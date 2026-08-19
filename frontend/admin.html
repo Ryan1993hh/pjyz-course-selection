@@ -2447,14 +2447,14 @@ function openEditSelection(s){
   );
   document.getElementById('modalTitle').textContent = '换课编辑';
 
-  document.getElementById('saveSelBtn').addEventListener('click', async function(){
+  const saveBtn = document.getElementById('saveSelBtn');
+  saveBtn.onclick = async function(){
     const selEl = document.getElementById('editSelCourse');
     const course_name = selEl.value;
     const opt = selEl.options[selEl.selectedIndex];
     const course_id = opt ? opt.getAttribute('data-id') : '';
     if (!course_id){ toast('请选择课程', 'error'); return; }
-    const btn2 = document.getElementById('saveSelBtn');
-    btn2.disabled = true;
+    saveBtn.disabled = true;
     try {
       await request('PUT', '/api/selections/' + s.id, { course_id: course_id, course_name: course_name });
       toast('换课成功', 'success');
@@ -2463,9 +2463,9 @@ function openEditSelection(s){
     } catch(e){
       toast('保存失败：' + e.message, 'error');
     } finally {
-      btn2.disabled = false;
+      saveBtn.disabled = false;
     }
-  });
+  };
 }
 
 async function exportSelections(){
@@ -2564,11 +2564,10 @@ function renderClassManager(){
   openModal(html);
   document.getElementById('modalTitle').textContent = '班级管理';
 
-  // 绑定添加按钮
   setTimeout(function(){
     const addBtn = document.getElementById('addClassBtn');
     if (addBtn) {
-      addBtn.addEventListener('click', async function(){
+      addBtn.onclick = async function(){
         const grade = document.getElementById('newClsGrade').value;
         const name = document.getElementById('newClsName').value.trim();
         const teacher = document.getElementById('newClsTeacher').value.trim();
@@ -2581,7 +2580,7 @@ function renderClassManager(){
         } catch(e) {
           toast('添加失败：' + e.message, 'error');
         }
-      });
+      };
     }
   }, 50);
 }
@@ -2615,7 +2614,7 @@ window.editClassItem = function(id){
   setTimeout(function(){
     const btn = document.getElementById('saveEditCls');
     if (btn) {
-      btn.addEventListener('click', async function(){
+      btn.onclick = async function(){
         const grade = document.getElementById('editClsGrade').value;
         const name = document.getElementById('editClsName').value.trim();
         const teacher = document.getElementById('editClsTeacher').value;
@@ -2630,7 +2629,7 @@ window.editClassItem = function(id){
         } catch(e) {
           toast('保存失败：' + e.message, 'error');
         }
-      });
+      };
     }
   }, 50);
 };
@@ -2855,7 +2854,6 @@ document.getElementById('userSearchInput').addEventListener('input', function(e)
 });
 
 function openAddUser(){
-  // 构建班级选项
   const classOptions = ['<option value="">不指定班级</option>'];
   const seenClasses = new Set();
   classesData.forEach(function(c){
@@ -2879,15 +2877,15 @@ function openAddUser(){
     '</div>'
   );
   document.getElementById('modalTitle').textContent = '添加用户';
-  document.getElementById('saveAddUser').addEventListener('click', async function(){
+  const saveBtn = document.getElementById('saveAddUser');
+  saveBtn.onclick = async function(){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
     const className = document.getElementById('uClassName').value;
     const role = document.getElementById('uRole').value;
     if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
-    const btn = document.getElementById('saveAddUser');
-    btn.disabled = true;
+    saveBtn.disabled = true;
     try {
       const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, class_name: className, role: role });
       if (data.success){
@@ -2900,13 +2898,12 @@ function openAddUser(){
     } catch(e){
       toast('添加失败：' + e.message, 'error');
     } finally {
-      btn.disabled = false;
+      saveBtn.disabled = false;
     }
-  });
+  };
 }
 
 function openEditUser(u){
-  // 构建班级选项
   const classOptions = ['<option value="">不指定班级</option>'];
   const seenClasses = new Set();
   if (u.class_name) {
@@ -2941,15 +2938,15 @@ function openEditUser(u){
     '</div>'
   );
   document.getElementById('modalTitle').textContent = '编辑用户';
-  document.getElementById('saveEditUser').addEventListener('click', async function(){
+  const saveBtn = document.getElementById('saveEditUser');
+  saveBtn.onclick = async function(){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
     const className = document.getElementById('uClassName').value;
     const role = document.getElementById('uRole').value;
     if (!username){ toast('请填写账号', 'error'); return; }
-    const btn = document.getElementById('saveEditUser');
-    btn.disabled = true;
+    saveBtn.disabled = true;
     try {
       const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, class_name: className, role: role });
       if (data.success){
@@ -2963,9 +2960,9 @@ function openEditUser(u){
     } catch(e){
       toast('保存失败：' + e.message, 'error');
     } finally {
-      btn.disabled = false;
+      saveBtn.disabled = false;
     }
-  });
+  };
 }
 
 async function deleteUser(u){
@@ -3017,7 +3014,8 @@ function openImportUsers(){
   document.getElementById('modalTitle').textContent = '批量导入用户';
   setupUserUpload();
 
-  document.getElementById('downloadTemplateBtn').addEventListener('click', downloadUserTemplate);
+  const downloadBtn = document.getElementById('downloadTemplateBtn');
+  if (downloadBtn) downloadBtn.onclick = downloadUserTemplate;
 }
 
 function downloadUserTemplate(){
@@ -3046,19 +3044,20 @@ function setupUserUpload(){
   const input = document.getElementById('userFileInput');
   const msgEl = document.getElementById('userUploadMsg');
 
-  area.addEventListener('click', function(){ input.click(); });
-  area.addEventListener('dragover', function(e){ e.preventDefault(); area.classList.add('dragover'); });
-  area.addEventListener('dragleave', function(){ area.classList.remove('dragover'); });
-  area.addEventListener('drop', function(e){
+  area.onclick = function(){ input.click(); };
+  area.ondragover = function(e){ e.preventDefault(); area.classList.add('dragover'); };
+  area.ondragleave = function(){ area.classList.remove('dragover'); };
+  area.ondrop = function(e){
     e.preventDefault();
     area.classList.remove('dragover');
     if (e.dataTransfer.files.length) handleUserFile(e.dataTransfer.files[0]);
-  });
-  input.addEventListener('change', function(){
+  };
+  input.onchange = function(){
     if (input.files.length) handleUserFile(input.files[0]);
-  });
+  };
 
-  document.getElementById('confirmImportBtn').addEventListener('click', doImportUsers);
+  const confirmBtn = document.getElementById('confirmImportBtn');
+  if (confirmBtn) confirmBtn.onclick = doImportUsers;
 }
 
 async function handleUserFile(file){
