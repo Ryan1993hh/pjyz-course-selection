@@ -1599,16 +1599,24 @@ async function saveCourses(){
         limit_grade7: parseInt(c.limit_grade7, 10) || 0
       };
     });
+    console.log('[保存] 发送课程数:', payload.length);
     const data = await request('PUT', '/api/courses', payload);
+    console.log('[保存] 响应:', data);
     if (data.success){
       if (data.courses) coursesData = data.courses;
       renderCourses();
       toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
     } else {
-      toast('保存失败', 'error');
+      toast('保存失败：' + (data.error || '未知错误'), 'error');
     }
   } catch(e){
-    toast('保存失败：' + e.message, 'error');
+    console.error('[保存] 错误:', e);
+    const msg = e.message || '';
+    if (msg.includes('<!DOCTYPE') || msg.includes('Cloudflare')) {
+      toast('保存失败：服务器暂时不可用，请稍后重试', 'error');
+    } else {
+      toast('保存失败：' + msg, 'error');
+    }
   } finally {
     btn.disabled = false;
   }
