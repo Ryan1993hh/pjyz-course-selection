@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>浦江一中拓展课选课</title>
 <!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
 <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
@@ -199,7 +202,7 @@ body {
   align-items: center;
   gap: 10px;
 }
-.btn-reset {
+.btn-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -220,26 +223,38 @@ body {
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
-.btn-reset:hover,
-.btn-reset:focus-visible {
-  background: rgba(220, 38, 38, 0.82);
+.btn-header:hover,
+.btn-header:focus-visible {
+  background: rgba(255,255,255,0.28);
   border-color: rgba(255,255,255,0.55);
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.45);
+  box-shadow: 0 5px 14px rgba(0,0,0,0.3);
   outline: none;
 }
-.btn-reset:focus-visible {
-  outline: 2px solid #ffffff;
-  outline-offset: 2px;
+.btn-header:active { transform: translateY(0); }
+.btn-header.user-info {
+  cursor: default;
+  background: rgba(255,255,255,0.24);
+  min-width: 120px;
 }
-.btn-reset:active { transform: translateY(0); }
-.btn-reset-icon {
+.btn-header.user-info:hover {
+  background: rgba(255,255,255,0.24);
+  transform: none;
+}
+.btn-header.logout:hover {
+  background: rgba(220, 38, 38, 0.82);
+  border-color: rgba(255,255,255,0.55);
+  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.45);
+}
+.btn-header .btn-icon {
   font-size: 16px;
   line-height: 1;
   display: inline-block;
-  transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
 }
-.btn-reset:hover .btn-reset-icon { transform: rotate(-180deg); }
+.btn-header:hover .btn-icon.icon-reset {
+  transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  transform: rotate(-180deg);
+}
 
 /* 重置确认弹窗：使用 lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
 .reset-confirm-mask {
@@ -1784,9 +1799,17 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
   <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   <div class="header-actions">
-    <button type="button" class="btn-reset" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态" accesskey="r">
-      <span class="btn-reset-icon" aria-hidden="true">↻</span>
+    <button type="button" class="btn-header user-info" id="userInfoBtn" title="当前登录用户">
+      <span class="btn-icon">👤</span>
+      <span id="userDisplayName">未登录</span>
+    </button>
+    <button type="button" class="btn-header" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态">
+      <span class="btn-icon icon-reset" aria-hidden="true">↻</span>
       <span>重置</span>
+    </button>
+    <button type="button" class="btn-header logout" id="logoutBtn" title="退出登录">
+      <span class="btn-icon">⏻</span>
+      <span>退出登录</span>
     </button>
   </div>
 </div>
@@ -2021,8 +2044,8 @@ function pjyzToken() {
   catch (_) { return ''; }
 }
 
-// ===== 课程固定数据（30 门课程，按体育健康/艺术技艺/人文社科分类）=====
-const COURSES = [
+// ===== 课程数据（优先从 API 加载，失败时使用硬编码兜底）=====
+let COURSES = [
   // —— 体育健康类（7门）——
   { id: 1,  category: '体育健康', name: '乒乓球',       teacher: '陆顺军',           location: '旧体育馆',                  requirement: '',                  limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '本课程会对学习乒乓球的学生进行科学系统的训练，从球感、灵活性、反应、动作、上台，掌握乒乓球运动的基本技术，逐步走向实战。' },
   { id: 2,  category: '体育健康', name: '女子排球',     teacher: '徐李斌、耿凡诗雨', location: '新体育馆',                  requirement: '仅限女生',           limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '浦江一中排球社团的组建，丰富学生的课余生活的同时形成良好的校园体育文化。排球社团培养学生学习排球知识与技能，形成良好的沟通能力、团队合作意识和顽强拼搏的精神，营造出积极自信、阳光、富有朝气、拼搏向上的学习氛围，展现初中生的青春与活力。通过体教结合，让学生在兼顾学业基础上，给予学生在体育项目上发展的机会。在学校的支持和鼓励下，我校排球社团在上海市、闵行区等排球比赛中取得优异成绩。' },
@@ -3591,8 +3614,76 @@ document.addEventListener('keydown', e => {
   }
 })();
 
-// ===== 初始渲染 =====
-renderAll();
+// ===== 初始渲染（优先从 API 加载课程数据，失败时使用硬编码兜底）=====
+async function initCourses() {
+  console.log('[选课] 开始加载课程数据...');
+  try {
+    const resp = await fetch(pjyzApiBase() + '/api/courses');
+    console.log('[选课] API 响应状态:', resp.status);
+    if (!resp.ok) throw new Error('API 返回 ' + resp.status);
+    const data = await resp.json();
+    const arr = Array.isArray(data) ? data : (data.courses || []);
+    console.log('[选课] API 返回课程数量:', arr.length);
+    if (arr && arr.length > 0) {
+      COURSES = arr.map(function(c) {
+        const l6 = parseInt(c.limit_grade6, 10) || 0;
+        const l7 = parseInt(c.limit_grade7, 10) || 0;
+        const total = l6 + l7;
+        const students = new Array(total).fill(null);
+        return {
+          id: c.id,
+          category: c.category || '',
+          name: c.name || '',
+          teacher: c.teacher || '',
+          location: c.location || '',
+          requirement: c.requirement || '',
+          limit: { '六年级': l6, '七年级': l7 },
+          students: students,
+          description: c.description || ''
+        };
+      });
+      console.log('[选课] 从 API 加载了', COURSES.length, '门课程');
+      // 课程数据更新后，重新应用持久化数据（按 ID 匹配恢复学生）
+      try {
+        var loaded = PersistentStorage.load();
+        if (loaded && loaded.ok) {
+          PersistentStorage.applyData(loaded.data);
+        }
+      } catch (_) {}
+    } else {
+      console.warn('[选课] API 返回空数组，使用硬编码兜底');
+    }
+  } catch (e) {
+    console.warn('[选课] API 加载课程失败，使用硬编码兜底:', e.message);
+  }
+  renderAll();
+}
+initCourses();
+
+// ===== 用户信息显示 + 退出登录 =====
+(function initUserInfo() {
+  const displayEl = document.getElementById('userDisplayName');
+  const logoutBtn = document.getElementById('logoutBtn');
+  try {
+    const userStr = localStorage.getItem('pjyz_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      const name = user.teacher_name || user.username || '未登录';
+      displayEl.textContent = name;
+    }
+  } catch (_) {
+    displayEl.textContent = '未登录';
+  }
+  logoutBtn.addEventListener('click', function () {
+    if (confirm('确定要退出登录吗？')) {
+      localStorage.removeItem('pjyz_token');
+      localStorage.removeItem('pjyz_user');
+      localStorage.removeItem('pjyz_login_role');
+      localStorage.removeItem('admin_token');
+      window.location.href = 'denglu.html';
+    }
+  });
+})();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
 (function () {
