@@ -1763,8 +1763,8 @@ th.sortable.active .sort-icon { opacity: 1; }
   <!-- 右侧：导航 + 管理员 + 退出 -->
   <div class="header-actions">
     <div class="top-nav-items">
-      <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
-      <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
+      <div class="nav-item" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
+      <div class="nav-item active" data-section="selections"><span class="nav-icon">▦</span>选课数据</div>
       <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
     </div>
     <div class="admin-info">
@@ -1784,7 +1784,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   <main class="main">
 
     <!-- ===== 模块一：课程管理 ===== -->
-    <section class="section active" id="section-courses">
+    <section class="section" id="section-courses">
       <!-- 第一行：课程管理 + 上传文件（等宽） -->
       <div class="course-manage-row">
         <div class="course-manage-left">
@@ -1858,8 +1858,8 @@ th.sortable.active .sort-icon { opacity: 1; }
       </div>
     </section>
 
-    <!-- ===== 模块二：选课结果 ===== -->
-    <section class="section" id="section-selections">
+    <!-- ===== 模块二：选课数据 ===== -->
+    <section class="section active" id="section-selections">
       <div class="section-header">
         <div>
           <h2>选课数据看板</h2>
@@ -2889,7 +2889,7 @@ async function exportSelections(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = '选课结果导出.xlsx';
+    a.download = '选课数据导出.xlsx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -3794,6 +3794,8 @@ function initAll(){
   loadCourseNames();
   loadUsers();
   setupUpload();
+  // 自动加载选课数据
+  querySelections();
 }
 
 if (checkLogin()){
