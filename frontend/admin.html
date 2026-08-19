@@ -64,15 +64,12 @@ body {
   line-height: 1.5;
 }
 
-/* ===== 顶部标题栏 — 居中标题 + 渐变流动动效（严格参照页风格）===== */
+/* ===== 顶部标题栏 + 导航 ===== */
 .header {
   color: white;
-  padding: 14px 24px;
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   margin-bottom: 12px;
-  display: flex;
-  align-items: center;
   position: relative;
   overflow: hidden;
   background: linear-gradient(110deg, var(--primary-dark) 0%, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, var(--primary-dark) 100%);
@@ -91,6 +88,89 @@ body {
   inset: 0;
   pointer-events: none;
   background: radial-gradient(600px 120px at 50% 0%, rgba(255,255,255,0.18), transparent 60%);
+}
+/* header 内层：logo + 标题 + 操作区 */
+.header-inner {
+  display: flex;
+  align-items: center;
+  padding: 14px 24px;
+  position: relative;
+  z-index: 1;
+}
+/* 顶部横向导航 */
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 24px;
+  background: rgba(0,0,0,0.15);
+  border-top: 1px solid rgba(255,255,255,0.15);
+  position: relative;
+  z-index: 1;
+}
+.top-nav .nav-item {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+.top-nav .nav-item:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+}
+.top-nav .nav-item.active {
+  background: rgba(255,255,255,0.25);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.top-nav .nav-icon {
+  font-size: 14px;
+}
+.top-nav .nav-right {
+  margin-left: auto;
+}
+.top-nav .nav-link {
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.top-nav .nav-link:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+}
+/* 用户信息显示 */
+.user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin-right: 10px;
+}
+.user-info .user-avatar {
+  font-size: 16px;
+}
+.user-info .user-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .header-logo {
   display: flex;
@@ -133,10 +213,7 @@ body {
   color: white;
 }
 .header-title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  flex: 1;
   text-align: center;
   z-index: 1;
 }
@@ -202,106 +279,14 @@ body {
 }
 .btn-logout:hover .btn-logout-icon { transform: translateX(4px); }
 
-/* ===== 主布局：侧边栏 + 主区 ===== */
+/* ===== 主布局：全宽主区 ===== */
 .layout {
   display: flex;
   gap: 14px;
-  min-height: calc(100vh - 14px - 72px);
+  min-height: calc(100vh - 14px - 120px);
 }
 
-/* ===== 侧边栏（卡片化，参照页卡片风格）===== */
-.sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: sticky;
-  top: 14px;
-  align-self: flex-start;
-  max-height: calc(100vh - 100px);
-}
-.sidebar-title {
-  font-size: 13px;
-  color: var(--muted);
-  font-weight: 600;
-  letter-spacing: 2px;
-  padding: 6px 12px 12px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 6px;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  user-select: none;
-  letter-spacing: 0.5px;
-}
-.nav-item:hover {
-  background: var(--bg-soft);
-  color: var(--primary-dark);
-  transform: translateX(2px);
-}
-.nav-item.active {
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.2);
-}
-.nav-item.active::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  border-radius: 0 2px 2px 0;
-  background: var(--primary);
-}
-.nav-item .nav-icon {
-  width: 18px;
-  display: inline-flex;
-  justify-content: center;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-.sidebar-foot {
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.sidebar-foot a {
-  display: block;
-  padding: 10px 14px;
-  border-radius: 10px;
-  color: var(--primary-dark);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--bg-soft);
-  text-align: center;
-  transition: all 0.2s ease;
-  letter-spacing: 1px;
-}
-.sidebar-foot a:hover {
-  background: var(--primary);
-  color: white;
-  transform: translateY(-1px);
-}
-
-/* ===== 主内容区 ===== */
+/* ===== 主内容区（全宽） ===== */
 .main {
   flex: 1;
   min-width: 0;
@@ -1036,33 +1021,26 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 
 /* ===== 响应式 ===== */
 @media (max-width: 960px) {
-  .layout { flex-direction: column; }
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-self: auto;
-    position: static;
-    max-height: none;
-    padding: 10px 12px;
-  }
-  .sidebar-title { display: none; }
-  .sidebar-foot { margin-top: 0; padding-top: 0; border: none; flex-basis: 100%; }
-  .nav-item { flex: 1; justify-content: center; min-width: 120px; }
-  .nav-item.active::before { display: none; }
   .header-title h1 { font-size: 18px; letter-spacing: 2px; }
   .header-logo .logo-svg { width: 36px; height: 36px; }
   .header-logo .logo-text { display: none; }
+  .top-nav { padding: 8px 16px; flex-wrap: wrap; }
+  .top-nav .nav-item { padding: 6px 14px; font-size: 13px; }
+  .user-info { font-size: 13px; padding: 5px 12px; }
 }
 @media (max-width: 760px) {
   .header-title h1 { font-size: 16px; letter-spacing: 2px; }
   .control-bar { grid-template-columns: 1fr 1fr; }
   .control-bar .upload-area { grid-column: 1 / -1; }
   .step-arrow { display: none; }
+  .top-nav .nav-item { padding: 6px 10px; font-size: 12px; }
+  .top-nav .nav-icon { display: none; }
+  .user-info .user-name { max-width: 80px; }
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
-  .header { margin: 0 0 8px; padding: 12px 16px; }
+  .header { margin: 0 0 8px; }
+  .header-inner { padding: 10px 14px; }
   .layout { padding: 0; gap: 8px; }
   .section-header h2 { font-size: 17px; letter-spacing: 1px; }
   th { padding: 10px 10px; font-size: 12px; letter-spacing: 1px; }
@@ -1070,55 +1048,64 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
   .header-title h1 { font-size: 14px; letter-spacing: 1px; }
   .btn-logout { padding: 0 12px; height: 36px; min-width: 0; font-size: 12px; }
   .btn-logout-icon { display: none; }
+  .top-nav { padding: 6px 12px; }
+  .top-nav .nav-item { padding: 5px 10px; font-size: 12px; gap: 4px; }
+  .top-nav .nav-link { font-size: 12px; padding: 5px 10px; }
+  .user-info { margin-right: 6px; font-size: 12px; padding: 5px 10px; }
+  .user-info .user-avatar { display: none; }
 }
 </style>
 </head>
 <body>
 
-<!-- ===== 顶部标题栏（参照页风格，居中标题 + 校徽） ===== -->
+<!-- ===== 顶部标题栏 + 导航 ===== -->
 <div class="header">
-  <div class="header-logo">
-    <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
-      <defs>
-        <clipPath id="admin-circle">
-          <circle cx="200" cy="200" r="190"/>
-        </clipPath>
-      </defs>
-      <circle cx="200" cy="200" r="190" fill="#F5A623"/>
-      <g clip-path="url(#admin-circle)" fill="none" stroke="white" stroke-linecap="round">
-        <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
-        <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
-        <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
-      </g>
-    </svg>
-    <div class="logo-text">
-      <span class="cn">上海市闵行区浦江第一中学</span>
-      <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
+  <div class="header-inner">
+    <div class="header-logo">
+      <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
+        <defs>
+          <clipPath id="admin-circle">
+            <circle cx="200" cy="200" r="190"/>
+          </clipPath>
+        </defs>
+        <circle cx="200" cy="200" r="190" fill="#F5A623"/>
+        <g clip-path="url(#admin-circle)" fill="none" stroke="white" stroke-linecap="round">
+          <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
+          <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
+          <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
+        </g>
+      </svg>
+      <div class="logo-text">
+        <span class="cn">上海市闵行区浦江第一中学</span>
+        <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
+      </div>
+    </div>
+    <div class="header-title"><h1>浦江一中拓展课 · 管理后台</h1></div>
+    <div class="header-actions">
+      <div class="user-info" id="userInfoDisplay">
+        <span class="user-avatar">👤</span>
+        <span class="user-name" id="currentUserName">管理员</span>
+      </div>
+      <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
+        <span class="btn-logout-icon" aria-hidden="true">→</span>
+        <span>退出登录</span>
+      </button>
     </div>
   </div>
-  <div class="header-title"><h1>浦江一中拓展课 · 管理后台</h1></div>
-  <div class="header-actions">
-    <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
-      <span class="btn-logout-icon" aria-hidden="true">→</span>
-      <span>退出登录</span>
-    </button>
-  </div>
+  <!-- 顶部横向导航 -->
+  <nav class="top-nav">
+    <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
+    <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
+    <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
+    <div class="nav-right">
+      <a href="denglu.html" class="nav-link" title="返回登录首页">⌂ 返回选课首页</a>
+    </div>
+  </nav>
 </div>
 
 <!-- ===== 主布局 ===== -->
 <div class="layout">
-  <!-- ===== 侧边栏 ===== -->
-  <aside class="sidebar">
-    <div class="sidebar-title">功能导航</div>
-    <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
-    <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
-    <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
-    <div class="sidebar-foot">
-      <a href="denglu.html" title="返回登录首页">⌂ 返回选课首页</a>
-    </div>
-  </aside>
-
-  <!-- ===== 主内容区 ===== -->
+  <!-- ===== 主内容区（全宽） ===== -->
   <main class="main">
 
     <!-- ===== 模块一：课程管理 ===== -->
@@ -2177,8 +2164,20 @@ function openImportUsers(){
   });
 }
 
+/* ============ 显示当前用户 ============ */
+function displayCurrentUser(){
+  const userStr = localStorage.getItem('pjyz_user');
+  if (!userStr) return;
+  try {
+    const user = JSON.parse(userStr);
+    const displayName = user.teacher_name || user.username || '管理员';
+    document.getElementById('currentUserName').textContent = displayName;
+  } catch(e) {}
+}
+
 /* ============ Init ============ */
 function initAll(){
+  displayCurrentUser();
   loadCourses();
   loadClasses();
   loadCourseNames();
