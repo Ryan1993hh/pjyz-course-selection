@@ -162,4 +162,50 @@ router.get('/selections/export', async (req, res) => {
   }
 });
 
+router.delete('/selections/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    if (pool) {
+      await ensureDB();
+      const info = await run('DELETE FROM selections WHERE id = $1', [id]);
+      if (info.changes === 0) {
+        return res.status(404).json({ error: '选课记录不存在' });
+      }
+      return res.json({ success: true });
+    }
+    const idx = MEM_SELECTIONS.findIndex(s => s.id === id);
+    if (idx === -1) return res.status(404).json({ error: '选课记录不存在' });
+    MEM_SELECTIONS.splice(idx, 1);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/selections/batch-delete', async (req, res) => {
+  const { ids } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) {
+    return res.status(400).json({ error: '请提供要删除的ID列表' });
+  }
+  try {
+    if (pool) {
+      await ensureDB();
+      const placeholders = ids.map((_, i) => '$' + (i + 1)).join(',');
+      const info = await run('DELETE FROM selections WHERE id IN (' + placeholders + ')', ids.map(id => parseInt(id, 10)));
+      return res.json({ success: true, deleted: info.changes || ids.length });
+    }
+    let deleted = 0;
+    ids.forEach(id => {
+      const idx = MEM_SELECTIONS.findIndex(s => s.id === parseInt(id, 10));
+      if (idx !== -1) {
+        MEM_SELECTIONS.splice(idx, 1);
+        deleted++;
+      }
+    });
+    res.json({ success: true, deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

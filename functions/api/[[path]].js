@@ -483,6 +483,28 @@ async function handleSelectionDelete(db, request, id) {
   return json({ success: true });
 }
 
+async function handleSelectionBatchDelete(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const body = await request.json();
+  const { ids } = body || {};
+  if (!Array.isArray(ids) || !ids.length) {
+    return json({ error: '请提供要删除的ID列表' }, 400);
+  }
+  let deleted = 0;
+  for (const id of ids) {
+    const existing = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
+    if (existing) {
+      if (existing.course_id) {
+        await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(existing.course_id).run();
+      }
+      await db.prepare('DELETE FROM selections WHERE id = ?').bind(id).run();
+      deleted++;
+    }
+  }
+  return json({ success: true, deleted });
+}
+
 async function handleSelectionsExport(db, request, url) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -842,6 +864,11 @@ export async function onRequest(context) {
     if (method === 'GET') return handleSelectionsGet(db, request, url);
     if (method === 'POST') return handleSelectionsBatchCreate(db, request);
     if (method === 'DELETE') return handleClearSelections(db, request);
+  }
+
+  // /api/selections/batch-delete
+  if (path === '/api/selections/batch-delete' && method === 'POST') {
+    return handleSelectionBatchDelete(db, request);
   }
 
   // /api/selections/export
