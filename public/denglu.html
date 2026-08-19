@@ -768,7 +768,7 @@
   };
 
   /* ---------- 表单提交 ---------- */
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
     hideMsg();
 
@@ -802,6 +802,36 @@
       return;
     }
 
+    // 管理员账号：通过 API 获取真实 token
+    if (account.role === 'admin') {
+      loginBtn.disabled = true;
+      loginBtn.textContent = '登录中...';
+      try {
+        var res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username, password: password })
+        });
+        var data = await res.json();
+        if (data.success && data.token) {
+          localStorage.setItem('admin_token', data.token);
+          if (data.user) {
+            localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+          }
+        } else {
+          showMsg(data.error || '登录失败', 'error');
+          loginBtn.disabled = false;
+          loginBtn.textContent = '登 录';
+          return;
+        }
+      } catch (err) {
+        showMsg('登录请求失败：' + err.message, 'error');
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登 录';
+        return;
+      }
+    }
+
     // 记住账号 & 保存角色
     try {
       if (rememberEl.checked) {
@@ -813,10 +843,6 @@
       }
       // 保存当前登录角色，供后续页面使用
       localStorage.setItem('pjyz_login_role', account.role);
-      // 管理员账号：写入 admin_token，供 admin.html 直接进入后台（无需再次登录）
-      if (account.role === 'admin') {
-        localStorage.setItem('admin_token', 'admin_' + Date.now());
-      }
     } catch (_) {}
 
     // 直接跳转到对应页面（与登录页同目录）
