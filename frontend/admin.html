@@ -2432,7 +2432,15 @@ function renderUsers(){
     tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无用户</td></tr>';
     return;
   }
-  usersData.forEach(function(u, idx){
+  // 管理员优先，按角色优先级排序：admin > teacher
+  const sorted = usersData.slice().sort(function(a, b){
+    const roleOrder = { 'admin': 0, 'teacher': 1 };
+    const ra = roleOrder[a.role] !== undefined ? roleOrder[a.role] : 9;
+    const rb = roleOrder[b.role] !== undefined ? roleOrder[b.role] : 9;
+    if (ra !== rb) return ra - rb;
+    return (a.username || '').localeCompare(b.username || '', 'zh-CN');
+  });
+  sorted.forEach(function(u, idx){
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td class="seq">' + (idx + 1) + '</td>' +
