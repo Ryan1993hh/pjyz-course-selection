@@ -104,6 +104,20 @@ export async function onRequest(context) {
     if (path === '/api/users' && method === 'GET') {
       return handleGetUsers(corsHeaders);
     }
+    // 添加用户
+    if (path === '/api/users' && method === 'POST') {
+      return handlePostUsers(context, corsHeaders);
+    }
+    // 更新用户
+    if (path.match(/^\/api\/users\/\d+$/) && method === 'PUT') {
+      const id = parseInt(path.split('/').pop(), 10);
+      return handlePutUser(id, context, corsHeaders);
+    }
+    // 删除用户
+    if (path.match(/^\/api\/users\/\d+$/) && method === 'DELETE') {
+      const id = parseInt(path.split('/').pop(), 10);
+      return handleDeleteUser(id, corsHeaders);
+    }
 
     return json({ error: 'API 端点不存在', path }, 404, corsHeaders);
   } catch (err) {
@@ -264,6 +278,45 @@ async function handleGetUsers(corsHeaders) {
   const sql = getSQL();
   const rows = await sql`SELECT id, username, role FROM users ORDER BY id ASC`;
   return json(rows, 200, corsHeaders);
+}
+
+async function handlePostUsers(context, corsHeaders) {
+  const body = await context.request.json();
+  const { username, password, role } = body;
+  if (!username || !password) {
+    return json({ error: '账号和密码不能为空' }, 400, corsHeaders);
+  }
+  await ensureDB();
+  const sql = getSQL();
+  try {
+    const result = await sql`INSERT INTO users (username, password, role) VALUES (${username}, ${password}, ${role || 'teacher'}) RETURNING id, username, role`;
+    return json({ success: true, user: result[0] }, 201, corsHeaders);
+  } catch (err) {
+    return json({ error: '添加失败：' + (err.message || '账号可能已存在') }, 400, corsHeaders);
+  }
+}
+
+async function handlePutUser(id, context, corsHeaders) {
+  const body = await context.request.json();
+  const { username, password, role } = body;
+  if (!username) {
+    return json({ error: '账号不能为空' }, 400, corsHeaders);
+  }
+  await ensureDB();
+  const sql = getSQL();
+  if (password) {
+    await sql`UPDATE users SET username = ${username}, password = ${password}, role = ${role || 'teacher'} WHERE id = ${id}`;
+  } else {
+    await sql`UPDATE users SET username = ${username}, role = ${role || 'teacher'} WHERE id = ${id}`;
+  }
+  return json({ success: true }, 200, corsHeaders);
+}
+
+async function handleDeleteUser(id, corsHeaders) {
+  await ensureDB();
+  const sql = getSQL();
+  await sql`DELETE FROM users WHERE id = ${id}`;
+  return json({ success: true }, 200, corsHeaders);
 }
 
 // JWT using Web Crypto
