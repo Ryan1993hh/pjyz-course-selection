@@ -5,6 +5,7 @@ import { neon } from '@neondatabase/serverless';
 
 let _sql = null;
 let _initialized = false;
+let _env = null;
 
 function getSQL() {
   if (!_sql) {
@@ -15,7 +16,12 @@ function getSQL() {
   return _sql;
 }
 
+function setEnv(env) {
+  _env = env || {};
+}
+
 function getEnv(name) {
+  if (_env && _env[name]) return _env[name];
   if (typeof globalThis[name] !== 'undefined' && globalThis[name]) return globalThis[name];
   if (typeof process !== 'undefined' && process.env && process.env[name]) return process.env[name];
   return '';
@@ -84,6 +90,7 @@ async function ensureDB() {
 }
 
 export async function onRequest(context) {
+  setEnv(context.env);
   const url = new URL(context.request.url);
   const path = url.pathname;
   const method = context.request.method;

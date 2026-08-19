@@ -1581,6 +1581,10 @@ async function request(method, url, body, isForm){
     }
     return data;
   }
+  if (ct.includes('text/html') || ct.includes('text/plain')){
+    const txt = await res.text().catch(()=> '');
+    throw new Error('后端返回了 HTML 页面（而非 API 数据），可能是后端服务未正确启动。');
+  }
   if (ct.includes('spreadsheet') || ct.includes('octet-stream') || ct.includes('excel') || ct.includes('openxmlformats')){
     if (!res.ok) throw new Error('导出失败 (' + res.status + ')');
     return await res.blob();

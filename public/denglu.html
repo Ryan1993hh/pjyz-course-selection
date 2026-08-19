@@ -811,6 +811,10 @@
       body: JSON.stringify({ username: username, password: password })
     })
       .then(function (res) {
+        var ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          throw new Error('后端未返回有效数据（请检查后端服务是否正常）');
+        }
         return res.json().then(function (data) {
           return { ok: res.ok, data: data };
         });

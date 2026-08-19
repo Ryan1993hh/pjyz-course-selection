@@ -1,3 +1,4 @@
 # Cloudflare Pages _redirects
-# 所有未匹配的路径回退到 index.html（用于 SPA 路由）
-/* /index.html 200
+# 每个页面都是独立的 HTML 文件，不需要 SPA 回退
+# API 路径由 functions/api/[[path]].js 处理
+/api/*  /api/* 200
