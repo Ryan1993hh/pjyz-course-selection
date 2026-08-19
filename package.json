@@ -14,9 +14,11 @@
   },
   "devDependencies": {
     "better-sqlite3": "^13.0.3",
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
     "mammoth": "^1.8.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.2",
+    "pg": "^8.23.0"
   }
 }
