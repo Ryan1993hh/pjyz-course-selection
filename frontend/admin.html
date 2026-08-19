@@ -359,6 +359,55 @@ body {
   display: inline-block;
 }
 
+/* ===== 课程管理左右布局 ===== */
+.course-manage-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.course-manage-left {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.course-manage-left .section-header {
+  margin-bottom: 0;
+}
+.course-list-card {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.course-list-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ===== 表格单元格自动换行 ===== */
+table.courses-table td[data-field="name"],
+table.courses-table td[data-field="description"] {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.course-name {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+  height: auto;
+  max-width: 100%;
+}
+
 /* ===== 通用按钮 ===== */
 .btn {
   display: inline-flex;
@@ -1046,6 +1095,16 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
   table.courses-table td[data-field="description"] { font-size: 12px; }
   .course-name { font-size: 12px; padding: 3px 6px; }
 }
+@media (max-width: 1100px) {
+  .course-manage-row {
+    flex-direction: column;
+  }
+  .course-manage-left,
+  .course-list-card {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
 @media (max-width: 960px) {
   .layout { flex-direction: column; }
   .sidebar {
@@ -1147,67 +1206,70 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 
     <!-- ===== 模块一：课程管理 ===== -->
     <section class="section active" id="section-courses">
-      <div class="section-header">
-        <div>
-          <h2>课程管理</h2>
-          <p class="desc">上传课程文件解析后，可在下方表格内编辑，确认后统一保存</p>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">上传课程文件</div>
-        <div class="upload-area" id="uploadArea" title="点击或拖拽上传 xlsx / xls / docx 文件">
-          <span class="icon">↑</span>
-          <div class="text-col">
-            <span class="title">点击或拖拽上传课程清单</span>
-            <span class="hint">支持 .xlsx / .xls / .docx 格式，可包含课程名称、简介、老师、地点、要求、名额等字段</span>
+      <div class="course-manage-row">
+        <div class="course-manage-left">
+          <div class="section-header">
+            <div>
+              <h2>课程管理</h2>
+              <p class="desc">上传课程文件解析后，可在下方表格内编辑，确认后统一保存</p>
+            </div>
           </div>
-          <input type="file" id="fileInput" accept=".xlsx,.xls,.docx" style="display:none;">
+          <div class="card">
+            <div class="card-title">上传课程文件</div>
+            <div class="upload-area" id="uploadArea" title="点击或拖拽上传 xlsx / xls / docx 文件">
+              <span class="icon">↑</span>
+              <div class="text-col">
+                <span class="title">点击或拖拽上传课程清单</span>
+                <span class="hint">支持 .xlsx / .xls / .docx 格式，可包含课程名称、简介、老师、地点、要求、名额等字段</span>
+              </div>
+              <input type="file" id="fileInput" accept=".xlsx,.xls,.docx" style="display:none;">
+            </div>
+            <div class="upload-msg" id="uploadMsg">尚未上传文件，您也可以直接在下方表格中新增课程</div>
+          </div>
         </div>
-        <div class="upload-msg" id="uploadMsg">尚未上传文件，您也可以直接在下方表格中新增课程</div>
-      </div>
 
-      <div class="card">
-        <div class="card-title">
-          课程列表
-          <span style="margin-left:auto;font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;">支持点击单元格行内编辑</span>
-        </div>
-        <div class="action-bar left">
-          <button type="button" class="btn btn-outline" id="addRowBtn">+ 新增一行</button>
-        </div>
-        <div class="table-wrap">
-          <table class="courses-table" id="coursesTable">
-            <colgroup>
-              <col style="width:4%;">
-              <col style="width:7%;">
-              <col style="width:9%;">
-              <col style="width:22%;">
-              <col style="width:7%;">
-              <col style="width:8%;">
-              <col style="width:10%;">
-              <col style="width:7%;">
-              <col style="width:7%;">
-              <col style="width:6%;">
-            </colgroup>
-            <thead>
-              <tr>
-                <th>序号</th>
-                <th>课程类别</th>
-                <th>课程名称</th>
-                <th>课程简介</th>
-                <th>授课老师</th>
-                <th>授课地点</th>
-                <th>报名要求</th>
-                <th>六年级名额</th>
-                <th>七年级名额</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="coursesBody"></tbody>
-          </table>
-        </div>
-        <div class="action-bar">
-          <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ 确认保存全部课程</button>
+        <div class="card course-list-card">
+          <div class="card-title course-list-title">
+            <span>课程列表</span>
+            <span class="card-title-right">
+              <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;margin-right:12px;">支持点击单元格行内编辑</span>
+              <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ 新增一行</button>
+            </span>
+          </div>
+          <div class="table-wrap">
+            <table class="courses-table" id="coursesTable">
+              <colgroup>
+                <col style="width:4%;">
+                <col style="width:6%;">
+                <col style="width:18%;">
+                <col style="width:18%;">
+                <col style="width:6%;">
+                <col style="width:7%;">
+                <col style="width:9%;">
+                <col style="width:6%;">
+                <col style="width:6%;">
+                <col style="width:5%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>序号</th>
+                  <th>课程类别</th>
+                  <th>课程名称</th>
+                  <th>课程简介</th>
+                  <th>授课老师</th>
+                  <th>授课地点</th>
+                  <th>报名要求</th>
+                  <th>六年级名额</th>
+                  <th>七年级名额</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="coursesBody"></tbody>
+            </table>
+          </div>
+          <div class="action-bar">
+            <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ 确认保存全部课程</button>
+          </div>
         </div>
       </div>
     </section>
