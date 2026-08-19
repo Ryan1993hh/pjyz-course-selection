@@ -796,12 +796,14 @@ table.sel-table th:nth-child(3) { border-bottom-color: #0288D1; }
 table.sel-table th:nth-child(4) { border-bottom-color: #00838F; }
 table.sel-table th:nth-child(5) { border-bottom-color: #3949AB; }
 table.sel-table th:nth-child(6) { border-bottom-color: #455A64; }
-/* 用户表 5 列 */
+/* 用户表 7 列 */
 table.usr-table th:nth-child(1) { border-bottom-color: #546E7A; }
 table.usr-table th:nth-child(2) { border-bottom-color: #1976D2; }
 table.usr-table th:nth-child(3) { border-bottom-color: #3949AB; }
 table.usr-table th:nth-child(4) { border-bottom-color: #0288D1; }
-table.usr-table th:nth-child(5) { border-bottom-color: #455A64; }
+table.usr-table th:nth-child(5) { border-bottom-color: #00838F; }
+table.usr-table th:nth-child(6) { border-bottom-color: #5C6BC0; }
+table.usr-table th:nth-child(7) { border-bottom-color: #455A64; }
 
 /* —— 单元格基础 —— */
 td {
@@ -855,18 +857,22 @@ table.sel-table tbody tr:hover td:nth-child(4){ background-color: var(--col-4-h)
 table.sel-table tbody tr:hover td:nth-child(5){ background-color: var(--col-5-h); }
 table.sel-table tbody tr:hover td.row-actions { background-color: var(--col-6-h); }
 
-/* 用户表 5 列 */
+/* 用户表 7 列 */
 table.usr-table td.seq         { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
 table.usr-table td:nth-child(2){ background-color: var(--col-2); text-align: left; }
 table.usr-table td.pwd-cell    { background-color: var(--col-3); cursor: pointer; text-align: left; letter-spacing: 2px; }
-table.usr-table td:nth-child(4){ background-color: var(--col-4); text-align: center; }
-table.usr-table td.row-actions { background-color: var(--col-5); text-align: center; }
+table.usr-table td:nth-child(4){ background-color: var(--col-4); text-align: left; }
+table.usr-table td:nth-child(5){ background-color: var(--col-5); text-align: center; }
+table.usr-table td:nth-child(6){ background-color: var(--col-8); text-align: center; }
+table.usr-table td.row-actions { background-color: var(--col-10); text-align: center; }
 
 table.usr-table tbody tr:hover td.seq         { background-color: var(--col-1-h); }
 table.usr-table tbody tr:hover td:nth-child(2){ background-color: var(--col-2-h); }
 table.usr-table tbody tr:hover td.pwd-cell    { background-color: var(--col-3-h); }
 table.usr-table tbody tr:hover td:nth-child(4){ background-color: var(--col-4-h); }
-table.usr-table tbody tr:hover td.row-actions { background-color: var(--col-5-h); }
+table.usr-table tbody tr:hover td:nth-child(5){ background-color: var(--col-5-h); }
+table.usr-table tbody tr:hover td:nth-child(6){ background-color: var(--col-8-h); }
+table.usr-table tbody tr:hover td.row-actions { background-color: var(--col-10-h); }
 
 td.editable { cursor: pointer; transition: all 0.15s ease; }
 td.editable:hover {
@@ -1201,6 +1207,251 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 .toast.success { background: var(--success); }
 .toast.warning { background: var(--warning); }
 
+/* ===== 用户管理：搜索栏 ===== */
+.user-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.user-toolbar .search-input {
+  flex: 1;
+  min-width: 200px;
+  max-width: 320px;
+}
+.user-toolbar .stat-info {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ===== 用户表格排序 ===== */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { background-color: rgba(13, 148, 136, 0.15); }
+th.sortable .sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+th.sortable.active .sort-icon { opacity: 1; }
+
+/* ===== 分页 ===== */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pagination .page-info {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.pagination .page-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.pagination .page-btn {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0 6px;
+}
+.pagination .page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.pagination .page-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.pagination .page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pagination .page-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pagination .page-size select {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+}
+
+/* ===== 导入预览表格 ===== */
+.import-preview {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 12px 0;
+}
+.import-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.import-preview th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(135deg, rgba(100, 181, 246, 0.55) 0%, rgba(66, 165, 245, 0.50) 50%, rgba(100, 181, 246, 0.55) 100%);
+  color: #0D47A1;
+  font-size: 12px;
+  padding: 8px;
+  text-align: center;
+  font-weight: 700;
+}
+.import-preview td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.import-preview tr.has-error {
+  background-color: rgba(239, 68, 68, 0.08);
+}
+.import-preview tr.has-error td {
+  color: #dc2626;
+}
+.import-preview .status-ok {
+  color: #16a34a;
+  font-weight: 600;
+}
+.import-preview .status-error {
+  color: #dc2626;
+  font-weight: 600;
+}
+.import-preview .status-warn {
+  color: #ea580c;
+  font-weight: 600;
+}
+
+/* ===== 导入历史 ===== */
+.history-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.15s ease;
+}
+.history-item:hover {
+  background: var(--bg-soft);
+  border-color: var(--primary-light);
+}
+.history-item .history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.history-item .history-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.history-item .history-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+.history-item .history-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.history-item .stat-success { color: #16a34a; }
+.history-item .stat-failed { color: #dc2626; }
+
+/* ===== 模板下载按钮 ===== */
+.btn-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--primary);
+  text-decoration: none;
+  padding: 4px 8px;
+  border: 1px dashed var(--primary-light);
+  border-radius: 6px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.btn-template:hover {
+  background: var(--bg-soft);
+  border-color: var(--primary);
+}
+
+/* ===== 导入结果统计卡片 ===== */
+.import-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.import-stat-card {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+}
+.import-stat-card .stat-num {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+.import-stat-card .stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.import-stat-card.total {
+  background: var(--bg-soft);
+  color: var(--primary-dark);
+}
+.import-stat-card.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+.import-stat-card.failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
 /* ===== 响应式 ===== */
 @media (max-width: 1200px) {
   table.courses-table td[data-field="description"] { font-size: 12px; }
@@ -1404,7 +1655,7 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
       </div>
 
       <div class="card">
-        <div class="card-title">筛选条件</div>
+        <div class="card-title">精准查找</div>
         <div class="filter-bar">
           <div class="f-item">
             <label>年级</label>
@@ -1425,6 +1676,10 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
             <select class="form-select" id="filterCourse">
               <option value="">全部</option>
             </select>
+          </div>
+          <div class="f-item">
+            <label>学生姓名</label>
+            <input type="text" class="form-input" id="filterStudent" placeholder="输入学生姓名">
           </div>
           <div class="f-actions">
             <button type="button" class="btn btn-primary" id="queryBtn">查询</button>
@@ -1458,31 +1713,37 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
       <div class="section-header">
         <div>
           <h2>用户管理</h2>
-          <p class="desc">管理教师与管理员账号，密码默认为 ******，点击单元格可切换明文显示</p>
+          <p class="desc">管理教师与管理员账号，支持批量导入用户数据</p>
         </div>
         <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-outline" id="importHistoryBtn">📋 导入历史</button>
           <button type="button" class="btn btn-outline" id="importUserBtn">⬆ 导入用户</button>
           <button type="button" class="btn btn-primary" id="addUserBtn">+ 添加用户</button>
         </div>
       </div>
 
       <div class="card">
-        <div class="table-wrap">
+        <div class="user-toolbar">
+          <input type="text" class="form-input search-input" id="userSearchInput" placeholder="🔍 搜索账号、姓名或班级...">
+          <span class="stat-info" id="userStatInfo"></span>
+        </div>
+        <div class="table-wrap" style="max-height: none;">
           <table class="usr-table" id="usersTable">
             <thead>
               <tr>
-                <th style="width:64px;">序号</th>
-                <th style="min-width:120px;">账号</th>
+                <th style="width:60px;" class="sortable" data-sort="index">序号<span class="sort-icon">⇅</span></th>
+                <th style="min-width:120px;" class="sortable" data-sort="username">账号<span class="sort-icon">⇅</span></th>
                 <th style="min-width:100px;">密码</th>
-                <th style="min-width:120px;">教师名字</th>
-                <th style="min-width:120px;">班级</th>
-                <th style="width:88px;">角色</th>
+                <th style="min-width:120px;" class="sortable" data-sort="teacher_name">教师名字<span class="sort-icon">⇅</span></th>
+                <th style="min-width:120px;" class="sortable" data-sort="class_name">班级<span class="sort-icon">⇅</span></th>
+                <th style="width:88px;" class="sortable" data-sort="role">角色<span class="sort-icon">⇅</span></th>
                 <th style="width:148px;">操作</th>
               </tr>
             </thead>
             <tbody id="usersBody"></tbody>
           </table>
         </div>
+        <div class="pagination" id="usersPagination"></div>
       </div>
     </section>
 
@@ -1581,10 +1842,6 @@ async function request(method, url, body, isForm){
     }
     return data;
   }
-  if (ct.includes('text/html') || ct.includes('text/plain')){
-    const txt = await res.text().catch(()=> '');
-    throw new Error('后端返回了 HTML 页面（而非 API 数据），可能是后端服务未正确启动。');
-  }
   if (ct.includes('spreadsheet') || ct.includes('octet-stream') || ct.includes('excel') || ct.includes('openxmlformats')){
     if (!res.ok) throw new Error('导出失败 (' + res.status + ')');
     return await res.blob();
@@ -1608,11 +1865,6 @@ function toast(msg, type){
 }
 
 /* ============ Login ============ */
-var ADMIN_ACCOUNTS = {
-  'admin':  { password: '123456', role: 'admin'  },
-  '123456': { password: '123456', role: 'teacher' }
-};
-
 function checkLogin(){
   if (!getToken()){
     document.getElementById('loginOverlay').classList.add('show');
@@ -1620,14 +1872,6 @@ function checkLogin(){
   }
   document.getElementById('loginOverlay').classList.remove('show');
   return true;
-}
-
-function adminClientLogin(username, password) {
-  var acc = ADMIN_ACCOUNTS[username];
-  if (!acc) return { ok: false, error: '账号不存在' };
-  if (acc.password !== password) return { ok: false, error: '密码错误' };
-  if (acc.role !== 'admin') return { ok: false, error: '该账号无管理员权限' };
-  return { ok: true, user: { username: username, role: 'admin', id: 1 } };
 }
 
 async function doLogin(){
@@ -1638,38 +1882,23 @@ async function doLogin(){
   if (!username || !password){ msgEl.textContent = '请输入账号和密码'; return; }
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = '登录中...';
-
-  let usedClientFallback = false;
   try {
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('TIMEOUT')), 5000);
-    });
-    const fetchPromise = request('POST', '/api/login', { username, password });
-    const data = await Promise.race([fetchPromise, timeoutPromise]);
+    const data = await request('POST', '/api/login', { username, password });
     if (data.success && data.token){
       setToken(data.token);
-      if (data.user) localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+      if (data.user) {
+        localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+      }
       document.getElementById('loginOverlay').classList.remove('show');
       toast('登录成功', 'success');
       initAll();
     } else {
       msgEl.textContent = data.error || data.message || '登录失败';
-      btn.disabled = false; btn.textContent = '登 录';
     }
-  } catch(err) {
-    var clientResult = adminClientLogin(username, password);
-    if (clientResult.ok) {
-      usedClientFallback = true;
-      setToken('local_' + Date.now());
-      localStorage.setItem('pjyz_user', JSON.stringify(clientResult.user));
-      document.getElementById('loginOverlay').classList.remove('show');
-      toast('登录成功（本地模式）', 'success');
-      initAll();
-    } else {
-      msgEl.textContent = clientResult.error || '登录失败：' + err.message;
-      btn.disabled = false; btn.textContent = '登 录';
-    }
+  } catch(e){
+    msgEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '登 录';
   }
 }
 
@@ -1685,7 +1914,7 @@ document.getElementById('loginUser').addEventListener('keydown', function(e){
 document.getElementById('adminLogoutBtn').addEventListener('click', function(){
   clearToken();
   // 管理后台不再处理账号登录，统一返回登录页
-  window.location.href = '/denglu';
+  window.location.href = 'denglu.html';
 });
 
 /* ============ Navigation ============ */
@@ -2046,58 +2275,37 @@ async function loadClasses(){
   try {
     const data = await request('GET', '/api/classes');
     classesData = Array.isArray(data) ? data : [];
-    // 更新筛选器中的班级选项
-    const sel = document.getElementById('filterClass');
-    if (sel) {
-      sel.innerHTML = '<option value="">全部</option>';
-      const seen = new Set();
-      classesData.forEach(function(c){
-        const key = c.grade + ' ' + c.class_name;
-        if (!seen.has(key)) {
-          seen.add(key);
-          const opt = document.createElement('option');
-          opt.value = c.class_name; opt.textContent = c.grade + c.class_name;
-          sel.appendChild(opt);
-        }
-      });
-      // 如果班级表为空，从选课数据中提取
-      if (classesData.length === 0) {
-        try {
-          const oldData = await request('GET', '/api/selections');
-          const arr = Array.isArray(oldData) ? oldData : [];
-          const seen2 = new Set();
-          arr.forEach(function(s){
-            if (s.class_name) {
-              seen2.add(s.class_name);
-              const opt = document.createElement('option');
-              opt.value = s.class_name; opt.textContent = (s.grade || '') + s.class_name;
-              sel.appendChild(opt);
-            }
-          });
-        } catch(e) {}
-      }
-    }
-    // 同步年级筛选器
     updateGradeFilter();
   } catch(e){
-    /* silent */
+    updateGradeFilter();
   }
 }
 
 function updateGradeFilter(){
   const gradeSel = document.getElementById('filterGrade');
   if (!gradeSel) return;
-  // 保持默认选项，从classesData中提取年级
-  const grades = new Set(['六年级', '七年级']);
-  classesData.forEach(function(c){
-    if (c.grade) grades.add(c.grade);
-  });
-  gradeSel.innerHTML = '<option value="">全部</option>';
-  Array.from(grades).sort().forEach(function(g){
-    const opt = document.createElement('option');
-    opt.value = g; opt.textContent = g;
-    gradeSel.appendChild(opt);
-  });
+  gradeSel.innerHTML = '<option value="">全部</option>' +
+    '<option value="六年级">六年级</option>' +
+    '<option value="七年级">七年级</option>';
+  updateClassFilter();
+  gradeSel.onchange = updateClassFilter;
+}
+
+function updateClassFilter(){
+  const gradeSel = document.getElementById('filterGrade');
+  const classSel = document.getElementById('filterClass');
+  if (!classSel) return;
+  const grade = gradeSel.value;
+  let classCount = 10;
+  if (grade === '六年级') classCount = 10;
+  else if (grade === '七年级') classCount = 10;
+  else classCount = 10;
+
+  let html = '<option value="">全部</option>';
+  for (let i = 1; i <= classCount; i++){
+    html += '<option value="' + i + '班">' + i + '班</option>';
+  }
+  classSel.innerHTML = html;
 }
 
 async function loadTeachersList(){
@@ -2131,10 +2339,12 @@ function buildQuery(){
   const grade = document.getElementById('filterGrade').value;
   const cls = document.getElementById('filterClass').value;
   const course = document.getElementById('filterCourse').value;
+  const student = document.getElementById('filterStudent').value.trim();
   const params = new URLSearchParams();
   if (grade) params.set('grade', grade);
   if (cls) params.set('class', cls);
   if (course) params.set('course', course);
+  if (student) params.set('student_name', student);
   return params.toString();
 }
 
@@ -2167,7 +2377,7 @@ function renderSelections(){
       '<td>' + escapeHtml(s.grade || '') + '</td>' +
       '<td>' + escapeHtml(s.class_name || '') + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
-      '<td>' + escapeHtml(s.course_name || '') + '</td>' +
+      '<td></td>' +
       '<td class="row-actions"></td>';
 
     // 点击年级筛选
@@ -2262,23 +2472,15 @@ async function exportSelections(){
   const btn = document.getElementById('exportBtn');
   btn.disabled = true;
   try {
-    const url = '/api/selections/export?' + buildQuery();
-    const res = await fetch(apiBase() + url, {
-      headers: { 'Authorization': getToken() ? 'Bearer ' + getToken() : '' }
-    });
-    if (!res.ok) throw new Error('导出失败 (' + res.status + ')');
-    const ct = res.headers.get('content-type') || '';
-    const blob = await res.blob();
-    const isCsv = ct.includes('csv');
-    const filename = '选课结果导出_' + Date.now() + (isCsv ? '.csv' : '.xlsx');
-    const blobUrl = URL.createObjectURL(blob);
+    const blob = await request('GET', '/api/selections/export?' + buildQuery());
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
+    a.href = url;
+    a.download = '选课结果导出.xlsx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 1500);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
     toast('导出成功', 'success');
   } catch(e){
     toast('导出失败：' + e.message, 'error');
@@ -2448,6 +2650,11 @@ document.getElementById('manageClassesBtn').addEventListener('click', openClassM
 
 /* ============ Module 3: Users ============ */
 let usersData = [];
+let userSearchQuery = '';
+let userSortField = '';
+let userSortOrder = 'asc';
+let userCurrentPage = 1;
+let userPageSize = 10;
 
 async function loadUsers(){
   try {
@@ -2465,25 +2672,68 @@ function roleLabel(r){
   return escapeHtml(r || '');
 }
 
-function renderUsers(){
-  const tbody = document.getElementById('usersBody');
-  tbody.innerHTML = '';
-  if (!usersData.length){
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无用户</td></tr>';
-    return;
+function getFilteredSortedUsers(){
+  let list = usersData.slice();
+  if (userSearchQuery){
+    const q = userSearchQuery.toLowerCase();
+    list = list.filter(function(u){
+      return (u.username || '').toLowerCase().indexOf(q) > -1 ||
+             (u.teacher_name || '').toLowerCase().indexOf(q) > -1 ||
+             (u.class_name || '').toLowerCase().indexOf(q) > -1;
+    });
   }
-  // 管理员优先，按角色优先级排序：admin > teacher
-  const sorted = usersData.slice().sort(function(a, b){
+  list.sort(function(a, b){
     const roleOrder = { 'admin': 0, 'teacher': 1 };
     const ra = roleOrder[a.role] !== undefined ? roleOrder[a.role] : 9;
     const rb = roleOrder[b.role] !== undefined ? roleOrder[b.role] : 9;
     if (ra !== rb) return ra - rb;
+    if (userSortField){
+      let va = a[userSortField] || '';
+      let vb = b[userSortField] || '';
+      if (userSortField === 'role'){
+        const ro = { 'admin': 0, 'teacher': 1 };
+        va = ro[va] !== undefined ? ro[va] : 9;
+        vb = ro[vb] !== undefined ? ro[vb] : 9;
+      }
+      if (va < vb) return userSortOrder === 'asc' ? -1 : 1;
+      if (va > vb) return userSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    }
     return (a.username || '').localeCompare(b.username || '', 'zh-CN');
   });
-  sorted.forEach(function(u, idx){
+  return list;
+}
+
+function renderUsers(){
+  const tbody = document.getElementById('usersBody');
+  tbody.innerHTML = '';
+  const list = getFilteredSortedUsers();
+  const total = list.length;
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(total / userPageSize));
+  if (userCurrentPage > totalPages) userCurrentPage = totalPages;
+  const start = (userCurrentPage - 1) * userPageSize;
+  const pageList = list.slice(start, start + userPageSize);
+
+  // Stats
+  document.getElementById('userStatInfo').textContent =
+    '共 ' + usersData.length + ' 位用户' +
+    (userSearchQuery ? '，筛选出 ' + total + ' 条' : '') +
+    '，当前第 ' + userCurrentPage + '/' + totalPages + ' 页';
+
+  if (!pageList.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">' +
+      (userSearchQuery ? '未找到匹配的用户' : '暂无用户') + '</td></tr>';
+    renderPagination(totalPages);
+    return;
+  }
+
+  pageList.forEach(function(u, idx){
+    const displayIdx = start + idx + 1;
     const tr = document.createElement('tr');
     tr.innerHTML =
-      '<td class="seq">' + (idx + 1) + '</td>' +
+      '<td class="seq">' + displayIdx + '</td>' +
       '<td>' + escapeHtml(u.username || '') + '</td>' +
       '<td class="pwd-cell" data-shown="0">******</td>' +
       '<td>' + escapeHtml(u.teacher_name || '') + '</td>' +
@@ -2516,7 +2766,93 @@ function renderUsers(){
 
     tbody.appendChild(tr);
   });
+
+  renderPagination(totalPages);
+  renderSortIcons();
 }
+
+function renderPagination(totalPages){
+  const container = document.getElementById('usersPagination');
+  let html = '';
+  html += '<div class="page-info">共 ' + totalPages + ' 页</div>';
+  html += '<div class="page-controls">';
+  html += '<button class="page-btn" ' + (userCurrentPage <= 1 ? 'disabled' : '') + ' data-page="prev">‹</button>';
+
+  let startPage = Math.max(1, userCurrentPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+  for (let i = startPage; i <= endPage; i++){
+    html += '<button class="page-btn ' + (i === userCurrentPage ? 'active' : '') + '" data-page="' + i + '">' + i + '</button>';
+  }
+
+  html += '<button class="page-btn" ' + (userCurrentPage >= totalPages ? 'disabled' : '') + ' data-page="next">›</button>';
+  html += '</div>';
+  html += '<div class="page-size">';
+  html += '<label>每页</label>';
+  html += '<select id="pageSizeSelect">';
+  [5, 10, 20, 50].forEach(function(s){
+    html += '<option value="' + s + '"' + (s === userPageSize ? ' selected' : '') + '>' + s + '</option>';
+  });
+  html += '</select>';
+  html += '<label>条</label>';
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('.page-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const p = btn.dataset.page;
+      if (p === 'prev') userCurrentPage = Math.max(1, userCurrentPage - 1);
+      else if (p === 'next') userCurrentPage = Math.min(totalPages, userCurrentPage + 1);
+      else userCurrentPage = parseInt(p, 10);
+      renderUsers();
+    });
+  });
+
+  const sizeSel = document.getElementById('pageSizeSelect');
+  if (sizeSel){
+    sizeSel.addEventListener('change', function(){
+      userPageSize = parseInt(sizeSel.value, 10);
+      userCurrentPage = 1;
+      renderUsers();
+    });
+  }
+}
+
+function renderSortIcons(){
+  document.querySelectorAll('th.sortable').forEach(function(th){
+    const field = th.dataset.sort;
+    const icon = th.querySelector('.sort-icon');
+    th.classList.remove('active');
+    if (icon) icon.textContent = '⇅';
+    if (field === userSortField){
+      th.classList.add('active');
+      if (icon) icon.textContent = userSortOrder === 'asc' ? '↑' : '↓';
+    }
+  });
+}
+
+// Sort handlers
+document.querySelectorAll('th.sortable').forEach(function(th){
+  th.addEventListener('click', function(){
+    const field = th.dataset.sort;
+    if (userSortField === field){
+      userSortOrder = userSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      userSortField = field;
+      userSortOrder = 'asc';
+    }
+    renderUsers();
+  });
+});
+
+// Search handler
+document.getElementById('userSearchInput').addEventListener('input', function(e){
+  userSearchQuery = e.target.value.trim();
+  userCurrentPage = 1;
+  renderUsers();
+});
 
 function openAddUser(){
   // 构建班级选项
@@ -2649,69 +2985,364 @@ async function deleteUser(u){
 
 document.getElementById('addUserBtn').addEventListener('click', openAddUser);
 document.getElementById('importUserBtn').addEventListener('click', openImportUsers);
+document.getElementById('importHistoryBtn').addEventListener('click', openImportHistory);
+
+/* ============ 用户导入：文件上传 ============ */
+
+let importPreviewData = [];
 
 function openImportUsers(){
+  importPreviewData = [];
   openModal(
     '<h3 style="display:none;">导入用户</h3>' +
-    '<p style="color:#6b7280;font-size:13px;margin-bottom:12px;">粘贴用户数据（每行一个用户，用英文逗号分隔：<b>账号,密码,姓名,角色</b>）。角色可选：admin 或 teacher（默认 teacher）</p>' +
-    '<div class="form-group">' +
-      '<label>用户数据</label>' +
-      '<textarea class="form-input" id="importUserData" rows="8" placeholder="张三,123456,张老师,teacher&#10;李四,123456,李老师,teacher&#10;admin,admin123,管理员,admin"></textarea>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+      '<p style="color:#6b7280;font-size:13px;margin:0;">上传包含用户信息的文件，支持 CSV / Excel 格式</p>' +
+      '<span class="btn-template" id="downloadTemplateBtn">📥 下载模板</span>' +
     '</div>' +
+    '<div class="upload-area" id="userUploadArea" style="padding:24px 20px;">' +
+      '<span class="icon">↑</span>' +
+      '<div class="text-col">' +
+        '<span class="title">点击或拖拽上传用户文件</span>' +
+        '<span class="hint">Excel 表头需包含：账号、密码、姓名、角色（admin/teacher）、班级（可选）</span>' +
+      '</div>' +
+      '<input type="file" id="userFileInput" accept=".csv,.xlsx,.xls" style="display:none;">' +
+    '</div>' +
+    '<div class="upload-msg" id="userUploadMsg">尚未上传文件</div>' +
+    '<div id="importPreviewContainer"></div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
-      '<button class="btn btn-success" id="doImportUsers">确认导入</button>' +
+      '<button class="btn btn-success" id="confirmImportBtn" disabled>确认导入</button>' +
     '</div>'
   );
   document.getElementById('modalTitle').textContent = '批量导入用户';
-  document.getElementById('doImportUsers').addEventListener('click', async function(){
-    const raw = document.getElementById('importUserData').value.trim();
-    if (!raw) { toast('请输入用户数据', 'error'); return; }
-    const lines = raw.split(/\r?\n/).filter(l => l.trim());
-    const users = [];
-    const errors = [];
-    for (let i = 0; i < lines.length; i++) {
-      const parts = lines[i].split(/[,，]/).map(s => s.trim());
-      if (parts.length < 2) {
-        errors.push(`第${i+1}行：格式错误`);
-        continue;
-      }
-      const [username, password, teacherName, role] = parts;
-      if (!username || !password) {
-        errors.push(`第${i+1}行：账号或密码为空`);
-        continue;
-      }
-      users.push({
-        username: username,
-        password: password,
-        teacher_name: teacherName || '',
-        role: (role && (role === 'admin' || role === 'teacher')) ? role : 'teacher'
-      });
-    }
-    if (users.length === 0) { toast('没有有效用户数据', 'error'); return; }
-    const btn = document.getElementById('doImportUsers');
-    btn.disabled = true;
-    try {
-      const data = await request('POST', '/api/users/import', { users: users });
-      if (data.success){
-        let msg = `成功导入 ${data.imported} 个用户`;
-        if (data.failed > 0) msg += `，失败 ${data.failed} 个`;
-        if (data.errors && data.errors.length > 0) {
-          msg += '\\n' + data.errors.slice(0, 5).join('\\n');
-          if (data.errors.length > 5) msg += `\\n...还有${data.errors.length - 5}个错误`;
-        }
-        alert(msg);
-        closeModal();
-        loadUsers();
-      } else {
-        toast(data.error || '导入失败', 'error');
-      }
-    } catch(e){
-      toast('导入失败：' + e.message, 'error');
-    } finally {
-      btn.disabled = false;
-    }
+  setupUserUpload();
+
+  document.getElementById('downloadTemplateBtn').addEventListener('click', downloadUserTemplate);
+}
+
+function downloadUserTemplate(){
+  const headers = ['账号', '密码', '姓名', '角色', '班级'];
+  const rows = [
+    ['teacher01', '123456', '张老师', 'teacher', '1班'],
+    ['teacher02', '123456', '李老师', 'teacher', '2班'],
+    ['admin01', 'admin123', '王管理', 'admin', '']
+  ];
+  const csv = [headers, ...rows].map(function(row){
+    return row.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+  }).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '用户导入模板.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+}
+
+function setupUserUpload(){
+  const area = document.getElementById('userUploadArea');
+  const input = document.getElementById('userFileInput');
+  const msgEl = document.getElementById('userUploadMsg');
+
+  area.addEventListener('click', function(){ input.click(); });
+  area.addEventListener('dragover', function(e){ e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', function(){ area.classList.remove('dragover'); });
+  area.addEventListener('drop', function(e){
+    e.preventDefault();
+    area.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleUserFile(e.dataTransfer.files[0]);
   });
+  input.addEventListener('change', function(){
+    if (input.files.length) handleUserFile(input.files[0]);
+  });
+
+  document.getElementById('confirmImportBtn').addEventListener('click', doImportUsers);
+}
+
+async function handleUserFile(file){
+  const msgEl = document.getElementById('userUploadMsg');
+  msgEl.style.color = '#1e40af';
+  msgEl.textContent = '正在解析 ' + file.name + ' ...';
+  try {
+    const name = file.name.toLowerCase();
+    const isBinary = name.endsWith('.xlsx') || name.endsWith('.xls');
+    let rows;
+
+    if (isBinary) {
+      if (typeof window.XLSX === 'undefined') {
+        msgEl.textContent = '加载解析组件...';
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        script.crossOrigin = 'anonymous';
+        try {
+          await new Promise(function(resolve, reject){
+            script.onload = resolve;
+            script.onerror = function(){ reject(new Error('加载解析组件失败')); };
+            document.head.appendChild(script);
+            setTimeout(function(){ reject(new Error('加载超时')); }, 10000);
+          });
+        } catch(err) {
+          throw new Error('Excel 解析组件加载失败：' + err.message + '。请使用 CSV 格式');
+        }
+      }
+      msgEl.textContent = '解析文件内容...';
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    } else {
+      const text = await file.text();
+      rows = parseCSVRows(text);
+    }
+
+    importPreviewData = parseUsersFromRows(rows);
+    renderImportPreview();
+  } catch(e){
+    msgEl.style.color = '#dc2626';
+    msgEl.textContent = '解析失败：' + e.message;
+    toast('解析失败：' + e.message, 'error');
+  }
+}
+
+function parseCSVRows(text){
+  const lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  return lines.map(function(line){
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++){
+      const ch = line[i];
+      if (inQuotes){
+        if (ch === '"'){
+          if (line[i + 1] === '"'){ current += '"'; i++; }
+          else { inQuotes = false; }
+        } else { current += ch; }
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ','){ result.push(current); current = ''; }
+        else current += ch;
+      }
+    }
+    result.push(current);
+    return result.map(function(s){ return s.trim(); });
+  });
+}
+
+function parseUsersFromRows(rows){
+  if (!rows || rows.length < 2){
+    toast('文件内容为空或格式不正确', 'error');
+    return [];
+  }
+  const headers = rows[0].map(function(h){ return String(h || '').trim(); });
+  const headerMap = mapUserHeaders(headers);
+  const result = [];
+
+  for (let i = 1; i < rows.length; i++){
+    const cols = rows[i];
+    const username = getUserCol(cols, headerMap.username, '');
+    const password = getUserCol(cols, headerMap.password, '');
+    const teacherName = getUserCol(cols, headerMap.teacher_name, '');
+    const className = getUserCol(cols, headerMap.class_name, '');
+    const role = getUserCol(cols, headerMap.role, 'teacher');
+
+    const item = {
+      username: username,
+      password: password,
+      teacher_name: teacherName,
+      class_name: className,
+      role: role,
+      _rowIndex: i + 1,
+      _errors: [],
+      _valid: true
+    };
+
+    if (!username || !username.trim()){
+      item._errors.push('账号必填');
+      item._valid = false;
+    }
+    if (!password || !password.trim()){
+      item._errors.push('密码必填');
+      item._valid = false;
+    }
+    const roleLower = (role || '').toLowerCase();
+    if (roleLower && roleLower !== 'admin' && roleLower !== 'teacher'){
+      item._errors.push('角色必须为 admin 或 teacher');
+      item._valid = false;
+    } else {
+      item.role = roleLower || 'teacher';
+    }
+
+    result.push(item);
+  }
+  return result;
+}
+
+function mapUserHeaders(headers){
+  const map = { username: -1, password: -1, teacher_name: -1, class_name: -1, role: -1 };
+  headers.forEach(function(h, i){
+    const trimmed = h.replace(/^\uFEFF/, '').trim();
+    if (/账号|用户名|username|账户/.test(trimmed)) map.username = i;
+    else if (/密码|password|passwd/.test(trimmed)) map.password = i;
+    else if (/姓名|教师|teacher|名字/.test(trimmed)) map.teacher_name = i;
+    else if (/班级|class|班/.test(trimmed)) map.class_name = i;
+    else if (/角色|role/.test(trimmed)) map.role = i;
+  });
+  return map;
+}
+
+function getUserCol(cols, idx, defaultVal){
+  if (idx == null || idx < 0) return defaultVal;
+  return String(cols[idx] || '').trim() || defaultVal;
+}
+
+function renderImportPreview(){
+  const container = document.getElementById('importPreviewContainer');
+  const msgEl = document.getElementById('userUploadMsg');
+  if (!importPreviewData.length){
+    container.innerHTML = '';
+    msgEl.style.color = '#dc2626';
+    msgEl.textContent = '解析失败：未识别到有效数据';
+    document.getElementById('confirmImportBtn').disabled = true;
+    return;
+  }
+
+  const validCount = importPreviewData.filter(function(d){ return d._valid; }).length;
+  const errorCount = importPreviewData.length - validCount;
+
+  let html = '<div class="import-stats">' +
+    '<div class="import-stat-card total"><div class="stat-num">' + importPreviewData.length + '</div><div class="stat-label">总数</div></div>' +
+    '<div class="import-stat-card success"><div class="stat-num">' + validCount + '</div><div class="stat-label">有效</div></div>' +
+    '<div class="import-stat-card failed"><div class="stat-num">' + errorCount + '</div><div class="stat-label">异常</div></div>' +
+  '</div>';
+
+  html += '<div class="import-preview"><table>' +
+    '<thead><tr>' +
+      '<th style="width:50px;">行号</th>' +
+      '<th>账号</th>' +
+      '<th>密码</th>' +
+      '<th>姓名</th>' +
+      '<th>班级</th>' +
+      '<th>角色</th>' +
+      '<th>状态</th>' +
+    '</tr></thead><tbody>';
+
+  importPreviewData.forEach(function(d){
+    const rowClass = d._valid ? '' : ' class="has-error"';
+    const statusHtml = d._valid
+      ? '<span class="status-ok">✓ 正常</span>'
+      : '<span class="status-error">✗ ' + d._errors.join('、') + '</span>';
+    html += '<tr' + rowClass + '>' +
+      '<td>' + d._rowIndex + '</td>' +
+      '<td>' + escapeHtml(d.username || '') + '</td>' +
+      '<td>' + escapeHtml(d.password || '') + '</td>' +
+      '<td>' + escapeHtml(d.teacher_name || '') + '</td>' +
+      '<td>' + escapeHtml(d.class_name || '') + '</td>' +
+      '<td>' + roleLabel(d.role) + '</td>' +
+      '<td>' + statusHtml + '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+
+  msgEl.style.color = errorCount > 0 ? '#ea580c' : '#16a34a';
+  msgEl.textContent = '解析完成：共 ' + importPreviewData.length + ' 条，有效 ' + validCount + ' 条，异常 ' + errorCount + ' 条';
+
+  document.getElementById('confirmImportBtn').disabled = validCount === 0;
+}
+
+async function doImportUsers(){
+  const validUsers = importPreviewData.filter(function(d){ return d._valid; });
+  if (!validUsers.length){ toast('没有可导入的有效数据', 'error'); return; }
+
+  const btn = document.getElementById('confirmImportBtn');
+  btn.disabled = true;
+  btn.textContent = '导入中...';
+
+  try {
+    const users = validUsers.map(function(d){
+      return {
+        username: d.username,
+        password: d.password,
+        teacher_name: d.teacher_name,
+        class_name: d.class_name,
+        role: d.role
+      };
+    });
+
+    const data = await request('POST', '/api/users/import', { users: users });
+    if (data.success){
+      let msg = '导入完成：成功 ' + data.imported + ' 个';
+      if (data.failed > 0) msg += '，失败 ' + data.failed + ' 个';
+      if (data.errors && data.errors.length > 0){
+        msg += '\n\n错误详情：\n' + data.errors.slice(0, 10).join('\n');
+        if (data.errors.length > 10) msg += '\n...还有' + (data.errors.length - 10) + '个错误';
+      }
+      alert(msg);
+      closeModal();
+      loadUsers();
+    } else {
+      toast(data.error || '导入失败', 'error');
+    }
+  } catch(e){
+    toast('导入失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '确认导入';
+  }
+}
+
+/* ============ 导入历史 ============ */
+
+async function openImportHistory(){
+  openModal(
+    '<h3 style="display:none;">导入历史</h3>' +
+    '<div style="margin-bottom:12px;color:#6b7280;font-size:13px;">查看过往用户导入操作的详细记录</div>' +
+    '<div id="importHistoryList" class="history-list"><div style="text-align:center;color:#6b7280;padding:40px;">加载中...</div></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-secondary" onclick="closeModal()">关闭</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '导入历史';
+
+  try {
+    const data = await request('GET', '/api/import-history');
+    const list = Array.isArray(data) ? data : (data.history || []);
+    renderImportHistoryList(list);
+  } catch(e){
+    document.getElementById('importHistoryList').innerHTML =
+      '<div style="text-align:center;color:#dc2626;padding:40px;">加载失败：' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderImportHistoryList(list){
+  const container = document.getElementById('importHistoryList');
+  if (!list.length){
+    container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:40px;">暂无导入记录</div>';
+    return;
+  }
+
+  let html = '';
+  list.forEach(function(item){
+    const time = item.created_at ? new Date(item.created_at) : new Date();
+    const timeStr = time.toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    html += '<div class="history-item">' +
+      '<div class="history-info">' +
+        '<div class="history-title">用户批量导入</div>' +
+        '<div class="history-meta">' + timeStr + ' · 操作人：' + escapeHtml(item.operator || '系统') + '</div>' +
+      '</div>' +
+      '<div class="history-stats">' +
+        '<span class="stat-success">成功 ' + (item.imported_count || 0) + '</span>' +
+        '<span class="stat-failed">失败 ' + (item.failed_count || 0) + '</span>' +
+      '</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
 }
 
 /* ============ Init ============ */

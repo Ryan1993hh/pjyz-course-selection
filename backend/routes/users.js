@@ -135,6 +135,7 @@ router.post('/users/import', async (req, res) => {
   const imported = [];
   const failed = [];
   const errors = [];
+  const totalCount = users.length;
   try {
     if (pool) {
       await ensureDB();
@@ -157,6 +158,15 @@ router.post('/users/import', async (req, res) => {
           failed.push(u.username);
           errors.push(`${u.username}: ${err.message}`);
         }
+      }
+      // Record import history
+      try {
+        await run(
+          'INSERT INTO import_history (type, operator, imported_count, failed_count, total_count, details) VALUES ($1, $2, $3, $4, $5, $6)',
+          ['user_import', req.user ? String(req.user.id) : 'admin', imported.length, failed.length, totalCount, errors.slice(0, 20).join('; ')]
+        );
+      } catch(histErr) {
+        console.error('Failed to record import history:', histErr.message);
       }
       return res.json({ success: true, imported: imported.length, failed: failed.length, errors });
     }
@@ -184,6 +194,19 @@ router.post('/users/import', async (req, res) => {
       }
     }
     res.json({ success: true, imported: imported.length, failed: failed.length, errors });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/import-history', async (req, res) => {
+  try {
+    if (pool) {
+      await ensureDB();
+      const rows = await query('SELECT * FROM import_history ORDER BY created_at DESC LIMIT 100');
+      return res.json({ history: rows });
+    }
+    res.json({ history: [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

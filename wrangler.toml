@@ -4,6 +4,9 @@
 name = "pjyz-course-selection"
 pages_build_output_dir = "public"
 compatibility_date = "2024-01-01"
-# 环境变量（在 Cloudflare Pages Dashboard 中设置）
-# DATABASE_URL = "your-neon-database-url"
-# JWT_SECRET = "your-jwt-secret"
+
+# D1 数据库绑定 - 持久化存储用户/课程/选课/班级数据
+[[d1_databases]]
+binding = "DB"
+database_name = "pjyz-database"
+database_id = "2aaa012a-7a7f-4a86-bed1-80b268636ec6"

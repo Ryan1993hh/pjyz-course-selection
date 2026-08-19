@@ -2866,12 +2866,18 @@ function exportExcel() {
   const cls = className.trim() || '未填写班级';
   // 构造后端 payload：字段名与 /api/selections 一致
   const payload = [];
+  // 拆分 className（如"六年级(8)班"→ grade=六年级, class_num=8, short_class="8班"）
+  let classForBackend = className || '未填写班级';
+  if (className && classNumber && gradeName) {
+    // 仅存储短名"8班"，与后端班级表 class_name 对应，避免筛选时不一致
+    classForBackend = `${classNumber}班`;
+  }
   COURSES.forEach(c => {
     c.students.forEach(name => {
       if (name) {
         payload.push({
           grade: gradeName || '',
-          class_name: cls,
+          class_name: classForBackend,
           student_name: name,
           course_id: c.id,
           course_name: c.name
@@ -2890,15 +2896,20 @@ function exportExcel() {
   const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
   const filename = `浦江一中拓展课选课结果_${safeClass}_${dateStr}.xlsx`;
 
-  // 本地导出（兜底）
+  // 本地导出（兜底）—— 班级列写完整"几年级几班"
+  const fullClassDisplay = (gradeName && classNumber)
+    ? `${gradeName}${classNumber}班`
+    : (cls || '未填写班级');
   function localExport() {
     const data = payload.map(p => ({
-      '班级': p.class_name,
+      '班级': (p.grade && p.class_name && String(p.class_name).indexOf(p.grade) === -1)
+        ? (p.grade + p.class_name)
+        : (p.class_name || fullClassDisplay),
       '姓名': p.student_name,
       '选课名称': p.course_name,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 24 }];
+    ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 26 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '选课结果');
     XLSX.writeFile(wb, filename);

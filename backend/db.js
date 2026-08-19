@@ -138,6 +138,19 @@ async function initDB() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS import_history (
+        id            SERIAL PRIMARY KEY,
+        type          TEXT DEFAULT 'user_import',
+        operator      TEXT DEFAULT '',
+        imported_count INTEGER DEFAULT 0,
+        failed_count  INTEGER DEFAULT 0,
+        total_count   INTEGER DEFAULT 0,
+        details       TEXT DEFAULT '',
+        created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // 种子账号
     const SEED_ACCOUNTS = [
       { username: 'admin',  password: '123456', role: 'admin'  },

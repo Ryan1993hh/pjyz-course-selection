@@ -66,7 +66,7 @@ router.post('/selections', async (req, res) => {
 });
 
 router.get('/selections', async (req, res) => {
-  const { grade, class: className, course } = req.query;
+  const { grade, class: className, course, student_name } = req.query;
   try {
     if (pool) {
       let sql = 'SELECT * FROM selections WHERE 1=1';
@@ -74,6 +74,7 @@ router.get('/selections', async (req, res) => {
       if (grade && grade !== '全部') { sql += ' AND grade = $' + (params.length + 1); params.push(grade); }
       if (className && className !== '全部') { sql += ' AND class_name = $' + (params.length + 1); params.push(className); }
       if (course && course !== '全部') { sql += ' AND course_name = $' + (params.length + 1); params.push(course); }
+      if (student_name && student_name.trim()) { sql += ' AND student_name = $' + (params.length + 1); params.push(student_name.trim()); }
       sql += ' ORDER BY id DESC';
       await ensureDB();
       const rows = await query(sql, params);
@@ -83,6 +84,7 @@ router.get('/selections', async (req, res) => {
     if (grade && grade !== '全部') rows = rows.filter(r => r.grade === grade);
     if (className && className !== '全部') rows = rows.filter(r => r.class_name === className);
     if (course && course !== '全部') rows = rows.filter(r => r.course_name === course);
+    if (student_name && student_name.trim()) rows = rows.filter(r => r.student_name === student_name.trim());
     rows.sort((a, b) => b.id - a.id);
     res.json(rows);
   } catch (err) {
