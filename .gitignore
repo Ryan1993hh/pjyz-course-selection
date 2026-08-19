@@ -1,14 +1,11 @@
 # 依赖
 node_modules/
 
-# 数据库文件（运行时生成，不入库）
-database/*.db
-database/*.db-shm
-database/*.db-wal
+# 数据库文件（旧 SQLite，已迁移到 PostgreSQL）
+database/
 
-# 日志
-*.log
-logs/
+# Vercel
+.vercel/
 
 # 系统/IDE
 .DS_Store
