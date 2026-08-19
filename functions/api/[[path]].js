@@ -1,6 +1,5 @@
 // functions/api/[[path]].js
 // Cloudflare Pages Functions - API handler using Hono + Neon
-// Uses pure JS only (no Node.js Buffer/fs required)
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getSQL, ensureDB } from '../../lib/db.js';
@@ -14,16 +13,12 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
-// Parse JSON body
+// Parse JSON body using Hono's built-in method
 app.use('*', async (c, next) => {
   if (['POST', 'PUT', 'PATCH'].includes(c.req.method)) {
     try {
-      const text = await c.req.text();
-      if (text) {
-        c.set('body', JSON.parse(text));
-      } else {
-        c.set('body', {});
-      }
+      const body = await c.req.json();
+      c.set('body', body);
     } catch {
       c.set('body', {});
     }
@@ -74,7 +69,6 @@ app.get('/api/courses', async (c) => {
   }
 });
 
-// 批量保存课程（前端已解析，直接存 JSON）
 app.put('/api/courses', async (c) => {
   const body = c.get('body');
   if (!Array.isArray(body)) {
@@ -94,7 +88,6 @@ app.put('/api/courses', async (c) => {
   }
 });
 
-// 删除单门课程
 app.delete('/api/courses/:id', async (c) => {
   const id = parseInt(c.req.param('id'), 10);
   try {
@@ -126,22 +119,26 @@ app.post('/api/selections', async (c) => {
   }
 });
 
+// Helper: build dynamic WHERE clause for selections
+function buildSelectionsWhere(grade, className, course) {
+  const conditions = [];
+  const params = [];
+  if (grade && grade !== '全部') { conditions.push('grade = $' + (params.length + 1)); params.push(grade); }
+  if (className && className !== '全部') { conditions.push('class_name = $' + (params.length + 1)); params.push(className); }
+  if (course && course !== '全部') { conditions.push('course_name = $' + (params.length + 1)); params.push(course); }
+  const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+  return { where, params };
+}
+
 app.get('/api/selections', async (c) => {
   const { grade, class: className, course } = c.req.query();
   try {
     await ensureDB();
     const sql = getSQL();
-    let rows;
-    const conditions = [];
-    if (grade && grade !== '全部') conditions.push(`grade = ${grade}`);
-    if (className && className !== '全部') conditions.push(`class_name = ${className}`);
-    if (course && course !== '全部') conditions.push(`course_name = ${course}`);
-    if (conditions.length > 0) {
-      rows = await sql`SELECT * FROM selections WHERE ${conditions.join(' AND ')} ORDER BY id DESC`;
-    } else {
-      rows = await sql`SELECT * FROM selections ORDER BY id DESC`;
-    }
-    return c.json(rows);
+    const { where, params } = buildSelectionsWhere(grade, className, course);
+    const query = `SELECT * FROM selections ${where} ORDER BY id DESC`;
+    const result = await sql(query, params);
+    return c.json(result.rows || result);
   } catch (err) {
     return c.json({ error: err.message }, 500);
   }
@@ -164,23 +161,15 @@ app.put('/api/selections/:id', async (c) => {
   }
 });
 
-// 导出选课数据为 CSV
 app.get('/api/selections/export', async (c) => {
   const { grade, class: className, course } = c.req.query();
   try {
     await ensureDB();
     const sql = getSQL();
-    let rows;
-    const conditions = [];
-    if (grade && grade !== '全部') conditions.push(`grade = ${grade}`);
-    if (className && className !== '全部') conditions.push(`class_name = ${className}`);
-    if (course && course !== '全部') conditions.push(`course_name = ${course}`);
-    if (conditions.length > 0) {
-      rows = await sql`SELECT * FROM selections WHERE ${conditions.join(' AND ')} ORDER BY id DESC`;
-    } else {
-      rows = await sql`SELECT * FROM selections ORDER BY id DESC`;
-    }
-    // 生成 CSV
+    const { where, params } = buildSelectionsWhere(grade, className, course);
+    const query = `SELECT * FROM selections ${where} ORDER BY id DESC`;
+    const result = await sql(query, params);
+    const rows = result.rows || result;
     const headers = ['序号', '年级', '班级', '学生姓名', '所选课程', '上传时间'];
     const csvRows = [headers.join(',')];
     rows.forEach((r, i) => {
@@ -206,7 +195,6 @@ app.get('/api/selections/export', async (c) => {
   }
 });
 
-// 获取班级列表
 app.get('/api/classes', async (c) => {
   try {
     await ensureDB();
@@ -218,7 +206,6 @@ app.get('/api/classes', async (c) => {
   }
 });
 
-// ===== 404 =====
 app.notFound((c) => {
   return c.json({ error: 'API 端点不存在' }, 404);
 });
