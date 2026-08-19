@@ -1,218 +1,117 @@
 // functions/api/[[path]].js
-// Cloudflare Pages Functions - API handler using Hono + Neon
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { getSQL, ensureDB } from '../../lib/db.js';
-import { createToken } from '../../lib/auth.js';
+// Cloudflare Pages Functions - 最小化测试版本
+export function onRequest(context) {
+  const url = new URL(context.request.url);
+  const path = url.pathname;
 
-const app = new Hono();
-
-app.use('*', cors({
-  origin: ['*'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
-
-// Parse JSON body using Hono's built-in method
-app.use('*', async (c, next) => {
-  if (['POST', 'PUT', 'PATCH'].includes(c.req.method)) {
-    try {
-      const body = await c.req.json();
-      c.set('body', body);
-    } catch {
-      c.set('body', {});
-    }
-  }
-  await next();
-});
-
-// ===== 健康检查 =====
-app.get('/api/health', (c) => {
-  return c.json({ status: 'ok', time: new Date().toISOString() });
-});
-
-// ===== 登录 =====
-app.post('/api/login', async (c) => {
-  const body = c.get('body') || {};
-  const { username, password } = body;
-  if (!username || !password) {
-    return c.json({ error: '请输入账号和密码' }, 400);
-  }
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    const users = await sql`SELECT * FROM users WHERE username = ${username} AND password = ${password}`;
-    if (users.length === 0) {
-      return c.json({ error: '账号或密码错误' }, 401);
-    }
-    const token = await createToken(users[0]);
-    return c.json({
-      success: true,
-      token,
-      user: { id: users[0].id, username: users[0].username, role: users[0].role }
+  if (path === '/api/health' || path === '/api/') {
+    return new Response(JSON.stringify({ status: 'ok', time: new Date().toISOString(), path }), {
+      headers: { 'Content-Type': 'application/json' }
     });
-  } catch (err) {
-    console.error('[LOGIN ERROR]', err);
-    return c.json({ error: '登录失败：' + (err.message || '服务器错误') }, 500);
   }
-});
 
-// ===== 课程管理 =====
-app.get('/api/courses', async (c) => {
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    const rows = await sql`SELECT * FROM courses ORDER BY id ASC`;
-    return c.json(rows);
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
+  if (path === '/api/login') {
+    return handleLogin(context);
   }
-});
 
-app.put('/api/courses', async (c) => {
-  const body = c.get('body');
-  if (!Array.isArray(body)) {
-    return c.json({ error: '请求数据格式错误，应为课程数组' }, 400);
-  }
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    await sql`DELETE FROM courses`;
-    for (const course of body) {
-      await sql`INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7) VALUES (${course.category || '体育健康类'}, ${course.name || ''}, ${course.description || ''}, ${course.teacher || ''}, ${course.location || ''}, ${course.requirement || ''}, ${parseInt(course.limit_grade6, 10) || 0}, ${parseInt(course.limit_grade7, 10) || 0})`;
-    }
-    const rows = await sql`SELECT * FROM courses ORDER BY id ASC`;
-    return c.json({ success: true, count: rows.length, courses: rows });
-  } catch (err) {
-    return c.json({ error: '保存失败：' + err.message }, 500);
-  }
-});
-
-app.delete('/api/courses/:id', async (c) => {
-  const id = parseInt(c.req.param('id'), 10);
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    await sql`DELETE FROM courses WHERE id = ${id}`;
-    return c.json({ success: true });
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-// ===== 选课管理 =====
-app.post('/api/selections', async (c) => {
-  const body = c.get('body');
-  if (!Array.isArray(body)) {
-    return c.json({ error: '请求数据格式错误，应为选课数组' }, 400);
-  }
-  const now = new Date().toLocaleString('zh-CN', { hour12: false });
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    for (const s of body) {
-      await sql`INSERT INTO selections (grade, class_name, student_name, course_id, course_name, upload_time) VALUES (${s.grade || ''}, ${s.class_name || ''}, ${s.student_name || ''}, ${parseInt(s.course_id, 10) || null}, ${s.course_name || ''}, ${now})`;
-    }
-    return c.json({ success: true, count: body.length });
-  } catch (err) {
-    return c.json({ error: '保存失败：' + err.message }, 500);
-  }
-});
-
-// Helper: build dynamic WHERE clause for selections
-function buildSelectionsWhere(grade, className, course) {
-  const conditions = [];
-  const params = [];
-  if (grade && grade !== '全部') { conditions.push('grade = $' + (params.length + 1)); params.push(grade); }
-  if (className && className !== '全部') { conditions.push('class_name = $' + (params.length + 1)); params.push(className); }
-  if (course && course !== '全部') { conditions.push('course_name = $' + (params.length + 1)); params.push(course); }
-  const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
-  return { where, params };
+  return new Response(JSON.stringify({ error: 'API 端点不存在', path }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
-app.get('/api/selections', async (c) => {
-  const { grade, class: className, course } = c.req.query();
+async function handleLogin(context) {
   try {
-    await ensureDB();
-    const sql = getSQL();
-    const { where, params } = buildSelectionsWhere(grade, className, course);
-    const query = `SELECT * FROM selections ${where} ORDER BY id DESC`;
-    const result = await sql(query, params);
-    return c.json(result.rows || result);
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+    const body = await context.request.json();
+    const { username, password } = body;
+    if (!username || !password) {
+      return new Response(JSON.stringify({ error: '请输入账号和密码' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-app.put('/api/selections/:id', async (c) => {
-  const id = parseInt(c.req.param('id'), 10);
-  const body = c.get('body') || {};
-  const { course_id, course_name } = body;
-  if (!course_id || !course_name) {
-    return c.json({ error: '缺少课程信息' }, 400);
-  }
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    await sql`UPDATE selections SET course_id = ${parseInt(course_id, 10)}, course_name = ${course_name} WHERE id = ${id}`;
-    return c.json({ success: true });
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+    const url = getEnv('DATABASE_URL') || '';
+    if (!url) {
+      return new Response(JSON.stringify({ error: 'DATABASE_URL 未配置' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-app.get('/api/selections/export', async (c) => {
-  const { grade, class: className, course } = c.req.query();
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    const { where, params } = buildSelectionsWhere(grade, className, course);
-    const query = `SELECT * FROM selections ${where} ORDER BY id DESC`;
-    const result = await sql(query, params);
-    const rows = result.rows || result;
-    const headers = ['序号', '年级', '班级', '学生姓名', '所选课程', '上传时间'];
-    const csvRows = [headers.join(',')];
-    rows.forEach((r, i) => {
-      csvRows.push([
-        i + 1,
-        r.grade || '',
-        r.class_name || '',
-        r.student_name || '',
-        r.course_name || '',
-        r.upload_time || ''
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-    });
-    const csv = '\uFEFF' + csvRows.join('\n');
-    const filename = encodeURIComponent('选课结果导出_' + Date.now() + '.csv');
-    return new Response(csv, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename*=UTF-8''${filename}`
-      }
+    const result = await fetchNeon(url, `SELECT * FROM users WHERE username = $1 AND password = $2`, [username, password]);
+    const rows = result.rows || [];
+
+    if (rows.length === 0) {
+      return new Response(JSON.stringify({ error: '账号或密码错误' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const user = rows[0];
+    const token = await createSimpleToken(user);
+
+    return new Response(JSON.stringify({
+      success: true,
+      token,
+      user: { id: user.id, username: user.username, role: user.role }
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {
-    return c.json({ error: err.message }, 500);
+    return new Response(JSON.stringify({ error: '登录失败：' + err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
-});
+}
 
-app.get('/api/classes', async (c) => {
-  try {
-    await ensureDB();
-    const sql = getSQL();
-    const rows = await sql`SELECT DISTINCT class_name FROM selections WHERE class_name != '' ORDER BY class_name ASC`;
-    return c.json(rows.map(r => r.class_name));
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
+function getEnv(name) {
+  if (typeof globalThis[name] !== 'undefined' && globalThis[name]) return globalThis[name];
+  if (typeof process !== 'undefined' && process.env && process.env[name]) return process.env[name];
+  return '';
+}
+
+// Simple JWT using Web Crypto
+async function createSimpleToken(user) {
+  const secret = getEnv('JWT_SECRET') || 'pjyz-dev-secret-key';
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = { id: user.id, username: user.username, role: user.role, exp: Math.floor(Date.now()/1000) + 7*86400 };
+  const enc = (obj) => btoa(JSON.stringify(obj)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const signing = `${enc(header)}.${enc(payload)}`;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signing));
+  const sigEnc = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return `${signing}.${sigEnc}`;
+}
+
+// Neon HTTP driver - simple fetch-based query
+async function fetchNeon(connUrl, sql, params = []) {
+  // Parse connection URL
+  const url = new URL(connUrl);
+  const host = url.hostname;
+  const dbName = url.pathname.slice(1);
+  const auth = decodeURIComponent(url.username + ':' + url.password);
+
+  const neonUrl = `https://${host}/sql`;
+  const response = await fetch(neonUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${auth}`
+    },
+    body: JSON.stringify({
+      query: sql,
+      params: params,
+      database: dbName
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error('Neon 查询失败: ' + errText);
   }
-});
 
-app.notFound((c) => {
-  return c.json({ error: 'API 端点不存在' }, 404);
-});
-
-app.onError((err, c) => {
-  console.error('[ERROR]', err);
-  return c.json({ error: '服务器内部错误：' + (err.message || '未知错误') }, 500);
-});
-
-export default app;
+  return await response.json();
+}
