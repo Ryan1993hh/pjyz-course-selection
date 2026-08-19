@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
 const mammoth = require('mammoth');
-const { query, run, transaction } = require('../db');
+const { query, run, transaction, ensureDB } = require('../db');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -125,6 +125,7 @@ async function parseDocx(buffer) {
 // GET /api/courses 获取所有课程
 router.get('/courses', async (req, res) => {
   try {
+    await ensureDB();
     const rows = await query('SELECT * FROM courses ORDER BY id ASC');
     res.json(rows);
   } catch (err) {
@@ -167,6 +168,7 @@ router.put('/courses', async (req, res) => {
     return res.status(400).json({ error: '请求数据格式错误，应为课程数组' });
   }
   try {
+    await ensureDB();
     await transaction(async (client) => {
       await client.query('DELETE FROM courses');
       for (const c of list) {

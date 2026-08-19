@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const XLSX = require('xlsx');
-const { query, run, transaction } = require('../db');
+const { query, run, transaction, ensureDB } = require('../db');
 
 // POST /api/selections 上传选课结果并返回 Excel
 router.post('/selections', async (req, res) => {
@@ -12,6 +12,7 @@ router.post('/selections', async (req, res) => {
   }
   const now = new Date().toLocaleString('zh-CN', { hour12: false });
   try {
+    await ensureDB();
     await transaction(async (client) => {
       for (const s of list) {
         await client.query(
@@ -70,6 +71,7 @@ router.get('/selections', async (req, res) => {
   }
   sql += ' ORDER BY id DESC';
   try {
+    await ensureDB();
     const rows = await query(sql, params);
     res.json(rows);
   } catch (err) {
@@ -117,6 +119,7 @@ router.get('/selections/export', async (req, res) => {
   }
   sql += ' ORDER BY id DESC';
   try {
+    await ensureDB();
     const rows = await query(sql, params);
     const data = rows.map((s, i) => ({
       '序号': i + 1,
@@ -142,6 +145,7 @@ router.get('/selections/export', async (req, res) => {
 // GET /api/classes 获取所有班级列表
 router.get('/classes', async (req, res) => {
   try {
+    await ensureDB();
     const rows = await query(
       "SELECT DISTINCT class_name FROM selections WHERE class_name != '' ORDER BY class_name ASC"
     );

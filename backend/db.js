@@ -154,7 +154,20 @@ async function initDB() {
   }
 }
 
-// 启动时初始化
+// 启动时非阻塞初始化（Vercel Serverless 冷启动可能需要 5-15s，不能阻塞）
+// 使用 .catch() 处理错误，不 await，避免首次请求超时
 initDB().catch(err => console.error('[DB] 初始化失败:', err.message));
 
-module.exports = { pool, query, queryOne, run, transaction };
+// 暴露初始化函数供首次 API 调用时按需触发
+let initPromise = null;
+async function ensureDB() {
+  if (!initPromise) {
+    initPromise = initDB().catch(err => {
+      console.error('[DB] 初始化失败:', err.message);
+      throw err;
+    });
+  }
+  return initPromise;
+}
+
+module.exports = { pool, query, queryOne, run, transaction, initDB, ensureDB };

@@ -1,7 +1,7 @@
 // backend/routes/auth.js
 const express = require('express');
 const router = express.Router();
-const { queryOne } = require('../db');
+const { queryOne, ensureDB } = require('../db');
 const { createToken } = require('../auth');
 
 // POST /api/login 登录验证
@@ -11,6 +11,7 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: '请输入账号和密码' });
   }
   try {
+    await ensureDB();
     const user = await queryOne(
       'SELECT * FROM users WHERE username = $1 AND password = $2',
       [username, password]
