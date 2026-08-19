@@ -3593,11 +3593,14 @@ document.addEventListener('keydown', e => {
 
 // ===== 初始渲染（优先从 API 加载课程数据，失败时使用硬编码兜底）=====
 async function initCourses() {
+  console.log('[选课] 开始加载课程数据...');
   try {
     const resp = await fetch(pjyzApiBase() + '/api/courses');
+    console.log('[选课] API 响应状态:', resp.status);
     if (!resp.ok) throw new Error('API 返回 ' + resp.status);
     const data = await resp.json();
     const arr = Array.isArray(data) ? data : (data.courses || []);
+    console.log('[选课] API 返回课程数量:', arr.length);
     if (arr && arr.length > 0) {
       COURSES = arr.map(function(c) {
         const l6 = parseInt(c.limit_grade6, 10) || 0;
@@ -3617,6 +3620,15 @@ async function initCourses() {
         };
       });
       console.log('[选课] 从 API 加载了', COURSES.length, '门课程');
+      // 课程数据更新后，重新应用持久化数据（按 ID 匹配恢复学生）
+      try {
+        var loaded = PersistentStorage.load();
+        if (loaded && loaded.ok) {
+          PersistentStorage.applyData(loaded.data);
+        }
+      } catch (_) {}
+    } else {
+      console.warn('[选课] API 返回空数组，使用硬编码兜底');
     }
   } catch (e) {
     console.warn('[选课] API 加载课程失败，使用硬编码兜底:', e.message);
