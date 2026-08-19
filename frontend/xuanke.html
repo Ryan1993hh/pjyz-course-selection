@@ -3,9 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>浦江一中拓展课选课</title>
 <!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
 <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
@@ -202,7 +199,7 @@ body {
   align-items: center;
   gap: 10px;
 }
-.btn-header {
+.btn-reset {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -223,38 +220,26 @@ body {
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
-.btn-header:hover,
-.btn-header:focus-visible {
-  background: rgba(255,255,255,0.28);
-  border-color: rgba(255,255,255,0.55);
-  transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(0,0,0,0.3);
-  outline: none;
-}
-.btn-header:active { transform: translateY(0); }
-.btn-header.user-info {
-  cursor: default;
-  background: rgba(255,255,255,0.24);
-  min-width: 120px;
-}
-.btn-header.user-info:hover {
-  background: rgba(255,255,255,0.24);
-  transform: none;
-}
-.btn-header.logout:hover {
+.btn-reset:hover,
+.btn-reset:focus-visible {
   background: rgba(220, 38, 38, 0.82);
   border-color: rgba(255,255,255,0.55);
+  transform: translateY(-1px);
   box-shadow: 0 5px 14px rgba(220, 38, 38, 0.45);
+  outline: none;
 }
-.btn-header .btn-icon {
+.btn-reset:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+.btn-reset:active { transform: translateY(0); }
+.btn-reset-icon {
   font-size: 16px;
   line-height: 1;
   display: inline-block;
-}
-.btn-header:hover .btn-icon.icon-reset {
   transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
-  transform: rotate(-180deg);
 }
+.btn-reset:hover .btn-reset-icon { transform: rotate(-180deg); }
 
 /* 重置确认弹窗：使用 lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
 .reset-confirm-mask {
@@ -505,13 +490,14 @@ body {
 .table-wrap {
   overflow-x: auto;
   border-radius: var(--radius);
-  border: 1px solid #BBDEFB;      /* 浅灰蓝边框，与#E3F2FD同色系 */
-  background: var(--tbl-base);    /* 外层容器：浅灰蓝 #E3F2FD */
+  border: 1px solid #BBDEFB;
+  background: var(--tbl-base);
   max-height: calc(100vh - 280px);
   overflow-y: auto;
   box-shadow: 0 4px 16px rgba(33, 99, 163, 0.12);
+  padding: 0;
 }
-table { width: 100%; border-collapse: collapse; background: var(--tbl-base); } /* 表格本体：浅灰蓝 #E3F2FD */
+table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--tbl-base); table-layout: fixed; }
 
 /* —— 表头：浅蓝磨砂玻璃 + 居中大字号 —— */
 th {
@@ -519,16 +505,16 @@ th {
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   color: #0D47A1;
-  padding: 14px 16px;
+  padding: 10px 8px;
   text-align: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 13px;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 2;
-  letter-spacing: 1.5px;
-  border-bottom: 3px solid rgba(13, 71, 161, 0.55);
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(13, 71, 161, 0.55);
   border-right: 1px solid rgba(255, 255, 255, 0.45);
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
 }
@@ -543,12 +529,14 @@ th:nth-child(7) { border-bottom-color: #455A64; }   /* 学生 - 深钢蓝 */
 
 /* —— 单元格基础 —— */
 td {
-  padding: 10px 16px;
-  border-top: 1px solid #BBDEFB;   /* 浅灰蓝同色系分隔线，与底色协调 */
+  padding: 8px 8px;
+  border-top: 1px solid #BBDEFB;
   font-size: 13px;
   vertical-align: middle;
   white-space: nowrap;
   transition: background-color 0.18s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 tbody tr { transition: background 0.18s ease; }
 
@@ -598,13 +586,16 @@ tr.no-quota:hover td { opacity: 0.7; }
   display: inline-block;
   font-weight: 700;
   color: #ffffff;
-  font-size: 15px;
-  padding: 5px 14px;
-  border-radius: 6px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 5px;
   background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.25);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* ===== 授课老师 / 授课地点 ===== */
@@ -618,41 +609,41 @@ tr.no-quota:hover td { opacity: 0.7; }
 .req-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
+  gap: 2px;
+  padding: 2px 6px;
   background: rgba(255, 255, 255, 0.7);
   color: #92400e;
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   border: 1px solid #fcd34d;
   white-space: nowrap;
   backdrop-filter: blur(2px);
 }
-.req-tag .ico { font-size: 12px; }
+.req-tag .ico { font-size: 11px; }
 
 /* ===== 限制人数徽章 ===== */
 .limit-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 12px;
+  gap: 2px;
+  padding: 2px 6px;
   background: rgba(255, 255, 255, 0.7);
   color: var(--primary-dark);
-  border-radius: 10px;
+  border-radius: 6px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
   border: 1px solid #99f6e4;
   white-space: nowrap;
   backdrop-filter: blur(2px);
 }
-.limit-badge .ico { font-size: 13px; }
+.limit-badge .ico { font-size: 12px; }
 .limit-badge.zero {
   background: rgba(255, 255, 255, 0.6);
   color: var(--muted);
   border-color: #cbd5e1;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* ===== 名额按钮 ===== */
@@ -1720,6 +1711,8 @@ tr.no-quota:hover td { opacity: 0.7; }
   .control-bar .upload-area { grid-column: 1 / -1; }
   .step-arrow { display: none; }
   .stat-input, .stat-card { min-width: 0; }
+  .course-name { font-size: 11px; padding: 2px 6px; }
+  .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
 }
 @media (max-width: 768px) {
   body { padding: 12px; }
@@ -1758,7 +1751,9 @@ tr.no-quota:hover td { opacity: 0.7; }
   .stat-card { min-width: 0; padding: 6px 10px; }
   .stat-card .value { font-size: 20px; }
   .name-grid { grid-template-columns: repeat(4, 1fr); }
-  th, td { padding: 10px 8px; font-size: 13px; }
+  th, td { padding: 6px 4px; font-size: 12px; }
+  .course-name { font-size: 11px; padding: 2px 4px; }
+  .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
   /* 窄屏：表头学生姓名列内按钮和标签垂直堆叠 */
   .th-students-inner {
     flex-direction: column;
@@ -1799,17 +1794,9 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
   <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   <div class="header-actions">
-    <button type="button" class="btn-header user-info" id="userInfoBtn" title="当前登录用户">
-      <span class="btn-icon">👤</span>
-      <span id="userDisplayName">未登录</span>
-    </button>
-    <button type="button" class="btn-header" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态">
-      <span class="btn-icon icon-reset" aria-hidden="true">↻</span>
+    <button type="button" class="btn-reset" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态" accesskey="r">
+      <span class="btn-reset-icon" aria-hidden="true">↻</span>
       <span>重置</span>
-    </button>
-    <button type="button" class="btn-header logout" id="logoutBtn" title="退出登录">
-      <span class="btn-icon">⏻</span>
-      <span>退出登录</span>
     </button>
   </div>
 </div>
@@ -2027,25 +2014,11 @@ tr.no-quota:hover td { opacity: 0.7; }
 <script>
 /* ============================================================
  * 浦江一中拓展课选课 - 主逻辑
- * 数据保存：localStorage（本地缓存）+ 后端 /api/selections（持久化）
+ * 纯前端实现，数据保存在内存中
  * ============================================================ */
 
-/* ---------- API 基址（同源默认，支持前后端分离） ---------- */
-function pjyzApiBase() {
-  try {
-    if (window.__API_BASE__ && typeof window.__API_BASE__ === 'string') return window.__API_BASE__;
-    var saved = localStorage.getItem('pjyz_api_base');
-    if (saved) return saved.replace(/\/+$/, '');
-  } catch (_) {}
-  return '';
-}
-function pjyzToken() {
-  try { return localStorage.getItem('pjyz_token') || localStorage.getItem('admin_token') || ''; }
-  catch (_) { return ''; }
-}
-
-// ===== 课程数据（优先从 API 加载，失败时使用硬编码兜底）=====
-let COURSES = [
+// ===== 课程固定数据（30 门课程，按体育健康/艺术技艺/人文社科分类）=====
+const COURSES = [
   // —— 体育健康类（7门）——
   { id: 1,  category: '体育健康', name: '乒乓球',       teacher: '陆顺军',           location: '旧体育馆',                  requirement: '',                  limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '本课程会对学习乒乓球的学生进行科学系统的训练，从球感、灵活性、反应、动作、上台，掌握乒乓球运动的基本技术，逐步走向实战。' },
   { id: 2,  category: '体育健康', name: '女子排球',     teacher: '徐李斌、耿凡诗雨', location: '新体育馆',                  requirement: '仅限女生',           limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '浦江一中排球社团的组建，丰富学生的课余生活的同时形成良好的校园体育文化。排球社团培养学生学习排球知识与技能，形成良好的沟通能力、团队合作意识和顽强拼搏的精神，营造出积极自信、阳光、富有朝气、拼搏向上的学习氛围，展现初中生的青春与活力。通过体教结合，让学生在兼顾学业基础上，给予学生在体育项目上发展的机会。在学校的支持和鼓励下，我校排球社团在上海市、闵行区等排球比赛中取得优异成绩。' },
@@ -2629,14 +2602,23 @@ function updateClassName() {
 function renderTable() {
   let html = `
     <table>
+      <colgroup>
+        <col style="width:4%;">
+        <col style="width:13%;">
+        <col style="width:10%;">
+        <col style="width:13%;">
+        <col style="width:10%;">
+        <col style="width:8%;">
+        <col style="width:42%;">
+      </colgroup>
       <thead>
         <tr>
-          <th style="width:60px;">序号</th>
-          <th style="width:220px;">课程名称</th>
-          <th style="width:180px;">授课老师</th>
-          <th style="width:220px;">授课地点</th>
-          <th style="width:140px;">报名要求</th>
-          <th style="width:110px;">限制人数</th>
+          <th>序号</th>
+          <th>课程名称</th>
+          <th>授课老师</th>
+          <th>授课地点</th>
+          <th>报名要求</th>
+          <th>限制人数</th>
           <th class="th-students">
             <div class="th-students-inner">
               <span>学生姓名</span>
@@ -2846,7 +2828,7 @@ function handleFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// ===== 导出 Excel（同步提交到后端持久化） =====
+// ===== 导出 Excel =====
 function exportExcel() {
   if (!ensureXLSX()) return;
   if (students.length === 0) {
@@ -2854,82 +2836,32 @@ function exportExcel() {
     return;
   }
   const cls = className.trim() || '未填写班级';
-  // 构造后端 payload：字段名与 /api/selections 一致
-  const payload = [];
+  const data = [];
   COURSES.forEach(c => {
     c.students.forEach(name => {
       if (name) {
-        payload.push({
-          grade: gradeName || '',
-          class_name: cls,
-          student_name: name,
-          course_id: c.id,
-          course_name: c.name
+        data.push({
+          '班级': cls,
+          '姓名': name,
+          '选课名称': c.name,
         });
       }
     });
   });
-  if (payload.length === 0) {
+  if (data.length === 0) {
     showToast('暂无已选课学生，无法导出', 'warning');
     return;
   }
-
-  // 本地导出文件名
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 24 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '选课结果');
   const date = new Date();
   const dateStr = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
   const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
   const filename = `浦江一中拓展课选课结果_${safeClass}_${dateStr}.xlsx`;
-
-  // 本地导出（兜底）
-  function localExport() {
-    const data = payload.map(p => ({
-      '班级': p.class_name,
-      '姓名': p.student_name,
-      '选课名称': p.course_name,
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 24 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '选课结果');
-    XLSX.writeFile(wb, filename);
-  }
-
-  // 先尝试同步到后端 → 后端返回 Excel 直接下载
-  showToast('正在同步到后台并导出…', 'info');
-  const headers = { 'Content-Type': 'application/json' };
-  const token = pjyzToken();
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-
-  fetch(pjyzApiBase() + '/api/selections', {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(payload)
-  })
-    .then(res => {
-      if (!res.ok) {
-        return res.json().catch(() => ({})).then(d => {
-          throw new Error(d.error || ('后端返回 ' + res.status));
-        });
-      }
-      return res.blob().then(blob => ({ blob: blob, fromServer: true }));
-    })
-    .then(result => {
-      // 下载后端返回的 Excel
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      showToast(`已同步 ${payload.length} 条记录到后台并导出`, 'success');
-    })
-    .catch(err => {
-      console.warn('[export] 后端同步失败，回退本地导出:', err);
-      try { localExport(); } catch (e) { console.error(e); }
-      showToast(`已本地导出 ${payload.length} 条（后台同步失败：${err.message}）`, 'warning');
-    });
+  XLSX.writeFile(wb, filename);
+  showToast(`已导出 ${data.length} 条记录`, 'success');
 }
 
 // ===== 事件绑定 =====
@@ -3614,76 +3546,8 @@ document.addEventListener('keydown', e => {
   }
 })();
 
-// ===== 初始渲染（优先从 API 加载课程数据，失败时使用硬编码兜底）=====
-async function initCourses() {
-  console.log('[选课] 开始加载课程数据...');
-  try {
-    // 添加时间戳避免缓存
-    const resp = await fetch(pjyzApiBase() + '/api/courses?_t=' + Date.now());
-    console.log('[选课] API 响应状态:', resp.status);
-    if (!resp.ok) throw new Error('API 返回 ' + resp.status);
-    const data = await resp.json();
-    const arr = Array.isArray(data) ? data : (data.courses || []);
-    console.log('[选课] API 返回课程数量:', arr.length);
-    if (arr && arr.length > 0) {
-      COURSES = arr.map(function(c) {
-        const l6 = parseInt(c.limit_grade6, 10) || 0;
-        const l7 = parseInt(c.limit_grade7, 10) || 0;
-        const total = l6 + l7;
-        const students = new Array(total).fill(null);
-        return {
-          id: c.id,
-          category: c.category || '',
-          name: c.name || '',
-          teacher: c.teacher || '',
-          location: c.location || '',
-          requirement: c.requirement || '',
-          limit: { '六年级': l6, '七年级': l7 },
-          students: students,
-          description: c.description || ''
-        };
-      });
-      console.log('[选课] 从 API 加载了', COURSES.length, '门课程');
-      // 课程数据更新后，重新应用持久化数据（按 ID 匹配恢复学生）
-      try {
-        var loaded = PersistentStorage.load();
-        if (loaded && loaded.ok) {
-          PersistentStorage.applyData(loaded.data);
-        }
-      } catch (_) {}
-    } else {
-      console.warn('[选课] API 返回空数组，使用硬编码兜底');
-    }
-  } catch (e) {
-    console.warn('[选课] API 加载课程失败，使用硬编码兜底:', e.message);
-  }
-  renderAll();
-}
-initCourses();
-
-// ===== 用户信息显示 + 退出登录 =====
-(function initUserInfo() {
-  const displayEl = document.getElementById('userDisplayName');
-  const logoutBtn = document.getElementById('logoutBtn');
-  try {
-    const userStr = localStorage.getItem('pjyz_user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      const name = user.teacher_name || user.username || '未登录';
-      displayEl.textContent = name;
-    }
-  } catch (_) {
-    displayEl.textContent = '未登录';
-  }
-  logoutBtn.addEventListener('click', function () {
-    if (confirm('确定要退出登录吗？')) {
-      localStorage.removeItem('pjyz_token');
-      localStorage.removeItem('pjyz_user');
-      localStorage.removeItem('pjyz_login_role');
-      localStorage.removeItem('admin_token');
-      window.location.href = 'denglu.html';
-    }
-  });
+// ===== 初始渲染 =====
+renderAll();
 })();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
