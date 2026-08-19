@@ -841,8 +841,9 @@
         localStorage.removeItem('pjyz_login_user');
         localStorage.removeItem('pjyz_login_remember');
       }
-      // 保存当前登录角色，供后续页面使用
+      // 保存当前登录角色和用户名，供后续页面使用
       localStorage.setItem('pjyz_login_role', account.role);
+      localStorage.setItem('pjyz_current_username', username);
     } catch (_) {}
 
     // 直接跳转到对应页面（与登录页同目录）

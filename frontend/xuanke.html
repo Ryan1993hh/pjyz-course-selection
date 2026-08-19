@@ -241,6 +241,82 @@ body {
 }
 .btn-reset:hover .btn-reset-icon { transform: rotate(-180deg); }
 
+/* ===== 用户信息区 + 退出按钮 ===== */
+.user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+.user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  min-width: 90px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  color: white;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.btn-logout:hover,
+.btn-logout:focus-visible {
+  background: rgba(239, 68, 68, 0.82);
+  border-color: rgba(255,255,255,0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(239, 68, 68, 0.45);
+  outline: none;
+}
+.btn-logout:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+.btn-logout:active { transform: translateY(0); }
+.btn-logout-icon {
+  font-size: 15px;
+  line-height: 1;
+  display: inline-block;
+}
+
 /* 重置确认弹窗：使用 lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
 .reset-confirm-mask {
   position: fixed; inset: 0; z-index: 200;
@@ -1739,6 +1815,10 @@ tr.no-quota:hover td { opacity: 0.7; }
     width: auto;
   }
   .btn-reset { height: 36px; padding: 0 12px; font-size: 12px; min-width: 72px; }
+  .user-info { height: 36px; padding: 0 10px; font-size: 12px; }
+  .user-avatar { width: 22px; height: 22px; font-size: 11px; }
+  .user-name { max-width: 70px; }
+  .btn-logout { height: 36px; padding: 0 12px; font-size: 12px; min-width: 72px; }
   .btn-lottery { padding: 0 12px; font-size: 11px; height: 32px; }
   .card { padding: 12px; }
   .control-bar {
@@ -1794,9 +1874,17 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
   <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   <div class="header-actions">
+    <div class="user-info" id="userInfo">
+      <span class="user-avatar" id="userAvatar">U</span>
+      <span class="user-name" id="userName">用户</span>
+    </div>
     <button type="button" class="btn-reset" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态" accesskey="r">
       <span class="btn-reset-icon" aria-hidden="true">↻</span>
       <span>重置</span>
+    </button>
+    <button type="button" class="btn-logout" id="logoutBtn" aria-label="退出登录" title="退出登录">
+      <span class="btn-logout-icon" aria-hidden="true">⎋</span>
+      <span>退出</span>
     </button>
   </div>
 </div>
@@ -3682,6 +3770,40 @@ renderAll();
   document.addEventListener('xlsx-failed', function () {
     showToast('Excel 处理库加载失败，请检查网络或刷新页面重试', 'error');
   });
+})();
+
+// ===== 用户信息显示 + 退出登录 =====
+(function userInfoFeature() {
+  var userNameEl = document.getElementById('userName');
+  var userAvatarEl = document.getElementById('userAvatar');
+  var logoutBtn = document.getElementById('logoutBtn');
+
+  // 从 localStorage 获取用户名
+  var username = '';
+  try {
+    username = localStorage.getItem('pjyz_current_username') || '';
+  } catch (_) {}
+
+  if (username) {
+    if (userNameEl) userNameEl.textContent = username;
+    if (userAvatarEl) userAvatarEl.textContent = username.charAt(0).toUpperCase();
+  }
+
+  // 退出登录
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function () {
+      try {
+        localStorage.removeItem('pjyz_current_username');
+        localStorage.removeItem('pjyz_login_role');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('pjyz_user');
+        // 跳转到登录页
+        window.location.href = 'denglu.html';
+      } catch (e) {
+        window.location.href = 'denglu.html';
+      }
+    });
+  }
 })();
 </script>
 </body>
