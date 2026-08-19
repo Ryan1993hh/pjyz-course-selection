@@ -2135,7 +2135,7 @@ function renderSelections(){
       '<td>' + escapeHtml(s.grade || '') + '</td>' +
       '<td>' + escapeHtml(s.class_name || '') + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
-      '<td></td>' +
+      '<td>' + escapeHtml(s.course_name || '') + '</td>' +
       '<td class="row-actions"></td>';
 
     // 点击年级筛选
@@ -2230,15 +2230,23 @@ async function exportSelections(){
   const btn = document.getElementById('exportBtn');
   btn.disabled = true;
   try {
-    const blob = await request('GET', '/api/selections/export?' + buildQuery());
-    const url = URL.createObjectURL(blob);
+    const url = '/api/selections/export?' + buildQuery();
+    const res = await fetch(apiBase() + url, {
+      headers: { 'Authorization': getToken() ? 'Bearer ' + getToken() : '' }
+    });
+    if (!res.ok) throw new Error('导出失败 (' + res.status + ')');
+    const ct = res.headers.get('content-type') || '';
+    const blob = await res.blob();
+    const isCsv = ct.includes('csv');
+    const filename = '选课结果导出_' + Date.now() + (isCsv ? '.csv' : '.xlsx');
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = '选课结果导出.xlsx';
+    a.href = blobUrl;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 1500);
     toast('导出成功', 'success');
   } catch(e){
     toast('导出失败：' + e.message, 'error');

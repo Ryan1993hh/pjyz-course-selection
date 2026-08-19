@@ -399,7 +399,7 @@ async function handleGetSelections(url, corsHeaders) {
     });
     template += ' ORDER BY id DESC';
     // 使用 sql() 函数执行动态查询
-    rows = await sql(template, ...values);
+    rows = await sql(template, values);
   } else {
     rows = await sql`SELECT * FROM selections ORDER BY id DESC`;
   }
@@ -434,14 +434,26 @@ async function handleExportSelections(url, corsHeaders) {
   const course = url.searchParams.get('course');
   await ensureDB();
   const sql = getSQL();
+
+  const conditions = [];
+  const values = [];
+
+  if (grade && grade !== '全部') { conditions.push('grade = '); values.push(grade); }
+  if (className && className !== '全部') { conditions.push('class_name = '); values.push(className); }
+  if (course && course !== '全部') { conditions.push('course_name = '); values.push(course); }
+
   let rows;
-  if (grade && grade !== '全部') {
-    rows = await sql`SELECT * FROM selections WHERE grade = ${grade} ORDER BY id DESC`;
+  if (conditions.length > 0) {
+    let template = 'SELECT * FROM selections WHERE ';
+    conditions.forEach((c, i) => {
+      if (i > 0) template += ' AND ';
+      template += c + '$' + (values.length + 1);
+    });
+    template += ' ORDER BY id DESC';
+    rows = await sql(template, values);
   } else {
     rows = await sql`SELECT * FROM selections ORDER BY id DESC`;
   }
-  if (className && className !== '全部') rows = rows.filter(r => r.class_name === className);
-  if (course && course !== '全部') rows = rows.filter(r => r.course_name === course);
 
   const headers = ['序号', '年级', '班级', '学生姓名', '所选课程', '上传时间'];
   const csvRows = [headers.join(',')];

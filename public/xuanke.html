@@ -2921,19 +2921,27 @@ function exportExcel() {
           throw new Error(d.error || ('后端返回 ' + res.status));
         });
       }
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        return res.json().then(d => ({ json: d, fromServer: false }));
+      }
       return res.blob().then(blob => ({ blob: blob, fromServer: true }));
     })
     .then(result => {
-      // 下载后端返回的 Excel
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      showToast(`已同步 ${payload.length} 条记录到后台并导出`, 'success');
+      if (result.fromServer) {
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast(`已同步 ${payload.length} 条记录到后台并导出`, 'success');
+      } else {
+        localExport();
+        showToast(`已同步 ${payload.length} 条记录到后台，本地导出 Excel`, 'success');
+      }
     })
     .catch(err => {
       console.warn('[export] 后端同步失败，回退本地导出:', err);
