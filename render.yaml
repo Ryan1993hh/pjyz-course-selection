@@ -1,0 +1,31 @@
+# Render Blueprint - 浦江一中拓展课选课管理系统
+# 文档: https://render.com/docs/blueprint-spec
+#
+# 部署架构：单个 Web Service（Express 同时提供 API 与前端静态资源）
+# 这样前端用相对路径 /api/... 即可，无需配置 CORS 或绝对地址。
+#
+# 数据持久化说明：
+#   - Render 免费方案文件系统是临时的，每次重新部署/重启会丢失 SQLite 数据
+#   - 如需持久保存学生选课数据，请将 plan 改为 starter 并启用下方 disk 配置
+#   - 启用后，数据库会写入 /var/data/app.db（RENDER_DISK_PATH 自动识别）
+services:
+  - type: web
+    name: pjyz-course-selection
+    runtime: node
+    plan: free                      # 免费方案；需持久数据请改为 starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    healthCheckGracePeriodSeconds: 30
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 18.20.4
+      # 持久磁盘路径（仅当 disk 启用且 /var/data 存在时生效）
+      - key: RENDER_DISK_PATH
+        value: /var/data
+    # === 持久磁盘（需要 plan: starter 或更高，免费方案请整段注释掉） ===
+    # disk:
+    #   name: pjyz-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

@@ -1,0 +1,3733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>浦江一中拓展课选课</title>
+<!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
+<link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://fastly.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.bootcdn.net">
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link rel="dns-prefetch" href="https://unpkg.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+<!-- SheetJS：竞赛式并行加载（所有 CDN 同时发起，首个成功即结束） -->
+<script>
+var XLSX_CDN_LIST = [
+  'https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://fastly.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+];
+// 并行竞赛：所有 CDN 同时加载，首个成功立即结束，其余忽略
+var __XLSX_DONE__ = false;
+XLSX_CDN_LIST.forEach(function (url) {
+  if (__XLSX_DONE__ || typeof XLSX !== 'undefined') return;
+  var s = document.createElement('script');
+  s.src = url;
+  s.async = true;
+  s.onload = function () {
+    if (__XLSX_DONE__) return;
+    if (typeof XLSX !== 'undefined') {
+      __XLSX_DONE__ = true;
+      var e = document.createEvent('Event');
+      e.initEvent('xlsx-loaded', true, true);
+      document.dispatchEvent(e);
+    }
+  };
+  // 单个 CDN 失败无需处理——其他 CDN 仍在并行竞争中
+  document.head.appendChild(s);
+});
+// 超时兜底：6 秒后全部未成功则判定失败
+setTimeout(function () {
+  if (!__XLSX_DONE__ && typeof XLSX === 'undefined') {
+    __XLSX_DONE__ = true;
+    window.__XLSX_LOAD_FAILED__ = true;
+    var evt = document.createEvent('Event');
+    evt.initEvent('xlsx-failed', true, true);
+    document.dispatchEvent(evt);
+  }
+}, 6000);
+</script>
+<style>
+:root {
+  /* 蓝绿色系主色调，清新专业 */
+  --primary: #0d9488;
+  --primary-light: #14b8a6;
+  --primary-dark: #0f766e;
+  --accent: #0ea5e9;
+  --bg: #f0fdfa;
+  --bg-soft: #ecfeff;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --success: #10b981;
+  --success-soft: #d1fae5;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --shadow: 0 4px 12px rgba(13, 148, 136, 0.08);
+  --shadow-lg: 0 10px 30px rgba(13, 148, 136, 0.15);
+  --radius: 12px;
+  /* ===== 表格整体基础色：浅灰蓝 #E3F2FD ===== */
+  --tbl-base: #E3F2FD;
+  /* ===== 表格列底色（浅灰蓝同色系微差，统一蓝灰调）===== */
+  --col-1: rgba(100, 116, 139, 0.10);   /* 序号 - 冷灰蓝 */
+  --col-2: rgba(59, 130, 246, 0.10);    /* 课程名称 - 柔天蓝 */
+  --col-3: rgba(37, 99, 235, 0.08);     /* 授课老师 - 柔靛蓝 */
+  --col-4: rgba(14, 165, 233, 0.08);    /* 授课地点 - 柔青蓝 */
+  --col-5: rgba(14, 116, 144, 0.08);    /* 报名要求 - 柔青灰 */
+  --col-6: rgba(79, 70, 229, 0.08);     /* 限制人数 - 柔靛青紫 */
+  --col-7: rgba(148, 163, 184, 0.05);   /* 学生姓名 - 极淡蓝灰 */
+  /* hover 态加深（约 2 倍） */
+  --col-1-h: rgba(100, 116, 139, 0.20);
+  --col-2-h: rgba(59, 130, 246, 0.20);
+  --col-3-h: rgba(37, 99, 235, 0.18);
+  --col-4-h: rgba(14, 165, 233, 0.18);
+  --col-5-h: rgba(14, 116, 144, 0.18);
+  --col-6-h: rgba(79, 70, 229, 0.18);
+  --col-7-h: rgba(148, 163, 184, 0.13);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 100%);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 14px 14px 14px 14px;
+  line-height: 1.5;
+}
+
+/* ===== 顶部标题栏 — 居中标题 + 渐变流动动效 ===== */
+.header {
+  color: white;
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(110deg, var(--primary-dark) 0%, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, var(--primary-dark) 100%);
+  background-size: 300% 300%;
+  animation: headerGradientShift 12s ease-in-out infinite;
+}
+@keyframes headerGradientShift {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+/* 柔光叠加 */
+.header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(600px 120px at 50% 0%, rgba(255,255,255,0.18), transparent 60%);
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.header-logo img {
+  height: 44px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+/* 内嵌 SVG logo 与原 img 尺寸对齐 */
+.header-logo .logo-svg {
+  height: 44px;
+  width: 44px;
+  flex-shrink: 0;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18));
+}
+.header-logo .logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.header-logo .logo-text .cn {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.header-logo .logo-text .en {
+  font-size: 10px;
+  opacity: 0.85;
+  letter-spacing: 0.5px;
+  color: white;
+}
+.header-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 1;
+}
+.header-title h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  margin: 0;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.3);
+  padding-left: 4px;
+}
+/* ===== 右侧操作区 + Reset 按钮 ===== */
+.header-actions {
+  position: relative;
+  z-index: 2;
+  margin-left: auto;     /* logo 占左，title 绝对居中，actions 占右 */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  min-width: 90px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  color: white;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.btn-reset:hover,
+.btn-reset:focus-visible {
+  background: rgba(220, 38, 38, 0.82);
+  border-color: rgba(255,255,255,0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.45);
+  outline: none;
+}
+.btn-reset:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+.btn-reset:active { transform: translateY(0); }
+.btn-reset-icon {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+.btn-reset:hover .btn-reset-icon { transform: rotate(-180deg); }
+
+/* 重置确认弹窗：使用 lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
+.reset-confirm-mask {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.reset-confirm-mask.active { display: flex; animation: fadeIn 0.18s ease; }
+.reset-confirm-box {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: 18px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 28px 80px rgba(15,23,42,0.35), inset 0 1px 0 rgba(255,255,255,0.95);
+  padding: 22px 24px 18px;
+  animation: scaleIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.reset-confirm-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+.reset-confirm-icon {
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
+  background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+  color: white; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.32);
+}
+.reset-confirm-texts { flex: 1; min-width: 0; }
+.reset-confirm-title { font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 6px; letter-spacing: 1px; }
+.reset-confirm-desc {
+  font-size: 13px; line-height: 1.65; color: #4b5563;
+  background: rgba(254, 226, 226, 0.55);
+  border: 1px dashed #fca5a5;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.reset-confirm-list {
+  margin: 8px 0 0; padding-left: 18px;
+  font-size: 12.5px; color: #6b7280; line-height: 1.7;
+}
+.reset-confirm-actions {
+  margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;
+}
+.reset-btn {
+  padding: 0 18px; height: 40px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+}
+.reset-btn.cancel {
+  background: rgba(255,255,255,0.9); color: #4b5563;
+  border-color: #e5e7eb;
+}
+.reset-btn.cancel:hover { background: white; border-color: #d1d5db; transform: translateY(-1px); }
+.reset-btn.danger {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+}
+.reset-btn.danger:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(239, 68, 68, 0.45); }
+.reset-btn:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
+/* ===== 抽签按钮（在表头学生姓名列右侧，同一行） ===== */
+.btn-lottery {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 36px;
+  flex-shrink: 0;
+}
+.btn-lottery:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(234, 88, 12, 0.45); filter: brightness(1.05); }
+.btn-lottery:active { transform: translateY(0); }
+
+/* 学生姓名表头：flex 布局，标签居中 + 抽签按钮右浮 */
+.th-students { /* th 通用样式已定义，此处仅覆写 padding */ }
+.th-students-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* 标签居中 */
+  gap: 12px;
+  width: 100%;
+  position: relative;
+}
+/* 抽签按钮绝对定位到右侧，避免破坏标签居中 */
+.th-students-inner .btn-lottery {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ===== 卡片通用 ===== */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+
+/* ===== 控制条：单行合并 上传/Step1 → Step2 → 统计卡 ===== */
+.control-bar {
+  display: grid;
+  /* 上传宽度 = 年级(1fr) + 班级(1fr)，之后箭头→年级→班级→3统计卡 */
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr)) auto auto auto;
+  gap: 12px;
+  align-items: stretch;
+}
+/* Step1 上传区跨 2 列（= 年级 + 班级 两个 1fr 列之和） */
+.control-bar .upload-area {
+  grid-column: 1 / span 2;
+}
+/* 步骤分隔箭头 */
+.step-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0.5;
+  padding: 0 2px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ===== Step 1：上传（紧凑单行，原UI色保持） ===== */
+.upload-area {
+  border: 2px dashed var(--primary-light);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  background: var(--bg-soft);
+  min-width: 0;
+}
+.upload-area:hover, .upload-area.dragover {
+  border-color: var(--primary);
+  background: #ccfbf1;
+  transform: translateY(-1px);
+}
+.upload-area .icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.upload-area .text-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.3;
+  min-width: 0;
+}
+.upload-area .title { font-size: 13px; font-weight: 600; color: var(--primary-dark); white-space: nowrap; }
+.upload-area .hint { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.file-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--success-soft);
+  color: var(--success);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.file-info-wrap {
+  min-width: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* ===== 信息统计栏 ===== */
+.stats-bar { display: contents; }
+.stat-input {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 14px;
+  background: var(--bg-soft);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  min-width: 130px;
+}
+.stat-input label { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.stat-input input,
+.stat-input select {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 2px 22px 2px 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+}
+.stat-input select:disabled { color: var(--muted); cursor: not-allowed; }
+.stat-input select option { font-weight: normal; }
+.stat-card {
+  padding: 8px 18px;
+  color: white;
+  border-radius: var(--radius);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  min-width: 100px;
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.2);
+}
+.stat-card.selected { background: linear-gradient(135deg, #34d399 0%, var(--success) 100%); box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); }
+.stat-card.unselected { background: linear-gradient(135deg, #fbbf24 0%, var(--warning) 100%); box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25); }
+.stat-card .label { font-size: 12px; opacity: 0.95; white-space: nowrap; }
+.stat-card .value { font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 2px; }
+
+/* ===== 表格 ===== */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid #BBDEFB;      /* 浅灰蓝边框，与#E3F2FD同色系 */
+  background: var(--tbl-base);    /* 外层容器：浅灰蓝 #E3F2FD */
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(33, 99, 163, 0.12);
+}
+table { width: 100%; border-collapse: collapse; background: var(--tbl-base); } /* 表格本体：浅灰蓝 #E3F2FD */
+
+/* —— 表头：浅蓝磨砂玻璃 + 居中大字号 —— */
+th {
+  background: linear-gradient(135deg, rgba(100, 181, 246, 0.55) 0%, rgba(66, 165, 245, 0.50) 50%, rgba(100, 181, 246, 0.55) 100%);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  color: #0D47A1;
+  padding: 14px 16px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  letter-spacing: 1.5px;
+  border-bottom: 3px solid rgba(13, 71, 161, 0.55);
+  border-right: 1px solid rgba(255, 255, 255, 0.45);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
+}
+/* 表头各列底部色条（浅灰蓝同色系，强化列身份） */
+th:nth-child(1) { border-bottom-color: #546E7A; }   /* 序号 - 钢蓝灰 */
+th:nth-child(2) { border-bottom-color: #1976D2; }   /* 课程 - 天蓝 */
+th:nth-child(3) { border-bottom-color: #3949AB; }   /* 老师 - 靛蓝 */
+th:nth-child(4) { border-bottom-color: #0288D1; }   /* 地点 - 青蓝 */
+th:nth-child(5) { border-bottom-color: #00838F; }   /* 要求 - 青灰蓝 */
+th:nth-child(6) { border-bottom-color: #5C6BC0; }   /* 名额 - 靛青紫 */
+th:nth-child(7) { border-bottom-color: #455A64; }   /* 学生 - 深钢蓝 */
+
+/* —— 单元格基础 —— */
+td {
+  padding: 10px 16px;
+  border-top: 1px solid #BBDEFB;   /* 浅灰蓝同色系分隔线，与底色协调 */
+  font-size: 13px;
+  vertical-align: middle;
+  white-space: nowrap;
+  transition: background-color 0.18s ease;
+}
+tbody tr { transition: background 0.18s ease; }
+
+/* —— 列底色（极浅，≤8%）—— */
+td:nth-child(1) { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
+td:nth-child(2) { background-color: var(--col-2); text-align: left; }
+td:nth-child(3) { background-color: var(--col-3); text-align: left; }
+td:nth-child(4) { background-color: var(--col-4); text-align: left; }
+td:nth-child(5) { background-color: var(--col-5); text-align: left; }
+td:nth-child(6) { background-color: var(--col-6); text-align: left; }
+td:nth-child(7) { background-color: var(--col-7); text-align: left; }
+
+/* —— 行 hover：各列同步加深，保持列身份 —— */
+tbody tr:hover td:nth-child(1) { background-color: var(--col-1-h); }
+tbody tr:hover td:nth-child(2) { background-color: var(--col-2-h); }
+tbody tr:hover td:nth-child(3) { background-color: var(--col-3-h); }
+tbody tr:hover td:nth-child(4) { background-color: var(--col-4-h); }
+tbody tr:hover td:nth-child(5) { background-color: var(--col-5-h); }
+tbody tr:hover td:nth-child(6) { background-color: var(--col-6-h); }
+tbody tr:hover td:nth-child(7) { background-color: var(--col-7-h); }
+
+/* —— 0 名额行整体弱化 —— */
+tr.no-quota td { opacity: 0.5; }
+tr.no-quota:hover td { opacity: 0.7; }
+
+/* ===== 单元格内统一行容器（确保图标+文字对齐、不换行）===== */
+.cell-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.cell-inner .ico {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* ===== 课程名称底色模块 ===== */
+.course-name {
+  display: inline-block;
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 15px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+}
+
+/* ===== 授课老师 / 授课地点 ===== */
+.teacher-cell, .location-cell {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* ===== 报名要求标签 ===== */
+.req-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #92400e;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #fcd34d;
+  white-space: nowrap;
+  backdrop-filter: blur(2px);
+}
+.req-tag .ico { font-size: 12px; }
+
+/* ===== 限制人数徽章 ===== */
+.limit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--primary-dark);
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid #99f6e4;
+  white-space: nowrap;
+  backdrop-filter: blur(2px);
+}
+.limit-badge .ico { font-size: 13px; }
+.limit-badge.zero {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--muted);
+  border-color: #cbd5e1;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* ===== 名额按钮 ===== */
+.slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  margin: 2px 4px 2px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  user-select: none;
+}
+.slot.disabled {
+  background: #f1f5f9;
+  color: var(--muted);
+  border: 1px dashed #cbd5e1;
+  cursor: not-allowed;
+  font-size: 11px;
+}
+.slot.empty {
+  border: 1.5px dashed #cbd5e1;
+  color: var(--muted);
+  background: #f8fafc;
+}
+.slot.empty:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--bg-soft);
+  transform: translateY(-1px);
+}
+.slot.filled {
+  background: linear-gradient(135deg, var(--success) 0%, var(--primary) 100%);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+.slot.filled:hover {
+  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+.slot.filled::after { content: ""; }
+.slot.filled:hover::after { content: " ✕"; }
+@keyframes pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.slot.filled { animation: pop 0.25s ease; }
+
+/* ===== 空状态 ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+/* ===== 导出按钮 ===== */
+.export-bar { display: flex; justify-content: center; padding: 6px; }
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 28px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.25s ease;
+}
+.btn-export:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(13, 148, 136, 0.3);
+}
+.btn-export:active:not(:disabled) { transform: translateY(0); }
+.btn-export:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ===== 选课弹窗 ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+.modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes scaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+.modal-header h3 { font-size: 17px; font-weight: 600; }
+.modal-header .count { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+.modal-close {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: rgba(255,255,255,0.35); }
+.modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.modal-search { margin-bottom: 16px; }
+.modal-search input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.modal-search input:focus { border-color: var(--primary); }
+
+/* 8 列 × 7 行 的名字网格 */
+.name-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+}
+.name-card {
+  padding: 10px 6px;
+  background: var(--bg-soft);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  transition: all 0.18s ease;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.name-card:hover {
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3);
+}
+.name-card:active { transform: scale(0.95); }
+.name-card.disabled {
+  background: #f3f4f6;
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+.name-card.disabled:hover {
+  background: #f3f4f6;
+  color: #cbd5e1;
+  transform: none;
+  box-shadow: none;
+}
+.no-students {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  grid-column: 1 / -1;
+}
+
+/* ===== Toast 提示 ===== */
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--text);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 200;
+  transition: transform 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  max-width: 80vw;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+.toast.warning { background: var(--warning); }
+
+/* ===== 响应式（平板）===== */
+/* ===== CDN 加载状态横幅 ===== */
+.load-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  transition: all 0.3s ease;
+}
+.load-banner.loading { display: flex; }
+.load-banner.success { display: none; }
+.load-banner.error {
+  display: flex;
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+.load-banner .spinner {
+  width: 16px; height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+.load-banner.loading .spinner { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== 抽签弹窗 ===== */
+.lottery-modal {
+  position: fixed;
+  inset: 0;
+  /* 模块外其余区域：80% 不透明度（深色遮罩，遮挡后面页面） */
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 150;
+  padding: 20px;
+}
+.lottery-modal.active { display: flex; animation: fadeIn 0.2s ease; }
+.lottery-box {
+  /* 模块：白色半透明 + 磨砂玻璃 */
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 1000px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 30px 80px rgba(15, 23, 42, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+.lottery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  /* 头部也半透明，保持玻璃质感的统一 */
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.88) 0%, rgba(234, 88, 12, 0.88) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+.lottery-header h3 { font-size: 16px; font-weight: 600; }
+.lottery-close {
+  background: rgba(255,255,255,0.22);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+}
+.lottery-close:hover { background: rgba(255,255,255,0.38); transform: rotate(90deg); }
+/* 抽签内容容器：内嵌原抽签系统的深色渐变背景，可滚动 */
+.lottery-content {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 35%, #4b6cb7 70%, #00b4d8 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 32px;
+  /* 覆盖主页面 CSS 变量，避免 --text 冲突（主页面 --text 为深色） */
+  --glass: rgba(255,255,255,0.18);
+  --glass-border: rgba(255,255,255,0.35);
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.75);
+}
+.lottery-content::-webkit-scrollbar { width: 8px; }
+.lottery-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+.lottery-content::-webkit-scrollbar-track { background: transparent; }
+
+/* 抽签系统主容器 */
+.lottery-content .app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* 标题区（原 .header 改名 .lot-header，避免与主页面顶部标题栏冲突） */
+.lottery-content .lot-header {
+  text-align: center;
+  padding: 16px 0 4px;
+}
+.lottery-content .lot-header h1 {
+  font-size: clamp(26px, 5vw, 38px);
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, #fff, #e0c3fc, #fff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.lottery-content .lot-header .sub {
+  margin-top: 10px;
+  font-size: clamp(14px, 3vw, 18px);
+  color: var(--text-dim);
+  letter-spacing: 5px;
+}
+
+/* Tab 切换 */
+.lottery-content .tabs {
+  display: flex;
+  gap: 0;
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  padding: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.lottery-content .tab-btn {
+  flex: 1;
+  padding: 15px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap;
+}
+.lottery-content .tab-btn.active {
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.65));
+  color: #4b6cb7;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: scale(1.02);
+}
+
+/* 面板容器 */
+.lottery-content .panels {
+  position: relative;
+  overflow: hidden;
+}
+.lottery-content .panel {
+  display: none;
+  animation: panelIn 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.lottery-content .panel.active { display: block; }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 毛玻璃卡片（原 .card 改名 .lot-card，避免与主页面卡片冲突） */
+.lottery-content .lot-card {
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* 表单元素 */
+.lottery-content .field { margin-bottom: 20px; }
+.lottery-content .field:last-child { margin-bottom: 0; }
+.lottery-content .field label {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+.lottery-content .field-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.lottery-content .field-row input[type="number"] { flex: 1; min-width: 0; }
+.lottery-content .btn-pick {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(22,163,74,0.4);
+}
+.lottery-content .btn-pick:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.lottery-content .btn-pick:active { transform: translateY(1px) scale(0.98); }
+
+.lottery-content .field input[type="number"] {
+  width: 100%;
+  padding: 15px 18px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.3s, background 0.3s;
+}
+.lottery-content .field input[type="number"]:focus {
+  border-color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.18);
+}
+.lottery-content .field input[type="number"]::-webkit-outer-spin-button,
+.lottery-content .field input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.lottery-content .field input[type="number"] { -moz-appearance: textfield; }
+
+.lottery-content .field input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.25s, background 0.25s;
+}
+.lottery-content .field input[type="text"]:focus {
+  border-color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.16);
+}
+.lottery-content .field input[type="text"]::placeholder { color: rgba(255,255,255,0.4); }
+
+/* 名字列表 */
+.lottery-content .name-list {
+  max-height: 400px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+  padding: 6px;
+  margin-top: 12px;
+}
+.lottery-content .name-list::-webkit-scrollbar { width: 8px; }
+.lottery-content .name-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+.lottery-content .name-list::-webkit-scrollbar-track { background: transparent; }
+
+.lottery-content .name-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 14px;
+  padding: 10px 14px;
+  transition: transform 0.3s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.3s, border-color 0.3s, background 0.3s;
+  overflow: hidden;
+}
+.lottery-content .name-item::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #667eea, #764ba2);
+  border-radius: 14px 0 0 14px;
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+.lottery-content .name-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(102,126,234,0.3);
+  border-color: rgba(255,255,255,0.4);
+}
+.lottery-content .name-item:focus-within {
+  border-color: rgba(255,255,255,0.6);
+  box-shadow: 0 8px 24px rgba(102,126,234,0.35);
+  background: rgba(255,255,255,0.16);
+}
+.lottery-content .name-item:focus-within::before {
+  transform: scaleY(1);
+}
+.lottery-content .name-item .num {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(102,126,234,0.4);
+  transition: border-radius 0.3s;
+}
+.lottery-content .name-item:focus-within .num {
+  border-radius: 50%;
+}
+.lottery-content .name-item input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  padding: 6px 0;
+  outline: none;
+  transition: color 0.2s;
+}
+.lottery-content .name-item input::placeholder { color: rgba(255,255,255,0.4); }
+.lottery-content .name-item input:focus { color: #fff; }
+
+/* 按钮 */
+.lottery-content .btn-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 22px;
+}
+.lottery-content .btn {
+  flex: 1;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  user-select: none;
+}
+.lottery-content .btn-primary {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(238,90,111,0.45);
+}
+.lottery-content .btn-secondary {
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+  color: #4b6cb7;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+.lottery-content .btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.lottery-content .btn:active { transform: translateY(2px) scale(0.98); }
+.lottery-content .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* 提示消息 */
+.lottery-content .msg {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  display: none;
+  animation: msgIn 0.3s ease;
+}
+.lottery-content .msg.show { display: block; }
+.lottery-content .msg.error { background: rgba(255,107,107,0.25); border: 1px solid rgba(255,107,107,0.5); }
+.lottery-content .msg.info  { background: rgba(0,180,216,0.2);  border: 1px solid rgba(0,180,216,0.4); }
+@keyframes msgIn { from { opacity:0; transform: translateY(-6px);} to { opacity:1; transform: translateY(0);} }
+
+/* 抽签动画区域 */
+.lottery-content .draw-stage {
+  text-align: center;
+  padding: 36px 24px;
+  margin-top: 18px;
+  display: none;
+}
+.lottery-content .draw-stage.show { display: block; animation: msgIn 0.4s ease; }
+.lottery-content .roller {
+  display: inline-block;
+  font-size: clamp(30px, 8vw, 54px);
+  font-weight: 900;
+  min-width: 140px;
+  padding: 18px 36px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 18px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255,255,255,0.5);
+  transition: transform 0.1s;
+}
+.lottery-content .roller.spinning {
+  animation: rollerPulse 0.1s linear infinite;
+}
+@keyframes rollerPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.06); }
+}
+
+/* 洗牌卡片 */
+.lottery-content .shuffle-deck {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 80px;
+  align-items: center;
+}
+.lottery-content .shuffle-card {
+  width: 64px;
+  height: 84px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: 2px solid rgba(255,255,255,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  transition: transform 0.3s;
+  word-break: break-all;
+  text-align: center;
+  padding: 6px;
+}
+.lottery-content .shuffle-card.shuffling {
+  animation: cardShuffle 0.5s ease-in-out;
+}
+@keyframes cardShuffle {
+  0%   { transform: translate(0,0) rotate(0); }
+  25%  { transform: translate(30px,-20px) rotate(15deg); }
+  50%  { transform: translate(-25px,15px) rotate(-12deg); }
+  75%  { transform: translate(20px,-10px) rotate(8deg); }
+  100% { transform: translate(0,0) rotate(0); }
+}
+
+/* 结果展示 */
+.lottery-content .results {
+  margin-top: 18px;
+  display: none;
+}
+.lottery-content .results.show { display: block; animation: msgIn 0.5s ease; }
+.lottery-content .results-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dim);
+  margin-bottom: 18px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+/* 结果卡片网格 */
+.lottery-content .result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+.lottery-content .result-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.1));
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 18px;
+  padding: 22px 14px;
+  text-align: center;
+  animation: cardReveal 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes cardReveal {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.lottery-content .result-card .badge {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.lottery-content .result-card .rname {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  word-break: break-all;
+}
+
+/* 奖牌排名 */
+.lottery-content .rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lottery-content .rank-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.08));
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 16px;
+  padding: 16px 20px;
+  animation: rankReveal 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes rankReveal {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.lottery-content .rank-item .medal {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.lottery-content .rank-item.gold   .medal { background: linear-gradient(135deg, #ffd700, #ffb700); color: #5a3e00; }
+.lottery-content .rank-item.silver .medal { background: linear-gradient(135deg, #e8e8e8, #b0b0b0); color: #333; }
+.lottery-content .rank-item.bronze .medal { background: linear-gradient(135deg, #e0945a, #b06820); color: #fff; }
+.lottery-content .rank-item .medal-num { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+.lottery-content .rank-item .rname {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* 页脚 */
+.lottery-content .footer {
+  text-align: center;
+  padding: 16px 0 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+}
+
+/* 选人抽签弹层（在 lottery-content 内嵌） */
+.lottery-content .picker-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+.lottery-content .picker-mask.show { display: flex; animation: msgIn 0.25s ease; }
+.lottery-content .picker-box {
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  background: rgba(255,255,255,0.14);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lottery-content .picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  flex-shrink: 0;
+}
+.lottery-content .picker-head h4 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.lottery-content .picker-count {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.lottery-content .picker-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.lottery-content .picker-body::-webkit-scrollbar { width: 6px; }
+.lottery-content .picker-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+.lottery-content .picker-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  user-select: none;
+  overflow: hidden;
+}
+.lottery-content .picker-chip:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.5);
+  transform: translateY(-1px);
+}
+.lottery-content .picker-chip.selected {
+  background: linear-gradient(135deg, rgba(34,197,94,0.55), rgba(22,163,74,0.55));
+  border-color: rgba(134,239,172,0.85);
+  box-shadow: 0 4px 14px rgba(22,163,74,0.4);
+}
+.lottery-content .picker-chip .chip-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.55);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s;
+}
+.lottery-content .picker-chip.selected .chip-dot {
+  background: #16a34a;
+  border-color: #fff;
+}
+.lottery-content .picker-chip .chip-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lottery-content .picker-empty {
+  grid-column: 1 / -1;
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.lottery-content .picker-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+.lottery-content .picker-foot .btn {
+  padding: 10px 14px;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+/* 抽签系统响应式 */
+@media (max-width: 640px) {
+  .lottery-content .name-list { grid-template-columns: 1fr 1fr; }
+  .lottery-content .result-grid { grid-template-columns: 1fr 1fr; }
+  .lottery-content .btn-row { flex-direction: column; }
+  .lottery-content .lot-card { padding: 20px; }
+  .lottery-content .tab-btn { font-size: 14px; padding: 13px 6px; }
+  .lottery-content .field-row { flex-direction: column; }
+  .lottery-content .picker-body { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 380px) {
+  .lottery-content .name-list { grid-template-columns: 1fr; }
+  .lottery-content .lot-header h1 { font-size: 26px; }
+  .lottery-content .picker-body { grid-template-columns: 1fr; }
+}
+
+/* ===== 课程简介 Tooltip（悬停 0.5s 显示）===== */
+.course-tip {
+  position: fixed;
+  z-index: 9999;
+  max-width: 420px;
+  background: linear-gradient(160deg, #ffffff 0%, #f0fdfa 100%);
+  border: 1px solid #99f6e4;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 118, 110, 0.2), 0 2px 8px rgba(0,0,0,0.06);
+  padding: 14px 16px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+.course-tip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.course-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #99f6e4;
+}
+.course-tip-cat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: white;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+}
+.course-tip-cat.cat-体育健康 { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); }
+.course-tip-cat.cat-艺术技艺 { background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
+.course-tip-cat.cat-人文社科 { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+
+.course-tip-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.course-tip-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+.course-tip-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.course-tip-meta i.ico {
+  width: 14px;
+  text-align: center;
+  font-style: normal;
+  font-size: 12px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.course-tip-meta b {
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#courseTipReqWrap { display: none; }
+#courseTipReqWrap.has-req { display: inline-flex; grid-column: 1 / -1; color: #92400e; }
+#courseTipReqWrap.has-req b { color: #92400e; }
+.course-tip-body {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 6px;
+  text-align: justify;
+}
+.course-tip-body::-webkit-scrollbar { width: 6px; }
+.course-tip-body::-webkit-scrollbar-thumb { background: #99f6e4; border-radius: 3px; }
+
+/* ===== 响应式（平板/窄屏） ===== */
+@media (max-width: 900px) {
+  .control-bar {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-auto-flow: dense;
+  }
+  .control-bar .upload-area { grid-column: 1 / -1; }
+  .step-arrow { display: none; }
+  .stat-input, .stat-card { min-width: 0; }
+}
+@media (max-width: 768px) {
+  body { padding: 12px; }
+  .header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .header-logo .logo-text .en { display: none; }
+  .header-logo .logo-text .cn { font-size: 12px; letter-spacing: 1px; }
+  .header-logo img { height: 36px; }
+  .header-logo .logo-svg { height: 36px; width: 36px; }
+  /* 窄屏：标题回归正常流式（不再绝对居中，避免与 logo 重叠） */
+  .header-title {
+    position: static;
+    transform: none;
+    flex: 1 1 100%;
+    order: 3;
+    text-align: center;
+  }
+  .header-title h1 { font-size: 17px; letter-spacing: 3px; }
+  .header-actions {
+    order: 2;
+    width: auto;
+  }
+  .btn-reset { height: 36px; padding: 0 12px; font-size: 12px; min-width: 72px; }
+  .btn-lottery { padding: 0 12px; font-size: 11px; height: 32px; }
+  .card { padding: 12px; }
+  .control-bar {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .control-bar .upload-area { grid-column: 1 / -1; padding: 6px 10px; }
+  .stat-input { min-width: 0; padding: 6px 10px; }
+  .stat-input select { font-size: 14px; }
+  .stat-card { min-width: 0; padding: 6px 10px; }
+  .stat-card .value { font-size: 20px; }
+  .name-grid { grid-template-columns: repeat(4, 1fr); }
+  th, td { padding: 10px 8px; font-size: 13px; }
+  /* 窄屏：表头学生姓名列内按钮和标签垂直堆叠 */
+  .th-students-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .btn-lottery { width: 100%; }
+  .reset-confirm-box { padding: 18px 16px 16px; }
+  .reset-confirm-icon { width: 38px; height: 38px; font-size: 19px; }
+  .reset-confirm-title { font-size: 15.5px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部标题栏 -->
+<div class="header">
+  <div class="header-logo">
+    <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
+      <!-- 金黄色圆形底（与参考图颜色一致：饱和橙黄） -->
+      <defs>
+        <clipPath id="pjyz-circle">
+          <circle cx="200" cy="200" r="190"/>
+        </clipPath>
+      </defs>
+      <circle cx="200" cy="200" r="190" fill="#F5A623"/>
+      <g clip-path="url(#pjyz-circle)" fill="none" stroke="white" stroke-linecap="round">
+        <!-- 三条白色飘带：从左下弧形扫向右上 -->
+        <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
+        <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
+        <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
+      </g>
+    </svg>
+    <div class="logo-text">
+      <span class="cn">上海市闵行区浦江第一中学</span>
+      <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
+    </div>
+  </div>
+  <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
+  <div class="header-actions">
+    <button type="button" class="btn-reset" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态" accesskey="r">
+      <span class="btn-reset-icon" aria-hidden="true">↻</span>
+      <span>重置</span>
+    </button>
+  </div>
+</div>
+
+<!-- 统一控制条：Step1 上传 → Step2 年级/班级 → 统计卡 -->
+<div class="card">
+  <div class="control-bar">
+    <!-- Step 1：上传模块（跨 2 列，宽度 = 年级 + 班级） -->
+    <div class="upload-area" id="uploadArea" title="点击或拖拽上传学生名单 Excel">
+      <span class="icon">📁</span>
+      <div class="text-col" id="uploadTextCol">
+        <span class="title">点击或拖拽上传学生名单</span>
+        <span class="hint">支持 .xlsx / .xls 格式，需包含"姓名"列</span>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+    </div>
+
+    <!-- 步骤箭头 1→2 -->
+    <span class="step-arrow" title="第二步">👉</span>
+
+    <!-- 信息统计栏（stats-bar 用 display: contents 将子元素平铺进 grid） -->
+    <div class="stats-bar" id="statsCard"></div>
+  </div>
+</div>
+
+<!-- 课程选课表格 -->
+<div class="card">
+  <div class="table-wrap" id="tableWrap"></div>
+</div>
+
+<!-- 课程简介 Tooltip（全局复用，按需定位显示） -->
+<div class="course-tip" id="courseTip" role="tooltip">
+  <div class="course-tip-head">
+    <span class="course-tip-cat" id="courseTipCat"></span>
+    <span class="course-tip-title" id="courseTipTitle"></span>
+  </div>
+  <div class="course-tip-meta">
+    <span><i class="ico">👨‍🏫</i><b id="courseTipTeacher"></b></span>
+    <span><i class="ico">📍</i><b id="courseTipLocation"></b></span>
+    <span><i class="ico">👥</i><b id="courseTipLimit"></b></span>
+    <span id="courseTipReqWrap"><i class="ico">⚠</i><b id="courseTipReq"></b></span>
+  </div>
+  <div class="course-tip-body" id="courseTipBody"></div>
+</div>
+
+<!-- 底部导出按钮 -->
+<div class="card export-bar">
+  <button class="btn-export" id="exportBtn" disabled>
+    <span>⬇</span> 导出 Excel
+  </button>
+</div>
+
+<!-- 选课弹窗 -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="modalTitle">选择学生</h3>
+        <div class="count" id="modalCount"></div>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-search">
+        <input type="text" id="searchInput" placeholder="搜索学生姓名…">
+      </div>
+      <div class="name-grid" id="nameGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 提示 Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 随机抽签弹窗（内嵌抽签系统，单文件完成所有功能） -->
+<div class="lottery-modal" id="lotteryModal">
+  <div class="lottery-box">
+    <div class="lottery-header">
+      <h3>🎲 随机抽签系统</h3>
+      <button class="lottery-close" id="lotteryClose" aria-label="关闭">×</button>
+    </div>
+    <div class="lottery-content" id="lotteryContent">
+      <div class="app">
+        <!-- 标题 -->
+        <div class="lot-header">
+          <h1>浦江一中抽签系统</h1>
+          <div class="sub">公平 · 随机 · 有趣</div>
+        </div>
+
+        <!-- Tab 切换 -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tab1">方式一：名额抽取</button>
+          <button class="tab-btn" data-tab="tab2">方式二：先后排序</button>
+        </div>
+
+        <!-- 面板区 -->
+        <div class="panels">
+          <!-- ===== 方式一：名额抽取 ===== -->
+          <div class="panel active" id="tab1">
+            <div class="lot-card">
+              <div class="field">
+                <label>待抽签总人数</label>
+                <div class="field-row">
+                  <input type="number" id="m1_total" min="1" max="500" placeholder="请输入总人数，如 30" />
+                  <button class="btn-pick" id="m1_pickBtn" type="button">👤 选人抽签</button>
+                </div>
+              </div>
+              <div class="name-list" id="m1_names"></div>
+              <div class="field" style="margin-top:16px;">
+                <label>抽取数量</label>
+                <input type="number" id="m1_pick" min="1" placeholder="请输入抽取数量，如 5" />
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="m1_start">开始抽签</button>
+                <button class="btn btn-secondary" id="m1_reset">重置</button>
+              </div>
+              <div class="msg" id="m1_msg"></div>
+            </div>
+
+            <!-- 抽签动画舞台 -->
+            <div class="draw-stage lot-card" id="m1_stage">
+              <div style="margin-bottom:12px;color:var(--text-dim);font-size:14px;letter-spacing:2px;">正在抽取中…</div>
+              <div class="roller spinning" id="m1_roller">?</div>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="results" id="m1_results">
+              <div class="lot-card">
+                <div class="results-title">抽签结果</div>
+                <div class="result-grid" id="m1_result_grid"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== 方式二：先后排序 ===== -->
+          <div class="panel" id="tab2">
+            <div class="lot-card">
+              <div class="field">
+                <label>参与人数</label>
+                <div class="field-row">
+                  <input type="number" id="m2_total" min="1" max="500" placeholder="请输入参与人数，如 7" />
+                  <button class="btn-pick" id="m2_pickBtn" type="button">👤 选人抽签</button>
+                </div>
+              </div>
+              <div class="name-list" id="m2_names"></div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="m2_start">开始抽签</button>
+                <button class="btn btn-secondary" id="m2_reset">重置</button>
+              </div>
+              <div class="msg" id="m2_msg"></div>
+            </div>
+
+            <!-- 抽签动画舞台 -->
+            <div class="draw-stage lot-card" id="m2_stage">
+              <div style="margin-bottom:12px;color:var(--text-dim);font-size:14px;letter-spacing:2px;">正在洗牌中…</div>
+              <div class="shuffle-deck" id="m2_deck"></div>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="results" id="m2_results">
+              <div class="lot-card">
+                <div class="results-title">出场顺序</div>
+                <div class="rank-list" id="m2_rank_list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">浦江一中 · 技术赋能教育 · 仅供校内活动使用</div>
+      </div>
+
+      <!-- 选人抽签弹层（在 lottery-content 内部覆盖） -->
+      <div class="picker-mask" id="pickerMask">
+        <div class="picker-box">
+          <div class="picker-head">
+            <h4 id="pickerTitle">从上传名单中选择参与抽签人员</h4>
+            <span class="picker-count" id="pickerCount">已选 0 人</span>
+          </div>
+          <div class="picker-body" id="pickerBody"></div>
+          <div class="picker-foot">
+            <button class="btn btn-secondary" id="pickerCancel" type="button">取消</button>
+            <button class="btn btn-primary" id="pickerConfirm" type="button">确认选人</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 重置确认弹窗（自定义，避免使用浏览器原生 confirm，可访问性/视觉一致性更好） -->
+<div class="reset-confirm-mask" id="resetConfirmMask" role="dialog" aria-modal="true" aria-labelledby="resetConfirmTitle" aria-describedby="resetConfirmDesc" tabindex="-1">
+  <div class="reset-confirm-box" role="document">
+    <div class="reset-confirm-head">
+      <div class="reset-confirm-icon" aria-hidden="true">!</div>
+      <div class="reset-confirm-texts">
+        <h3 class="reset-confirm-title" id="resetConfirmTitle">确认要重置所有数据吗？</h3>
+        <div class="reset-confirm-desc" id="resetConfirmDesc">
+          此操作不可撤销，将清除全部用户修改并恢复到初始页面状态：
+          <ul class="reset-confirm-list">
+            <li>清除已上传的学生名单、年级 / 班级信息</li>
+            <li>清除所有课程已选学生记录</li>
+            <li>清除浏览器本地存储的持久化数据</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="reset-confirm-actions">
+      <button type="button" class="reset-btn cancel" id="resetCancelBtn" aria-label="取消，关闭此对话框">取消</button>
+      <button type="button" class="reset-btn danger" id="resetConfirmBtn" aria-label="确认重置，所有数据将被清除">确认重置</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ * 浦江一中拓展课选课 - 主逻辑
+ * 数据保存：localStorage（本地缓存）+ 后端 /api/selections（持久化）
+ * ============================================================ */
+
+/* ---------- API 基址（同源默认，支持前后端分离） ---------- */
+function pjyzApiBase() {
+  try {
+    if (window.__API_BASE__ && typeof window.__API_BASE__ === 'string') return window.__API_BASE__;
+    var saved = localStorage.getItem('pjyz_api_base');
+    if (saved) return saved.replace(/\/+$/, '');
+  } catch (_) {}
+  return '';
+}
+function pjyzToken() {
+  try { return localStorage.getItem('pjyz_token') || localStorage.getItem('admin_token') || ''; }
+  catch (_) { return ''; }
+}
+
+// ===== 课程固定数据（30 门课程，按体育健康/艺术技艺/人文社科分类）=====
+const COURSES = [
+  // —— 体育健康类（7门）——
+  { id: 1,  category: '体育健康', name: '乒乓球',       teacher: '陆顺军',           location: '旧体育馆',                  requirement: '',                  limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '本课程会对学习乒乓球的学生进行科学系统的训练，从球感、灵活性、反应、动作、上台，掌握乒乓球运动的基本技术，逐步走向实战。' },
+  { id: 2,  category: '体育健康', name: '女子排球',     teacher: '徐李斌、耿凡诗雨', location: '新体育馆',                  requirement: '仅限女生',           limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '浦江一中排球社团的组建，丰富学生的课余生活的同时形成良好的校园体育文化。排球社团培养学生学习排球知识与技能，形成良好的沟通能力、团队合作意识和顽强拼搏的精神，营造出积极自信、阳光、富有朝气、拼搏向上的学习氛围，展现初中生的青春与活力。通过体教结合，让学生在兼顾学业基础上，给予学生在体育项目上发展的机会。在学校的支持和鼓励下，我校排球社团在上海市、闵行区等排球比赛中取得优异成绩。' },
+  { id: 3,  category: '体育健康', name: '男子篮球',     teacher: '汪涛',             location: '篮球场或六2班教室',          requirement: '仅限中预年级男生',     limit: { '六年级': 2, '七年级': 0 }, students: [null, null], description: '篮球拓展课是一门旨在培育学生篮球兴趣、技能和团队精神的课程。该课程通过系统的训练，让学生掌握篮球的基本技巧，如运球、投篮、传球等，并在实践中加以运用。课堂上，教师会组织有趣的篮球游戏和比赛，让学生在轻松愉快的氛围中提高篮球技能，培养团队协作意识。此外，课程还注重学生的心理健康，通过篮球运动帮助学生释放压力、增强自信心和意志力。参与这门课程，学生不仅能够锻炼身体，还能结交志同道合的朋友，共同享受篮球带来的乐趣。' },
+  { id: 4,  category: '体育健康', name: '田径',         teacher: '周万康',           location: '田径场或六9班教室',          requirement: '需具备一定基础',       limit: { '六年级': 1, '七年级': 2 }, students: [null], description: '初中田径拓展课，一个充满活力与挑战的体育课程！在这里，我们汇聚了一群热爱田径运动的初中生，共同追求速度与激情的碰撞，享受汗水与欢笑交织的时光。我们秉承"健康第一，快乐运动"的宗旨，致力于为同学们提供一个锻炼体能、磨炼意志、培养团队精神的平台。在田径拓展课里，你将学会如何面对挑战，如何在竞争中成长，如何在团队中找到自己的位置。我们的训练项目丰富多样，包括体适能、短跑、中长跑、长跑、跳远、三级跳、铅球等多个项目。通过科学的训练方法和专业的教练指导，你将逐步掌握各项田径技能，提高自己的运动水平。' },
+  { id: 5,  category: '体育健康', name: '女子篮球',     teacher: '王嘉晨',           location: '篮球场或六10班教室',         requirement: '仅限女生',           limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '女子篮球拓展课教学生学习相关的篮球基础知识，可以促进篮球技术的提高，可以使学生对于篮球运动产生更加浓厚的兴趣。针对篮球基础知识，主要包括篮球的起源和发展、篮球的比赛规则以及动作解析等等。学生在学习篮球运动之前，了解一些篮球基础知识，那么在今后的学习当中就会避免出现盲目学习的情况，少走弯路。针对中学篮球知识教学过程中的内容，学生通过教学可以对于篮球知识更加了解，使学生可以具备更加宽广的视野，这样学生才会具备学习的目标。' },
+  { id: 6,  category: '体育健康', name: '健美操',       teacher: '费晓芳',           location: '6号楼5楼形体房',            requirement: '需具备一定基础',       limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '本课程以"健体、塑形、育心"为核心理念，结合初中生身心发展特点，系统设计涵盖基础技能、创编能力、团队协作与艺术表现力的综合课程。课程融入竞技健美操、啦啦操、有氧舞蹈等多元形式，结合校史文化打造校本化特色内容。' },
+  { id: 7,  category: '体育健康', name: '武术',         teacher: '饶瑞芳',           location: '6号楼底楼',                 requirement: '优先招收女生',        limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '五步拳作为中国武术的基础拳术之一，不仅能够锻炼身体，增强体质，还蕴含着深厚的文化内涵。本课程旨在通过系统的学习与实践，使学生掌握五步拳的基本动作和技巧，了解其背后的文化故事，培养学生的意志力和团队协作精神。课程内容包括基本步伐、手型、身法等，每节课将通过分解教学、组合练习等形式，让每位同学都能较好的掌握五步拳。' },
+  // —— 艺术技艺类（4门）——
+  { id: 8,  category: '艺术技艺', name: '合唱',                 teacher: '陈洁（音乐）', location: '6号楼5楼音乐教室（南）',    requirement: '',          limit: { '六年级': 2, '七年级': 3 }, students: [null, null], description: '本课程面向对唱歌感兴趣的学生，通过专业、科学的练习，帮助学生用自然的科学的发声方法唱歌，培养学生的合作意识。' },
+  { id: 9,  category: '艺术技艺', name: '书法课',               teacher: '潘洁',         location: '美术教室（2）',             requirement: '',          limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '书法课程面向六、七年级书法爱好者，系统地开展毛笔书法基础课程，也借助学校艺术节、街道的书法比赛进一步加强书法临创实践，亲身体验活动。提升学生书写能力、审美素养和文化认同感。' },
+  { id: 10, category: '艺术技艺', name: '水彩画欣赏与创作',     teacher: '段秀慧',       location: '6号楼2楼美术教室（1）',     requirement: '需具备一定绘画基础', limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '想玩转通透灵动的水彩画吗？本课程将带你一边赏中外经典水彩佳作，学看色彩、品意境；一边从基础学起，练画笔握法、颜料调和，画植物、风景。老师手把手指导，帮你解锁绘画技能，在色彩里释放创意，收获成就感！' },
+  { id: 11, category: '艺术技艺', name: '无人机',               teacher: '瞿建辉',       location: '操场或3号楼计算机房',        requirement: '',          limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '无人机课程成立于2017年，通过学习理论知识，熟悉无人机的飞行原理和各项法规，通过操作训练，掌握四旋翼无人机的各项操作技巧，选拔优秀学员进一步学习航拍技巧，为学校的活动增添上帝视角。同时融入爱国主义教育，学习我国在无人机领域的前瞻性，从军事、农业、交管等各方面，知道无人机应用的广泛。' },
+  // —— 人文社科类（19门）——
+  { id: 12, category: '人文社科', name: '国际象棋入门',                                   teacher: '丁屹',     location: '六1班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '国际象棋入门旨在为零基础的学生提供较为全面的国际象棋学习路径，使他们能够了解棋盘布局、棋子走法及基本规则。通过经典开局讲解，残局解说等环节，提高学生的棋艺水平。同时，实战演练环节要求学生两两之间进行对战练习，在下棋过程中，锻炼学生的观察、分析、判断、推理棋局的能力，并以棋会友，增进学生间的友情。' },
+  { id: 13, category: '人文社科', name: '芳香植物',                                       teacher: '蒋丹',     location: '6号楼2楼创新实验室', requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '浦江一中"芳香社"创建于2015年，该社团围绕生物与环境这一生存大课题，对植物（特别是芳香植物）的栽培、植物的生长、习性等方面进行探究，把握"科学性、实践性和趣味性"的科普教育特点，在积极引导学生认识、种植植物的基础上，指导学生开展植物学的科学实践活动。' },
+  { id: 14, category: '人文社科', name: '手工制作',                                       teacher: '陈洁（数学）', location: '5号楼底楼备用教室', requirement: '', limit: { '六年级': 1, '七年级': 0 }, students: [null], description: '折纸活动是指利用普通的纸张，经过折、剪、画等活动来完成一定物体造型的一种美术活动。折纸活动取材方便，操作简单，生动形象，易学易做，是学生感兴趣和爱好的事情。它既能锻炼学生的手部肌肉，又能促进学生大脑的发育；内容丰富，有很强的趣味性，是经千百年来劳动人民不断创造而流传下来的。它体现了劳动人民的勤劳和智慧，具有独特风格和鲜明的个性，而且活动形式符合初中学生好奇、好动的心理特征。' },
+  { id: 15, category: '人文社科', name: '红十字救护',                                     teacher: '范丽霞',   location: '六7班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '生命健康是人类社会一切文明进步的基础和前提，但是各种意外伤害和突发急症却时刻威胁着人们的生命健康。通过有效地传播和普及应急救护知识和技能，可以使人人都成为生命守护者，最大限度地保护生命和健康。红十字救护课程是为了使受训救护学生树立救死扶伤的人道主义思想和自救互救意识，掌握常用急救知识和技能，在发生意外伤害和突发事件的现场，能迅速进行自救、互救，减少伤员的病痛、伤残和死亡。' },
+  { id: 16, category: '人文社科', name: '生涯探秘',                                       teacher: '陈敏',     location: '6号楼4楼心理教室',   requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程旨在引导学生熟知初中时期的发展任务，了解初中阶段的身心发展特点与角色，适应新环境，并带领学生通过多元探索路径形成积极的自我认识，学会将自己的兴趣、爱好、特长以及能力与校内外活动、家庭生活与生涯探索相联系，相互促进，并逐步形成自主生涯规划意识。帮助学生了解在校学习的课程所具有的价值和与未来生涯发展的关系；了解真实的职业世界，认识职业分类和职业特性，了解职业因社会变迁而发生的改变，并学会通过各类方式了解、探索生涯信息与机会。' },
+  { id: 17, category: '人文社科', name: '生活中的物理',                                   teacher: '周皓文',   location: '6号楼底楼物理实验室', requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '初中物理拓展课是一门旨在激发学生对物理学科的深层兴趣，拓展物理知识视野，培养科学思维和实践能力的特色课程。在课程内容方面，我们将超越传统教材的局限。不仅深入探究课本知识背后的奥秘，还会引入大量有趣且贴近生活的物理现象和案例。学生感受物理在现代科技中的广泛应用。教学方法上，强调互动与实践。课堂上会组织丰富的小组讨论和实验活动。学生们将有机会亲自操作实验器材，进行物理实验的设计与探究，如探究光的折射规律等，从而在实践中深刻理解物理概念和规律，提升动手能力和解决问题的能力。' },
+  { id: 18, category: '人文社科', name: '我爱古诗词/古典诗词鉴赏',                         teacher: '梁瑾',     location: '图书馆',            requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '《我爱古诗词》，在古诗词的浸润中践行语文学科素养，了解古诗词、喜欢古诗词、背诵古诗词；通过诵读、查找、比较、交流、分享、创作等多种形式，培养学生自主学习、主动探究的习惯。通过分享学习心得，展示创作成果，增强学生的自信和勇气，锻炼学生的口头表达能力，培养学生的创造性思维，在实现学以致用的同时，也传承和发扬了民族传统文化。' },
+  { id: 19, category: '人文社科', name: '英语绘本阅读',                                   teacher: '周頔',     location: '七4班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程以RAZ分级绘本为主线，遵循"诵读—探究—表达—创作"路径。学生在趣味故事中提升阅读兴趣与词汇量，掌握预测、扫读、精读、复述等策略；通过Book Talk、角色朗读、思维导图与微写作强化理解与口语。课程融入跨文化比较，培养自主学习与创造思维，并以主题海报成果收束。' },
+  { id: 20, category: '人文社科', name: '中国古代、近代人物故事',                         teacher: '刘丽婷',   location: '七3班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程将带领学生深入了解中国历史中具有重要影响力的古代与近代人物，通过对这些历史人物的生平、思想和贡献的研究，帮助学生全面认识中国历史的发展脉络。课程内容涵盖从秦始皇、武则天、李白等古代人物，到林则徐、孙中山、毛泽东等近代重要人物，既包括政治家、军事家，也涉及文学家、思想家等多领域的代表人物。通过生动的故事、历史背景分析和多元的课堂活动，激发学生的历史兴趣，提升他们对历史事件和人物的深层次理解，从而培养其批判性思维与独立分析能力。' },
+  { id: 21, category: '人文社科', name: '雪泥鸿爪：苏东坡的人生行旅',                     teacher: '吴锦钱',   location: '六10班教室',         requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '"人生到处知何似？应似飞鸿踏雪泥。"北宋大文豪苏东坡的一生，犹如飞鸿翩跹，偶然在雪地上留下指爪的痕迹，随即又飘然远引。本课程将追随这只"飞鸿"的轨迹，开启一场穿越时空的"人生行旅"。这是一场与有趣灵魂的对话，等你加入！' },
+  { id: 22, category: '人文社科', name: '生生不息：中国传统文化中的生物学智慧',           teacher: '李雅倩',   location: '六8班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '生物学知识与每个人的生活健康息息相关。中国传统文化（包括中医、农学、饮食、哲学思想）中蕴含着大量对生命、自然和健康的深刻观察与实践智慧，但这些内容在现代生物学教学中常常被忽视。学生往往觉得生物学是"舶来品"，与自身文化有距离感。本课程以现代生物学知识为骨架，以中国传统文化与实践为血肉，通过项目式学习和探究式活动，让学生在熟悉的文化语境和生活场景中学习生物学，理解"天人合一"、"药食同源"等思想的科学内涵，培养跨学科思维和民族自豪感。' },
+  { id: 23, category: '人文社科', name: '语言的艺术：演讲与辩论中的说服逻辑和批判思维',   teacher: '许晓锋',   location: '七7班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程旨在探讨演讲与辩论中说服逻辑的核心原理与实用技巧。学生将学习如何构建严谨论证、有效质询与反驳，并深入学习具体案例。课程融合理论与实战训练，通过模拟辩论、演讲实践及案例研究，培养学生的批判性思维、语言表达与应变能力。' },
+  { id: 24, category: '人文社科', name: '天文学基础',                                     teacher: '吴一凡',   location: '六4班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '通过图文配合讲解与视频的形式，主要围绕太阳系中的各类天体、基本天文概念、天文望远镜的操作方法等方面进行教学，旨在培养初中生的基本天文素养、激发学生对宇宙探索及天文学的兴趣。' },
+  { id: 25, category: '人文社科', name: '英语音乐剧赏析与表达',                           teacher: '张杨',     location: '七5班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程旨在引领学生初探英语音乐剧的奇妙世界。课程将系统介绍音乐剧的四大核心构成元素：剧本、音乐、舞蹈、舞美。通过赏析《音乐之声》《狮子王》《玛蒂尔达》等经典剧目的精彩片段，学生将在沉浸式中提升英语听读与审美能力。课程以小组合作形式进行，最终通过创造性展示分享感悟，培养学生的表达能力、批判性思维与团队协作精神。' },
+  { id: 26, category: '人文社科', name: '我是创业家',                                     teacher: '孙洋',     location: '六5班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程专为六至七年级学生量身定制，通过体验式教学、跨学科学习和项目式学习的教学方法，让学生初步掌握创业基本知识。课程的核心目标是激发学生的创新思维与创业精神，同时强化他们的团队协作能力。' },
+  { id: 27, category: '人文社科', name: '玩转数独',                                       teacher: '李小月',   location: '六3班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '数独作为一种逻辑性强的数学拼图益智游戏，被誉为"思维的乐高"、"高智商的游戏"。《玩转数独》课程从学生认知发展角度出发，结合学生各阶段特点精心设计的课程，旨在从基础到高阶培养学生的数学思维，提升数感、专注力、观察力和反应力，为学生取得良好数学成绩奠定基础。' },
+  { id: 28, category: '人文社科', name: '认识二十四节气',                                 teacher: '黄璐琳',   location: '六6班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '这是一趟穿越四季的自然与文化之旅。我们将跳出课本，以全新的视角探寻二十四节气的奥秘。课程将融合科学、农事、诗词、美食与手作，带领学生感受中国古代智慧的深邃，观察物候的变化，体验传统文化的魅力，从而理解人与自然和谐共处的哲学。' },
+  { id: 29, category: '人文社科', name: '话说英语',                                       teacher: '林依依',   location: '七1班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程以丰富多元的主题为脉络，结合文章研读、视频赏析、针对性练习等形式，引导学生深入探讨常见话题和新鲜热点。在提升英语听说读写能力的同时，拓展思维深度与广度，助力学生灵活运用语言，培养跨文化认知与独立思考能力。' },
+  { id: 30, category: '人文社科', name: '认识自我心理拓展课',                             teacher: '孔经纬',   location: '七2班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程以叙事治疗为理论基础，通过课堂内外的人际互动，了解社会文化脉络对自我认知的影响，从多维度认知自我，从而发掘自我潜能和优势。' },
+];
+
+// ====================================================================
+// PersistentStorage — 页面状态持久化 + 重置 + 单元测试
+// 说明：
+//  - 仅持久化用户修改过的动态部分（学生、年级/班级、每门课已选名单）
+//  - 静态固定数据（30 门课程的 id/name/teacher/location/requirement/limit/description/category）
+//    不入库，保证未来课程配置更新时不与用户旧存储冲突
+//  - 持久化层独立于页面状态，不依赖任何 UI 模块
+// ====================================================================
+const PersistentStorage = (function () {
+  const KEY = 'pjyz_course_selection_state_v1';
+  const VERSION = 1;
+
+  // ---- 存储底层：try/catch + 可访问性检测 ----
+  function isAvailable() {
+    try {
+      if (!window.localStorage) return false;
+      const t = '__pjyz_test__';
+      localStorage.setItem(t, '1');
+      localStorage.removeItem(t);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 抽取需要持久化的“动态状态”快照
+  function _snapshot() {
+    return {
+      v: VERSION,
+      t: Date.now(),
+      students: students.slice(),
+      fileName: fileName,
+      gradeName: gradeName,
+      classNumber: classNumber,
+      className: className,
+      // 只持久化 {id, students}，其他字段来自 COURSES 常量
+      courses: COURSES.map(function (c) {
+        return { id: c.id, students: c.students.slice() };
+      }),
+    };
+  }
+
+  function save() {
+    if (!isAvailable()) return { ok: false, reason: 'storage-unavailable' };
+    try {
+      const payload = _snapshot();
+      localStorage.setItem(KEY, JSON.stringify(payload));
+      return { ok: true };
+    } catch (e) {
+      // 配额超限 / 序列化异常
+      console.error('[PersistentStorage] save failed:', e);
+      try {
+        if (typeof window.showToast === 'function') {
+          window.showToast('本地保存失败（可能是存储已满）：' + (e && e.message ? e.message : e), 'error');
+        }
+      } catch (_) { /* 忽略 */ }
+      return { ok: false, reason: e && e.message ? e.message : 'save-error' };
+    }
+  }
+
+  function load() {
+    if (!isAvailable()) return { ok: false, reason: 'storage-unavailable' };
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return { ok: false, reason: 'empty' };
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') {
+        throw new Error('invalid format');
+      }
+      if (data.v !== VERSION) {
+        throw new Error('version mismatch: expected ' + VERSION + ', got ' + data.v);
+      }
+      return { ok: true, data: data };
+    } catch (e) {
+      console.error('[PersistentStorage] load failed:', e);
+      // 损坏/格式错误：清除，避免下次继续报错
+      try { localStorage.removeItem(KEY); } catch (_) { /* 忽略 */ }
+      return { ok: false, reason: e && e.message ? e.message : 'load-error' };
+    }
+  }
+
+  // 将加载结果应用到全局状态（不直接操作 DOM，只改内存状态）
+  function applyData(data) {
+    if (!data) return false;
+    try {
+      // 恢复基本状态
+      if (Array.isArray(data.students)) students = data.students.slice();
+      if (typeof data.fileName === 'string') fileName = data.fileName;
+      if (typeof data.gradeName === 'string') gradeName = data.gradeName;
+      if (typeof data.classNumber === 'string') classNumber = data.classNumber;
+      if (typeof data.className === 'string') className = data.className;
+
+      // 恢复已选学生（只改 students 槽位；limit/结构从 COURSES 同步）
+      if (Array.isArray(data.courses)) {
+        data.courses.forEach(function (snap) {
+          if (!snap || typeof snap.id !== 'number') return;
+          const course = COURSES.find(function (c) { return c.id === snap.id; });
+          if (!course) return;
+          if (Array.isArray(snap.students)) {
+            // 按持久化结果重写，长度以存储为准（之后 syncCourseSlots 会按年级修正）
+            course.students = snap.students.slice();
+          }
+        });
+      }
+      // 年级存在 → 同步各课程槽位数（保证 limit 配置正确）
+      if (gradeName) {
+        try { syncCourseSlots(); } catch (_) { /* 忽略 */ }
+      }
+      return true;
+    } catch (e) {
+      console.error('[PersistentStorage] applyData failed:', e);
+      return false;
+    }
+  }
+
+  function clear() {
+    if (!isAvailable()) return { ok: false, reason: 'storage-unavailable' };
+    try {
+      localStorage.removeItem(KEY);
+      return { ok: true };
+    } catch (e) {
+      console.error('[PersistentStorage] clear failed:', e);
+      return { ok: false, reason: e && e.message ? e.message : 'clear-error' };
+    }
+  }
+
+  function hasData() {
+    if (!isAvailable()) return false;
+    try {
+      return !!localStorage.getItem(KEY);
+    } catch (e) { return false; }
+  }
+
+  return {
+    KEY: KEY,
+    VERSION: VERSION,
+    isAvailable: isAvailable,
+    save: save,
+    load: load,
+    applyData: applyData,
+    clear: clear,
+    hasData: hasData,
+  };
+})();
+
+// ---- 便捷包装：持久化 + 上报结果（给 UI 调用）----
+function saveState() {
+  var r = PersistentStorage.save();
+  return r.ok;
+}
+function loadStateFromStorage() {
+  var r = PersistentStorage.load();
+  if (!r.ok) return false;
+  return PersistentStorage.applyData(r.data);
+}
+
+// ====================================================================
+// 单元测试：持久化与重置（浏览器控制台执行 `window.PjyzTests.run()` 可手动触发）
+// 特点：
+//  - 不污染正式 localStorage 键（使用独立测试键）
+//  - 输出通过/失败 + 断言
+// ====================================================================
+window.PjyzTests = (function () {
+  var TEST_KEY = '__pjyz_test_state_v1__';
+
+  // 返回一个隔离环境的存储工具
+  function makeSandbox() {
+    var COURSES_BAK = COURSES.map(function (c) {
+      return { id: c.id, students: c.students.slice() };
+    });
+    var STUDENTS_BAK = students.slice();
+    var GRADE_BAK = gradeName, CLASSNUM_BAK = classNumber, CLASSNM_BAK = className, FN_BAK = fileName;
+
+    function restore() {
+      COURSES_BAK.forEach(function (b) {
+        var c = COURSES.find(function (x) { return x.id === b.id; });
+        if (c) c.students = b.students.slice();
+      });
+      students = STUDENTS_BAK.slice();
+      gradeName = GRADE_BAK;
+      classNumber = CLASSNUM_BAK;
+      className = CLASSNM_BAK;
+      fileName = FN_BAK;
+      try { localStorage.removeItem(TEST_KEY); } catch (_) {}
+    }
+    return { restore: restore };
+  }
+
+  function assert(cond, msg) {
+    if (!cond) throw new Error('ASSERT FAILED: ' + msg);
+  }
+
+  function runCase(name, fn) {
+    var sb = makeSandbox();
+    try {
+      fn();
+      console.log('%c✔ PASS : ' + name, 'color:#16a34a;font-weight:600;');
+      return true;
+    } catch (e) {
+      console.error('%c✘ FAIL : ' + name, 'color:#dc2626;font-weight:700;', e && e.message ? e.message : e);
+      return false;
+    } finally {
+      sb.restore();
+    }
+  }
+
+  function run() {
+    console.group('%c浦江一中拓展课选课 — 持久化/重置 单元测试', 'color:#2563eb;font-weight:700;font-size:14px;');
+    var t0 = performance.now();
+    var pass = 0, total = 0;
+
+    total++;
+    if (runCase('1. Storage: isAvailable 不为 undefined', function () {
+      assert(typeof PersistentStorage.isAvailable === 'function', 'isAvailable 必须是函数');
+      assert(typeof PersistentStorage.save === 'function', 'save 必须是函数');
+      assert(typeof PersistentStorage.load === 'function', 'load 必须是函数');
+      assert(typeof PersistentStorage.clear === 'function', 'clear 必须是函数');
+      assert(typeof PersistentStorage.applyData === 'function', 'applyData 必须是函数');
+    })) pass++;
+
+    total++;
+    if (runCase('2. 序列化/反序列化：写入 → 读回 → 字段匹配', function () {
+      // 先把测试键写进去
+      students = ['张三', '李四', '王五'];
+      gradeName = '六年级';
+      classNumber = '3';
+      className = '六年级(3)班';
+      fileName = 'test.xlsx';
+      COURSES.find(function (c) { return c.id === 1; }).students = ['张三'];
+      COURSES.find(function (c) { return c.id === 2; }).students = [null, '李四'];
+
+      // 复用 PersistentStorage 的序列化结构，但使用测试键
+      var payload = {
+        v: PersistentStorage.VERSION,
+        t: Date.now(),
+        students: students.slice(),
+        fileName: fileName,
+        gradeName: gradeName,
+        classNumber: classNumber,
+        className: className,
+        courses: COURSES.map(function (c) { return { id: c.id, students: c.students.slice() }; }),
+      };
+      localStorage.setItem(TEST_KEY, JSON.stringify(payload));
+
+      var raw = localStorage.getItem(TEST_KEY);
+      assert(!!raw, '原始数据应当存在');
+      var parsed = JSON.parse(raw);
+      assert(parsed.v === PersistentStorage.VERSION, '版本号匹配');
+      assert(Array.isArray(parsed.students) && parsed.students.length === 3, '学生数组长度=3');
+      assert(parsed.fileName === 'test.xlsx', '文件名正确');
+      assert(parsed.gradeName === '六年级', '年级正确');
+      var c8 = parsed.courses.find(function (x) { return x.id === 2; });
+      assert(Array.isArray(c8.students) && c8.students[1] === '李四', '课程2的已选正确');
+    })) pass++;
+
+    total++;
+    if (runCase('3. applyData：能正确把快照写回全局状态', function () {
+      var snap = {
+        v: PersistentStorage.VERSION,
+        t: Date.now(),
+        students: ['测试A', '测试B'],
+        fileName: 'snap.xlsx',
+        gradeName: '七年级',
+        classNumber: '5',
+        className: '七年级(5)班',
+        courses: [
+          { id: 1, students: ['测试A'] },
+          { id: 2, students: ['测试B', null] },
+          { id: 99, students: ['忽略不存在的id'] },
+        ],
+      };
+      var ok = PersistentStorage.applyData(snap);
+      assert(ok === true, 'applyData 返回 true');
+      assert(students.length === 2 && students[0] === '测试A', 'students 已恢复');
+      assert(fileName === 'snap.xlsx', 'fileName 已恢复');
+      assert(gradeName === '七年级' && className === '七年级(5)班', '年级班级已恢复');
+      assert(COURSES.find(function (c) { return c.id === 1; }).students[0] === '测试A', '课程1的已选已恢复');
+      assert(COURSES.find(function (c) { return c.id === 2; }).students[0] === '测试B', '课程2的已选已恢复');
+    })) pass++;
+
+    total++;
+    if (runCase('4. clear：能移除存储键', function () {
+      localStorage.setItem(TEST_KEY, JSON.stringify({ v: 1 }));
+      assert(!!localStorage.getItem(TEST_KEY), '写入成功');
+      // 用 PersistentStorage.clear 的逻辑但指向测试键
+      localStorage.removeItem(TEST_KEY);
+      assert(!localStorage.getItem(TEST_KEY), '清除成功');
+    })) pass++;
+
+    total++;
+    if (runCase('5. 异常处理：JSON 损坏时 load 会失败并清理', function () {
+      localStorage.setItem(TEST_KEY, '{ this is not valid json ');
+      // 模拟 load 的工作流，只是用测试键
+      try {
+        var raw = localStorage.getItem(TEST_KEY);
+        JSON.parse(raw);
+        assert(false, '理应 parse 失败');
+      } catch (e) {
+        localStorage.removeItem(TEST_KEY); // load 会清
+      }
+      assert(!localStorage.getItem(TEST_KEY), '损坏数据应已被清理');
+    })) pass++;
+
+    total++;
+    if (runCase('6. 版本不匹配时 load 返回失败', function () {
+      var bad = { v: 9999, students: ['X'] };
+      localStorage.setItem(TEST_KEY, JSON.stringify(bad));
+      var raw = localStorage.getItem(TEST_KEY);
+      var parsed = JSON.parse(raw);
+      assert(parsed.v !== PersistentStorage.VERSION, '版本号不相等');
+    })) pass++;
+
+    total++;
+    if (runCase('7. resetState() 把状态重置回初始默认（空）', function () {
+      // 先设一些假数据
+      students = ['干扰1', '干扰2'];
+      gradeName = '六年级'; classNumber = '1'; className = '六年级(1)班';
+      fileName = 'xxx.xlsx';
+      COURSES.find(function (c) { return c.id === 3; }).students = ['干扰1'];
+      // 调全局 resetState
+      resetState(true); // 静默（不弹 toast，不触发 UI）
+      assert(students.length === 0, 'students 已清空');
+      assert(gradeName === '' && classNumber === '' && className === '', '年级班级已清空');
+      assert(fileName === '', 'fileName 已清空');
+      var c3 = COURSES.find(function (c) { return c.id === 3; });
+      var hasSelection = c3.students.some(function (s) { return !!s; });
+      assert(!hasSelection, '课程已选已清空');
+    })) pass++;
+
+    var t1 = performance.now();
+    console.log('%c完成：' + pass + ' / ' + total + ' 项通过（耗时 ' + (t1 - t0).toFixed(2) + 'ms）',
+      pass === total ? 'color:#16a34a;font-weight:700;' : 'color:#dc2626;font-weight:700;');
+    console.groupEnd();
+    return pass === total;
+  }
+
+  return { run: run };
+})();
+
+// ====================================================================
+// 重置：回到初始默认状态（= 用户首次打开页面的状态）
+//  - 清空 students / gradeName / classNumber / className / fileName
+//  - 清空所有课程已选槽位，并按 limit 重建为 null 数组
+//  - 清空 localStorage 持久化
+//  - silent=true 时不触发 UI / 不显示提示（供自测用）
+// ====================================================================
+function resetState(silent) {
+  // 1. 清空全局状态
+  students = [];
+  gradeName = '';
+  classNumber = '';
+  className = '';
+  fileName = '';
+  currentSelect = null;
+
+  // 2. 重置所有课程的 students 为初始空槽（按 limit 初始化）
+  COURSES.forEach(function (c) {
+    var limit;
+    if (c.limit == null) {
+      limit = 0;
+    } else if (typeof c.limit === 'number') {
+      limit = c.limit;
+    } else {
+      var vals = Object.values(c.limit);
+      limit = vals.length ? vals[0] : 0;
+    }
+    c.students = Array(Math.max(0, limit)).fill(null);
+  });
+
+  // 3. 清空持久化存储
+  PersistentStorage.clear();
+
+  if (silent) return;
+
+  // 4. UI：上传模块恢复到初始文案
+  var uploadTextCol = document.getElementById('uploadTextCol');
+  if (uploadTextCol) {
+    uploadTextCol.innerHTML =
+      '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
+      '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列</span>';
+  }
+
+  // 5. 关闭可能打开的 modal / lottery
+  try { closeModal(); } catch (_) { /* 忽略 */ }
+  try { closeLottery(); } catch (_) { /* 忽略 */ }
+
+  // 6. 重渲染 UI
+  renderAll();
+}
+
+// ===== 页面状态 =====
+let students = [];          // 学生姓名数组（去重后）
+let gradeName = '';         // 年级名称（六年级 / 七年级）
+let classNumber = '';       // 班级序号（如 "3"）
+let className = '';         // 组合后的班级名称（如 "六年级(3)班"）
+let fileName = '';           // 上传的文件名
+let currentSelect = null;   // 当前正在选课的位置 { courseId, slotIndex }
+
+// ===== DOM 引用 =====
+const uploadArea = document.getElementById('uploadArea');
+const fileInput  = document.getElementById('fileInput');
+const statsCard  = document.getElementById('statsCard');
+const tableWrap  = document.getElementById('tableWrap');
+const exportBtn  = document.getElementById('exportBtn');
+const modal      = document.getElementById('modal');
+const modalTitle = document.getElementById('modalTitle');
+const modalCount = document.getElementById('modalCount');
+const modalClose = document.getElementById('modalClose');
+const nameGrid   = document.getElementById('nameGrid');
+const searchInput = document.getElementById('searchInput');
+const toast      = document.getElementById('toast');
+
+// ===== 工具函数 =====
+// 显示 Toast 提示
+function showToast(msg, type = '') {
+  toast.textContent = msg;
+  toast.className = 'toast show ' + type;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { toast.className = 'toast ' + type; }, 2500);
+}
+
+// 获取所有已被选课的学生姓名集合
+function getAssignedNames() {
+  const set = new Set();
+  COURSES.forEach(c => c.students.forEach(n => { if (n) set.add(n); }));
+  return set;
+}
+
+// 根据当前年级获取课程限制人数
+// limit 为数字时所有年级一致；为对象时按年级取值
+function getCourseLimit(course) {
+  if (course.limit == null) return 0;
+  if (typeof course.limit === 'number') return course.limit;
+  if (gradeName && course.limit[gradeName] != null) return course.limit[gradeName];
+  // 未选年级或无对应配置时，取对象中第一个值作兜底
+  const vals = Object.values(course.limit);
+  return vals.length ? vals[0] : 0;
+}
+
+// 根据当前年级同步各课程的 students 数组长度
+// 切换年级时：扩容补 null，缩容时保留已选、裁掉多余空位；若已选超出新限制则裁掉末尾已选
+function syncCourseSlots() {
+  COURSES.forEach(c => {
+    const limit = getCourseLimit(c);
+    const filled = c.students.filter(s => s != null);
+    // 已选超出新限制：保留前 limit 个已选（如超出则提示）
+    if (filled.length > limit) {
+      const overflow = filled.slice(limit);
+      const kept = filled.slice(0, limit);
+      c.students = kept.concat(Array(Math.max(0, limit - kept.length)).fill(null));
+      if (overflow.length) {
+        showToast(`年级切换：${c.name} 已超出限制，已移除 ${overflow.join('、')}`, 'warning');
+      }
+    } else {
+      // 正常扩缩容：保留已选顺序，补 null
+      c.students = filled.concat(Array(Math.max(0, limit - filled.length)).fill(null));
+    }
+  });
+}
+
+// 统计已选人数
+function countSelected() {
+  let n = 0;
+  COURSES.forEach(c => c.students.forEach(s => { if (s) n++; }));
+  return n;
+}
+
+// 转义 HTML，防止学生名中含有特殊字符
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+// ===== 渲染：信息统计栏 =====
+function renderStats() {
+  const total = students.length;
+  const selected = countSelected();
+  const unselected = total - selected;
+  // 直接输出子节点（父容器 statsCard 本身就是 .stats-bar 且 display: contents，平铺到控制条 grid）
+  statsCard.innerHTML = `
+      <div class="stat-input stat-input-class">
+        <label>年级</label>
+        <select id="gradeSelect">
+          <option value="">请选择</option>
+          <option value="六年级" ${gradeName === '六年级' ? 'selected' : ''}>六年级</option>
+          <option value="七年级" ${gradeName === '七年级' ? 'selected' : ''}>七年级</option>
+        </select>
+      </div>
+      <div class="stat-input stat-input-class">
+        <label>班级</label>
+        <select id="classSelect" ${!gradeName ? 'disabled' : ''}>
+          <option value="">请先选择年级</option>
+          ${buildClassOptions()}
+        </select>
+      </div>
+      <div class="stat-card">
+        <div class="label">总人数</div>
+        <div class="value">${total}</div>
+      </div>
+      <div class="stat-card selected">
+        <div class="label">已选人数</div>
+        <div class="value">${selected}</div>
+      </div>
+      <div class="stat-card unselected">
+        <div class="label">未选人数</div>
+        <div class="value">${unselected}</div>
+      </div>`;
+  // 绑定年级、班级下拉联动
+  const gradeSelect = document.getElementById('gradeSelect');
+  const classSelect = document.getElementById('classSelect');
+  gradeSelect.addEventListener('change', e => {
+    gradeName = e.target.value;
+    classNumber = '';
+    syncCourseSlots(); // 按新年级同步各课程名额
+    renderAll();
+  });
+  classSelect.addEventListener('change', e => {
+    classNumber = e.target.value;
+    updateClassName();
+  });
+}
+
+// 根据年级生成班级选项：六年级 10 个班，七年级 8 个班
+function buildClassOptions() {
+  if (!gradeName) return '';
+  const count = gradeName === '六年级' ? 10 : 8;
+  let html = '';
+  for (let i = 1; i <= count; i++) {
+    const v = String(i);
+    html += `<option value="${v}" ${classNumber === v ? 'selected' : ''}>${v}班</option>`;
+  }
+  return html;
+}
+
+// 组合班级名称，如 "六年级(3)班"
+function updateClassName() {
+  if (gradeName && classNumber) {
+    className = `${gradeName}(${classNumber})班`;
+  } else {
+    className = '';
+  }
+}
+
+// ===== 渲染：课程选课表格 =====
+function renderTable() {
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:60px;">序号</th>
+          <th style="width:220px;">课程名称</th>
+          <th style="width:180px;">授课老师</th>
+          <th style="width:220px;">授课地点</th>
+          <th style="width:140px;">报名要求</th>
+          <th style="width:110px;">限制人数</th>
+          <th class="th-students">
+            <div class="th-students-inner">
+              <span>学生姓名</span>
+              <button class="btn-lottery" id="lotteryBtn">🎲 随机抽签</button>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>`;
+  COURSES.forEach((c, i) => {
+    const limit = getCourseLimit(c);
+    const noQuota = limit === 0;
+    html += `
+      <tr${noQuota ? ' class="no-quota"' : ''}>
+        <td>${i + 1}</td>
+        <td><span class="course-name" data-course-id="${c.id}" style="cursor:help;" title="">${esc(c.name)}</span></td>
+        <td><span class="cell-inner"><span class="ico">👨‍🏫</span><span class="teacher-cell">${esc(c.teacher || '')}</span></span></td>
+        <td><span class="cell-inner"><span class="ico">📍</span><span class="location-cell">${esc(c.location || '')}</span></span></td>
+        <td>${c.requirement ? `<span class="req-tag"><span class="ico">⚠</span>${esc(c.requirement)}</span>` : ''}</td>
+        <td>${noQuota
+          ? '<span class="limit-badge zero"><span class="ico">🚫</span>本年级无名额</span>'
+          : `<span class="limit-badge"><span class="ico">👥</span>${limit} 人</span>`}</td>
+        <td>`;
+    if (noQuota) {
+      html += `<span class="slot disabled">本年级不开放</span>`;
+    } else {
+      c.students.forEach((name, idx) => {
+        if (name) {
+          html += `<span class="slot filled" data-course="${c.id}" data-slot="${idx}" title="点击取消">${esc(name)}</span>`;
+        } else {
+          html += `<span class="slot empty" data-course="${c.id}" data-slot="${idx}">+ 点击选择</span>`;
+        }
+      });
+    }
+    html += `</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  tableWrap.innerHTML = html;
+  tableWrap.querySelectorAll('.slot').forEach(slot => {
+    slot.addEventListener('click', onSlotClick);
+  });
+}
+
+// 渲染全部
+function renderAll() {
+  renderStats();
+  renderTable();
+  exportBtn.disabled = students.length === 0;
+  // 状态可能发生变化 → 写入持久化（localStorage 写入通常 <1ms，失败有兜底不影响 UI）
+  try { saveState(); } catch (e) { console.error('saveState failed in renderAll', e); }
+}
+
+// ===== 选课交互 =====
+// 名额按钮点击
+function onSlotClick(e) {
+  const courseId  = parseInt(e.currentTarget.dataset.course);
+  const slotIndex = parseInt(e.currentTarget.dataset.slot);
+  const course = COURSES.find(c => c.id === courseId);
+  const currentName = course.students[slotIndex];
+
+  // 已选 → 取消选课
+  if (currentName) {
+    course.students[slotIndex] = null;
+    renderAll();
+    showToast(`已取消 ${currentName} 的 ${course.name}`, 'warning');
+    return;
+  }
+  // 空白 → 打开选课面板
+  currentSelect = { courseId, slotIndex };
+  openModal(course);
+}
+
+// 打开选课面板
+function openModal(course) {
+  modalTitle.textContent = `选择学生 - ${course.name}`;
+  searchInput.value = '';
+  renderNameGrid('');
+  modal.classList.add('active');
+  setTimeout(() => searchInput.focus(), 50);
+}
+
+// 关闭选课面板
+function closeModal() {
+  modal.classList.remove('active');
+  currentSelect = null;
+}
+
+// 渲染名字网格（已选学生置灰不可点击）
+function renderNameGrid(filter) {
+  const assigned = getAssignedNames();
+  // 搜索过滤
+  let list = students;
+  if (filter) {
+    const f = filter.toLowerCase();
+    list = students.filter(s => s.toLowerCase().includes(f));
+  }
+  // 统计可用人数
+  const availableCount = students.filter(s => !assigned.has(s)).length;
+  modalCount.textContent = `共 ${students.length} 人 · 可选 ${availableCount} 人 · 已选 ${students.length - availableCount} 人`;
+
+  if (list.length === 0) {
+    nameGrid.innerHTML = `<div class="no-students">${students.length === 0 ? '请先上传学生名单' : '没有匹配的学生'}</div>`;
+    return;
+  }
+  nameGrid.innerHTML = list.map(name => {
+    const isAssigned = assigned.has(name);
+    return `<div class="name-card ${isAssigned ? 'disabled' : ''}" data-name="${esc(name)}" title="${isAssigned ? '已选其他课程' : ''}">${esc(name)}${isAssigned ? ' ✓' : ''}</div>`;
+  }).join('');
+  // 绑定可用名字的点击事件
+  nameGrid.querySelectorAll('.name-card:not(.disabled)').forEach(card => {
+    card.addEventListener('click', onNameClick);
+  });
+}
+
+// 名字点击 → 填入名额
+function onNameClick(e) {
+  const name = e.currentTarget.dataset.name;
+  if (!currentSelect) return;
+  const course = COURSES.find(c => c.id === currentSelect.courseId);
+  course.students[currentSelect.slotIndex] = name;
+  closeModal();
+  renderAll();
+  showToast(`已为 ${name} 选择 ${course.name}`, 'success');
+}
+
+// ===== Excel 文件处理 =====
+// 检查 XLSX 库是否已加载完成
+function ensureXLSX() {
+  if (typeof XLSX !== 'undefined') return true;
+  showToast('Excel 处理库正在加载中，请稍后再试…', 'warning');
+  return false;
+}
+
+function handleFile(file) {
+  if (!file) return;
+  if (!ensureXLSX()) return;
+  if (!/\.(xlsx|xls)$/i.test(file.name)) {
+    showToast('请上传 .xlsx 或 .xls 格式的文件', 'error');
+    return;
+  }
+  fileName = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      // 以二维数组形式读取（保留空单元格为空串）
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length === 0) {
+        showToast('Excel 文件为空', 'error');
+        return;
+      }
+      // 查找"姓名"列：优先匹配常见表头
+      const header = rows[0].map(h => String(h).trim());
+      let nameIdx = header.findIndex(h =>
+        h === '姓名' || h === '名字' || h === '学生姓名' || /^name$/i.test(h)
+      );
+      let headerFound = nameIdx !== -1;
+      if (!headerFound) {
+        // 未找到姓名列 → 退而求其次使用第一列
+        nameIdx = 0;
+      }
+      // 判断第一行是否为表头（首单元格是否包含"姓名/名字/name"字样）
+      const firstCell = String(rows[0][nameIdx] || '').trim();
+      const looksLikeHeader = /姓名|名字|name/i.test(firstCell);
+      const startRow = looksLikeHeader ? 1 : 0;
+
+      // 提取学生姓名
+      const names = [];
+      for (let i = startRow; i < rows.length; i++) {
+        const cell = rows[i][nameIdx];
+        const name = cell ? String(cell).trim() : '';
+        if (name) names.push(name);
+      }
+      // 去重
+      const unique = [...new Set(names)];
+      if (unique.length === 0) {
+        showToast('未读取到任何学生姓名', 'error');
+        return;
+      }
+      // 重置选课状态
+      students = unique;
+      COURSES.forEach(c => c.students = c.students.map(() => null));
+      gradeName = '';
+      classNumber = '';
+      className = '';
+      // 显示文件信息：替换上传模块的 text-col 为成功状态
+      const uploadTextCol = document.getElementById('uploadTextCol');
+      if (uploadTextCol) {
+        uploadTextCol.innerHTML = `
+          <span class="title">✓ ${esc(fileName)}</span>
+          <span class="file-info">📋 共 ${unique.length} 名学生</span>`;
+      }
+      renderAll();
+      if (!headerFound) {
+        showToast(`未找到"姓名"列，已使用第一列作为姓名（共 ${unique.length} 人）`, 'warning');
+      } else {
+        showToast(`成功读取 ${unique.length} 名学生`, 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('读取 Excel 失败：' + err.message, 'error');
+    }
+  };
+  reader.onerror = () => showToast('文件读取失败', 'error');
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== 导出 Excel（同步提交到后端持久化） =====
+function exportExcel() {
+  if (!ensureXLSX()) return;
+  if (students.length === 0) {
+    showToast('请先上传学生名单', 'error');
+    return;
+  }
+  const cls = className.trim() || '未填写班级';
+  // 构造后端 payload：字段名与 /api/selections 一致
+  const payload = [];
+  COURSES.forEach(c => {
+    c.students.forEach(name => {
+      if (name) {
+        payload.push({
+          grade: gradeName || '',
+          class_name: cls,
+          student_name: name,
+          course_id: c.id,
+          course_name: c.name
+        });
+      }
+    });
+  });
+  if (payload.length === 0) {
+    showToast('暂无已选课学生，无法导出', 'warning');
+    return;
+  }
+
+  // 本地导出文件名
+  const date = new Date();
+  const dateStr = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
+  const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
+  const filename = `浦江一中拓展课选课结果_${safeClass}_${dateStr}.xlsx`;
+
+  // 本地导出（兜底）
+  function localExport() {
+    const data = payload.map(p => ({
+      '班级': p.class_name,
+      '姓名': p.student_name,
+      '选课名称': p.course_name,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 24 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '选课结果');
+    XLSX.writeFile(wb, filename);
+  }
+
+  // 先尝试同步到后端 → 后端返回 Excel 直接下载
+  showToast('正在同步到后台并导出…', 'info');
+  const headers = { 'Content-Type': 'application/json' };
+  const token = pjyzToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  fetch(pjyzApiBase() + '/api/selections', {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(payload)
+  })
+    .then(res => {
+      if (!res.ok) {
+        return res.json().catch(() => ({})).then(d => {
+          throw new Error(d.error || ('后端返回 ' + res.status));
+        });
+      }
+      return res.blob().then(blob => ({ blob: blob, fromServer: true }));
+    })
+    .then(result => {
+      // 下载后端返回的 Excel
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      showToast(`已同步 ${payload.length} 条记录到后台并导出`, 'success');
+    })
+    .catch(err => {
+      console.warn('[export] 后端同步失败，回退本地导出:', err);
+      try { localExport(); } catch (e) { console.error(e); }
+      showToast(`已本地导出 ${payload.length} 条（后台同步失败：${err.message}）`, 'warning');
+    });
+}
+
+// ===== 事件绑定 =====
+// 上传区点击 → 触发文件选择
+uploadArea.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+  e.target.value = ''; // 重置以便相同文件可再次选择
+});
+
+// 拖拽上传
+['dragenter', 'dragover'].forEach(ev => {
+  uploadArea.addEventListener(ev, e => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+});
+['dragleave', 'drop'].forEach(ev => {
+  uploadArea.addEventListener(ev, e => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+  });
+});
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// 弹窗交互
+modalClose.addEventListener('click', closeModal);
+modal.addEventListener('click', e => {
+  if (e.target === modal) closeModal();
+});
+searchInput.addEventListener('input', e => renderNameGrid(e.target.value));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+});
+
+// 导出按钮
+exportBtn.addEventListener('click', exportExcel);
+
+// ===== 抽签弹窗（内嵌抽签系统，无需 iframe / 外部文件） =====
+// 抽签按钮现在在 renderTable() 生成的 thead 内，会随表格重渲染而重建。
+// → 用事件委托绑定到 document，避免每次 renderTable 后重新绑。
+const lotteryModal = document.getElementById('lotteryModal');
+const lotteryClose = document.getElementById('lotteryClose');
+const lotteryContent = document.getElementById('lotteryContent');
+
+function openLottery() {
+  lotteryModal.classList.add('active');
+}
+function closeLottery() {
+  lotteryModal.classList.remove('active');
+  // 关闭弹窗时也关闭可能打开的选人弹层（直接操作 DOM，不依赖 IIFE 内的 closePicker）
+  var pm = document.getElementById('pickerMask');
+  if (pm) pm.classList.remove('show');
+}
+document.addEventListener('click', function (e) {
+  if (e.target.closest('#lotteryBtn')) openLottery();
+});
+lotteryClose.addEventListener('click', closeLottery);
+lotteryModal.addEventListener('click', e => { if (e.target === lotteryModal) closeLottery(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && lotteryModal.classList.contains('active')) closeLottery();
+});
+
+// ===== 抽签系统核心逻辑（内嵌，作用于 #lotteryContent 内） =====
+// 通过闭包访问主页面的 students 数组（用户上传表格后去重的学生姓名列表）
+(function () {
+  'use strict';
+
+  /* ---------- 工具函数 ---------- */
+  function showMsg(el, text, type) {
+    el.textContent = text;
+    el.className = 'msg show ' + (type || 'info');
+  }
+  function hideMsg(el) {
+    el.className = 'msg';
+  }
+  function isPositiveInt(val) {
+    var n = parseInt(val, 10);
+    return !isNaN(n) && n > 0 && String(n) === String(val).trim();
+  }
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+  function pickRandom(arr, n) {
+    return shuffle(arr).slice(0, n);
+  }
+  function delay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  // 读取主页面 students 数组（上传名单去重后的学生姓名列表）
+  function getUploadedStudents() {
+    return Array.isArray(students) ? students.slice() : [];
+  }
+
+  /* ---------- Tab 切换（作用域限定在抽签弹窗内） ---------- */
+  var tabBtns = lotteryContent.querySelectorAll('.tab-btn');
+  var panels = lotteryContent.querySelectorAll('.panel');
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = btn.getAttribute('data-tab');
+      tabBtns.forEach(function (b) { b.classList.remove('active'); });
+      panels.forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      lotteryContent.querySelector('#' + target).classList.add('active');
+    });
+  });
+
+  /* ============================================================
+   *  方式一：名额抽取
+   * ============================================================ */
+  var m1_total  = document.getElementById('m1_total');
+  var m1_names  = document.getElementById('m1_names');
+  var m1_pick   = document.getElementById('m1_pick');
+  var m1_start  = document.getElementById('m1_start');
+  var m1_reset  = document.getElementById('m1_reset');
+  var m1_msg    = document.getElementById('m1_msg');
+  var m1_stage  = document.getElementById('m1_stage');
+  var m1_roller = document.getElementById('m1_roller');
+  var m1_results = document.getElementById('m1_results');
+  var m1_grid    = document.getElementById('m1_result_grid');
+  var m1_pickBtn = document.getElementById('m1_pickBtn');
+
+  var m1_data = [];
+  var m1_busy = false;
+
+  // 由"选人抽签"填充名单：把选中的姓名写入 m1_data，并刷新 m1_names 显示
+  function applyPickedNamesToM1(names) {
+    m1_data = names.map(function (n, i) { return { num: i + 1, name: n }; });
+    m1_names.innerHTML = '';
+    m1_data.forEach(function (d) {
+      var item = document.createElement('div');
+      item.className = 'name-item';
+      item.innerHTML =
+        '<span class="num">' + d.num + '</span>' +
+        '<input type="text" data-idx="' + (d.num - 1) + '" value="' + (d.name || '') + '" placeholder="名字（选填）" />';
+      m1_names.appendChild(item);
+    });
+    m1_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var idx = parseInt(inp.getAttribute('data-idx'), 10);
+        m1_data[idx].name = inp.value.trim();
+      });
+    });
+    // 自动填入总人数
+    m1_total.value = m1_data.length;
+  }
+
+  m1_total.addEventListener('input', function () {
+    hideMsg(m1_msg);
+    // 如果当前总人数与已有 m1_data 长度一致（即选人抽签刚填入），不重建列表
+    if (m1_data.length > 0 && parseInt(m1_total.value, 10) === m1_data.length) {
+      return;
+    }
+    m1_data = [];
+    m1_names.innerHTML = '';
+    var val = m1_total.value.trim();
+    if (!isPositiveInt(val)) {
+      if (val !== '') showMsg(m1_msg, '请输入有效的正整数', 'error');
+      return;
+    }
+    var n = parseInt(val, 10);
+    if (n > 500) { showMsg(m1_msg, '总人数最多 500 人', 'error'); return; }
+    for (var i = 1; i <= n; i++) {
+      m1_data.push({ num: i, name: '' });
+      var item = document.createElement('div');
+      item.className = 'name-item';
+      item.innerHTML =
+        '<span class="num">' + i + '</span>' +
+        '<input type="text" data-idx="' + (i - 1) + '" placeholder="名字（选填）" />';
+      m1_names.appendChild(item);
+    }
+    m1_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var idx = parseInt(inp.getAttribute('data-idx'), 10);
+        m1_data[idx].name = inp.value.trim();
+      });
+    });
+  });
+
+  m1_start.addEventListener('click', function () {
+    if (m1_busy) return;
+    hideMsg(m1_msg);
+
+    if (!isPositiveInt(m1_total.value)) {
+      showMsg(m1_msg, '请先输入有效的总人数', 'error'); return;
+    }
+    if (m1_data.length === 0) {
+      showMsg(m1_msg, '请先生成序号列表', 'error'); return;
+    }
+    if (!isPositiveInt(m1_pick.value)) {
+      showMsg(m1_msg, '请输入有效的抽取数量', 'error'); return;
+    }
+    var total = m1_data.length;
+    var pickN = parseInt(m1_pick.value, 10);
+    if (pickN > total) {
+      showMsg(m1_msg, '抽取数量不能超过总人数（' + total + '）', 'error'); return;
+    }
+
+    m1_busy = true;
+    m1_start.disabled = true;
+    m1_results.classList.remove('show');
+    m1_stage.classList.add('show');
+
+    var displayPool = m1_data.map(function (d) {
+      return d.name || ('号 ' + d.num);
+    });
+
+    var winners = pickRandom(m1_data, pickN);
+
+    var spinDuration = 2200;
+    var interval = 50;
+    var elapsed = 0;
+
+    function spin() {
+      var randIdx = Math.floor(Math.random() * displayPool.length);
+      m1_roller.textContent = displayPool[randIdx];
+
+      elapsed += interval;
+      interval = 50 + (elapsed / spinDuration) * 180;
+
+      if (elapsed < spinDuration) {
+        setTimeout(spin, interval);
+      } else {
+        revealResults();
+      }
+    }
+
+    function revealResults() {
+      m1_roller.classList.remove('spinning');
+      m1_roller.textContent = '✓';
+
+      setTimeout(function () {
+        m1_stage.classList.remove('show');
+
+        m1_grid.innerHTML = '';
+        winners.forEach(function (w, i) {
+          var card = document.createElement('div');
+          card.className = 'result-card';
+          card.style.animationDelay = (i * 0.12) + 's';
+          var display = w.name || ('号 ' + w.num);
+          var badge = w.name ? '#' + w.num : w.num;
+          card.innerHTML =
+            '<div class="badge">' + badge + '</div>' +
+            '<div class="rname">' + display + '</div>';
+          m1_grid.appendChild(card);
+        });
+
+        m1_results.classList.add('show');
+        m1_busy = false;
+        m1_start.disabled = false;
+      }, 500);
+    }
+
+    spin();
+  });
+
+  m1_reset.addEventListener('click', function () {
+    m1_total.value = '';
+    m1_pick.value = '';
+    m1_names.innerHTML = '';
+    m1_data = [];
+    hideMsg(m1_msg);
+    m1_stage.classList.remove('show');
+    m1_results.classList.remove('show');
+    m1_roller.classList.add('spinning');
+    m1_roller.textContent = '?';
+    m1_grid.innerHTML = '';
+  });
+
+  m1_pickBtn.addEventListener('click', function () {
+    openPicker(function (names) {
+      // 选人完成后：把姓名填入方式一，并自动确认总人数
+      applyPickedNamesToM1(names);
+      hideMsg(m1_msg);
+      if (names.length > 0) {
+        showMsg(m1_msg, '已选 ' + names.length + ' 人，请输入抽取数量后开始抽签', 'info');
+      }
+    });
+  });
+
+  /* ============================================================
+   *  方式二：先后排序
+   * ============================================================ */
+  var m2_total   = document.getElementById('m2_total');
+  var m2_names   = document.getElementById('m2_names');
+  var m2_start   = document.getElementById('m2_start');
+  var m2_reset   = document.getElementById('m2_reset');
+  var m2_msg     = document.getElementById('m2_msg');
+  var m2_stage   = document.getElementById('m2_stage');
+  var m2_deck    = document.getElementById('m2_deck');
+  var m2_results = document.getElementById('m2_results');
+  var m2_rank    = document.getElementById('m2_rank_list');
+  var m2_pickBtn = document.getElementById('m2_pickBtn');
+
+  var m2_data = [];
+  var m2_busy = false;
+
+  function applyPickedNamesToM2(names) {
+    m2_data = names.map(function (n, i) { return { num: i + 1, name: n }; });
+    m2_names.innerHTML = '';
+    m2_data.forEach(function (d) {
+      var item = document.createElement('div');
+      item.className = 'name-item';
+      item.innerHTML =
+        '<span class="num">' + d.num + '</span>' +
+        '<input type="text" data-idx="' + (d.num - 1) + '" value="' + (d.name || '') + '" placeholder="选手' + d.num + '（选填）" />';
+      m2_names.appendChild(item);
+    });
+    m2_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var idx = parseInt(inp.getAttribute('data-idx'), 10);
+        m2_data[idx].name = inp.value.trim();
+      });
+    });
+    m2_total.value = m2_data.length;
+  }
+
+  m2_total.addEventListener('input', function () {
+    hideMsg(m2_msg);
+    if (m2_data.length > 0 && parseInt(m2_total.value, 10) === m2_data.length) {
+      return;
+    }
+    m2_data = [];
+    m2_names.innerHTML = '';
+    var val = m2_total.value.trim();
+    if (!isPositiveInt(val)) {
+      if (val !== '') showMsg(m2_msg, '请输入有效的正整数', 'error');
+      return;
+    }
+    var n = parseInt(val, 10);
+    if (n > 500) { showMsg(m2_msg, '参与人数最多 500 人', 'error'); return; }
+    for (var i = 1; i <= n; i++) {
+      m2_data.push({ num: i, name: '' });
+      var item = document.createElement('div');
+      item.className = 'name-item';
+      item.innerHTML =
+        '<span class="num">' + i + '</span>' +
+        '<input type="text" data-idx="' + (i - 1) + '" placeholder="选手' + i + '（选填）" />';
+      m2_names.appendChild(item);
+    }
+    m2_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var idx = parseInt(inp.getAttribute('data-idx'), 10);
+        m2_data[idx].name = inp.value.trim();
+      });
+    });
+  });
+
+  m2_start.addEventListener('click', async function () {
+    if (m2_busy) return;
+    hideMsg(m2_msg);
+
+    if (!isPositiveInt(m2_total.value)) {
+      showMsg(m2_msg, '请先输入有效的参与人数', 'error'); return;
+    }
+    if (m2_data.length === 0) {
+      showMsg(m2_msg, '请先生成选手列表', 'error'); return;
+    }
+
+    m2_busy = true;
+    m2_start.disabled = true;
+    m2_results.classList.remove('show');
+    m2_stage.classList.add('show');
+
+    var displayPool = m2_data.map(function (d) {
+      return d.name || ('选手' + d.num);
+    });
+
+    m2_deck.innerHTML = '';
+    var cards = [];
+    displayPool.forEach(function (txt, i) {
+      var c = document.createElement('div');
+      c.className = 'shuffle-card shuffling';
+      c.textContent = txt.length > 4 ? txt.slice(0, 3) + '…' : txt;
+      c.style.animationDelay = (i * 0.05) + 's';
+      m2_deck.appendChild(c);
+      cards.push(c);
+    });
+
+    var shuffled = shuffle(m2_data);
+
+    var rounds = 5;
+    for (var r = 0; r < rounds; r++) {
+      var shuffledDisplay = shuffle(displayPool);
+      cards.forEach(function (c, i) {
+        var txt = shuffledDisplay[i];
+        c.textContent = txt.length > 4 ? txt.slice(0, 3) + '…' : txt;
+        c.classList.remove('shuffling');
+        void c.offsetWidth;
+        c.classList.add('shuffling');
+      });
+      await delay(450);
+    }
+
+    await delay(300);
+    m2_deck.innerHTML = '';
+    var reveal = document.createElement('div');
+    reveal.style.cssText = 'font-size:24px;font-weight:800;color:#fff;animation:rollerPulse 0.3s linear infinite;';
+    reveal.textContent = '揭晓中…';
+    m2_deck.appendChild(reveal);
+
+    await delay(700);
+    m2_stage.classList.remove('show');
+    m2_deck.innerHTML = '';
+
+    m2_rank.innerHTML = '';
+    var medals = ['🥇', '🥈', '🥉'];
+    shuffled.forEach(function (d, i) {
+      var rank = i + 1;
+      var item = document.createElement('div');
+      item.className = 'rank-item';
+      if (rank === 1)      item.classList.add('gold');
+      else if (rank === 2) item.classList.add('silver');
+      else if (rank === 3) item.classList.add('bronze');
+
+      item.style.animationDelay = (i * 0.1) + 's';
+
+      var medalClass = (rank <= 3) ? 'medal' : 'medal medal-num';
+      var medalText  = (rank <= 3) ? medals[rank - 1] : rank;
+      var displayName = d.name || ('选手' + d.num);
+
+      item.innerHTML =
+        '<div class="' + medalClass + '">' + medalText + '</div>' +
+        '<div class="rname">' + displayName + '</div>';
+
+      m2_rank.appendChild(item);
+    });
+
+    m2_results.classList.add('show');
+    m2_busy = false;
+    m2_start.disabled = false;
+  });
+
+  m2_reset.addEventListener('click', function () {
+    m2_total.value = '';
+    m2_names.innerHTML = '';
+    m2_data = [];
+    hideMsg(m2_msg);
+    m2_stage.classList.remove('show');
+    m2_results.classList.remove('show');
+    m2_rank.innerHTML = '';
+    m2_deck.innerHTML = '';
+  });
+
+  m2_pickBtn.addEventListener('click', function () {
+    openPicker(function (names) {
+      applyPickedNamesToM2(names);
+      hideMsg(m2_msg);
+      if (names.length > 0) {
+        showMsg(m2_msg, '已选 ' + names.length + ' 人，可直接开始抽签', 'info');
+      }
+    });
+  });
+
+  /* ============================================================
+   *  选人抽签弹层（共享：方式一/方式二都调用 openPicker）
+   * ============================================================ */
+  var pickerMask    = document.getElementById('pickerMask');
+  var pickerTitle   = document.getElementById('pickerTitle');
+  var pickerCount   = document.getElementById('pickerCount');
+  var pickerBody    = document.getElementById('pickerBody');
+  var pickerCancel  = document.getElementById('pickerCancel');
+  var pickerConfirm = document.getElementById('pickerConfirm');
+
+  var pickerSelected = new Set();   // 当前已选姓名集合
+  var pickerCallback = null;        // 选人完成后的回调
+
+  function openPicker(onConfirm) {
+    var allList = getUploadedStudents();
+    // 过滤掉已在选课表格中被确认选课的学生（主页面 getAssignedNames 返回的集合）
+    var assigned = (typeof getAssignedNames === 'function') ? getAssignedNames() : new Set();
+    var list = allList.filter(function (name) { return !assigned.has(name); });
+
+    pickerCallback = onConfirm || null;
+    pickerSelected = new Set();
+    pickerTitle.textContent = '从上传名单中选择参与抽签人员';
+
+    if (allList.length === 0) {
+      pickerBody.innerHTML =
+        '<div class="picker-empty">尚未上传学生名单<br>请先在主页面通过"点击或拖拽上传学生名单 Excel"上传表格</div>';
+      pickerConfirm.disabled = true;
+    } else if (list.length === 0) {
+      // 名单已上传，但所有人都在选课表格中被确认选课了
+      pickerBody.innerHTML =
+        '<div class="picker-empty">上传名单中的所有学生已选课<br>无可参与抽签的人员</div>';
+      pickerConfirm.disabled = true;
+    } else {
+      pickerConfirm.disabled = false;
+      renderPickerChips(list);
+    }
+    updatePickerCount();
+    pickerMask.classList.add('show');
+  }
+
+  function renderPickerChips(list) {
+    pickerBody.innerHTML = '';
+    list.forEach(function (name) {
+      var chip = document.createElement('div');
+      chip.className = 'picker-chip';
+      chip.setAttribute('data-name', name);
+      chip.innerHTML =
+        '<span class="chip-dot"></span>' +
+        '<span class="chip-name">' + name + '</span>';
+      chip.addEventListener('click', function () {
+        if (pickerSelected.has(name)) {
+          pickerSelected.delete(name);
+          chip.classList.remove('selected');
+          chip.querySelector('.chip-dot').textContent = '';
+        } else {
+          pickerSelected.add(name);
+          chip.classList.add('selected');
+          chip.querySelector('.chip-dot').textContent = '✓';
+        }
+        updatePickerCount();
+      });
+      pickerBody.appendChild(chip);
+    });
+  }
+
+  function updatePickerCount() {
+    pickerCount.textContent = '已选 ' + pickerSelected.size + ' 人';
+  }
+
+  function closePicker() {
+    pickerMask.classList.remove('show');
+    pickerCallback = null;
+    pickerSelected = new Set();
+  }
+
+  pickerCancel.addEventListener('click', closePicker);
+  pickerMask.addEventListener('click', function (e) {
+    if (e.target === pickerMask) closePicker();
+  });
+  pickerConfirm.addEventListener('click', function () {
+    if (pickerSelected.size === 0) {
+      // 没选任何人不触发回调
+      closePicker();
+      return;
+    }
+    var names = Array.from(pickerSelected);
+    var cb = pickerCallback;
+    closePicker();
+    if (typeof cb === 'function') cb(names);
+  });
+  // 选人弹层内的 ESC：阻止冒泡到 document 的 ESC（否则会关闭整个抽签弹窗）
+  pickerMask.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      closePicker();
+    }
+  });
+  // 选人弹层显示时，阻止 document 上的 ESC 冒泡关闭整个弹窗
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && pickerMask.classList.contains('show')) {
+      e.stopPropagation();
+      e.preventDefault();
+      closePicker();
+    }
+  }, true);
+})();
+
+// ====================================================================
+// 重置按钮 + 确认弹窗交互
+//  - 可访问性：role/aria/焦点管理/ESC关闭
+//  - 点击遮罩取消
+//  - 确认后：resetState + 成功反馈 Toast
+// ====================================================================
+(function resetFeature() {
+  var resetBtn = document.getElementById('resetBtn');
+  var mask = document.getElementById('resetConfirmMask');
+  var cancelBtn = document.getElementById('resetCancelBtn');
+  var confirmBtn = document.getElementById('resetConfirmBtn');
+  var lastFocused = null;
+
+  function openConfirm() {
+    // 没有任何已修改数据时，直接提示，不必开确认
+    var hasAny =
+      (students && students.length > 0) ||
+      (typeof PersistentStorage !== 'undefined' && PersistentStorage.hasData && PersistentStorage.hasData()) ||
+      COURSES.some(function (c) { return c.students && c.students.some(function (s) { return !!s; }); }) ||
+      !!gradeName ||
+      !!classNumber;
+    if (!hasAny) {
+      showToast('当前没有可重置的用户数据', 'warning');
+      return;
+    }
+    lastFocused = document.activeElement;
+    mask.classList.add('active');
+    // 焦点移到“取消”（安全默认）
+    setTimeout(function () {
+      try { cancelBtn.focus(); } catch (_) { /* 忽略 */ }
+    }, 0);
+  }
+  function closeConfirm() {
+    mask.classList.remove('active');
+    if (lastFocused && typeof lastFocused.focus === 'function') {
+      try { lastFocused.focus(); } catch (_) { /* 忽略 */ }
+    }
+  }
+  function doReset() {
+    try {
+      resetState(false);
+    } catch (e) {
+      console.error('reset failed', e);
+      showToast('重置执行失败：' + (e && e.message ? e.message : e), 'error');
+      return;
+    }
+    closeConfirm();
+    // 成功视觉反馈：Toast + 简短抖动
+    showToast('✅ 已重置所有数据，页面已恢复到初始状态', 'success');
+    try {
+      var header = document.querySelector('.header');
+      if (header) {
+        header.animate(
+          [
+            { transform: 'translateY(0)' },
+            { transform: 'translateY(-2px)' },
+            { transform: 'translateY(0)' },
+          ],
+          { duration: 260, easing: 'ease-out' }
+        );
+      }
+    } catch (_) { /* 忽略 */ }
+  }
+
+  if (resetBtn) resetBtn.addEventListener('click', openConfirm);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeConfirm);
+  if (confirmBtn) confirmBtn.addEventListener('click', doReset);
+  if (mask) {
+    mask.addEventListener('click', function (e) {
+      if (e.target === mask) closeConfirm();
+    });
+  }
+  // 键盘：ESC 关闭 / Enter=确认(当焦点在确认按钮上默认) / Tab 焦点闭环
+  document.addEventListener('keydown', function (e) {
+    if (!mask || !mask.classList.contains('active')) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeConfirm();
+    } else if (e.key === 'Tab') {
+      // 简单焦点闭环：在两个按钮之间循环
+      var focusables = [cancelBtn, confirmBtn].filter(Boolean);
+      if (focusables.length === 0) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      var active = document.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  });
+})();
+
+// ===== 初始化：加载持久化状态 → 还原上传模块文案 → 首次渲染 =====
+(function initBootstrap() {
+  try {
+    var loaded = loadStateFromStorage();
+    if (loaded) {
+      // 还原上传模块文案（如果已有学生名单）
+      if (students.length > 0) {
+        var uploadTextCol = document.getElementById('uploadTextCol');
+        if (uploadTextCol) {
+          uploadTextCol.innerHTML =
+            '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
+            '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[initBootstrap] load state failed:', e);
+  }
+})();
+
+// ===== 初始渲染 =====
+renderAll();
+
+// ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
+(function () {
+  const tip      = document.getElementById('courseTip');
+  const tipCat   = document.getElementById('courseTipCat');
+  const tipTitle = document.getElementById('courseTipTitle');
+  const tipTch   = document.getElementById('courseTipTeacher');
+  const tipLoc   = document.getElementById('courseTipLocation');
+  const tipLimit = document.getElementById('courseTipLimit');
+  const tipReqW  = document.getElementById('courseTipReqWrap');
+  const tipReq   = document.getElementById('courseTipReq');
+  const tipBody  = document.getElementById('courseTipBody');
+
+  let showTimer = null;
+  let hideTimer = null;
+  const DELAY = 500; // 0.5s
+
+  function formatLimit(course) {
+    const L = course.limit;
+    if (typeof L === 'number') return `${L} 人（各年级通用）`;
+    const parts = Object.entries(L).map(([g, n]) => `${g}${n}人`).join(' / ');
+    return parts;
+  }
+
+  function showTipFor(el) {
+    const id = Number(el.getAttribute('data-course-id'));
+    const c  = COURSES.find(x => x.id === id);
+    if (!c || !c.description) return;
+
+    // 填充内容
+    tipCat.textContent = c.category || '';
+    tipCat.className   = 'course-tip-cat cat-' + (c.category || '');
+    tipTitle.textContent = c.name;
+    tipTch.textContent   = c.teacher || '';
+    tipLoc.textContent   = c.location || '';
+    tipLimit.textContent = formatLimit(c);
+    if (c.requirement) {
+      tipReq.textContent = c.requirement;
+      tipReqW.classList.add('has-req');
+    } else {
+      tipReq.textContent = '';
+      tipReqW.classList.remove('has-req');
+    }
+    tipBody.textContent = c.description;
+
+    // 先显示一次（visibility:hidden 仅为测量尺寸），不触发transition
+    tip.classList.remove('show');
+    tip.style.visibility = 'hidden';
+    tip.style.opacity    = '0';
+    tip.style.left       = '0px';
+    tip.style.top        = '0px';
+
+    requestAnimationFrame(() => {
+      // 定位：目标右下优先；超出右边界则放在目标左下；超出下边界则放在目标正上
+      const rect = el.getBoundingClientRect();
+      const tipW = tip.offsetWidth;
+      const tipH = tip.offsetHeight;
+      const GAP  = 12;
+      const MARGIN = 16;
+
+      let left = rect.right + GAP;
+      let top  = rect.top;
+
+      // 右溢出：改为左侧
+      if (left + tipW + MARGIN > window.innerWidth) {
+        left = rect.left - tipW - GAP;
+        // 左侧也超出则左对齐
+        if (left < MARGIN) left = MARGIN;
+      }
+      // 下溢出：上移
+      if (top + tipH + MARGIN > window.innerHeight) {
+        top = Math.max(MARGIN, rect.bottom - tipH);
+        // 上方也放不下则贴底部
+        if (top < MARGIN) top = window.innerHeight - tipH - MARGIN;
+      }
+      tip.style.left = left + 'px';
+      tip.style.top  = top  + 'px';
+      tip.style.visibility = '';
+      tip.style.opacity    = '';   // 清除内联 opacity，让 .show 类的 opacity:1 生效
+      tip.classList.add('show');
+    });
+  }
+
+  function hideTip() {
+    tip.classList.remove('show');
+  }
+
+  function clearTimers() {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+  }
+
+  // 事件委托：绑定到 tableWrap 容器（课程名在表格内）
+  const wrap = document.getElementById('tableWrap');
+  wrap.addEventListener('mouseover', function (e) {
+    const target = e.target.closest('.course-name[data-course-id]');
+    if (!target) return;
+    clearTimers();
+    showTimer = setTimeout(() => {
+      showTimer = null;
+      showTipFor(target);
+    }, DELAY);
+  });
+  wrap.addEventListener('mouseout', function (e) {
+    const to = e.relatedTarget;
+    // 若进入 tip 本身则不隐藏
+    if (to && (to === tip || tip.contains(to))) return;
+    const fromTarget = e.target.closest('.course-name[data-course-id]');
+    if (!fromTarget) return;
+    clearTimers();
+    hideTimer = setTimeout(() => {
+      hideTimer = null;
+      hideTip();
+    }, 120);
+  });
+
+  // 鼠标进入 tooltip 则保持显示（方便选中文字）
+  tip.addEventListener('mouseenter', function () { clearTimers(); });
+  tip.addEventListener('mouseleave', function () {
+    clearTimers();
+    hideTimer = setTimeout(hideTip, 120);
+  });
+
+  // 滚动时关闭
+  document.addEventListener('scroll', function () { clearTimers(); hideTip(); }, true);
+  // ESC 关闭
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { clearTimers(); hideTip(); } });
+})();
+
+// ===== XLSX 库加载状态联动（静默）=====
+(function () {
+  document.addEventListener('xlsx-failed', function () {
+    showToast('Excel 处理库加载失败，请检查网络或刷新页面重试', 'error');
+  });
+})();
+</script>
+</body>
+</html>
