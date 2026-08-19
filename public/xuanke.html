@@ -2119,49 +2119,76 @@ tr.no-quota:hover td { opacity: 0.7; }
  * 纯前端实现，数据保存在内存中
  * ============================================================ */
 
-// ===== 课程固定数据（30 门课程，按体育健康/艺术技艺/人文社科分类）=====
-const COURSES = [
-  // —— 体育健康类（7门）——
-  { id: 1,  category: '体育健康', name: '乒乓球',       teacher: '陆顺军',           location: '旧体育馆',                  requirement: '',                  limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '本课程会对学习乒乓球的学生进行科学系统的训练，从球感、灵活性、反应、动作、上台，掌握乒乓球运动的基本技术，逐步走向实战。' },
-  { id: 2,  category: '体育健康', name: '女子排球',     teacher: '徐李斌、耿凡诗雨', location: '新体育馆',                  requirement: '仅限女生',           limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '浦江一中排球社团的组建，丰富学生的课余生活的同时形成良好的校园体育文化。排球社团培养学生学习排球知识与技能，形成良好的沟通能力、团队合作意识和顽强拼搏的精神，营造出积极自信、阳光、富有朝气、拼搏向上的学习氛围，展现初中生的青春与活力。通过体教结合，让学生在兼顾学业基础上，给予学生在体育项目上发展的机会。在学校的支持和鼓励下，我校排球社团在上海市、闵行区等排球比赛中取得优异成绩。' },
-  { id: 3,  category: '体育健康', name: '男子篮球',     teacher: '汪涛',             location: '篮球场或六2班教室',          requirement: '仅限中预年级男生',     limit: { '六年级': 2, '七年级': 0 }, students: [null, null], description: '篮球拓展课是一门旨在培育学生篮球兴趣、技能和团队精神的课程。该课程通过系统的训练，让学生掌握篮球的基本技巧，如运球、投篮、传球等，并在实践中加以运用。课堂上，教师会组织有趣的篮球游戏和比赛，让学生在轻松愉快的氛围中提高篮球技能，培养团队协作意识。此外，课程还注重学生的心理健康，通过篮球运动帮助学生释放压力、增强自信心和意志力。参与这门课程，学生不仅能够锻炼身体，还能结交志同道合的朋友，共同享受篮球带来的乐趣。' },
-  { id: 4,  category: '体育健康', name: '田径',         teacher: '周万康',           location: '田径场或六9班教室',          requirement: '需具备一定基础',       limit: { '六年级': 1, '七年级': 2 }, students: [null], description: '初中田径拓展课，一个充满活力与挑战的体育课程！在这里，我们汇聚了一群热爱田径运动的初中生，共同追求速度与激情的碰撞，享受汗水与欢笑交织的时光。我们秉承"健康第一，快乐运动"的宗旨，致力于为同学们提供一个锻炼体能、磨炼意志、培养团队精神的平台。在田径拓展课里，你将学会如何面对挑战，如何在竞争中成长，如何在团队中找到自己的位置。我们的训练项目丰富多样，包括体适能、短跑、中长跑、长跑、跳远、三级跳、铅球等多个项目。通过科学的训练方法和专业的教练指导，你将逐步掌握各项田径技能，提高自己的运动水平。' },
-  { id: 5,  category: '体育健康', name: '女子篮球',     teacher: '王嘉晨',           location: '篮球场或六10班教室',         requirement: '仅限女生',           limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '女子篮球拓展课教学生学习相关的篮球基础知识，可以促进篮球技术的提高，可以使学生对于篮球运动产生更加浓厚的兴趣。针对篮球基础知识，主要包括篮球的起源和发展、篮球的比赛规则以及动作解析等等。学生在学习篮球运动之前，了解一些篮球基础知识，那么在今后的学习当中就会避免出现盲目学习的情况，少走弯路。针对中学篮球知识教学过程中的内容，学生通过教学可以对于篮球知识更加了解，使学生可以具备更加宽广的视野，这样学生才会具备学习的目标。' },
-  { id: 6,  category: '体育健康', name: '健美操',       teacher: '费晓芳',           location: '6号楼5楼形体房',            requirement: '需具备一定基础',       limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '本课程以"健体、塑形、育心"为核心理念，结合初中生身心发展特点，系统设计涵盖基础技能、创编能力、团队协作与艺术表现力的综合课程。课程融入竞技健美操、啦啦操、有氧舞蹈等多元形式，结合校史文化打造校本化特色内容。' },
-  { id: 7,  category: '体育健康', name: '武术',         teacher: '饶瑞芳',           location: '6号楼底楼',                 requirement: '优先招收女生',        limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '五步拳作为中国武术的基础拳术之一，不仅能够锻炼身体，增强体质，还蕴含着深厚的文化内涵。本课程旨在通过系统的学习与实践，使学生掌握五步拳的基本动作和技巧，了解其背后的文化故事，培养学生的意志力和团队协作精神。课程内容包括基本步伐、手型、身法等，每节课将通过分解教学、组合练习等形式，让每位同学都能较好的掌握五步拳。' },
-  // —— 艺术技艺类（4门）——
-  { id: 8,  category: '艺术技艺', name: '合唱',                 teacher: '陈洁（音乐）', location: '6号楼5楼音乐教室（南）',    requirement: '',          limit: { '六年级': 2, '七年级': 3 }, students: [null, null], description: '本课程面向对唱歌感兴趣的学生，通过专业、科学的练习，帮助学生用自然的科学的发声方法唱歌，培养学生的合作意识。' },
-  { id: 9,  category: '艺术技艺', name: '书法课',               teacher: '潘洁',         location: '美术教室（2）',             requirement: '',          limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '书法课程面向六、七年级书法爱好者，系统地开展毛笔书法基础课程，也借助学校艺术节、街道的书法比赛进一步加强书法临创实践，亲身体验活动。提升学生书写能力、审美素养和文化认同感。' },
-  { id: 10, category: '艺术技艺', name: '水彩画欣赏与创作',     teacher: '段秀慧',       location: '6号楼2楼美术教室（1）',     requirement: '需具备一定绘画基础', limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '想玩转通透灵动的水彩画吗？本课程将带你一边赏中外经典水彩佳作，学看色彩、品意境；一边从基础学起，练画笔握法、颜料调和，画植物、风景。老师手把手指导，帮你解锁绘画技能，在色彩里释放创意，收获成就感！' },
-  { id: 11, category: '艺术技艺', name: '无人机',               teacher: '瞿建辉',       location: '操场或3号楼计算机房',        requirement: '',          limit: { '六年级': 1, '七年级': 1 }, students: [null], description: '无人机课程成立于2017年，通过学习理论知识，熟悉无人机的飞行原理和各项法规，通过操作训练，掌握四旋翼无人机的各项操作技巧，选拔优秀学员进一步学习航拍技巧，为学校的活动增添上帝视角。同时融入爱国主义教育，学习我国在无人机领域的前瞻性，从军事、农业、交管等各方面，知道无人机应用的广泛。' },
-  // —— 人文社科类（19门）——
-  { id: 12, category: '人文社科', name: '国际象棋入门',                                   teacher: '丁屹',     location: '六1班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '国际象棋入门旨在为零基础的学生提供较为全面的国际象棋学习路径，使他们能够了解棋盘布局、棋子走法及基本规则。通过经典开局讲解，残局解说等环节，提高学生的棋艺水平。同时，实战演练环节要求学生两两之间进行对战练习，在下棋过程中，锻炼学生的观察、分析、判断、推理棋局的能力，并以棋会友，增进学生间的友情。' },
-  { id: 13, category: '人文社科', name: '芳香植物',                                       teacher: '蒋丹',     location: '6号楼2楼创新实验室', requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '浦江一中"芳香社"创建于2015年，该社团围绕生物与环境这一生存大课题，对植物（特别是芳香植物）的栽培、植物的生长、习性等方面进行探究，把握"科学性、实践性和趣味性"的科普教育特点，在积极引导学生认识、种植植物的基础上，指导学生开展植物学的科学实践活动。' },
-  { id: 14, category: '人文社科', name: '手工制作',                                       teacher: '陈洁（数学）', location: '5号楼底楼备用教室', requirement: '', limit: { '六年级': 1, '七年级': 0 }, students: [null], description: '折纸活动是指利用普通的纸张，经过折、剪、画等活动来完成一定物体造型的一种美术活动。折纸活动取材方便，操作简单，生动形象，易学易做，是学生感兴趣和爱好的事情。它既能锻炼学生的手部肌肉，又能促进学生大脑的发育；内容丰富，有很强的趣味性，是经千百年来劳动人民不断创造而流传下来的。它体现了劳动人民的勤劳和智慧，具有独特风格和鲜明的个性，而且活动形式符合初中学生好奇、好动的心理特征。' },
-  { id: 15, category: '人文社科', name: '红十字救护',                                     teacher: '范丽霞',   location: '六7班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '生命健康是人类社会一切文明进步的基础和前提，但是各种意外伤害和突发急症却时刻威胁着人们的生命健康。通过有效地传播和普及应急救护知识和技能，可以使人人都成为生命守护者，最大限度地保护生命和健康。红十字救护课程是为了使受训救护学生树立救死扶伤的人道主义思想和自救互救意识，掌握常用急救知识和技能，在发生意外伤害和突发事件的现场，能迅速进行自救、互救，减少伤员的病痛、伤残和死亡。' },
-  { id: 16, category: '人文社科', name: '生涯探秘',                                       teacher: '陈敏',     location: '6号楼4楼心理教室',   requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程旨在引导学生熟知初中时期的发展任务，了解初中阶段的身心发展特点与角色，适应新环境，并带领学生通过多元探索路径形成积极的自我认识，学会将自己的兴趣、爱好、特长以及能力与校内外活动、家庭生活与生涯探索相联系，相互促进，并逐步形成自主生涯规划意识。帮助学生了解在校学习的课程所具有的价值和与未来生涯发展的关系；了解真实的职业世界，认识职业分类和职业特性，了解职业因社会变迁而发生的改变，并学会通过各类方式了解、探索生涯信息与机会。' },
-  { id: 17, category: '人文社科', name: '生活中的物理',                                   teacher: '周皓文',   location: '6号楼底楼物理实验室', requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '初中物理拓展课是一门旨在激发学生对物理学科的深层兴趣，拓展物理知识视野，培养科学思维和实践能力的特色课程。在课程内容方面，我们将超越传统教材的局限。不仅深入探究课本知识背后的奥秘，还会引入大量有趣且贴近生活的物理现象和案例。学生感受物理在现代科技中的广泛应用。教学方法上，强调互动与实践。课堂上会组织丰富的小组讨论和实验活动。学生们将有机会亲自操作实验器材，进行物理实验的设计与探究，如探究光的折射规律等，从而在实践中深刻理解物理概念和规律，提升动手能力和解决问题的能力。' },
-  { id: 18, category: '人文社科', name: '我爱古诗词/古典诗词鉴赏',                         teacher: '梁瑾',     location: '图书馆',            requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '《我爱古诗词》，在古诗词的浸润中践行语文学科素养，了解古诗词、喜欢古诗词、背诵古诗词；通过诵读、查找、比较、交流、分享、创作等多种形式，培养学生自主学习、主动探究的习惯。通过分享学习心得，展示创作成果，增强学生的自信和勇气，锻炼学生的口头表达能力，培养学生的创造性思维，在实现学以致用的同时，也传承和发扬了民族传统文化。' },
-  { id: 19, category: '人文社科', name: '英语绘本阅读',                                   teacher: '周頔',     location: '七4班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程以RAZ分级绘本为主线，遵循"诵读—探究—表达—创作"路径。学生在趣味故事中提升阅读兴趣与词汇量，掌握预测、扫读、精读、复述等策略；通过Book Talk、角色朗读、思维导图与微写作强化理解与口语。课程融入跨文化比较，培养自主学习与创造思维，并以主题海报成果收束。' },
-  { id: 20, category: '人文社科', name: '中国古代、近代人物故事',                         teacher: '刘丽婷',   location: '七3班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程将带领学生深入了解中国历史中具有重要影响力的古代与近代人物，通过对这些历史人物的生平、思想和贡献的研究，帮助学生全面认识中国历史的发展脉络。课程内容涵盖从秦始皇、武则天、李白等古代人物，到林则徐、孙中山、毛泽东等近代重要人物，既包括政治家、军事家，也涉及文学家、思想家等多领域的代表人物。通过生动的故事、历史背景分析和多元的课堂活动，激发学生的历史兴趣，提升他们对历史事件和人物的深层次理解，从而培养其批判性思维与独立分析能力。' },
-  { id: 21, category: '人文社科', name: '雪泥鸿爪：苏东坡的人生行旅',                     teacher: '吴锦钱',   location: '六10班教室',         requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '"人生到处知何似？应似飞鸿踏雪泥。"北宋大文豪苏东坡的一生，犹如飞鸿翩跹，偶然在雪地上留下指爪的痕迹，随即又飘然远引。本课程将追随这只"飞鸿"的轨迹，开启一场穿越时空的"人生行旅"。这是一场与有趣灵魂的对话，等你加入！' },
-  { id: 22, category: '人文社科', name: '生生不息：中国传统文化中的生物学智慧',           teacher: '李雅倩',   location: '六8班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '生物学知识与每个人的生活健康息息相关。中国传统文化（包括中医、农学、饮食、哲学思想）中蕴含着大量对生命、自然和健康的深刻观察与实践智慧，但这些内容在现代生物学教学中常常被忽视。学生往往觉得生物学是"舶来品"，与自身文化有距离感。本课程以现代生物学知识为骨架，以中国传统文化与实践为血肉，通过项目式学习和探究式活动，让学生在熟悉的文化语境和生活场景中学习生物学，理解"天人合一"、"药食同源"等思想的科学内涵，培养跨学科思维和民族自豪感。' },
-  { id: 23, category: '人文社科', name: '语言的艺术：演讲与辩论中的说服逻辑和批判思维',   teacher: '许晓锋',   location: '七7班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程旨在探讨演讲与辩论中说服逻辑的核心原理与实用技巧。学生将学习如何构建严谨论证、有效质询与反驳，并深入学习具体案例。课程融合理论与实战训练，通过模拟辩论、演讲实践及案例研究，培养学生的批判性思维、语言表达与应变能力。' },
-  { id: 24, category: '人文社科', name: '天文学基础',                                     teacher: '吴一凡',   location: '六4班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '通过图文配合讲解与视频的形式，主要围绕太阳系中的各类天体、基本天文概念、天文望远镜的操作方法等方面进行教学，旨在培养初中生的基本天文素养、激发学生对宇宙探索及天文学的兴趣。' },
-  { id: 25, category: '人文社科', name: '英语音乐剧赏析与表达',                           teacher: '张杨',     location: '七5班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程旨在引领学生初探英语音乐剧的奇妙世界。课程将系统介绍音乐剧的四大核心构成元素：剧本、音乐、舞蹈、舞美。通过赏析《音乐之声》《狮子王》《玛蒂尔达》等经典剧目的精彩片段，学生将在沉浸式中提升英语听读与审美能力。课程以小组合作形式进行，最终通过创造性展示分享感悟，培养学生的表达能力、批判性思维与团队协作精神。' },
-  { id: 26, category: '人文社科', name: '我是创业家',                                     teacher: '孙洋',     location: '六5班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程专为六至七年级学生量身定制，通过体验式教学、跨学科学习和项目式学习的教学方法，让学生初步掌握创业基本知识。课程的核心目标是激发学生的创新思维与创业精神，同时强化他们的团队协作能力。' },
-  { id: 27, category: '人文社科', name: '玩转数独',                                       teacher: '李小月',   location: '六3班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '数独作为一种逻辑性强的数学拼图益智游戏，被誉为"思维的乐高"、"高智商的游戏"。《玩转数独》课程从学生认知发展角度出发，结合学生各阶段特点精心设计的课程，旨在从基础到高阶培养学生的数学思维，提升数感、专注力、观察力和反应力，为学生取得良好数学成绩奠定基础。' },
-  { id: 28, category: '人文社科', name: '认识二十四节气',                                 teacher: '黄璐琳',   location: '六6班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '这是一趟穿越四季的自然与文化之旅。我们将跳出课本，以全新的视角探寻二十四节气的奥秘。课程将融合科学、农事、诗词、美食与手作，带领学生感受中国古代智慧的深邃，观察物候的变化，体验传统文化的魅力，从而理解人与自然和谐共处的哲学。' },
-  { id: 29, category: '人文社科', name: '话说英语',                                       teacher: '林依依',   location: '七1班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程以丰富多元的主题为脉络，结合文章研读、视频赏析、针对性练习等形式，引导学生深入探讨常见话题和新鲜热点。在提升英语听说读写能力的同时，拓展思维深度与广度，助力学生灵活运用语言，培养跨文化认知与独立思考能力。' },
-  { id: 30, category: '人文社科', name: '认识自我心理拓展课',                             teacher: '孔经纬',   location: '七2班教室',          requirement: '', limit: { '六年级': 2, '七年级': 2 }, students: [null, null], description: '本课程以叙事治疗为理论基础，通过课堂内外的人际互动，了解社会文化脉络对自我认知的影响，从多维度认知自我，从而发掘自我潜能和优势。' },
-];
+// ===== 课程数据（从后台管理系统数据库加载）=====
+let COURSES = [];
+
+// 将 API 返回的课程数据转换为选课页面的格式
+function convertCourseFromAPI(apiCourse) {
+  const limit6 = parseInt(apiCourse.limit_grade6, 10) || 0;
+  const limit7 = parseInt(apiCourse.limit_grade7, 10) || 0;
+  const totalLimit = limit6 + limit7;
+  return {
+    id: apiCourse.id,
+    category: apiCourse.category || '体育健康类',
+    name: apiCourse.name || '',
+    teacher: apiCourse.teacher || '',
+    location: apiCourse.location || '',
+    requirement: apiCourse.requirement || '',
+    description: apiCourse.description || '',
+    limit: { '六年级': limit6, '七年级': limit7 },
+    students: Array(totalLimit).fill(null)
+  };
+}
+
+// 从服务器加载课程数据
+async function loadCoursesFromServer() {
+  try {
+    const data = await apiRequest('GET', '/api/courses');
+    const courses = data.courses || data || [];
+    if (!Array.isArray(courses)) {
+      throw new Error('返回数据格式错误');
+    }
+    COURSES = courses
+      .filter(function(c) { return c.is_active !== 0; })
+      .map(convertCourseFromAPI);
+    
+    // 重新同步已保存的选课数据（如果有的话）
+    try {
+      const saved = localStorage.getItem('pjyz_course_selection_state_v1');
+      if (saved) {
+        const snap = JSON.parse(saved);
+        if (snap && snap.courses && Array.isArray(snap.courses)) {
+          snap.courses.forEach(function(sc) {
+            const course = COURSES.find(function(c) { return c.id === sc.id; });
+            if (course && sc.students) {
+              // 保留已选学生，但只保留有效槽位内的
+              const preserved = sc.students.slice(0, course.students.length);
+              course.students = preserved.concat(
+                Array(Math.max(0, course.students.length - preserved.length)).fill(null)
+              );
+            }
+          });
+        }
+      }
+    } catch(e) {
+      console.warn('恢复选课数据失败:', e);
+    }
+    
+    return true;
+  } catch(e) {
+    console.warn('加载课程数据失败:', e.message);
+    showToast('加载课程数据失败: ' + e.message + '，请确保管理员已上传课程', 'error');
+    COURSES = [];
+    return false;
+  }
+}
 
 // ====================================================================
 // PersistentStorage — 页面状态持久化 + 重置 + 单元测试
 // 说明：
 //  - 仅持久化用户修改过的动态部分（学生、年级/班级、每门课已选名单）
-//  - 静态固定数据（30 门课程的 id/name/teacher/location/requirement/limit/description/category）
-//    不入库，保证未来课程配置更新时不与用户旧存储冲突
+//  - 课程静态数据（id/name/teacher/location/requirement/limit/description/category）
+//    从后台管理系统数据库动态加载，保证与管理员上传的课程保持一致
 //  - 持久化层独立于页面状态，不依赖任何 UI 模块
 // ====================================================================
 const PersistentStorage = (function () {
@@ -2679,10 +2706,10 @@ function renderStats() {
   });
 }
 
-// 根据年级生成班级选项：六年级 10 个班，七年级 8 个班
+// 根据年级生成班级选项：六年级 10 个班，七年级 10 个班
 function buildClassOptions() {
   if (!gradeName) return '';
-  const count = gradeName === '六年级' ? 10 : 8;
+  const count = 10;
   let html = '';
   for (let i = 1; i <= count; i++) {
     const v = String(i);
@@ -2702,7 +2729,22 @@ function updateClassName() {
 
 // ===== 渲染：课程选课表格 =====
 function renderTable() {
-  let html = `
+  let html = '';
+  
+  if (COURSES.length === 0) {
+    // 无课程数据时显示友好提示
+    html = `
+      <div style="text-align:center; padding:60px 20px; color:#888;">
+        <div style="font-size:64px; margin-bottom:16px;">📚</div>
+        <div style="font-size:18px; font-weight:600; margin-bottom:8px;">暂无课程数据</div>
+        <div style="font-size:14px; color:#aaa;">请联系管理员在后台管理系统中上传课程文件</div>
+      </div>`;
+    var tableWrap = document.querySelector('.course-table-wrap');
+    if (tableWrap) tableWrap.innerHTML = html;
+    return;
+  }
+  
+  html = `
     <table>
       <colgroup>
         <col style="width:4%;">
@@ -3752,9 +3794,13 @@ document.addEventListener('keydown', e => {
   });
 })();
 
-// ===== 初始化：加载持久化状态 → 还原上传模块文案 → 首次渲染 =====
-(function initBootstrap() {
+// ===== 初始化：加载课程数据 → 加载持久化状态 → 首次渲染 =====
+(async function initBootstrap() {
   try {
+    // 1. 先从服务器加载课程数据
+    await loadCoursesFromServer();
+    
+    // 2. 加载本地持久化的选课状态（恢复已选学生等）
     var loaded = loadStateFromStorage();
     if (loaded) {
       // 还原上传模块文案（如果已有学生名单）
@@ -3768,12 +3814,17 @@ document.addEventListener('keydown', e => {
       }
     }
   } catch (e) {
-    console.error('[initBootstrap] load state failed:', e);
+    console.error('[initBootstrap] init failed:', e);
+  }
+  
+  // 3. 无论加载成功与否，都渲染页面
+  renderAll();
+  
+  // 如果没有课程数据，显示提示
+  if (COURSES.length === 0) {
+    showToast('暂无课程数据，请联系管理员上传课程', 'warning');
   }
 })();
-
-// ===== 初始渲染 =====
-renderAll();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
 (function () {
