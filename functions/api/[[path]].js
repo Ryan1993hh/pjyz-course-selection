@@ -84,7 +84,7 @@ async function createToken(userId, role) {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  const tokenPayload = `${Buffer.from(payload).toString('base64')}.${hashHex.substring(0, 16)}`;
+  const tokenPayload = `${btoa(payload)}.${hashHex.substring(0, 16)}`;
   return tokenPayload;
 }
 
@@ -92,7 +92,7 @@ function verifyToken(token) {
   try {
     const parts = token.split('.');
     if (parts.length !== 2) return null;
-    const decoded = Buffer.from(parts[0], 'base64').toString('utf8');
+    const decoded = atob(parts[0]);
     const [userId, role, expiry] = decoded.split(':');
     if (Date.now() > parseInt(expiry)) return null;
     return { userId: parseInt(userId), role };
