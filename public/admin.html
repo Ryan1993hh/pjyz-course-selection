@@ -1805,8 +1805,8 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <span class="title">点击或拖拽上传课程清单</span>
                 <span class="hint">支持 .csv / .xlsx / .xls / .docx 格式。Excel 文件表头需包含：类别、课程名称、简介、老师、地点、要求、六年级名额、七年级名额</span>
               </div>
-              <input type="file" id="fileInput" accept="*" style="display:none;">
             </div>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
             <div class="upload-msg" id="uploadMsg">尚未上传文件，您也可以直接在下方表格中新增课程</div>
           </div>
         </div>
@@ -2145,20 +2145,24 @@ async function doLogin(){
   }
 }
 
-document.getElementById('loginBtn').addEventListener('click', doLogin);
-document.getElementById('loginPass').addEventListener('keydown', function(e){
-  if (e.key === 'Enter') doLogin();
-});
-document.getElementById('loginUser').addEventListener('keydown', function(e){
-  if (e.key === 'Enter') document.getElementById('loginPass').focus();
-});
-
 /* ============ 退出登录 ============ */
-document.getElementById('adminLogoutBtn').addEventListener('click', function(){
-  clearToken();
-  // 管理后台不再处理账号登录，统一返回登录页
-  window.location.href = 'denglu.html';
-});
+(function bindEvents(){
+  function safeBind(id, event, handler){
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  }
+  
+  safeBind('loginBtn', 'click', doLogin);
+  safeBind('loginPass', 'keydown', function(e){ if (e.key === 'Enter') doLogin(); });
+  safeBind('loginUser', 'keydown', function(e){ if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+  safeBind('adminLogoutBtn', 'click', function(){
+    clearToken();
+    window.location.href = 'denglu.html';
+  });
+  safeBind('modalOverlay', 'click', function(e){
+    if (e.target.id === 'modalOverlay' || e.target.id === 'modalShell') closeModal();
+  });
+})();
 
 /* ============ Navigation ============ */
 document.querySelectorAll('.nav-item').forEach(function(item){
@@ -2178,9 +2182,6 @@ function openModal(html){
 function closeModal(){
   document.getElementById('modalOverlay').classList.remove('show');
 }
-document.getElementById('modalOverlay').addEventListener('click', function(e){
-  if (e.target.id === 'modalOverlay' || e.target.id === 'modalShell') closeModal();
-});
 window.closeModal = closeModal;
 
 /* ============ Utils ============ */
@@ -2497,14 +2498,18 @@ function getExcelCol(cols, idx, defaultVal) {
   return String(cols[idx] || '').trim() || defaultVal;
 }
 
-document.getElementById('addRowBtn').addEventListener('click', function(){
-  coursesData.push({
-    category: '体育健康类', name: '', description: '', teacher: '',
-    location: '', requirement: '', limit_grade6: 0, limit_grade7: 0
+(function(){
+  var el1 = document.getElementById('addRowBtn');
+  if (el1) el1.addEventListener('click', function(){
+    coursesData.push({
+      category: '体育健康类', name: '', description: '', teacher: '',
+      location: '', requirement: '', limit_grade6: 0, limit_grade7: 0
+    });
+    renderCourses();
   });
-  renderCourses();
-});
-document.getElementById('saveCoursesBtn').addEventListener('click', saveCourses);
+  var el2 = document.getElementById('saveCoursesBtn');
+  if (el2) el2.addEventListener('click', saveCourses);
+})();
 
 /* ============ Module 2: Selections ============ */
 let selectionsData = [];
@@ -2902,23 +2907,30 @@ async function exportSelections(){
   }
 }
 
-document.getElementById('queryBtn').addEventListener('click', querySelections);
-document.getElementById('exportBtn').addEventListener('click', exportSelections);
-document.getElementById('resetFilterBtn').addEventListener('click', resetFilterSelections);
-document.getElementById('batchDeleteBtn').addEventListener('click', batchDeleteSelections);
-document.getElementById('selectAll').addEventListener('change', function(){
-  const checked = this.checked;
-  document.querySelectorAll('.sel-checkbox').forEach(function(cb){
-    cb.checked = checked;
-    const id = String(cb.dataset.id);
-    if (checked) selectionsCheckedIds.add(id);
-    else selectionsCheckedIds.delete(id);
+(function(){
+  function safeBind(id, event, handler){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  }
+  safeBind('queryBtn', 'click', querySelections);
+  safeBind('exportBtn', 'click', exportSelections);
+  safeBind('resetFilterBtn', 'click', resetFilterSelections);
+  safeBind('batchDeleteBtn', 'click', batchDeleteSelections);
+  var selAll = document.getElementById('selectAll');
+  if (selAll) selAll.addEventListener('change', function(){
+    var checked = this.checked;
+    document.querySelectorAll('.sel-checkbox').forEach(function(cb){
+      cb.checked = checked;
+      var id = String(cb.dataset.id);
+      if (checked) selectionsCheckedIds.add(id);
+      else selectionsCheckedIds.delete(id);
+    });
+    updateBatchDeleteBtn();
   });
-  updateBatchDeleteBtn();
-});
-document.getElementById('filterStudent').addEventListener('keydown', function(e){
-  if (e.key === 'Enter') querySelections();
-});
+  safeBind('filterStudent', 'keydown', function(e){
+    if (e.key === 'Enter') querySelections();
+  });
+})();
 
 /* ============ Class Management Module ============ */
 
@@ -3073,7 +3085,10 @@ window.deleteClassItem = function(id){
   });
 };
 
-document.getElementById('manageClassesBtn').addEventListener('click', openClassManager);
+(function(){
+  var el = document.getElementById('manageClassesBtn');
+  if (el) el.addEventListener('click', openClassManager);
+})();
 
 /* ============ Module 3: Users ============ */
 let usersData = [];
@@ -3275,11 +3290,14 @@ document.querySelectorAll('th.sortable').forEach(function(th){
 });
 
 // Search handler
-document.getElementById('userSearchInput').addEventListener('input', function(e){
-  userSearchQuery = e.target.value.trim();
-  userCurrentPage = 1;
-  renderUsers();
-});
+(function(){
+  var el = document.getElementById('userSearchInput');
+  if (el) el.addEventListener('input', function(e){
+    userSearchQuery = e.target.value.trim();
+    userCurrentPage = 1;
+    renderUsers();
+  });
+})();
 
 function openAddUser(){
   const classOptions = ['<option value="">不指定班级</option>'];
@@ -3408,13 +3426,19 @@ async function deleteUser(u){
   }
 }
 
-document.getElementById('addUserBtn').addEventListener('click', openAddUser);
-document.getElementById('importUserBtn').addEventListener('click', openImportUsers);
-document.getElementById('importHistoryBtn').addEventListener('click', openImportHistory);
-
 /* ============ 用户导入：文件上传 ============ */
 
 let importPreviewData = [];
+
+(function(){
+  function safeBind(id, event, handler){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  }
+  safeBind('addUserBtn', 'click', openAddUser);
+  safeBind('importUserBtn', 'click', openImportUsers);
+  safeBind('importHistoryBtn', 'click', openImportHistory);
+})();
 
 function openImportUsers(){
   importPreviewData = [];
