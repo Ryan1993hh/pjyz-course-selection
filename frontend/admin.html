@@ -1646,23 +1646,36 @@ function setupUpload(){
       if (isBinary) {
         // 客户端用 SheetJS 解析 Excel
         if (typeof window.XLSX === 'undefined') {
-          // 动态加载 SheetJS
+          msgEl.textContent = '正在加载解析组件...';
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-          await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
+          script.crossOrigin = 'anonymous';
+          try {
+            await new Promise((resolve, reject) => {
+              script.onload = resolve;
+              script.onerror = () => reject(new Error('加载解析组件失败，请检查网络'));
+              document.head.appendChild(script);
+              setTimeout(() => reject(new Error('加载超时')), 10000);
+            });
+          } catch(err) {
+            throw new Error('Excel 解析组件加载失败：' + err.message + '。请使用 CSV 格式');
+          }
         }
+        msgEl.textContent = '正在解析文件内容...';
         const buf = await file.arrayBuffer();
         const wb = XLSX.read(buf, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        console.log('[上传] 解析到原始行数:', rows.length);
+        if (rows.length > 0) {
+          console.log('[上传] 表头:', rows[0]);
+          if (rows.length > 1) console.log('[上传] 第一行数据:', rows[1]);
+        }
         const courses = parseExcelRows(rows);
+        console.log('[上传] 解析出课程数:', courses.length);
         if (courses.length === 0) {
           msgEl.style.color = '#dc2626';
-          msgEl.textContent = '解析失败：未识别到课程数据，请检查文件格式';
+          msgEl.textContent = '解析失败：共识别 0 门课程，请检查表头是否包含：课程类别、课程名称、授课老师、授课地点、报名要求、六年级人数限制、七年级人数限制';
           toast('解析失败', 'error');
           return;
         }
@@ -1701,17 +1714,33 @@ function setupUpload(){
 function parseExcelRows(rows) {
   if (!rows || rows.length < 2) return [];
   const headers = rows[0].map(h => String(h || '').trim());
+  console.log('[解析] 表头数组:', headers);
+  
+  // 字段名映射（支持多种命名）
+  const HEADER_RULES = [
+    { key: 'category', patterns: ['类别', '分类'] },
+    { key: 'name', patterns: ['课程名称', '课程名', '课程'] },
+    { key: 'description', patterns: ['简介', '描述'] },
+    { key: 'teacher', patterns: ['老师', '教师'] },
+    { key: 'location', patterns: ['地点', '位置'] },
+    { key: 'requirement', patterns: ['要求', '备注'] },
+    { key: 'limit_grade6', patterns: ['六年级', '6年级'] },
+    { key: 'limit_grade7', patterns: ['七年级', '7年级'] }
+  ];
+  
   const headerMap = {};
   headers.forEach((h, i) => {
-    if (h.includes('类别') || h.includes('分类')) headerMap.category = i;
-    else if ((h.includes('课程') && (h.includes('名') || h === '课程')) || h === '名称') headerMap.name = i;
-    else if (h.includes('简介') || h.includes('描述')) headerMap.description = i;
-    else if (h.includes('老师') || h.includes('教师')) headerMap.teacher = i;
-    else if (h.includes('地点') || h.includes('位置')) headerMap.location = i;
-    else if (h.includes('要求') || h.includes('备注')) headerMap.requirement = i;
-    else if (h.includes('六年级') && (h.includes('名额') || h.includes('人数'))) headerMap.limit_grade6 = i;
-    else if (h.includes('七年级') && (h.includes('名额') || h.includes('人数'))) headerMap.limit_grade7 = i;
+    for (const rule of HEADER_RULES) {
+      if (rule.key in headerMap) continue; // 已匹配，跳过
+      if (rule.patterns.some(p => h.includes(p))) {
+        headerMap[rule.key] = i;
+        console.log('[解析] 匹配表头:', h, '->', rule.key, '(列', i + 1, ')');
+        break;
+      }
+    }
   });
+  
+  console.log('[解析] 最终映射:', headerMap);
   
   const result = [];
   for (let i = 1; i < rows.length; i++) {
