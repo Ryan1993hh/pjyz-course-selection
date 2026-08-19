@@ -49,8 +49,7 @@ const INIT_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_selections_grade ON selections(grade)`,
   `CREATE INDEX IF NOT EXISTS idx_selections_class ON selections(class_name)`,
-  `CREATE INDEX IF NOT EXISTS idx_selections_course ON selections(course_name)`
-  `,
+  `CREATE INDEX IF NOT EXISTS idx_selections_course ON selections(course_name)`,
   `CREATE TABLE IF NOT EXISTS import_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT DEFAULT 'user_import',
