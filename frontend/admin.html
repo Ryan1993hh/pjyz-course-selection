@@ -1135,7 +1135,7 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
           <span class="icon">↑</span>
           <div class="text-col">
             <span class="title">点击或拖拽上传课程清单</span>
-            <span class="hint">支持 .csv / .xlsx / .xls / .docx 格式。推荐使用 CSV 格式，表头需包含：类别、课程名称、简介、老师、地点、要求、六年级名额、七年级名额</span>
+            <span class="hint">支持 .csv / .xlsx / .xls / .docx 格式。Excel 文件表头需包含：类别、课程名称、简介、老师、地点、要求、六年级名额、七年级名额</span>
           </div>
           <input type="file" id="fileInput" accept="*" style="display:none;">
         </div>
@@ -1639,20 +1639,54 @@ function setupUpload(){
   async function uploadFile(file){
     msgEl.style.color = '#1e40af';
     msgEl.textContent = '正在上传并解析 ' + file.name + ' ...';
-    const fd = new FormData();
-    fd.append('file', file);
     try {
-      const data = await request('POST', '/api/courses/upload', fd, true);
-      if (data.success){
-        const newCourses = data.courses || [];
-        coursesData = coursesData.concat(newCourses);
+      const name = file.name.toLowerCase();
+      const isBinary = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.docx');
+      
+      if (isBinary) {
+        // 客户端用 SheetJS 解析 Excel
+        if (typeof window.XLSX === 'undefined') {
+          // 动态加载 SheetJS
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const courses = parseExcelRows(rows);
+        if (courses.length === 0) {
+          msgEl.style.color = '#dc2626';
+          msgEl.textContent = '解析失败：未识别到课程数据，请检查文件格式';
+          toast('解析失败', 'error');
+          return;
+        }
+        coursesData = coursesData.concat(courses);
         renderCourses();
         msgEl.style.color = '#16a34a';
-        msgEl.textContent = '解析成功，共 ' + data.count + ' 门课程已添加到表格，请确认后点击"确认保存"';
-        toast('上传成功，新增 ' + data.count + ' 门课程', 'success');
+        msgEl.textContent = '解析成功，共 ' + courses.length + ' 门课程已添加到表格，请确认后点击"确认保存"';
+        toast('上传成功，新增 ' + courses.length + ' 门课程', 'success');
       } else {
-        msgEl.style.color = '#dc2626';
-        msgEl.textContent = data.error || '上传失败';
+        // CSV 走后端解析
+        const fd = new FormData();
+        fd.append('file', file);
+        const data = await request('POST', '/api/courses/upload', fd, true);
+        if (data.success){
+          const newCourses = data.courses || [];
+          coursesData = coursesData.concat(newCourses);
+          renderCourses();
+          msgEl.style.color = '#16a34a';
+          msgEl.textContent = '解析成功，共 ' + data.count + ' 门课程已添加到表格，请确认后点击"确认保存"';
+          toast('上传成功，新增 ' + data.count + ' 门课程', 'success');
+        } else {
+          msgEl.style.color = '#dc2626';
+          msgEl.textContent = data.error || data.message || '上传失败';
+        }
       }
     } catch(e){
       msgEl.style.color = '#dc2626';
@@ -1661,6 +1695,46 @@ function setupUpload(){
     }
     input.value = '';
   }
+}
+
+// 解析 Excel 行数据
+function parseExcelRows(rows) {
+  if (!rows || rows.length < 2) return [];
+  const headers = rows[0].map(h => String(h || '').trim());
+  const headerMap = {};
+  headers.forEach((h, i) => {
+    if (h.includes('类别') || h.includes('分类')) headerMap.category = i;
+    else if ((h.includes('课程') && (h.includes('名') || h === '课程')) || h === '名称') headerMap.name = i;
+    else if (h.includes('简介') || h.includes('描述')) headerMap.description = i;
+    else if (h.includes('老师') || h.includes('教师')) headerMap.teacher = i;
+    else if (h.includes('地点') || h.includes('位置')) headerMap.location = i;
+    else if (h.includes('要求') || h.includes('备注')) headerMap.requirement = i;
+    else if (h.includes('六年级') && (h.includes('名额') || h.includes('人数'))) headerMap.limit_grade6 = i;
+    else if (h.includes('七年级') && (h.includes('名额') || h.includes('人数'))) headerMap.limit_grade7 = i;
+  });
+  
+  const result = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i];
+    const name = getExcelCol(cols, headerMap.name, '');
+    if (!name) continue;
+    result.push({
+      category: getExcelCol(cols, headerMap.category, ''),
+      name: name,
+      description: getExcelCol(cols, headerMap.description, ''),
+      teacher: getExcelCol(cols, headerMap.teacher, ''),
+      location: getExcelCol(cols, headerMap.location, ''),
+      requirement: getExcelCol(cols, headerMap.requirement, ''),
+      limit_grade6: parseInt(getExcelCol(cols, headerMap.limit_grade6, '0'), 10) || 0,
+      limit_grade7: parseInt(getExcelCol(cols, headerMap.limit_grade7, '0'), 10) || 0
+    });
+  }
+  return result;
+}
+
+function getExcelCol(cols, idx, defaultVal) {
+  if (idx == null) return defaultVal;
+  return String(cols[idx] || '').trim() || defaultVal;
 }
 
 document.getElementById('addRowBtn').addEventListener('click', function(){
