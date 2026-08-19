@@ -1,13 +1,14 @@
 {
   "name": "pjyz-course-selection-system",
   "version": "1.0.0",
-  "description": "浦江一中拓展课选课管理系统 - 前后端分离完整版",
+  "description": "浦江一中拓展课选课管理系统",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "express": "^4.19.2",
