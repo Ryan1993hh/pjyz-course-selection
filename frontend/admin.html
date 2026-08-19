@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>后台管理 - 浦江一中拓展课选课</title>
 <style>
 :root {
@@ -63,15 +64,16 @@ body {
   line-height: 1.5;
 }
 
-/* ===== 顶部标题栏 — 居中标题 + 渐变流动动效（严格参照页风格）===== */
+/* ===== 顶部标题栏 — 左中右三栏布局 ===== */
 .header {
   color: white;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
+  gap: 16px;
   position: relative;
   overflow: hidden;
   background: linear-gradient(110deg, var(--primary-dark) 0%, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, var(--primary-dark) 100%);
@@ -97,7 +99,7 @@ body {
   gap: 12px;
   flex-shrink: 0;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 .header-logo img {
   height: 44px;
@@ -131,6 +133,7 @@ body {
   letter-spacing: 0.5px;
   color: white;
 }
+/* 居中标题 — 绝对定位确保真正居中 */
 .header-title {
   position: absolute;
   left: 50%;
@@ -138,18 +141,18 @@ body {
   transform: translate(-50%, -50%);
   text-align: center;
   z-index: 1;
+  pointer-events: none;
 }
 .header-title h1 {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: 4px;
   margin: 0;
   color: white;
   text-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.3);
-  padding-left: 4px;
   white-space: nowrap;
 }
-/* ===== 右侧操作区 + 退出登录按钮 ===== */
+/* ===== 右侧操作区：导航 + 管理员 + 退出 ===== */
 .header-actions {
   position: relative;
   z-index: 2;
@@ -201,29 +204,79 @@ body {
 }
 .btn-logout:hover .btn-logout-icon { transform: translateX(4px); }
 
-/* ===== 主布局：侧边栏 + 主区 ===== */
+/* ===== 主布局：垂直布局 ===== */
 .layout {
   display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: calc(100vh - 14px - 72px);
 }
 
-/* ===== 侧边栏（卡片化，参照页卡片风格）===== */
-.sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px 12px;
+/* ===== 顶部导航栏（集成在header右侧）===== */
+.top-nav {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: sticky;
-  top: 14px;
-  align-self: flex-start;
-  max-height: calc(100vh - 100px);
+  align-items: center;
+  gap: 12px;
 }
+.header-actions .admin-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.25);
+}
+.header-actions .admin-info .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.5);
+}
+.top-nav .admin-info .role {
+  display: none;
+}
+.top-nav-items {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.top-nav-items .nav-item {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+}
+.top-nav-items .nav-item:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+}
+.top-nav-items .nav-item.active {
+  background: rgba(255,255,255,0.25);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.top-nav-items .nav-item .nav-icon {
+  margin-right: 4px;
+  font-size: 13px;
+}
+
+/* ===== 侧边栏样式保留但不使用 ===== */
+.sidebar { display: none; }
 .sidebar-title {
   font-size: 13px;
   color: var(--muted);
@@ -306,8 +359,66 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+/* ===== 课程管理左右布局（上传 + 列表）===== */
+.course-manage-row {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+.course-manage-left {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
+.course-manage-left .section-header {
+  margin-bottom: 0;
+}
+.course-upload-right {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.course-list-card {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.course-list-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ===== 表格单元格自动换行 ===== */
+table.courses-table td[data-field="name"],
+table.courses-table td[data-field="description"] {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.course-name {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+  height: auto;
+  max-width: 100%;
+}
+
 .section { display: none; animation: fadeIn 0.25s ease; }
 .section.active { display: flex; flex-direction: column; gap: 12px; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -488,7 +599,7 @@ table.courses-table td[data-field="description"] {
   border-color: var(--primary);
   transform: translateY(-1px);
 }
-.btn-sm { height: 26px; padding: 0 10px; font-size: 12px; border-radius: 6px; }
+.btn-sm { height: 30px; padding: 0 12px; font-size: 12px; border-radius: 8px; }
 .btn-block { width: 100%; }
 
 /* ===== 表单元素（参照页 input/select 风格）===== */
@@ -710,7 +821,7 @@ tbody tr { transition: background 0.18s ease; }
 table.courses-table td.seq                        { background-color: var(--col-1);  text-align: center; color: var(--muted); font-weight: 600; }
 table.courses-table td[data-field="category"]     { background-color: var(--col-2);  text-align: center; }
 table.courses-table td[data-field="name"]         { background-color: var(--col-3);  text-align: left; }
-table.courses-table td[data-field="description"]  { background-color: var(--col-4);  text-align: left; white-space: normal; }
+table.courses-table td[data-field="description"]  { background-color: var(--col-4);  text-align: left; white-space: normal; max-width: 260px; }
 table.courses-table td[data-field="teacher"]      { background-color: var(--col-5);  text-align: left; }
 table.courses-table td[data-field="location"]     { background-color: var(--col-6);  text-align: left; }
 table.courses-table td[data-field="requirement"]  { background-color: var(--col-7);  text-align: left; }
@@ -819,10 +930,10 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.25);
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
   white-space: nowrap;
 }
-.course-link:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(13, 148, 136, 0.35); filter: brightness(1.06); }
+.course-link:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35); filter: brightness(1.06); }
 
 /* ===== 授课老师 / 授课地点 ===== */
 .teacher-cell, .location-cell {
@@ -863,13 +974,13 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
   white-space: nowrap;
   backdrop-filter: blur(2px);
 }
-.limit-badge .ico { font-size: 13px; }
+.limit-badge .ico { font-size: 12px; }
 .limit-badge.zero {
   background: rgba(255, 255, 255, 0.6);
   color: var(--muted);
   border-color: #cbd5e1;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* ===== 角色徽章 ===== */
@@ -1100,40 +1211,37 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
     flex-direction: column;
   }
   .course-manage-left,
-  .course-list-card {
+  .course-upload-right {
     flex: 1 1 100%;
     width: 100%;
   }
+  .header-title h1 { font-size: 16px; letter-spacing: 2px; }
+  .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
 }
 @media (max-width: 960px) {
-  .layout { flex-direction: column; }
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-self: auto;
-    position: static;
-    max-height: none;
-    padding: 10px 12px;
-  }
-  .sidebar-title { display: none; }
-  .sidebar-foot { margin-top: 0; padding-top: 0; border: none; flex-basis: 100%; }
-  .nav-item { flex: 1; justify-content: center; min-width: 120px; }
-  .nav-item.active::before { display: none; }
-  .header-title h1 { font-size: 18px; letter-spacing: 2px; }
-  .header-logo .logo-svg { width: 36px; height: 36px; }
+  .header { padding: 10px 14px; gap: 10px; }
   .header-logo .logo-text { display: none; }
+  .header-title h1 { font-size: 14px; letter-spacing: 1px; }
+  .top-nav-items { gap: 2px; }
+  .top-nav-items .nav-item { padding: 6px 8px; font-size: 12px; }
+  .top-nav-items .nav-item .nav-icon { margin-right: 2px; }
+  .header-actions .admin-info { padding: 3px 8px; font-size: 12px; }
+  .header-actions .admin-info .avatar { width: 24px; height: 24px; font-size: 12px; }
   table.courses-table td[data-field="description"] { font-size: 11px; line-height: 1.4; }
   .course-name { font-size: 11px; padding: 2px 6px; }
   .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
 }
 @media (max-width: 760px) {
-  .header-title h1 { font-size: 16px; letter-spacing: 2px; }
+  .header { padding: 8px 12px; }
+  .header-title h1 { font-size: 12px; letter-spacing: 1px; }
+  .top-nav-items .nav-item { padding: 5px 6px; font-size: 11px; }
+  .header-actions .admin-info span { display: none; }
+  .header-actions .admin-info { padding: 3px; }
   .control-bar { grid-template-columns: 1fr 1fr; }
   .control-bar .upload-area { grid-column: 1 / -1; }
   .step-arrow { display: none; }
-  th { padding: 8px 4px; font-size: 12px; }
-  td { padding: 6px 4px; font-size: 12px; }
+  th { padding: 6px 4px; font-size: 12px; }
+  td { padding: 5px 4px; font-size: 12px; }
   table.courses-table td[data-field="description"] { font-size: 11px; line-height: 1.35; }
   .course-name { font-size: 11px; padding: 2px 4px; }
   .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
@@ -1141,7 +1249,7 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
-  .header { margin: 0 0 8px; padding: 12px 16px; }
+  .header { margin: 0 0 8px; padding: 8px 12px; }
   .layout { padding: 0; gap: 8px; }
   .section-header h2 { font-size: 17px; letter-spacing: 1px; }
   th { padding: 6px 3px; font-size: 11px; letter-spacing: 0; }
@@ -1150,15 +1258,15 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
   .course-name { font-size: 10px; padding: 1px 3px; }
   .limit-badge, .req-tag { font-size: 10px; padding: 1px 3px; }
   .course-link { font-size: 10px; padding: 1px 3px; }
-  .header-title h1 { font-size: 14px; letter-spacing: 1px; }
-  .btn-logout { padding: 0 12px; height: 36px; min-width: 0; font-size: 12px; }
+  .header-title h1 { font-size: 12px; letter-spacing: 0; }
+  .btn-logout { padding: 0 10px; height: 32px; min-width: 0; font-size: 11px; }
   .btn-logout-icon { display: none; }
 }
 </style>
 </head>
 <body>
 
-<!-- ===== 顶部标题栏（参照页风格，居中标题 + 校徽） ===== -->
+<!-- ===== 顶部标题栏 ===== -->
 <div class="header">
   <div class="header-logo">
     <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
@@ -1179,33 +1287,38 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
       <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
     </div>
   </div>
-  <div class="header-title"><h1>浦江一中拓展课 · 管理后台</h1></div>
+
+  <!-- 居中标题 -->
+  <div class="header-title">
+    <h1>浦江一中拓展课 · 后台管理</h1>
+  </div>
+
+  <!-- 右侧：导航 + 管理员 + 退出 -->
   <div class="header-actions">
+    <div class="top-nav-items">
+      <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
+      <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
+      <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
+    </div>
+    <div class="admin-info">
+      <div class="avatar" id="adminAvatar">A</div>
+      <span id="adminName">管理员</span>
+    </div>
     <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
       <span class="btn-logout-icon" aria-hidden="true">→</span>
-      <span>退出登录</span>
+      <span>退出</span>
     </button>
   </div>
 </div>
 
-<!-- ===== 主布局 ===== -->
+<!-- ===== 主布局（垂直） ===== -->
 <div class="layout">
-  <!-- ===== 侧边栏 ===== -->
-  <aside class="sidebar">
-    <div class="sidebar-title">功能导航</div>
-    <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
-    <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
-    <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
-    <div class="sidebar-foot">
-      <a href="denglu.html" title="返回登录首页">⌂ 返回选课首页</a>
-    </div>
-  </aside>
-
   <!-- ===== 主内容区 ===== -->
   <main class="main">
 
     <!-- ===== 模块一：课程管理 ===== -->
     <section class="section active" id="section-courses">
+      <!-- 第一行：课程管理 + 上传文件（等宽） -->
       <div class="course-manage-row">
         <div class="course-manage-left">
           <div class="section-header">
@@ -1214,62 +1327,66 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
               <p class="desc">上传课程文件解析后，可在下方表格内编辑，确认后统一保存</p>
             </div>
           </div>
+        </div>
+
+        <div class="course-upload-right">
           <div class="card">
             <div class="card-title">上传课程文件</div>
-            <div class="upload-area" id="uploadArea" title="点击或拖拽上传 xlsx / xls / docx 文件">
+            <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
               <span class="icon">↑</span>
               <div class="text-col">
                 <span class="title">点击或拖拽上传课程清单</span>
-                <span class="hint">支持 .xlsx / .xls / .docx 格式，可包含课程名称、简介、老师、地点、要求、名额等字段</span>
+                <span class="hint">支持 .csv / .xlsx / .xls / .docx 格式。Excel 文件表头需包含：类别、课程名称、简介、老师、地点、要求、六年级名额、七年级名额</span>
               </div>
-              <input type="file" id="fileInput" accept=".xlsx,.xls,.docx" style="display:none;">
+              <input type="file" id="fileInput" accept="*" style="display:none;">
             </div>
             <div class="upload-msg" id="uploadMsg">尚未上传文件，您也可以直接在下方表格中新增课程</div>
           </div>
         </div>
+      </div>
 
-        <div class="card course-list-card">
-          <div class="card-title course-list-title">
-            <span>课程列表</span>
-            <span class="card-title-right">
-              <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;margin-right:12px;">支持点击单元格行内编辑</span>
-              <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ 新增一行</button>
-            </span>
-          </div>
-          <div class="table-wrap">
-            <table class="courses-table" id="coursesTable">
-              <colgroup>
-                <col style="width:4%;">
-                <col style="width:6%;">
-                <col style="width:18%;">
-                <col style="width:18%;">
-                <col style="width:6%;">
-                <col style="width:7%;">
-                <col style="width:9%;">
-                <col style="width:6%;">
-                <col style="width:6%;">
-                <col style="width:5%;">
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>序号</th>
-                  <th>课程类别</th>
-                  <th>课程名称</th>
-                  <th>课程简介</th>
-                  <th>授课老师</th>
-                  <th>授课地点</th>
-                  <th>报名要求</th>
-                  <th>六年级名额</th>
-                  <th>七年级名额</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="coursesBody"></tbody>
-            </table>
-          </div>
-          <div class="action-bar">
-            <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ 确认保存全部课程</button>
-          </div>
+      <!-- 第二行：课程列表（全宽） -->
+      <div class="card course-list-card">
+        <div class="card-title course-list-title">
+          <span>课程列表</span>
+          <span class="card-title-right">
+            <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;margin-right:12px;">支持点击单元格行内编辑</span>
+            <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ 新增一行</button>
+          </span>
+        </div>
+        <div class="table-wrap">
+          <table class="courses-table" id="coursesTable">
+            <colgroup>
+              <col style="width:3%;">
+              <col style="width:5%;">
+              <col style="width:10%;">
+              <col style="width:20%;">
+              <col style="width:5%;">
+              <col style="width:6%;">
+              <col style="width:8%;">
+              <col style="width:5%;">
+              <col style="width:5%;">
+              <col style="width:4%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>课程类别</th>
+                <th>课程名称</th>
+                <th>课程简介</th>
+                <th>授课老师</th>
+                <th>授课地点</th>
+                <th>报名要求</th>
+                <th>六年级名额</th>
+                <th>七年级名额</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="coursesBody"></tbody>
+          </table>
+        </div>
+        <div class="action-bar">
+          <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ 确认保存全部课程</button>
         </div>
       </div>
     </section>
@@ -1340,7 +1457,10 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
           <h2>用户管理</h2>
           <p class="desc">管理教师与管理员账号，密码默认为 ******，点击单元格可切换明文显示</p>
         </div>
-        <button type="button" class="btn btn-primary" id="addUserBtn">+ 添加用户</button>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-outline" id="importUserBtn">⬆ 导入用户</button>
+          <button type="button" class="btn btn-primary" id="addUserBtn">+ 添加用户</button>
+        </div>
       </div>
 
       <div class="card">
@@ -1349,8 +1469,9 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
             <thead>
               <tr>
                 <th style="width:64px;">序号</th>
-                <th style="min-width:160px;">账号</th>
-                <th style="min-width:160px;">密码</th>
+                <th style="min-width:140px;">账号</th>
+                <th style="min-width:120px;">密码</th>
+                <th style="min-width:140px;">教师名字</th>
                 <th style="width:108px;">角色</th>
                 <th style="width:148px;">操作</th>
               </tr>
@@ -1500,6 +1621,9 @@ async function doLogin(){
     const data = await request('POST', '/api/login', { username, password });
     if (data.success && data.token){
       setToken(data.token);
+      if (data.user) {
+        localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+      }
       document.getElementById('loginOverlay').classList.remove('show');
       toast('登录成功', 'success');
       initAll();
@@ -1591,25 +1715,13 @@ function renderCourses(){
     tr.innerHTML = cells.join('');
 
     tr.querySelector('[data-field="category"]').textContent = c.category || '';
-    const nameCell = tr.querySelector('[data-field="name"]');
-    nameCell.innerHTML = '<span class="course-name" title="' + escapeAttr(c.name || '') + '">' + escapeHtml(c.name || '') + '</span>';
+    tr.querySelector('[data-field="name"]').textContent = c.name || '';
     tr.querySelector('[data-field="description"]').textContent = c.description || '';
     tr.querySelector('[data-field="teacher"]').textContent = c.teacher || '';
     tr.querySelector('[data-field="location"]').textContent = c.location || '';
-    const reqVal = c.requirement || '';
-    if (reqVal) {
-      tr.querySelector('[data-field="requirement"]').innerHTML = '<span class="req-tag">' + escapeHtml(reqVal) + '</span>';
-    }
-    const g6val = c.limit_grade6 != null && c.limit_grade6 !== '' ? c.limit_grade6 : '';
-    if (g6val !== '') {
-      const cls = parseInt(g6val) === 0 ? 'limit-badge zero' : 'limit-badge';
-      tr.querySelector('[data-field="limit_grade6"]').innerHTML = '<span class="' + cls + '">' + escapeHtml(String(g6val)) + '</span>';
-    }
-    const g7val = c.limit_grade7 != null && c.limit_grade7 !== '' ? c.limit_grade7 : '';
-    if (g7val !== '') {
-      const cls = parseInt(g7val) === 0 ? 'limit-badge zero' : 'limit-badge';
-      tr.querySelector('[data-field="limit_grade7"]').innerHTML = '<span class="' + cls + '">' + escapeHtml(String(g7val)) + '</span>';
-    }
+    tr.querySelector('[data-field="requirement"]').textContent = c.requirement || '';
+    tr.querySelector('[data-field="limit_grade6"]').textContent = c.limit_grade6 != null && c.limit_grade6 !== '' ? c.limit_grade6 : '';
+    tr.querySelector('[data-field="limit_grade7"]').textContent = c.limit_grade7 != null && c.limit_grade7 !== '' ? c.limit_grade7 : '';
 
     tr.querySelectorAll('.editable').forEach(function(td){
       td.addEventListener('click', function(){ startEdit(td, idx); });
@@ -1667,31 +1779,11 @@ function startEdit(td, idx){
       else { const n = parseInt(v, 10); v = isNaN(n) ? 0 : n; }
     }
     coursesData[idx][field] = v;
-    // Render with proper formatting
-    if (field === 'name') {
-      td.innerHTML = '<span class="course-name" title="' + escapeAttr(v || '') + '">' + escapeHtml(v || '') + '</span>';
-    } else if (field === 'requirement' && v) {
-      td.innerHTML = '<span class="req-tag">' + escapeHtml(v) + '</span>';
-    } else if ((field === 'limit_grade6' || field === 'limit_grade7') && v !== '' && v !== null && v !== undefined) {
-      const cls = parseInt(v) === 0 ? 'limit-badge zero' : 'limit-badge';
-      td.innerHTML = '<span class="' + cls + '">' + escapeHtml(String(v)) + '</span>';
-    } else {
-      td.textContent = (v === '' ? '' : v);
-    }
+    td.textContent = (v === '' ? '' : v);
   }
   function cancel(){
     if (committed) return; committed = true;
-    // Restore with formatting
-    if (field === 'name') {
-      td.innerHTML = '<span class="course-name" title="' + escapeAttr(val) + '">' + escapeHtml(val) + '</span>';
-    } else if (field === 'requirement' && val) {
-      td.innerHTML = '<span class="req-tag">' + escapeHtml(val) + '</span>';
-    } else if ((field === 'limit_grade6' || field === 'limit_grade7') && val !== '' && val !== null && val !== undefined) {
-      const cls = parseInt(val) === 0 ? 'limit-badge zero' : 'limit-badge';
-      td.innerHTML = '<span class="' + cls + '">' + escapeHtml(String(val)) + '</span>';
-    } else {
-      td.textContent = val;
-    }
+    td.textContent = val;
   }
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', function(e){
@@ -1770,20 +1862,67 @@ function setupUpload(){
   async function uploadFile(file){
     msgEl.style.color = '#1e40af';
     msgEl.textContent = '正在上传并解析 ' + file.name + ' ...';
-    const fd = new FormData();
-    fd.append('file', file);
     try {
-      const data = await request('POST', '/api/courses/upload', fd, true);
-      if (data.success){
-        const newCourses = data.courses || [];
-        coursesData = coursesData.concat(newCourses);
+      const name = file.name.toLowerCase();
+      const isBinary = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.docx');
+      
+      if (isBinary) {
+        // 客户端用 SheetJS 解析 Excel
+        if (typeof window.XLSX === 'undefined') {
+          msgEl.textContent = '正在加载解析组件...';
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+          script.crossOrigin = 'anonymous';
+          try {
+            await new Promise((resolve, reject) => {
+              script.onload = resolve;
+              script.onerror = () => reject(new Error('加载解析组件失败，请检查网络'));
+              document.head.appendChild(script);
+              setTimeout(() => reject(new Error('加载超时')), 10000);
+            });
+          } catch(err) {
+            throw new Error('Excel 解析组件加载失败：' + err.message + '。请使用 CSV 格式');
+          }
+        }
+        msgEl.textContent = '正在解析文件内容...';
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        console.log('[上传] 解析到原始行数:', rows.length);
+        if (rows.length > 0) {
+          console.log('[上传] 表头:', rows[0]);
+          if (rows.length > 1) console.log('[上传] 第一行数据:', rows[1]);
+        }
+        const courses = parseExcelRows(rows);
+        console.log('[上传] 解析出课程数:', courses.length);
+        if (courses.length === 0) {
+          msgEl.style.color = '#dc2626';
+          msgEl.textContent = '解析失败：共识别 0 门课程，请检查表头是否包含：课程类别、课程名称、授课老师、授课地点、报名要求、六年级人数限制、七年级人数限制';
+          toast('解析失败', 'error');
+          return;
+        }
+        coursesData = coursesData.concat(courses);
         renderCourses();
         msgEl.style.color = '#16a34a';
-        msgEl.textContent = '解析成功，共 ' + data.count + ' 门课程已添加到表格，请确认后点击"确认保存"';
-        toast('上传成功，新增 ' + data.count + ' 门课程', 'success');
+        msgEl.textContent = '解析成功，共 ' + courses.length + ' 门课程已添加到表格，请确认后点击"确认保存"';
+        toast('上传成功，新增 ' + courses.length + ' 门课程', 'success');
       } else {
-        msgEl.style.color = '#dc2626';
-        msgEl.textContent = data.error || '上传失败';
+        // CSV 走后端解析
+        const fd = new FormData();
+        fd.append('file', file);
+        const data = await request('POST', '/api/courses/upload', fd, true);
+        if (data.success){
+          const newCourses = data.courses || [];
+          coursesData = coursesData.concat(newCourses);
+          renderCourses();
+          msgEl.style.color = '#16a34a';
+          msgEl.textContent = '解析成功，共 ' + data.count + ' 门课程已添加到表格，请确认后点击"确认保存"';
+          toast('上传成功，新增 ' + data.count + ' 门课程', 'success');
+        } else {
+          msgEl.style.color = '#dc2626';
+          msgEl.textContent = data.error || data.message || '上传失败';
+        }
       }
     } catch(e){
       msgEl.style.color = '#dc2626';
@@ -1792,6 +1931,62 @@ function setupUpload(){
     }
     input.value = '';
   }
+}
+
+// 解析 Excel 行数据
+function parseExcelRows(rows) {
+  if (!rows || rows.length < 2) return [];
+  const headers = rows[0].map(h => String(h || '').trim());
+  console.log('[解析] 表头数组:', headers);
+  
+  // 字段名映射（支持多种命名）
+  const HEADER_RULES = [
+    { key: 'category', patterns: ['类别', '分类'] },
+    { key: 'name', patterns: ['课程名称', '课程名', '课程'] },
+    { key: 'description', patterns: ['简介', '描述'] },
+    { key: 'teacher', patterns: ['老师', '教师'] },
+    { key: 'location', patterns: ['地点', '位置'] },
+    { key: 'requirement', patterns: ['要求', '备注'] },
+    { key: 'limit_grade6', patterns: ['六年级', '6年级'] },
+    { key: 'limit_grade7', patterns: ['七年级', '7年级'] }
+  ];
+  
+  const headerMap = {};
+  headers.forEach((h, i) => {
+    for (const rule of HEADER_RULES) {
+      if (rule.key in headerMap) continue; // 已匹配，跳过
+      if (rule.patterns.some(p => h.includes(p))) {
+        headerMap[rule.key] = i;
+        console.log('[解析] 匹配表头:', h, '->', rule.key, '(列', i + 1, ')');
+        break;
+      }
+    }
+  });
+  
+  console.log('[解析] 最终映射:', headerMap);
+  
+  const result = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i];
+    const name = getExcelCol(cols, headerMap.name, '');
+    if (!name) continue;
+    result.push({
+      category: getExcelCol(cols, headerMap.category, ''),
+      name: name,
+      description: getExcelCol(cols, headerMap.description, ''),
+      teacher: getExcelCol(cols, headerMap.teacher, ''),
+      location: getExcelCol(cols, headerMap.location, ''),
+      requirement: getExcelCol(cols, headerMap.requirement, ''),
+      limit_grade6: parseInt(getExcelCol(cols, headerMap.limit_grade6, '0'), 10) || 0,
+      limit_grade7: parseInt(getExcelCol(cols, headerMap.limit_grade7, '0'), 10) || 0
+    });
+  }
+  return result;
+}
+
+function getExcelCol(cols, idx, defaultVal) {
+  if (idx == null) return defaultVal;
+  return String(cols[idx] || '').trim() || defaultVal;
 }
 
 document.getElementById('addRowBtn').addEventListener('click', function(){
@@ -1996,7 +2191,7 @@ function renderUsers(){
   const tbody = document.getElementById('usersBody');
   tbody.innerHTML = '';
   if (!usersData.length){
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无用户</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无用户</td></tr>';
     return;
   }
   usersData.forEach(function(u, idx){
@@ -2005,6 +2200,7 @@ function renderUsers(){
       '<td class="seq">' + (idx + 1) + '</td>' +
       '<td>' + escapeHtml(u.username || '') + '</td>' +
       '<td class="pwd-cell" data-shown="0">******</td>' +
+      '<td>' + escapeHtml(u.teacher_name || '') + '</td>' +
       '<td>' + roleLabel(u.role) + '</td>' +
       '<td class="row-actions"></td>';
 
@@ -2040,6 +2236,7 @@ function openAddUser(){
     '<h3 style="display:none;">添加用户</h3>' +
     '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" autocomplete="off" placeholder="请输入登录账号"></div>' +
     '<div class="form-group"><label>密码</label><input type="text" class="form-input" id="uPassword" autocomplete="off" placeholder="请输入登录密码"></div>' +
+    '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" autocomplete="off" placeholder="请输入教师姓名"></div>' +
     '<div class="form-group"><label>角色</label><select class="form-select" id="uRole"><option value="admin">管理员</option><option value="teacher" selected>教师</option></select></div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
@@ -2050,12 +2247,13 @@ function openAddUser(){
   document.getElementById('saveAddUser').addEventListener('click', async function(){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
+    const teacherName = document.getElementById('uTeacherName').value.trim();
     const role = document.getElementById('uRole').value;
     if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
     const btn = document.getElementById('saveAddUser');
     btn.disabled = true;
     try {
-      const data = await request('POST', '/api/users', { username: username, password: password, role: role });
+      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, role: role });
       if (data.success){
         toast('添加成功', 'success');
         closeModal();
@@ -2075,7 +2273,8 @@ function openEditUser(u){
   openModal(
     '<h3 style="display:none;">编辑用户</h3>' +
     '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" value="' + escapeAttr(u.username || '') + '"></div>' +
-    '<div class="form-group"><label>密码</label><input type="text" class="form-input" id="uPassword" value="' + escapeAttr(u.password || '') + '"></div>' +
+    '<div class="form-group"><label>密码（留空不修改）</label><input type="text" class="form-input" id="uPassword" placeholder="留空则不修改密码"></div>' +
+    '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" value="' + escapeAttr(u.teacher_name || '') + '"></div>' +
     '<div class="form-group"><label>角色</label><select class="form-select" id="uRole">' +
       '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>管理员</option>' +
       '<option value="teacher"' + (u.role === 'teacher' ? ' selected' : '') + '>教师</option>' +
@@ -2089,12 +2288,13 @@ function openEditUser(u){
   document.getElementById('saveEditUser').addEventListener('click', async function(){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
+    const teacherName = document.getElementById('uTeacherName').value.trim();
     const role = document.getElementById('uRole').value;
-    if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
+    if (!username){ toast('请填写账号', 'error'); return; }
     const btn = document.getElementById('saveEditUser');
     btn.disabled = true;
     try {
-      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, role: role });
+      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, role: role });
       if (data.success){
         toast('保存成功', 'success');
         closeModal();
@@ -2126,9 +2326,88 @@ async function deleteUser(u){
 }
 
 document.getElementById('addUserBtn').addEventListener('click', openAddUser);
+document.getElementById('importUserBtn').addEventListener('click', openImportUsers);
+
+function openImportUsers(){
+  openModal(
+    '<h3 style="display:none;">导入用户</h3>' +
+    '<p style="color:#6b7280;font-size:13px;margin-bottom:12px;">粘贴用户数据（每行一个用户，用英文逗号分隔：<b>账号,密码,姓名,角色</b>）。角色可选：admin 或 teacher（默认 teacher）</p>' +
+    '<div class="form-group">' +
+      '<label>用户数据</label>' +
+      '<textarea class="form-input" id="importUserData" rows="8" placeholder="张三,123456,张老师,teacher&#10;李四,123456,李老师,teacher&#10;admin,admin123,管理员,admin"></textarea>' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+      '<button class="btn btn-success" id="doImportUsers">确认导入</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '批量导入用户';
+  document.getElementById('doImportUsers').addEventListener('click', async function(){
+    const raw = document.getElementById('importUserData').value.trim();
+    if (!raw) { toast('请输入用户数据', 'error'); return; }
+    const lines = raw.split(/\r?\n/).filter(l => l.trim());
+    const users = [];
+    const errors = [];
+    for (let i = 0; i < lines.length; i++) {
+      const parts = lines[i].split(/[,，]/).map(s => s.trim());
+      if (parts.length < 2) {
+        errors.push(`第${i+1}行：格式错误`);
+        continue;
+      }
+      const [username, password, teacherName, role] = parts;
+      if (!username || !password) {
+        errors.push(`第${i+1}行：账号或密码为空`);
+        continue;
+      }
+      users.push({
+        username: username,
+        password: password,
+        teacher_name: teacherName || '',
+        role: (role && (role === 'admin' || role === 'teacher')) ? role : 'teacher'
+      });
+    }
+    if (users.length === 0) { toast('没有有效用户数据', 'error'); return; }
+    const btn = document.getElementById('doImportUsers');
+    btn.disabled = true;
+    try {
+      const data = await request('POST', '/api/users/import', { users: users });
+      if (data.success){
+        let msg = `成功导入 ${data.imported} 个用户`;
+        if (data.failed > 0) msg += `，失败 ${data.failed} 个`;
+        if (data.errors && data.errors.length > 0) {
+          msg += '\\n' + data.errors.slice(0, 5).join('\\n');
+          if (data.errors.length > 5) msg += `\\n...还有${data.errors.length - 5}个错误`;
+        }
+        alert(msg);
+        closeModal();
+        loadUsers();
+      } else {
+        toast(data.error || '导入失败', 'error');
+      }
+    } catch(e){
+      toast('导入失败：' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
 
 /* ============ Init ============ */
 function initAll(){
+  // 显示管理员信息
+  try {
+    const userStr = localStorage.getItem('pjyz_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user) {
+        const nameEl = document.getElementById('adminName');
+        const avatarEl = document.getElementById('adminAvatar');
+        if (nameEl && user.username) nameEl.textContent = user.username;
+        if (avatarEl && user.username) avatarEl.textContent = user.username.charAt(0).toUpperCase();
+      }
+    }
+  } catch(e) {}
+
   loadCourses();
   loadClasses();
   loadCourseNames();
