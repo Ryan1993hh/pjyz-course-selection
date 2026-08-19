@@ -45,11 +45,14 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = context.request.method;
 
-  // CORS headers
+  // CORS headers + 禁止缓存
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   };
 
   if (method === 'OPTIONS') {
@@ -176,10 +179,30 @@ async function handlePutCourses(context, corsHeaders) {
   if (!Array.isArray(body)) return json({ error: '请求格式错误' }, 400, corsHeaders);
   await ensureDB();
   const sql = getSQL();
-  await sql`DELETE FROM courses`;
-  for (const c of body) {
-    await sql`INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7) VALUES (${c.category || ''}, ${c.name || ''}, ${c.description || ''}, ${c.teacher || ''}, ${c.location || ''}, ${c.requirement || ''}, ${parseInt(c.limit_grade6,10)||0}, ${parseInt(c.limit_grade7,10)||0})`;
+  
+  // 获取现有课程 ID 列表
+  const existing = await sql`SELECT id FROM courses`;
+  const existingIds = new Set(existing.map(r => r.id));
+  
+  // 处理删除（不在 body 中的课程）
+  const incomingIds = new Set(body.filter(c => c.id).map(c => c.id));
+  for (const id of existingIds) {
+    if (!incomingIds.has(id)) {
+      await sql`DELETE FROM courses WHERE id = ${id}`;
+    }
   }
+  
+  // 处理更新和新增
+  for (const c of body) {
+    if (c.id && existingIds.has(c.id)) {
+      // 更新现有课程
+      await sql`UPDATE courses SET category=${c.category || ''}, name=${c.name || ''}, description=${c.description || ''}, teacher=${c.teacher || ''}, location=${c.location || ''}, requirement=${c.requirement || ''}, limit_grade6=${parseInt(c.limit_grade6,10)||0}, limit_grade7=${parseInt(c.limit_grade7,10)||0} WHERE id=${c.id}`;
+    } else {
+      // 新增课程
+      await sql`INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7) VALUES (${c.category || ''}, ${c.name || ''}, ${c.description || ''}, ${c.teacher || ''}, ${c.location || ''}, ${c.requirement || ''}, ${parseInt(c.limit_grade6,10)||0}, ${parseInt(c.limit_grade7,10)||0})`;
+    }
+  }
+  
   const rows = await sql`SELECT * FROM courses ORDER BY id ASC`;
   return json({ success: true, count: rows.length, courses: rows }, 200, corsHeaders);
 }

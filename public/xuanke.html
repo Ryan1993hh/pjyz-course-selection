@@ -3618,7 +3618,8 @@ document.addEventListener('keydown', e => {
 async function initCourses() {
   console.log('[选课] 开始加载课程数据...');
   try {
-    const resp = await fetch(pjyzApiBase() + '/api/courses');
+    // 添加时间戳避免缓存
+    const resp = await fetch(pjyzApiBase() + '/api/courses?_t=' + Date.now());
     console.log('[选课] API 响应状态:', resp.status);
     if (!resp.ok) throw new Error('API 返回 ' + resp.status);
     const data = await resp.json();
