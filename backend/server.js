@@ -14,9 +14,12 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// 静态文件（前端）
+// 静态文件：优先 public/（Vercel 标准目录），回退 frontend/
+const publicDir = path.join(__dirname, '..', 'public');
 const frontendDir = path.join(__dirname, '..', 'frontend');
-app.use(express.static(frontendDir, {
+const staticDir = fs.existsSync(publicDir) ? publicDir : frontendDir;
+
+app.use(express.static(staticDir, {
   index: false,
   maxAge: '1h'
 }));
@@ -34,7 +37,7 @@ app.use('/api', userRoutes);
 
 // 根路径返回登录页
 app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendDir, 'denglu.html'));
+  res.sendFile(path.join(staticDir, 'denglu.html'));
 });
 
 // 健康检查
@@ -50,11 +53,11 @@ app.get('/api/health', (req, res) => {
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   if (req.path.endsWith('.html')) {
-    const f = path.join(frontendDir, path.basename(req.path));
+    const f = path.join(staticDir, path.basename(req.path));
     if (fs.existsSync(f)) return res.sendFile(f);
-    return res.sendFile(path.join(frontendDir, 'denglu.html'));
+    return res.sendFile(path.join(staticDir, 'denglu.html'));
   }
-  res.sendFile(path.join(frontendDir, 'denglu.html'));
+  res.sendFile(path.join(staticDir, 'denglu.html'));
 });
 
 // 全局错误处理
@@ -75,6 +78,7 @@ if (process.env.VERCEL !== '1') {
     console.log('  默认管理员:   admin / 123456');
     console.log('  默认用户:     123456 / 123456');
     console.log('  健康检查:     http://localhost:' + PORT + '/api/health');
+    console.log('  静态文件目录: ' + staticDir);
     console.log('========================================');
   });
 }
