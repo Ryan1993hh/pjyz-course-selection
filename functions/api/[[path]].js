@@ -239,7 +239,7 @@ async function handleCourseCreate(db, request) {
     body.is_active !== false ? 1 : 0
   ).run();
   
-  const course = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(result.lastRowId).first();
+  const course = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(result.meta.last_row_id).first();
   return json({ course });
 }
 
@@ -421,7 +421,7 @@ async function handleSelectionsBatchCreate(db, request) {
           await db.prepare('UPDATE courses SET selected_count = selected_count + 1 WHERE id = ?').bind(courseId).run();
         }
         
-        const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.lastRowId).first();
+        const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
         results.push(selection);
       } catch(innerErr) {
         errors.push('插入失败: ' + innerErr.message);
@@ -567,7 +567,7 @@ async function handleClassCreate(db, request) {
     sc
   ).run();
   
-  const cls = await db.prepare('SELECT * FROM classes WHERE id = ?').bind(result.lastRowId).first();
+  const cls = await db.prepare('SELECT * FROM classes WHERE id = ?').bind(result.meta.last_row_id).first();
   return json({ class: cls });
 }
 
@@ -711,7 +711,7 @@ async function handleUserCreate(db, request) {
     body.class_name || ''
   ).run();
   
-  const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(result.lastRowId).first();
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(result.meta.last_row_id).first();
   return json({ success: true, user });
 }
 
