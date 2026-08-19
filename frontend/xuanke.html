@@ -199,7 +199,7 @@ body {
   align-items: center;
   gap: 10px;
 }
-.btn-reset {
+.btn-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -220,26 +220,38 @@ body {
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
-.btn-reset:hover,
-.btn-reset:focus-visible {
-  background: rgba(220, 38, 38, 0.82);
+.btn-header:hover,
+.btn-header:focus-visible {
+  background: rgba(255,255,255,0.28);
   border-color: rgba(255,255,255,0.55);
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.45);
+  box-shadow: 0 5px 14px rgba(0,0,0,0.3);
   outline: none;
 }
-.btn-reset:focus-visible {
-  outline: 2px solid #ffffff;
-  outline-offset: 2px;
+.btn-header:active { transform: translateY(0); }
+.btn-header.user-info {
+  cursor: default;
+  background: rgba(255,255,255,0.24);
+  min-width: 120px;
 }
-.btn-reset:active { transform: translateY(0); }
-.btn-reset-icon {
+.btn-header.user-info:hover {
+  background: rgba(255,255,255,0.24);
+  transform: none;
+}
+.btn-header.logout:hover {
+  background: rgba(220, 38, 38, 0.82);
+  border-color: rgba(255,255,255,0.55);
+  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.45);
+}
+.btn-header .btn-icon {
   font-size: 16px;
   line-height: 1;
   display: inline-block;
-  transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
 }
-.btn-reset:hover .btn-reset-icon { transform: rotate(-180deg); }
+.btn-header:hover .btn-icon.icon-reset {
+  transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  transform: rotate(-180deg);
+}
 
 /* 重置确认弹窗：使用 lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
 .reset-confirm-mask {
@@ -1784,9 +1796,17 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
   <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   <div class="header-actions">
-    <button type="button" class="btn-reset" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态" accesskey="r">
-      <span class="btn-reset-icon" aria-hidden="true">↻</span>
+    <button type="button" class="btn-header user-info" id="userInfoBtn" title="当前登录用户">
+      <span class="btn-icon">👤</span>
+      <span id="userDisplayName">未登录</span>
+    </button>
+    <button type="button" class="btn-header" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态">
+      <span class="btn-icon icon-reset" aria-hidden="true">↻</span>
       <span>重置</span>
+    </button>
+    <button type="button" class="btn-header logout" id="logoutBtn" title="退出登录">
+      <span class="btn-icon">⏻</span>
+      <span>退出登录</span>
     </button>
   </div>
 </div>
@@ -3636,6 +3656,31 @@ async function initCourses() {
   renderAll();
 }
 initCourses();
+
+// ===== 用户信息显示 + 退出登录 =====
+(function initUserInfo() {
+  const displayEl = document.getElementById('userDisplayName');
+  const logoutBtn = document.getElementById('logoutBtn');
+  try {
+    const userStr = localStorage.getItem('pjyz_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      const name = user.teacher_name || user.username || '未登录';
+      displayEl.textContent = name;
+    }
+  } catch (_) {
+    displayEl.textContent = '未登录';
+  }
+  logoutBtn.addEventListener('click', function () {
+    if (confirm('确定要退出登录吗？')) {
+      localStorage.removeItem('pjyz_token');
+      localStorage.removeItem('pjyz_user');
+      localStorage.removeItem('pjyz_login_role');
+      localStorage.removeItem('admin_token');
+      window.location.href = 'denglu.html';
+    }
+  });
+})();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
 (function () {

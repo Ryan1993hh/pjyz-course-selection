@@ -25,7 +25,9 @@ async function ensureDB() {
   if (_initialized) return;
   const sql = getSQL();
   // 初始化表
-  await sql`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'teacher')`;
+  await sql`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'teacher', teacher_name TEXT DEFAULT '')`;
+  // 添加 teacher_name 列（兼容旧数据库）
+  try { await sql`ALTER TABLE users ADD COLUMN teacher_name TEXT DEFAULT ''`; } catch(e) { /* 列已存在 */ }
   await sql`CREATE TABLE IF NOT EXISTS courses (id SERIAL PRIMARY KEY, category TEXT DEFAULT '', name TEXT DEFAULT '', description TEXT DEFAULT '', teacher TEXT DEFAULT '', location TEXT DEFAULT '', requirement TEXT DEFAULT '', limit_grade6 INTEGER DEFAULT 0, limit_grade7 INTEGER DEFAULT 0)`;
   await sql`CREATE TABLE IF NOT EXISTS selections (id SERIAL PRIMARY KEY, grade TEXT DEFAULT '', class_name TEXT DEFAULT '', student_name TEXT DEFAULT '', course_id INTEGER, course_name TEXT DEFAULT '', upload_time TEXT DEFAULT '')`;
   // 种子账号
@@ -122,6 +124,10 @@ export async function onRequest(context) {
       const id = parseInt(path.split('/').pop(), 10);
       return handleDeleteUser(id, corsHeaders);
     }
+    // 批量导入用户
+    if (path === '/api/users/import' && method === 'POST') {
+      return handleImportUsers(context, corsHeaders);
+    }
 
     return json({ error: 'API 端点不存在', path }, 404, corsHeaders);
   } catch (err) {
@@ -150,7 +156,7 @@ async function handleLogin(context, corsHeaders) {
     return json({ error: '账号或密码错误' }, 401, corsHeaders);
   }
   const token = createToken(users[0]);
-  return json({ success: true, token, user: { id: users[0].id, username: users[0].username, role: users[0].role } }, 200, corsHeaders);
+  return json({ success: true, token, user: { id: users[0].id, username: users[0].username, role: users[0].role, teacher_name: users[0].teacher_name || '' } }, 200, corsHeaders);
 }
 
 async function handleInit(corsHeaders) {
@@ -391,20 +397,20 @@ async function handleGetClasses(corsHeaders) {
 async function handleGetUsers(corsHeaders) {
   await ensureDB();
   const sql = getSQL();
-  const rows = await sql`SELECT id, username, role FROM users ORDER BY id ASC`;
+  const rows = await sql`SELECT id, username, role, teacher_name FROM users ORDER BY id ASC`;
   return json(rows, 200, corsHeaders);
 }
 
 async function handlePostUsers(context, corsHeaders) {
   const body = await context.request.json();
-  const { username, password, role } = body;
+  const { username, password, role, teacher_name } = body;
   if (!username || !password) {
     return json({ error: '账号和密码不能为空' }, 400, corsHeaders);
   }
   await ensureDB();
   const sql = getSQL();
   try {
-    const result = await sql`INSERT INTO users (username, password, role) VALUES (${username}, ${password}, ${role || 'teacher'}) RETURNING id, username, role`;
+    const result = await sql`INSERT INTO users (username, password, role, teacher_name) VALUES (${username}, ${password}, ${role || 'teacher'}, ${teacher_name || ''}) RETURNING id, username, role, teacher_name`;
     return json({ success: true, user: result[0] }, 201, corsHeaders);
   } catch (err) {
     return json({ error: '添加失败：' + (err.message || '账号可能已存在') }, 400, corsHeaders);
@@ -413,16 +419,16 @@ async function handlePostUsers(context, corsHeaders) {
 
 async function handlePutUser(id, context, corsHeaders) {
   const body = await context.request.json();
-  const { username, password, role } = body;
+  const { username, password, role, teacher_name } = body;
   if (!username) {
     return json({ error: '账号不能为空' }, 400, corsHeaders);
   }
   await ensureDB();
   const sql = getSQL();
   if (password) {
-    await sql`UPDATE users SET username = ${username}, password = ${password}, role = ${role || 'teacher'} WHERE id = ${id}`;
+    await sql`UPDATE users SET username = ${username}, password = ${password}, role = ${role || 'teacher'}, teacher_name = ${teacher_name || ''} WHERE id = ${id}`;
   } else {
-    await sql`UPDATE users SET username = ${username}, role = ${role || 'teacher'} WHERE id = ${id}`;
+    await sql`UPDATE users SET username = ${username}, role = ${role || 'teacher'}, teacher_name = ${teacher_name || ''} WHERE id = ${id}`;
   }
   return json({ success: true }, 200, corsHeaders);
 }
@@ -432,6 +438,35 @@ async function handleDeleteUser(id, corsHeaders) {
   const sql = getSQL();
   await sql`DELETE FROM users WHERE id = ${id}`;
   return json({ success: true }, 200, corsHeaders);
+}
+
+async function handleImportUsers(context, corsHeaders) {
+  const body = await context.request.json();
+  const users = body.users;
+  if (!Array.isArray(users) || users.length === 0) {
+    return json({ error: '请提供用户数据数组' }, 400, corsHeaders);
+  }
+  await ensureDB();
+  const sql = getSQL();
+  let successCount = 0;
+  let failCount = 0;
+  const errors = [];
+  for (const u of users) {
+    const { username, password, role, teacher_name } = u;
+    if (!username || !password) {
+      failCount++;
+      errors.push(`用户 ${username || '(空)'}: 账号或密码为空`);
+      continue;
+    }
+    try {
+      await sql`INSERT INTO users (username, password, role, teacher_name) VALUES (${username}, ${password}, ${role || 'teacher'}, ${teacher_name || ''})`;
+      successCount++;
+    } catch (err) {
+      failCount++;
+      errors.push(`用户 ${username}: ${err.message || '账号可能已存在'}`);
+    }
+  }
+  return json({ success: true, imported: successCount, failed: failCount, errors }, 200, corsHeaders);
 }
 
 // JWT using Web Crypto
