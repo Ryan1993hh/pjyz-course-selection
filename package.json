@@ -6,15 +6,18 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
-    "vercel-build": "npm install"
+    "cf-dev": "npx wrangler pages dev public --compatibility-date=2024-01-01",
+    "deploy": "npx wrangler pages deploy public"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "hono": "^4.13.3",
     "jsonwebtoken": "^9.0.3",
     "mammoth": "^1.8.0",
     "multer": "^1.4.5-lts.1",
