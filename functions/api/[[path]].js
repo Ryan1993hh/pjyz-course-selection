@@ -379,30 +379,31 @@ async function handleGetSelections(url, corsHeaders) {
   await ensureDB();
   const sql = getSQL();
 
-  let query = `SELECT * FROM selections`;
+  // 使用 Neon 条件模板语法动态构建查询
   const conditions = [];
   const params = [];
 
-  if (grade && grade !== '全部') {
-    conditions.push(`grade = $${params.length + 1}`);
-    params.push(grade);
-  }
-  if (className && className !== '全部') {
-    conditions.push(`class_name = $${params.length + 1}`);
-    params.push(className);
-  }
-  if (course && course !== '全部') {
-    conditions.push(`course_name = $${params.length + 1}`);
-    params.push(course);
-  }
+  if (grade && grade !== '全部') { conditions.push('grade = '); params.push(grade); }
+  if (className && className !== '全部') { conditions.push('class_name = '); params.push(className); }
+  if (course && course !== '全部') { conditions.push('course_name = '); params.push(course); }
 
+  let rows;
   if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
+    // 构建动态 WHERE 子句
+    let template = `SELECT * FROM selections WHERE `;
+    const values = [];
+    conditions.forEach((c, i) => {
+      if (i > 0) template += ' AND ';
+      template += c + '$' + (values.length + 1);
+      values.push(params[i]);
+    });
+    template += ' ORDER BY id DESC';
+    // 使用 sql() 函数执行动态查询
+    rows = await sql(template, ...values);
+  } else {
+    rows = await sql`SELECT * FROM selections ORDER BY id DESC`;
   }
-  query += ' ORDER BY id DESC';
-
-  const rows = await sql.query(query, params);
-  return json(rows.rows || [], 200, corsHeaders);
+  return json(rows || [], 200, corsHeaders);
 }
 
 async function handlePostSelections(context, corsHeaders) {
