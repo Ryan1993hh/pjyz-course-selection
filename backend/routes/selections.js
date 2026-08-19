@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const XLSX = require('xlsx');
-const { query, run, transaction, ensureDB } = require('../db');
+const { query, queryOne, run, ensureDB } = require('../db');
 
 // POST /api/selections 上传选课结果并返回 Excel
 router.post('/selections', async (req, res) => {
@@ -13,43 +13,41 @@ router.post('/selections', async (req, res) => {
   const now = new Date().toLocaleString('zh-CN', { hour12: false });
   try {
     await ensureDB();
-    await transaction(async (client) => {
-      for (const s of list) {
-        await client.query(
-          `INSERT INTO selections (grade, class_name, student_name, course_id, course_name, upload_time)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            s.grade || '',
-            s.class_name || '',
-            s.student_name || '',
-            parseInt(s.course_id, 10) || null,
-            s.course_name || '',
-            now
-          ]
-        );
-      }
-    });
+    for (const s of list) {
+      await run(
+        'INSERT INTO selections (grade, class_name, student_name, course_id, course_name, upload_time) VALUES ($1, $2, $3, $4, $5, $6)',
+        [
+          s.grade || '',
+          s.class_name || '',
+          s.student_name || '',
+          parseInt(s.course_id, 10) || null,
+          s.course_name || '',
+          now
+        ]
+      );
+    }
+
+    // 生成 Excel 文件返回
+    const data = list.map((s, i) => ({
+      '序号': i + 1,
+      '年级': s.grade || '',
+      '班级': s.class_name || '',
+      '学生姓名': s.student_name || '',
+      '课程ID': s.course_id || '',
+      '所选课程': s.course_name || ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '选课结果');
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = encodeURIComponent('选课结果_' + Date.now() + '.xlsx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${filename}`);
+    res.send(buf);
   } catch (err) {
     return res.status(500).json({ error: '保存失败：' + err.message });
   }
-
-  const data = list.map((s, i) => ({
-    '序号': i + 1,
-    '年级': s.grade || '',
-    '班级': s.class_name || '',
-    '学生姓名': s.student_name || '',
-    '课程ID': s.course_id || '',
-    '所选课程': s.course_name || ''
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '选课结果');
-
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-  const filename = encodeURIComponent('选课结果_' + Date.now() + '.xlsx');
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${filename}`);
-  res.send(buf);
 });
 
 // GET /api/selections 按条件查询
@@ -87,11 +85,12 @@ router.put('/selections/:id', async (req, res) => {
     return res.status(400).json({ error: '缺少课程信息' });
   }
   try {
-    const result = await run(
+    await ensureDB();
+    const info = await run(
       'UPDATE selections SET course_id = $1, course_name = $2 WHERE id = $3',
       [parseInt(course_id, 10), course_name, id]
     );
-    if (result.changes === 0) {
+    if (info.changes === 0) {
       return res.status(404).json({ error: '选课记录不存在' });
     }
     res.json({ success: true });
@@ -121,6 +120,7 @@ router.get('/selections/export', async (req, res) => {
   try {
     await ensureDB();
     const rows = await query(sql, params);
+
     const data = rows.map((s, i) => ({
       '序号': i + 1,
       '年级': s.grade || '',
@@ -137,19 +137,6 @@ router.get('/selections/export', async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${filename}`);
     res.send(buf);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/classes 获取所有班级列表
-router.get('/classes', async (req, res) => {
-  try {
-    await ensureDB();
-    const rows = await query(
-      "SELECT DISTINCT class_name FROM selections WHERE class_name != '' ORDER BY class_name ASC"
-    );
-    res.json(rows.map(r => r.class_name));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

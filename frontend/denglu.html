@@ -760,28 +760,14 @@
     }
   } catch (_) {}
 
-  /* ---------- API 基址 ----------
-   * 同源部署（Render 单服务）：相对路径即可
-   * 前后端分离部署：在前端环境配置后端地址（如 Cloudflare Pages 注入环境变量）
-   * 优先级：window.__API_BASE__ > localStorage 手动设置 > 当前源
-   */
-  function getApiBase() {
-    try {
-      if (window.__API_BASE__ && typeof window.__API_BASE__ === 'string') return window.__API_BASE__;
-      var saved = localStorage.getItem('pjyz_api_base');
-      if (saved) return saved.replace(/\/+$/, '');
-    } catch (_) {}
-    return ''; // 同源
-  }
+  /* ---------- 账号配置 ---------- */
+  // 用户账号 → 选课页面；管理员账号 → 管理后台
+  var ACCOUNTS = {
+    '123456': { password: '123456', role: 'user',  redirect: 'xuanke.html' },
+    'admin':  { password: '123456', role: 'admin', redirect: 'admin.html'  }
+  };
 
-  function api(path) {
-    return getApiBase() + path;
-  }
-
-  /* ---------- 表单提交 ----------
-   * 调用后端 POST /api/login 进行真实账号校验
-   * 成功后按 role 跳转：admin → admin.html，其他 → xuanke.html
-   */
+  /* ---------- 表单提交 ---------- */
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     hideMsg();
@@ -801,64 +787,40 @@
       return;
     }
 
-    // 进入加载态
-    loginBtn.classList.add('loading');
-    loginBtn.disabled = true;
+    var account = ACCOUNTS[username];
 
-    fetch(api('/api/login'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username, password: password })
-    })
-      .then(function (res) {
-        return res.json().then(function (data) {
-          return { ok: res.ok, data: data };
-        });
-      })
-      .then(function (result) {
-        var ok = result.ok;
-        var data = result.data || {};
-        if (!ok || !data.success || !data.token) {
-          throw new Error(data.error || '登录失败，请检查账号与密码');
-        }
-        // 保存 token + 用户信息
-        try {
-          // 通用 token（xuanke.html 用）
-          localStorage.setItem('pjyz_token', data.token);
-          localStorage.setItem('pjyz_user', JSON.stringify(data.user || {}));
-          localStorage.setItem('pjyz_login_role', (data.user && data.user.role) || '');
+    // 账号校验
+    if (!account) {
+      showMsg('账号不存在，请重新输入', 'error');
+      usernameEl.focus();
+      return;
+    }
+    // 密码校验
+    if (password !== account.password) {
+      showMsg('密码错误，请重新输入', 'error');
+      passwordEl.focus();
+      return;
+    }
 
-          // 管理员 token 兼容 admin.html（admin.html 读取 admin_token）
-          if (data.user && data.user.role === 'admin') {
-            localStorage.setItem('admin_token', data.token);
-          } else {
-            // 切换账号时清理旧的 admin_token，避免误进后台
-            localStorage.removeItem('admin_token');
-          }
+    // 记住账号 & 保存角色
+    try {
+      if (rememberEl.checked) {
+        localStorage.setItem('pjyz_login_user', username);
+        localStorage.setItem('pjyz_login_remember', '1');
+      } else {
+        localStorage.removeItem('pjyz_login_user');
+        localStorage.removeItem('pjyz_login_remember');
+      }
+      // 保存当前登录角色，供后续页面使用
+      localStorage.setItem('pjyz_login_role', account.role);
+      // 管理员账号：写入 admin_token，供 admin.html 直接进入后台（无需再次登录）
+      if (account.role === 'admin') {
+        localStorage.setItem('admin_token', 'admin_' + Date.now());
+      }
+    } catch (_) {}
 
-          // 记住账号
-          if (rememberEl.checked) {
-            localStorage.setItem('pjyz_login_user', username);
-            localStorage.setItem('pjyz_login_remember', '1');
-          } else {
-            localStorage.removeItem('pjyz_login_user');
-            localStorage.removeItem('pjyz_login_remember');
-          }
-        } catch (_) {}
-
-        showMsg('登录成功，正在跳转…', 'success');
-
-        // 按角色跳转
-        var role = (data.user && data.user.role) || '';
-        var redirect = role === 'admin' ? 'admin.html' : 'xuanke.html';
-        // 直接跳转，避免延迟
-        window.location.href = redirect;
-      })
-      .catch(function (err) {
-        loginBtn.classList.remove('loading');
-        loginBtn.disabled = false;
-        showMsg((err && err.message) || '网络错误，请检查后端服务是否运行', 'error');
-      });
+    // 直接跳转到对应页面（与登录页同目录）
+    window.location.href = account.redirect;
   });
 
   /* ---------- 忘记密码 / 联系管理员 ---------- */

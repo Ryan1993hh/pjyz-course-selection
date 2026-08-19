@@ -1,6 +1,0 @@
-# wrangler.toml - Cloudflare Workers 本地开发配置
-name = "pjyz-course-selection"
-compatibility_date = "2024-01-01"
-
-# Pages Functions 自动识别 public/ 和 functions/ 目录
-# 本地开发: npx wrangler pages dev public --compatibility-date=2024-01-01

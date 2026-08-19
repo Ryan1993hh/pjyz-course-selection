@@ -12,10 +12,7 @@ router.post('/login', async (req, res) => {
   }
   try {
     await ensureDB();
-    const user = await queryOne(
-      'SELECT * FROM users WHERE username = $1 AND password = $2',
-      [username, password]
-    );
+    const user = await queryOne('SELECT * FROM users WHERE username = $1 AND password = $2', [username, password]);
     if (!user) {
       return res.status(401).json({ error: '账号或密码错误' });
     }
@@ -26,7 +23,7 @@ router.post('/login', async (req, res) => {
       user: { id: user.id, username: user.username, role: user.role }
     });
   } catch (err) {
-    res.status(500).json({ error: '登录失败：' + err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

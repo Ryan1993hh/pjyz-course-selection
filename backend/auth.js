@@ -1,19 +1,18 @@
 // backend/auth.js
-// JWT 鉴权中间件（无状态，适配 Vercel Serverless）
-const jwt = require('jsonwebtoken');
+// 简单 Token 鉴权中间件
+const crypto = require('crypto');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'pjyz-dev-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '7d';
+// 内存中存储 token -> 用户信息（重启后失效，需重新登录）
+const tokenStore = new Map();
 
 /**
- * 生成 JWT token
+ * 生成 token
  */
 function createToken(user) {
-  return jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
-  );
+  const raw = `${user.id}:${Date.now()}:${crypto.randomBytes(8).toString('hex')}`;
+  const token = Buffer.from(raw).toString('base64').replace(/[+/=]/g, '');
+  tokenStore.set(token, { id: user.id, username: user.username, role: user.role });
+  return token;
 }
 
 /**
@@ -22,16 +21,11 @@ function createToken(user) {
 function authRequired(req, res, next) {
   const header = req.headers['authorization'] || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) {
-    return res.status(401).json({ error: '未登录，请先登录' });
+  if (!token || !tokenStore.has(token)) {
+    return res.status(401).json({ error: '未登录或登录已过期，请重新登录' });
   }
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = { id: payload.id, username: payload.username, role: payload.role };
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: '登录已过期，请重新登录' });
-  }
+  req.user = tokenStore.get(token);
+  next();
 }
 
 /**
@@ -46,4 +40,4 @@ function adminRequired(req, res, next) {
   });
 }
 
-module.exports = { createToken, authRequired, adminRequired };
+module.exports = { createToken, authRequired, adminRequired, tokenStore };

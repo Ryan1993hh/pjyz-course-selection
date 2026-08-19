@@ -114,10 +114,27 @@ async function initDB() {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id       SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role     TEXT DEFAULT 'teacher'
+        id          SERIAL PRIMARY KEY,
+        username    TEXT UNIQUE NOT NULL,
+        password    TEXT NOT NULL,
+        teacher_name TEXT DEFAULT '',
+        class_name  TEXT DEFAULT '',
+        role        TEXT DEFAULT 'teacher'
+      );
+    `);
+
+    // 为已有 users 表添加新字段（兼容旧数据库）
+    try {
+      await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teacher_name TEXT DEFAULT \'\'');
+      await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS class_name TEXT DEFAULT \'\'');
+    } catch(e) { /* ignore if columns already exist */ }
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS classes (
+        id           SERIAL PRIMARY KEY,
+        grade        TEXT DEFAULT '',
+        class_name   TEXT DEFAULT '',
+        teacher_name TEXT DEFAULT ''
       );
     `);
 

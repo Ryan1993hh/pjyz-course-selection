@@ -53,76 +53,11 @@ node backend/server.js
 - 选课页面：http://localhost:3000/xuanke.html
 - 后台管理入口：http://localhost:3000/admin.html
 
-### 4. 默认账号
-- 管理员：`admin` / `123456` → 进入后台管理
-- 用户/教师：`123456` / `123456` → 进入选课页面
+### 4. 默认管理员账号
+- 账号：`admin`
+- 密码：`admin123`
 
-系统首次启动时会自动创建上述账号；若已存在旧账号（如 `admin/admin123`）会自动迁移为新的默认密码。
-
-## 部署上线（GitHub + Render + Cloudflare）
-
-整体架构：**Render 单个 Web Service 同时托管 API 与前端静态资源**，前端用相对路径 `/api/...` 调用后端，无需配置 CORS。GitHub 用于托管代码并触发自动部署，Cloudflare 用于 DNS / 自定义域名。
-
-### 第 1 步：把代码推到 GitHub
-1. 在 GitHub 新建一个空仓库（例如 `pjyz-course-selection`），不要勾选 README / .gitignore / license。
-2. 在项目根目录执行：
-   ```bash
-   git init
-   git add .
-   git commit -m "浦江一中选课系统初始提交"
-   git branch -M main
-   git remote add origin https://github.com/你的用户名/pjyz-course-selection.git
-   git push -u origin main
-   ```
-   注意：`.gitignore` 已排除 `node_modules/` 与 `database/*.db`，不会把依赖和数据库推上去。
-
-### 第 2 步：在 Render 创建 Web Service
-1. 注册 / 登录 https://render.com（可用 GitHub 账号登录）。
-2. 点 **New +** → **Web Service** → 选 **Build and deploy from a Git repository** → 授权并选择刚才的 GitHub 仓库。
-3. 填写配置（仓库里已有 `render.yaml`，也可在网页上手动填写）：
-   - **Name**：`pjyz-course-selection`（任意，会成为子域名一部分）
-   - **Runtime**：`Node`
-   - **Region**：选最近的（如 Singapore）
-   - **Branch**：`main`
-   - **Build Command**：`npm install`
-   - **Start Command**：`npm start`
-   - **Plan**：`Free`（免费）或 `Starter`（推荐，支持持久磁盘）
-4. 展开 **Advanced**，设置 **Health Check Path** 为 `/api/health`。
-5. 点 **Create Web Service**。Render 会自动 `npm install` 然后 `npm start`，几分钟后可得到一个 `https://pjyz-course-selection.onrender.com` 这样的地址。
-6. 部署完成后，浏览器访问该地址：
-   - 登录页：`https://你的服务名.onrender.com/`
-   - 后台：`https://你的服务名.onrender.com/admin.html`
-   - 健康检查：`https://你的服务名.onrender.com/api/health`
-
-### 第 3 步（重要）：数据持久化
-- **免费方案**：Render 免费层文件系统是临时的，**每次重新部署或重启，SQLite 数据会丢失**（账号会自动重建，但课程/选课记录会清空）。适合演示和短期使用。
-- **持久化方案（推荐用于实际生产）**：把 `render.yaml` 里 `plan: free` 改成 `plan: starter`，并取消 `disk:` 段的注释：
-  ```yaml
-  plan: starter
-  disk:
-    name: pjyz-data
-    mountPath: /var/data
-    sizeGB: 1
-  ```
-  后端 `db.js` 会自动检测 `/var/data` 并把数据库写入持久磁盘（约 $7/月 Web Service + $1/月 磁盘）。重新部署后数据保留。
-
-### 第 4 步（可选）：用 Cloudflare 绑定自定义域名
-1. 在 Cloudflare 添加你的域名（如 `pjyz.edu.cn`），把 Cloudflare 给出的两个 NS 替换掉域名注册商的 NS。
-2. 进入 Cloudflare 的 **DNS** → 添加记录：
-   - 类型：`CNAME`
-   - 名称：`xuanke`（或 `@` 表示根域）
-   - 目标：`pjyz-course-selection.onrender.com`（你的 Render 服务地址）
-   - 代理状态：开启橙色云朵
-3. 进入 Render 的 Web Service → **Settings** → **Custom Domains** → 添加 `xuanke.你的域名`，Render 会自动签发 HTTPS 证书。
-4. 等待几分钟，即可通过 `https://xuanke.你的域名` 访问系统。
-5. （可选）在 Cloudflare **SSL/TLS** 设置为 `Full` 模式，并在 **Speed → Optimization** 关闭 Auto Minify 对 HTML 的压缩（避免影响页面脚本）。
-
-### 部署后验证清单
-- [ ] 打开网站根路径，能看到登录页
-- [ ] 用 `admin / 123456` 登录 → 自动跳转 `admin.html`，左侧能看到课程管理 / 选课结果 / 用户管理
-- [ ] 用 `123456 / 123456` 登录 → 自动跳转 `xuanke.html`，能上传名单、选课、导出
-- [ ] 在 xuanke.html 导出 Excel 后，到 admin.html 的「选课结果」筛选该班级能看到刚提交的数据
-- [ ] 访问 `/api/health` 返回 `{"status":"ok",...}`
+系统首次启动时会自动创建该账号。
 
 ## 功能说明
 

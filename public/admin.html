@@ -1398,6 +1398,9 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
           <h2>选课结果</h2>
           <p class="desc">按年级 / 班级 / 课程筛选，支持换课编辑与 Excel 导出</p>
         </div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-outline" id="manageClassesBtn">📚 班级管理</button>
+        </div>
       </div>
 
       <div class="card">
@@ -1469,10 +1472,11 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
             <thead>
               <tr>
                 <th style="width:64px;">序号</th>
-                <th style="min-width:140px;">账号</th>
-                <th style="min-width:120px;">密码</th>
-                <th style="min-width:140px;">教师名字</th>
-                <th style="width:108px;">角色</th>
+                <th style="min-width:120px;">账号</th>
+                <th style="min-width:100px;">密码</th>
+                <th style="min-width:120px;">教师名字</th>
+                <th style="min-width:120px;">班级</th>
+                <th style="width:88px;">角色</th>
                 <th style="width:148px;">操作</th>
               </tr>
             </thead>
@@ -2002,19 +2006,74 @@ document.getElementById('saveCoursesBtn').addEventListener('click', saveCourses)
 let selectionsData = [];
 let coursesForFilter = [];
 
+let classesData = []; // 班级管理数据
+let teachersList = [];  // 教师列表
+let gradesList = [];    // 年级列表
+
 async function loadClasses(){
   try {
     const data = await request('GET', '/api/classes');
-    const list = Array.isArray(data) ? data : [];
+    classesData = Array.isArray(data) ? data : [];
+    // 更新筛选器中的班级选项
     const sel = document.getElementById('filterClass');
-    sel.innerHTML = '<option value="">全部</option>';
-    list.forEach(function(c){
-      const opt = document.createElement('option');
-      opt.value = c; opt.textContent = c;
-      sel.appendChild(opt);
-    });
+    if (sel) {
+      sel.innerHTML = '<option value="">全部</option>';
+      const seen = new Set();
+      classesData.forEach(function(c){
+        const key = c.grade + ' ' + c.class_name;
+        if (!seen.has(key)) {
+          seen.add(key);
+          const opt = document.createElement('option');
+          opt.value = c.class_name; opt.textContent = c.grade + c.class_name;
+          sel.appendChild(opt);
+        }
+      });
+      // 如果班级表为空，从选课数据中提取
+      if (classesData.length === 0) {
+        try {
+          const oldData = await request('GET', '/api/selections');
+          const arr = Array.isArray(oldData) ? oldData : [];
+          const seen2 = new Set();
+          arr.forEach(function(s){
+            if (s.class_name) {
+              seen2.add(s.class_name);
+              const opt = document.createElement('option');
+              opt.value = s.class_name; opt.textContent = (s.grade || '') + s.class_name;
+              sel.appendChild(opt);
+            }
+          });
+        } catch(e) {}
+      }
+    }
+    // 同步年级筛选器
+    updateGradeFilter();
   } catch(e){
     /* silent */
+  }
+}
+
+function updateGradeFilter(){
+  const gradeSel = document.getElementById('filterGrade');
+  if (!gradeSel) return;
+  // 保持默认选项，从classesData中提取年级
+  const grades = new Set(['六年级', '七年级']);
+  classesData.forEach(function(c){
+    if (c.grade) grades.add(c.grade);
+  });
+  gradeSel.innerHTML = '<option value="">全部</option>';
+  Array.from(grades).sort().forEach(function(g){
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    gradeSel.appendChild(opt);
+  });
+}
+
+async function loadTeachersList(){
+  try {
+    const data = await request('GET', '/api/teachers');
+    teachersList = Array.isArray(data) ? data : [];
+  } catch(e){
+    teachersList = [];
   }
 }
 
@@ -2078,6 +2137,29 @@ function renderSelections(){
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td></td>' +
       '<td class="row-actions"></td>';
+
+    // 点击年级筛选
+    const gradeCell = tr.children[1];
+    if (s.grade) {
+      gradeCell.style.cursor = 'pointer';
+      gradeCell.className = 'course-link';
+      gradeCell.addEventListener('click', function(){
+        document.getElementById('filterGrade').value = s.grade || '';
+        querySelections();
+      });
+    }
+    // 点击班级筛选
+    const classCell = tr.children[2];
+    if (s.class_name) {
+      classCell.style.cursor = 'pointer';
+      classCell.className = 'course-link';
+      classCell.textContent = (s.grade || '') + (s.class_name || '');
+      classCell.addEventListener('click', function(){
+        document.getElementById('filterClass').value = s.class_name || '';
+        if (s.grade) document.getElementById('filterGrade').value = s.grade;
+        querySelections();
+      });
+    }
 
     const courseCell = tr.children[4];
     const link = document.createElement('span');
@@ -2168,6 +2250,162 @@ async function exportSelections(){
 document.getElementById('queryBtn').addEventListener('click', querySelections);
 document.getElementById('exportBtn').addEventListener('click', exportSelections);
 
+/* ============ Class Management Module ============ */
+
+function openClassManager(){
+  loadTeachersList().then(function(){
+    renderClassManager();
+  });
+}
+
+function renderClassManager(){
+  const gradeOptions = ['<option value="">选择年级</option>'];
+  ['六年级', '七年级'].forEach(function(g){
+    gradeOptions.push('<option value="' + g + '">' + g + '</option>');
+  });
+
+  const teacherOptions = ['<option value="">选择教师</option>'];
+  teachersList.forEach(function(t){
+    teacherOptions.push('<option value="' + escapeAttr(t) + '">' + escapeHtml(t) + '</option>');
+  });
+
+  let rowsHtml = '';
+  if (classesData.length === 0) {
+    rowsHtml = '<tr><td colspan="5" class="empty">暂无班级数据，请添加班级</td></tr>';
+  } else {
+    classesData.forEach(function(c, idx){
+      rowsHtml += '<tr>' +
+        '<td>' + (idx + 1) + '</td>' +
+        '<td>' + escapeHtml(c.grade || '') + '</td>' +
+        '<td>' + escapeHtml(c.class_name || '') + '</td>' +
+        '<td>' + escapeHtml(c.teacher_name || '') + '</td>' +
+        '<td class="row-actions">' +
+          '<button class="btn btn-sm btn-outline" onclick="editClassItem(' + c.id + ')">编辑</button> ' +
+          '<button class="btn btn-danger btn-sm" onclick="deleteClassItem(' + c.id + ')">删除</button>' +
+        '</td>' +
+      '</tr>';
+    });
+  }
+
+  const html =
+    '<div style="margin-bottom:16px;">' +
+      '<h4 style="margin-bottom:8px;color:var(--primary-dark);">添加班级</h4>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">' +
+        '<div class="form-group" style="flex:1;min-width:100px;margin-bottom:0;"><label>年级</label><select class="form-select" id="newClsGrade">' + gradeOptions.join('') + '</select></div>' +
+        '<div class="form-group" style="flex:1;min-width:100px;margin-bottom:0;"><label>班级名称</label><input type="text" class="form-input" id="newClsName" placeholder="如：1班"></div>' +
+        '<div class="form-group" style="flex:1;min-width:100px;margin-bottom:0;"><label>授课教师</label><input type="text" class="form-input" id="newClsTeacher" list="teacherList" placeholder="输入或选择教师">' +
+          '<datalist id="teacherList">' + teacherOptions.map(o => '<option value="' + o.replace('<option value="','').replace('">','') + '">').join('') + '</datalist>' +
+        '</div>' +
+        '<button class="btn btn-primary" id="addClassBtn">+ 添加</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<h4 style="color:var(--primary-dark);margin:0;">班级列表</h4>' +
+      '<span style="font-size:12px;color:var(--muted);">共 ' + classesData.length + ' 个班级</span>' +
+    '</div>' +
+    '<div class="table-wrap" style="max-height:300px;overflow-y:auto;">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+        '<thead><tr style="background:var(--bg-soft);">' +
+          '<th style="padding:8px;border:1px solid var(--border);width:40px;">序号</th>' +
+          '<th style="padding:8px;border:1px solid var(--border);width:80px;">年级</th>' +
+          '<th style="padding:8px;border:1px solid var(--border);width:100px;">班级名称</th>' +
+          '<th style="padding:8px;border:1px solid var(--border);">授课教师</th>' +
+          '<th style="padding:8px;border:1px solid var(--border);width:140px;">操作</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rowsHtml + '</tbody>' +
+      '</table>' +
+    '</div>' +
+    '<div class="modal-actions" style="margin-top:16px;">' +
+      '<button class="btn btn-secondary" onclick="closeModal()">关闭</button>' +
+    '</div>';
+
+  openModal(html);
+  document.getElementById('modalTitle').textContent = '班级管理';
+
+  // 绑定添加按钮
+  setTimeout(function(){
+    const addBtn = document.getElementById('addClassBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', async function(){
+        const grade = document.getElementById('newClsGrade').value;
+        const name = document.getElementById('newClsName').value.trim();
+        const teacher = document.getElementById('newClsTeacher').value.trim();
+        if (!grade || !name) { toast('请填写年级和班级名称', 'error'); return; }
+        try {
+          await request('POST', '/api/classes', { grade: grade, class_name: name, teacher_name: teacher });
+          toast('添加成功', 'success');
+          loadClasses();
+          renderClassManager();
+        } catch(e) {
+          toast('添加失败：' + e.message, 'error');
+        }
+      });
+    }
+  }, 50);
+}
+
+window.editClassItem = function(id){
+  const c = classesData.find(function(x){ return x.id === id; });
+  if (!c) return;
+  const grades = ['六年级', '七年级'];
+  const gradeOptions = grades.map(function(g){
+    return '<option value="' + g + '"' + (g === c.grade ? ' selected' : '') + '>' + g + '</option>';
+  }).join('');
+
+  const teacherOptions = ['<option value=""></option>'];
+  const seen = new Set();
+  if (c.teacher_name) { teacherOptions.push('<option value="' + escapeAttr(c.teacher_name) + '" selected>' + escapeHtml(c.teacher_name) + '</option>'); seen.add(c.teacher_name); }
+  teachersList.forEach(function(t){
+    if (!seen.has(t)) teacherOptions.push('<option value="' + escapeAttr(t) + '">' + escapeHtml(t) + '</option>');
+  });
+
+  openModal(
+    '<h3 style="display:none;">编辑班级</h3>' +
+    '<div class="form-group"><label>年级</label><select class="form-select" id="editClsGrade">' + gradeOptions + '</select></div>' +
+    '<div class="form-group"><label>班级名称</label><input type="text" class="form-input" id="editClsName" value="' + escapeAttr(c.class_name || '') + '"></div>' +
+    '<div class="form-group"><label>授课教师</label><select class="form-select" id="editClsTeacher">' + teacherOptions.join('') + '</select></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+      '<button class="btn btn-success" id="saveEditCls">保存修改</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '编辑班级';
+  setTimeout(function(){
+    const btn = document.getElementById('saveEditCls');
+    if (btn) {
+      btn.addEventListener('click', async function(){
+        const grade = document.getElementById('editClsGrade').value;
+        const name = document.getElementById('editClsName').value.trim();
+        const teacher = document.getElementById('editClsTeacher').value;
+        if (!grade || !name) { toast('请填写完整信息', 'error'); return; }
+        try {
+          await request('PUT', '/api/classes/' + id, { grade: grade, class_name: name, teacher_name: teacher });
+          toast('保存成功', 'success');
+          closeModal();
+          loadClasses();
+          loadTeachersList();
+          renderClassManager();
+        } catch(e) {
+          toast('保存失败：' + e.message, 'error');
+        }
+      });
+    }
+  }, 50);
+};
+
+window.deleteClassItem = function(id){
+  if (!window.confirm('确定删除该班级吗？')) return;
+  request('DELETE', '/api/classes/' + id).then(function(){
+    toast('删除成功', 'success');
+    loadClasses();
+    renderClassManager();
+  }).catch(function(e){
+    toast('删除失败：' + e.message, 'error');
+  });
+};
+
+document.getElementById('manageClassesBtn').addEventListener('click', openClassManager);
+
 /* ============ Module 3: Users ============ */
 let usersData = [];
 
@@ -2191,7 +2429,7 @@ function renderUsers(){
   const tbody = document.getElementById('usersBody');
   tbody.innerHTML = '';
   if (!usersData.length){
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无用户</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无用户</td></tr>';
     return;
   }
   usersData.forEach(function(u, idx){
@@ -2201,6 +2439,7 @@ function renderUsers(){
       '<td>' + escapeHtml(u.username || '') + '</td>' +
       '<td class="pwd-cell" data-shown="0">******</td>' +
       '<td>' + escapeHtml(u.teacher_name || '') + '</td>' +
+      '<td>' + escapeHtml(u.class_name || '') + '</td>' +
       '<td>' + roleLabel(u.role) + '</td>' +
       '<td class="row-actions"></td>';
 
@@ -2232,11 +2471,23 @@ function renderUsers(){
 }
 
 function openAddUser(){
+  // 构建班级选项
+  const classOptions = ['<option value="">不指定班级</option>'];
+  const seenClasses = new Set();
+  classesData.forEach(function(c){
+    const key = c.grade + c.class_name;
+    if (!seenClasses.has(key)) {
+      seenClasses.add(key);
+      classOptions.push('<option value="' + escapeAttr(c.class_name) + '">' + escapeHtml(c.grade) + escapeHtml(c.class_name) + '</option>');
+    }
+  });
+
   openModal(
     '<h3 style="display:none;">添加用户</h3>' +
     '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" autocomplete="off" placeholder="请输入登录账号"></div>' +
     '<div class="form-group"><label>密码</label><input type="text" class="form-input" id="uPassword" autocomplete="off" placeholder="请输入登录密码"></div>' +
     '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" autocomplete="off" placeholder="请输入教师姓名"></div>' +
+    '<div class="form-group"><label>班级</label><select class="form-select" id="uClassName">' + classOptions.join('') + '</select></div>' +
     '<div class="form-group"><label>角色</label><select class="form-select" id="uRole"><option value="admin">管理员</option><option value="teacher" selected>教师</option></select></div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
@@ -2248,12 +2499,13 @@ function openAddUser(){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
+    const className = document.getElementById('uClassName').value;
     const role = document.getElementById('uRole').value;
     if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
     const btn = document.getElementById('saveAddUser');
     btn.disabled = true;
     try {
-      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, role: role });
+      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, class_name: className, role: role });
       if (data.success){
         toast('添加成功', 'success');
         closeModal();
@@ -2270,11 +2522,31 @@ function openAddUser(){
 }
 
 function openEditUser(u){
+  // 构建班级选项
+  const classOptions = ['<option value="">不指定班级</option>'];
+  const seenClasses = new Set();
+  if (u.class_name) {
+    const classItem = classesData.find(function(c){ return c.class_name === u.class_name; });
+    const displayText = classItem ? (classItem.grade + classItem.class_name) : u.class_name;
+    classOptions.push('<option value="' + escapeAttr(u.class_name) + '" selected>' + escapeHtml(displayText) + '</option>');
+    seenClasses.add(u.class_name);
+  }
+  classesData.forEach(function(c){
+    if (!seenClasses.has(c.class_name)) {
+      const key = c.grade + c.class_name;
+      if (!seenClasses.has(key)) {
+        seenClasses.add(key);
+        classOptions.push('<option value="' + escapeAttr(c.class_name) + '">' + escapeHtml(c.grade) + escapeHtml(c.class_name) + '</option>');
+      }
+    }
+  });
+
   openModal(
     '<h3 style="display:none;">编辑用户</h3>' +
     '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" value="' + escapeAttr(u.username || '') + '"></div>' +
     '<div class="form-group"><label>密码（留空不修改）</label><input type="text" class="form-input" id="uPassword" placeholder="留空则不修改密码"></div>' +
     '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" value="' + escapeAttr(u.teacher_name || '') + '"></div>' +
+    '<div class="form-group"><label>班级</label><select class="form-select" id="uClassName">' + classOptions.join('') + '</select></div>' +
     '<div class="form-group"><label>角色</label><select class="form-select" id="uRole">' +
       '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>管理员</option>' +
       '<option value="teacher"' + (u.role === 'teacher' ? ' selected' : '') + '>教师</option>' +
@@ -2289,16 +2561,18 @@ function openEditUser(u){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
+    const className = document.getElementById('uClassName').value;
     const role = document.getElementById('uRole').value;
     if (!username){ toast('请填写账号', 'error'); return; }
     const btn = document.getElementById('saveEditUser');
     btn.disabled = true;
     try {
-      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, role: role });
+      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, class_name: className, role: role });
       if (data.success){
         toast('保存成功', 'success');
         closeModal();
         loadUsers();
+        loadTeachersList();
       } else {
         toast(data.error || '保存失败', 'error');
       }
@@ -2410,6 +2684,7 @@ function initAll(){
 
   loadCourses();
   loadClasses();
+  loadTeachersList();
   loadCourseNames();
   loadUsers();
   setupUpload();

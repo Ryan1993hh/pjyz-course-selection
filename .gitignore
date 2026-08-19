@@ -1,24 +1,5 @@
-# 依赖
 node_modules/
-
-# 数据库文件（旧 SQLite，已迁移到 PostgreSQL）
-database/
-
-# Vercel
-.vercel/
-
-# 系统/IDE
+.env
+*.log
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/
-*.swp
-
-# 环境变量
-.env
-.env.local
-.env.*.local
-
-# 构建产物
-dist/
-build/
