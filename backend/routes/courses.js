@@ -4,10 +4,13 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
-const mammoth = require('mammoth');
-const { query, run, transaction, ensureDB } = require('../db');
+const { query, run, transaction, ensureDB, pool } = require('../db');
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// 内存存储（无DB时使用）
+let MEM_COURSES = [];
+let MEM_ID = 1;
 
 const FIELD_ALIASES = {
   category:    ['课程类别', '类别', 'category', '课程分类'],
@@ -66,6 +69,7 @@ function parseSheet(sheet) {
 }
 
 async function parseDocx(buffer) {
+  const mammoth = require('mammoth');
   const result = await mammoth.extractRawText({ arrayBuffer: buffer });
   const text = result.value || '';
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -122,18 +126,19 @@ async function parseDocx(buffer) {
   return courses;
 }
 
-// GET /api/courses 获取所有课程
 router.get('/courses', async (req, res) => {
   try {
-    await ensureDB();
-    const rows = await query('SELECT * FROM courses ORDER BY id ASC');
-    res.json(rows);
+    if (pool) {
+      await ensureDB();
+      const rows = await query('SELECT * FROM courses ORDER BY id ASC');
+      return res.json(rows);
+    }
+    res.json(MEM_COURSES);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/courses/upload 上传并解析文件
 router.post('/courses/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: '未接收到文件' });
@@ -161,48 +166,66 @@ router.post('/courses/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// PUT /api/courses 批量保存（覆盖）
 router.put('/courses', async (req, res) => {
   const list = req.body;
   if (!Array.isArray(list)) {
     return res.status(400).json({ error: '请求数据格式错误，应为课程数组' });
   }
   try {
-    await ensureDB();
-    await transaction(async (client) => {
-      await client.query('DELETE FROM courses');
-      for (const c of list) {
-        await client.query(
-          `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            c.category || '体育健康类',
-            c.name || '',
-            c.description || '',
-            c.teacher || '',
-            c.location || '',
-            c.requirement || '',
-            parseInt(c.limit_grade6, 10) || 0,
-            parseInt(c.limit_grade7, 10) || 0
-          ]
-        );
-      }
-    });
-    const rows = await query('SELECT * FROM courses ORDER BY id ASC');
-    res.json({ success: true, count: rows.length, courses: rows });
+    if (pool) {
+      await ensureDB();
+      await transaction(async (client) => {
+        await client.query('DELETE FROM courses');
+        for (const c of list) {
+          await client.query(
+            `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              c.category || '体育健康类',
+              c.name || '',
+              c.description || '',
+              c.teacher || '',
+              c.location || '',
+              c.requirement || '',
+              parseInt(c.limit_grade6, 10) || 0,
+              parseInt(c.limit_grade7, 10) || 0
+            ]
+          );
+        }
+      });
+      const rows = await query('SELECT * FROM courses ORDER BY id ASC');
+      return res.json({ success: true, count: rows.length, courses: rows });
+    }
+    MEM_COURSES = list.map(c => ({
+      id: MEM_ID++,
+      category: c.category || '体育健康类',
+      name: c.name || '',
+      description: c.description || '',
+      teacher: c.teacher || '',
+      location: c.location || '',
+      requirement: c.requirement || '',
+      limit_grade6: parseInt(c.limit_grade6, 10) || 0,
+      limit_grade7: parseInt(c.limit_grade7, 10) || 0
+    }));
+    res.json({ success: true, count: MEM_COURSES.length, courses: MEM_COURSES });
   } catch (err) {
     res.status(500).json({ error: '保存失败：' + err.message });
   }
 });
 
-// DELETE /api/courses/:id 删除单门课程
 router.delete('/courses/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
-    const result = await run('DELETE FROM courses WHERE id = $1', [id]);
-    if (result.changes === 0) {
-      return res.status(404).json({ error: '课程不存在' });
+    if (pool) {
+      const result = await run('DELETE FROM courses WHERE id = $1', [id]);
+      if (result.changes === 0) {
+        return res.status(404).json({ error: '课程不存在' });
+      }
+      return res.json({ success: true });
     }
+    const idx = MEM_COURSES.findIndex(c => c.id === id);
+    if (idx === -1) return res.status(404).json({ error: '课程不存在' });
+    MEM_COURSES.splice(idx, 1);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,4 +1,4 @@
 # Cloudflare Pages _redirects
-# 每个页面都是独立的 HTML 文件，不需要 SPA 回退
-# API 路径由 functions/api/[[path]].js 处理
-/api/*  /api/* 200
+# API 路径由 functions/api/[[path]].js 处理，不需要在此重定向
+# 静态文件（HTML/CSS/JS）默认直接由 Pages 服务
+# 如需 SPA 回退，使用: /* /index.html 200

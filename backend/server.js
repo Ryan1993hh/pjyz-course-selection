@@ -13,9 +13,12 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// 静态文件（前端）
+// 静态文件（前端）- 优先使用 public/（Cloudflare 部署用），回退 frontend/
+const publicDir = path.join(__dirname, '..', 'public');
 const frontendDir = path.join(__dirname, '..', 'frontend');
-app.use(express.static(frontendDir));
+const staticDir = fs.existsSync(publicDir) ? publicDir : frontendDir;
+app.use(express.static(staticDir));
+console.log('[Static] 静态文件目录:', staticDir);
 
 // 注册路由
 const authRoutes = require('./routes/auth');
