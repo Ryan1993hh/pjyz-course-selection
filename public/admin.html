@@ -64,15 +64,16 @@ body {
   line-height: 1.5;
 }
 
-/* ===== 顶部标题栏 — 居中标题 + 渐变流动动效（严格参照页风格）===== */
+/* ===== 顶部标题栏 — 左右布局 ===== */
 .header {
   color: white;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
+  gap: 16px;
   position: relative;
   overflow: hidden;
   background: linear-gradient(110deg, var(--primary-dark) 0%, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, var(--primary-dark) 100%);
@@ -133,22 +134,7 @@ body {
   color: white;
 }
 .header-title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 1;
-}
-.header-title h1 {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 4px;
-  margin: 0;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.3);
-  padding-left: 4px;
-  white-space: nowrap;
+  display: none;
 }
 /* ===== 右侧操作区 + 退出登录按钮 ===== */
 .header-actions {
@@ -202,29 +188,79 @@ body {
 }
 .btn-logout:hover .btn-logout-icon { transform: translateX(4px); }
 
-/* ===== 主布局：侧边栏 + 主区 ===== */
+/* ===== 主布局：垂直布局 ===== */
 .layout {
   display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: calc(100vh - 14px - 72px);
 }
 
-/* ===== 侧边栏（卡片化，参照页卡片风格）===== */
-.sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px 12px;
+/* ===== 顶部导航栏 ===== */
+.top-nav {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: sticky;
-  top: 14px;
-  align-self: flex-start;
-  max-height: calc(100vh - 100px);
+  align-items: center;
+  gap: 12px;
 }
+.top-nav .admin-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+.top-nav .admin-info .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.5);
+}
+.top-nav .admin-info .role {
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+.top-nav-items {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.top-nav-items .nav-item {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+}
+.top-nav-items .nav-item:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+}
+.top-nav-items .nav-item.active {
+  background: rgba(255,255,255,0.25);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.top-nav-items .nav-item .nav-icon {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+/* ===== 侧边栏样式保留但不使用 ===== */
+.sidebar { display: none; }
 .sidebar-title {
   font-size: 13px;
   color: var(--muted);
@@ -307,8 +343,59 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+/* ===== 课程管理左右布局（上传 + 列表）===== */
+.course-manage-row {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+.course-manage-left {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
+.course-manage-left .section-header {
+  margin-bottom: 0;
+}
+.course-list-card {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.course-list-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ===== 表格单元格自动换行 ===== */
+table.courses-table td[data-field="name"],
+table.courses-table td[data-field="description"] {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.course-name {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+  height: auto;
+  max-width: 100%;
+}
+
 .section { display: none; animation: fadeIn 0.25s ease; }
 .section.active { display: flex; flex-direction: column; gap: 12px; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -1105,40 +1192,31 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
     flex: 1 1 100%;
     width: 100%;
   }
+  .top-nav-items .nav-item { padding: 6px 12px; font-size: 12px; }
 }
 @media (max-width: 960px) {
-  .layout { flex-direction: column; }
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-self: auto;
-    position: static;
-    max-height: none;
-    padding: 10px 12px;
-  }
-  .sidebar-title { display: none; }
-  .sidebar-foot { margin-top: 0; padding-top: 0; border: none; flex-basis: 100%; }
-  .nav-item { flex: 1; justify-content: center; min-width: 120px; }
-  .nav-item.active::before { display: none; }
-  .header-title h1 { font-size: 18px; letter-spacing: 2px; }
-  .header-logo .logo-svg { width: 36px; height: 36px; }
+  .header { padding: 10px 14px; gap: 10px; }
   .header-logo .logo-text { display: none; }
+  .top-nav .admin-info .role { display: none; }
+  .top-nav-items { gap: 4px; }
+  .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
+  .top-nav-items .nav-item .nav-icon { margin-right: 4px; }
   table.courses-table td[data-field="description"] { font-size: 11px; line-height: 1.4; }
   .course-name { font-size: 11px; padding: 2px 6px; }
   .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
 }
 @media (max-width: 760px) {
-  .header-title h1 { font-size: 16px; letter-spacing: 2px; }
   .control-bar { grid-template-columns: 1fr 1fr; }
   .control-bar .upload-area { grid-column: 1 / -1; }
   .step-arrow { display: none; }
-  th { padding: 8px 4px; font-size: 12px; }
-  td { padding: 6px 4px; font-size: 12px; }
+  th { padding: 6px 4px; font-size: 12px; }
+  td { padding: 5px 4px; font-size: 12px; }
   table.courses-table td[data-field="description"] { font-size: 11px; line-height: 1.35; }
   .course-name { font-size: 11px; padding: 2px 4px; }
   .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
   .course-link { font-size: 11px; padding: 2px 4px; }
+  .top-nav .admin-info .avatar { width: 30px; height: 30px; font-size: 14px; }
+  .top-nav .admin-info { font-size: 12px; }
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
@@ -1159,7 +1237,7 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 </head>
 <body>
 
-<!-- ===== 顶部标题栏（参照页风格，居中标题 + 校徽） ===== -->
+<!-- ===== 顶部标题栏 ===== -->
 <div class="header">
   <div class="header-logo">
     <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
@@ -1180,7 +1258,23 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
       <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
     </div>
   </div>
-  <div class="header-title"><h1>浦江一中拓展课 · 管理后台</h1></div>
+
+  <!-- 管理员信息 + 顶部导航 -->
+  <div class="top-nav">
+    <div class="admin-info">
+      <div class="avatar" id="adminAvatar">A</div>
+      <div>
+        <div id="adminName">管理员</div>
+        <div class="role">系统管理员</div>
+      </div>
+    </div>
+    <div class="top-nav-items">
+      <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
+      <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
+      <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
+    </div>
+  </div>
+
   <div class="header-actions">
     <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
       <span class="btn-logout-icon" aria-hidden="true">→</span>
@@ -1189,19 +1283,8 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
   </div>
 </div>
 
-<!-- ===== 主布局 ===== -->
+<!-- ===== 主布局（垂直） ===== -->
 <div class="layout">
-  <!-- ===== 侧边栏 ===== -->
-  <aside class="sidebar">
-    <div class="sidebar-title">功能导航</div>
-    <div class="nav-item active" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
-    <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课结果</div>
-    <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
-    <div class="sidebar-foot">
-      <a href="denglu.html" title="返回登录首页">⌂ 返回选课首页</a>
-    </div>
-  </aside>
-
   <!-- ===== 主内容区 ===== -->
   <main class="main">
 
@@ -1240,16 +1323,16 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
           <div class="table-wrap">
             <table class="courses-table" id="coursesTable">
               <colgroup>
-                <col style="width:4%;">
-                <col style="width:6%;">
-                <col style="width:18%;">
-                <col style="width:18%;">
-                <col style="width:6%;">
-                <col style="width:7%;">
-                <col style="width:9%;">
-                <col style="width:6%;">
-                <col style="width:6%;">
+                <col style="width:3%;">
                 <col style="width:5%;">
+                <col style="width:10%;">
+                <col style="width:20%;">
+                <col style="width:5%;">
+                <col style="width:6%;">
+                <col style="width:8%;">
+                <col style="width:5%;">
+                <col style="width:5%;">
+                <col style="width:4%;">
               </colgroup>
               <thead>
                 <tr>
@@ -2278,6 +2361,20 @@ function openImportUsers(){
 
 /* ============ Init ============ */
 function initAll(){
+  // 显示管理员信息
+  try {
+    const userStr = localStorage.getItem('pjyz_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user) {
+        const nameEl = document.getElementById('adminName');
+        const avatarEl = document.getElementById('adminAvatar');
+        if (nameEl && user.username) nameEl.textContent = user.username;
+        if (avatarEl && user.username) avatarEl.textContent = user.username.charAt(0).toUpperCase();
+      }
+    }
+  } catch(e) {}
+
   loadCourses();
   loadClasses();
   loadCourseNames();
