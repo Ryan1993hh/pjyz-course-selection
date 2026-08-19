@@ -75,6 +75,10 @@ export async function onRequest(context) {
     if (path === '/api/courses' && method === 'PUT') {
       return handlePutCourses(context, corsHeaders);
     }
+    // 上传课程文件解析
+    if (path === '/api/courses/upload' && method === 'POST') {
+      return handleUploadCourses(context, corsHeaders);
+    }
     if (path.match(/^\/api\/courses\/\d+$/) && method === 'DELETE') {
       const id = parseInt(path.split('/').pop(), 10);
       return handleDeleteCourse(id, corsHeaders);
@@ -172,6 +176,117 @@ async function handlePutCourses(context, corsHeaders) {
   }
   const rows = await sql`SELECT * FROM courses ORDER BY id ASC`;
   return json({ success: true, count: rows.length, courses: rows }, 200, corsHeaders);
+}
+
+async function handleUploadCourses(context, corsHeaders) {
+  try {
+    const formData = await context.request.formData();
+    const file = formData.get('file');
+    if (!file) {
+      return json({ error: '未找到上传文件' }, 400, corsHeaders);
+    }
+    const name = (file.name || '').toLowerCase();
+    const buf = await file.arrayBuffer();
+    const decoder = new TextDecoder('utf-8');
+    const text = decoder.decode(buf);
+    
+    let courses = [];
+    
+    if (name.endsWith('.csv') || name.endsWith('.tsv')) {
+      courses = parseDelimited(text, name.endsWith('.tsv') ? '\t' : ',');
+    } else if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.docx')) {
+      // 对于二进制格式，尝试按 CSV 解析（用户可能直接传文本内容）
+      // 或者返回空，让用户手动在表格中添加
+      return json({ 
+        success: true, 
+        count: 0, 
+        courses: [],
+        message: '检测到二进制文件格式（' + name.split('.').pop().toUpperCase() + '）。请使用 CSV 格式文件，或直接在下方表格中手动添加课程。'
+      }, 200, corsHeaders);
+    } else {
+      // 尝试按 CSV 解析
+      courses = parseDelimited(text, ',');
+    }
+    
+    // 过滤空行和标题行
+    courses = courses.filter(c => c.name && c.name.trim());
+    
+    return json({ 
+      success: true, 
+      count: courses.length, 
+      courses: courses 
+    }, 200, corsHeaders);
+  } catch (err) {
+    return json({ error: '文件解析失败：' + err.message }, 500, corsHeaders);
+  }
+}
+
+function parseDelimited(text, delimiter) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return [];
+  
+  // 解析首行作为字段映射
+  const headers = parseCSVLine(lines[0], delimiter);
+  const headerMap = {};
+  headers.forEach((h, i) => {
+    const trimmed = (h || '').trim();
+    if (trimmed.includes('类别') || trimmed.includes('分类')) headerMap.category = i;
+    else if (trimmed.includes('课程') && (trimmed.includes('名') || trimmed === '课程')) headerMap.name = i;
+    else if (trimmed.includes('简介') || trimmed.includes('描述')) headerMap.description = i;
+    else if (trimmed.includes('老师') || trimmed.includes('教师')) headerMap.teacher = i;
+    else if (trimmed.includes('地点') || trimmed.includes('位置')) headerMap.location = i;
+    else if (trimmed.includes('要求') || trimmed.includes('备注')) headerMap.requirement = i;
+    else if (trimmed.includes('六年级') && trimmed.includes('名额')) headerMap.limit_grade6 = i;
+    else if (trimmed.includes('七年级') && trimmed.includes('名额')) headerMap.limit_grade7 = i;
+    else if (trimmed === '六年级' || trimmed === '预初') headerMap.limit_grade6 = i;
+    else if (trimmed === '七年级' || trimmed === '初一') headerMap.limit_grade7 = i;
+  });
+  
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i], delimiter);
+    const course = {
+      category: getCol(cols, headerMap.category, ''),
+      name: getCol(cols, headerMap.name, ''),
+      description: getCol(cols, headerMap.description, ''),
+      teacher: getCol(cols, headerMap.teacher, ''),
+      location: getCol(cols, headerMap.location, ''),
+      requirement: getCol(cols, headerMap.requirement, ''),
+      limit_grade6: parseInt(getCol(cols, headerMap.limit_grade6, '0'), 10) || 0,
+      limit_grade7: parseInt(getCol(cols, headerMap.limit_grade7, '0'), 10) || 0
+    };
+    if (course.name) result.push(course);
+  }
+  return result;
+}
+
+function getCol(cols, idx, defaultVal) {
+  if (idx == null) return defaultVal;
+  return (cols[idx] || '').trim() || defaultVal;
+}
+
+function parseCSVLine(line, delimiter) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === delimiter && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
 }
 
 async function handleDeleteCourse(id, corsHeaders) {

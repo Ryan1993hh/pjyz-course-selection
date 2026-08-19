@@ -1131,13 +1131,13 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 
       <div class="card">
         <div class="card-title">上传课程文件</div>
-        <div class="upload-area" id="uploadArea" title="点击或拖拽上传 xlsx / xls / docx 文件">
+        <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
           <span class="icon">↑</span>
           <div class="text-col">
             <span class="title">点击或拖拽上传课程清单</span>
-            <span class="hint">支持 .xlsx / .xls / .docx 格式，可包含课程名称、简介、老师、地点、要求、名额等字段</span>
+            <span class="hint">支持 .csv / .xlsx / .xls / .docx 格式。推荐使用 CSV 格式，表头需包含：类别、课程名称、简介、老师、地点、要求、六年级名额、七年级名额</span>
           </div>
-          <input type="file" id="fileInput" accept=".xlsx,.xls,.docx" style="display:none;">
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="display:none;">
         </div>
         <div class="upload-msg" id="uploadMsg">尚未上传文件，您也可以直接在下方表格中新增课程</div>
       </div>
