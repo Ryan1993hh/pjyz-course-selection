@@ -850,7 +850,7 @@
 
         // 按角色跳转
         var role = (data.user && data.user.role) || '';
-        var redirect = role === 'admin' ? 'admin.html' : 'xuanke.html';
+        var redirect = role === 'admin' ? '/admin' : '/xuanke';
         // 直接跳转，避免延迟
         window.location.href = redirect;
       })

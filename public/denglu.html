@@ -780,8 +780,8 @@
 
   /* ---------- 客户端降级账号（当后端不可用时使用） ---------- */
   var LOCAL_ACCOUNTS = {
-    'admin':  { password: '123456', role: 'admin',  redirect: 'admin.html'  },
-    '123456': { password: '123456', role: 'teacher', redirect: 'xuanke.html' }
+    'admin':  { password: '123456', role: 'admin',  redirect: '/admin'  },
+    '123456': { password: '123456', role: 'teacher', redirect: '/xuanke' }
   };
 
   function doClientLogin(username, password) {
@@ -863,7 +863,7 @@
         showMsg('登录成功，正在跳转…', 'success');
         setTimeout(function () {
           var role = (data.user && data.user.role) || '';
-          window.location.href = role === 'admin' ? 'admin.html' : 'xuanke.html';
+          window.location.href = role === 'admin' ? '/admin' : '/xuanke';
         }, 300);
       })
       .catch(function (err) {

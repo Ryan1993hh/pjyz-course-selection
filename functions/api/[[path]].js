@@ -148,9 +148,9 @@ export async function onRequest(context) {
   }
 
   try {
-    // 懒加载 Neon 驱动（首次请求时尝试，不阻塞）
+    // 懒加载 Neon 驱动（首次请求时尝试加载）
     if (!_neonLoadAttempted) {
-      tryLoadNeon().catch(() => {});
+      await tryLoadNeon().catch(() => {});
     }
 
     // ===== 健康检查 =====

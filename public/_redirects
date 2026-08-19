@@ -1,4 +1,6 @@
 # Cloudflare Pages _redirects
-# API 路径由 functions/api/[[path]].js 处理，不需要在此重定向
-# 静态文件（HTML/CSS/JS）默认直接由 Pages 服务
-# 如需 SPA 回退，使用: /* /index.html 200
+# 防止 .html 被 Pretty URLs 重定向，同时让 Function 处理 API
+/denglu   /denglu.html   200
+/admin    /admin.html    200
+/xuanke   /xuanke.html   200
+/index    /index.html    200
