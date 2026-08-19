@@ -505,13 +505,14 @@ body {
 .table-wrap {
   overflow-x: auto;
   border-radius: var(--radius);
-  border: 1px solid #BBDEFB;      /* 浅灰蓝边框，与#E3F2FD同色系 */
-  background: var(--tbl-base);    /* 外层容器：浅灰蓝 #E3F2FD */
+  border: 1px solid #BBDEFB;
+  background: var(--tbl-base);
   max-height: calc(100vh - 280px);
   overflow-y: auto;
   box-shadow: 0 4px 16px rgba(33, 99, 163, 0.12);
+  padding: 0;
 }
-table { width: 100%; border-collapse: collapse; background: var(--tbl-base); } /* 表格本体：浅灰蓝 #E3F2FD */
+table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--tbl-base); table-layout: fixed; }
 
 /* —— 表头：浅蓝磨砂玻璃 + 居中大字号 —— */
 th {
@@ -519,16 +520,16 @@ th {
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   color: #0D47A1;
-  padding: 14px 16px;
+  padding: 10px 8px;
   text-align: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 13px;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 2;
-  letter-spacing: 1.5px;
-  border-bottom: 3px solid rgba(13, 71, 161, 0.55);
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(13, 71, 161, 0.55);
   border-right: 1px solid rgba(255, 255, 255, 0.45);
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
 }
@@ -543,12 +544,14 @@ th:nth-child(7) { border-bottom-color: #455A64; }   /* 学生 - 深钢蓝 */
 
 /* —— 单元格基础 —— */
 td {
-  padding: 10px 16px;
-  border-top: 1px solid #BBDEFB;   /* 浅灰蓝同色系分隔线，与底色协调 */
+  padding: 8px 8px;
+  border-top: 1px solid #BBDEFB;
   font-size: 13px;
   vertical-align: middle;
   white-space: nowrap;
   transition: background-color 0.18s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 tbody tr { transition: background 0.18s ease; }
 
@@ -598,13 +601,16 @@ tr.no-quota:hover td { opacity: 0.7; }
   display: inline-block;
   font-weight: 700;
   color: #ffffff;
-  font-size: 15px;
-  padding: 5px 14px;
-  border-radius: 6px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 5px;
   background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.25);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* ===== 授课老师 / 授课地点 ===== */
@@ -618,30 +624,30 @@ tr.no-quota:hover td { opacity: 0.7; }
 .req-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
+  gap: 2px;
+  padding: 2px 6px;
   background: rgba(255, 255, 255, 0.7);
   color: #92400e;
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   border: 1px solid #fcd34d;
   white-space: nowrap;
   backdrop-filter: blur(2px);
 }
-.req-tag .ico { font-size: 12px; }
+.req-tag .ico { font-size: 11px; }
 
 /* ===== 限制人数徽章 ===== */
 .limit-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 12px;
+  gap: 2px;
+  padding: 2px 6px;
   background: rgba(255, 255, 255, 0.7);
   color: var(--primary-dark);
-  border-radius: 10px;
+  border-radius: 6px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
   border: 1px solid #99f6e4;
   white-space: nowrap;
   backdrop-filter: blur(2px);
@@ -1720,6 +1726,8 @@ tr.no-quota:hover td { opacity: 0.7; }
   .control-bar .upload-area { grid-column: 1 / -1; }
   .step-arrow { display: none; }
   .stat-input, .stat-card { min-width: 0; }
+  .course-name { font-size: 11px; padding: 2px 6px; }
+  .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
 }
 @media (max-width: 768px) {
   body { padding: 12px; }
@@ -1758,7 +1766,9 @@ tr.no-quota:hover td { opacity: 0.7; }
   .stat-card { min-width: 0; padding: 6px 10px; }
   .stat-card .value { font-size: 20px; }
   .name-grid { grid-template-columns: repeat(4, 1fr); }
-  th, td { padding: 10px 8px; font-size: 13px; }
+  th, td { padding: 6px 4px; font-size: 12px; }
+  .course-name { font-size: 11px; padding: 2px 4px; }
+  .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
   /* 窄屏：表头学生姓名列内按钮和标签垂直堆叠 */
   .th-students-inner {
     flex-direction: column;
@@ -3618,8 +3628,7 @@ document.addEventListener('keydown', e => {
 async function initCourses() {
   console.log('[选课] 开始加载课程数据...');
   try {
-    // 添加时间戳避免缓存
-    const resp = await fetch(pjyzApiBase() + '/api/courses?_t=' + Date.now());
+    const resp = await fetch(pjyzApiBase() + '/api/courses');
     console.log('[选课] API 响应状态:', resp.status);
     if (!resp.ok) throw new Error('API 返回 ' + resp.status);
     const data = await resp.json();
