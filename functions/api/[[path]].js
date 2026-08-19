@@ -100,6 +100,11 @@ export async function onRequest(context) {
       return handleGetClasses(corsHeaders);
     }
 
+    // 用户列表
+    if (path === '/api/users' && method === 'GET') {
+      return handleGetUsers(corsHeaders);
+    }
+
     return json({ error: 'API 端点不存在', path }, 404, corsHeaders);
   } catch (err) {
     console.error('[ERROR]', err);
@@ -252,6 +257,13 @@ async function handleGetClasses(corsHeaders) {
   const sql = getSQL();
   const rows = await sql`SELECT DISTINCT class_name FROM selections WHERE class_name != '' ORDER BY class_name ASC`;
   return json(rows.map(r => r.class_name), 200, corsHeaders);
+}
+
+async function handleGetUsers(corsHeaders) {
+  await ensureDB();
+  const sql = getSQL();
+  const rows = await sql`SELECT id, username, role FROM users ORDER BY id ASC`;
+  return json(rows, 200, corsHeaders);
 }
 
 // JWT using Web Crypto
