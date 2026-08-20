@@ -981,13 +981,13 @@ table.courses-table th:nth-child(7) { border-bottom-color: #00838F; }   /* 要�
 table.courses-table th:nth-child(8) { border-bottom-color: #5C6BC0; }   /* 六年级名额 - 靛青紫 */
 table.courses-table th:nth-child(9) { border-bottom-color: #5C6BC0; }   /* 七年级名额 - 靛青紫 */
 table.courses-table th:nth-child(10){ border-bottom-color: #455A64; }   /* 操作 - 深钢蓝 */
-/* 选课表 6 列 */
-table.sel-table th:nth-child(1) { border-bottom-color: #546E7A; }
-table.sel-table th:nth-child(2) { border-bottom-color: #1976D2; }
-table.sel-table th:nth-child(3) { border-bottom-color: #0288D1; }
-table.sel-table th:nth-child(4) { border-bottom-color: #00838F; }
-table.sel-table th:nth-child(5) { border-bottom-color: #3949AB; }
-table.sel-table th:nth-child(6) { border-bottom-color: #455A64; }
+/* 选课表 6 列 - 优化对齐与显示 */
+table.sel-table th:nth-child(1) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(2) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(3) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(4) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(5) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(6) { border-bottom-color: #94a3b8; }
 /* 用户表 7 列 */
 table.usr-table th:nth-child(1) { border-bottom-color: #546E7A; }
 table.usr-table th:nth-child(2) { border-bottom-color: #1976D2; }
@@ -1034,20 +1034,105 @@ table.courses-table tbody tr:hover td[data-field="limit_grade6"] { background-co
 table.courses-table tbody tr:hover td[data-field="limit_grade7"] { background-color: var(--col-9-h); }
 table.courses-table tbody tr:hover td.row-actions                { background-color: var(--col-10-h); }
 
-/* 选课表 6 列 */
-table.sel-table td.seq         { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
-table.sel-table td:nth-child(2){ background-color: var(--col-2); text-align: center; }
-table.sel-table td:nth-child(3){ background-color: var(--col-3); text-align: center; }
-table.sel-table td:nth-child(4){ background-color: var(--col-4); text-align: left; }
-table.sel-table td:nth-child(5){ background-color: var(--col-5); text-align: left; }
-table.sel-table td.row-actions { background-color: var(--col-6); text-align: center; }
-
-table.sel-table tbody tr:hover td.seq         { background-color: var(--col-1-h); }
-table.sel-table tbody tr:hover td:nth-child(2){ background-color: var(--col-2-h); }
-table.sel-table tbody tr:hover td:nth-child(3){ background-color: var(--col-3-h); }
-table.sel-table tbody tr:hover td:nth-child(4){ background-color: var(--col-4-h); }
-table.sel-table tbody tr:hover td:nth-child(5){ background-color: var(--col-5-h); }
-table.sel-table tbody tr:hover td.row-actions { background-color: var(--col-6-h); }
+/* 选课表 - 优化样式：移除背景色、加粗重要文本、精确对齐 */
+table.sel-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+table.sel-table thead th {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 12px 10px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #cbd5e1;
+  border-right: 1px solid #e2e8f0;
+  text-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+table.sel-table thead th:last-child {
+  border-right: none;
+}
+table.sel-table td {
+  background-color: transparent;
+  padding: 10px;
+  vertical-align: middle;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  font-size: 13px;
+  color: #334155;
+}
+table.sel-table td.seq {
+  background-color: transparent;
+  text-align: center;
+  color: #64748b;
+  font-weight: 600;
+}
+table.sel-table td:nth-child(2) {
+  background-color: transparent;
+  text-align: center;
+  font-weight: 600;
+  color: #334155;
+}
+table.sel-table td:nth-child(3) {
+  background-color: transparent;
+  text-align: center;
+  font-weight: 600;
+  color: #334155;
+}
+table.sel-table td:nth-child(4) {
+  background-color: transparent;
+  text-align: left;
+  color: #1e293b;
+  font-weight: 500;
+}
+table.sel-table td:nth-child(5) {
+  background-color: transparent;
+  text-align: left;
+  color: #1e293b;
+  font-weight: 500;
+}
+table.sel-table td.row-actions {
+  background-color: transparent;
+  text-align: center;
+  vertical-align: middle;
+}
+table.sel-table td.row-actions .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+table.sel-table td.row-actions .btn-sm + .btn-sm {
+  margin-left: 6px;
+}
+table.sel-table tbody tr:hover td {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td.seq {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td:nth-child(2) {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td:nth-child(3) {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td:nth-child(4) {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td:nth-child(5) {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td.row-actions {
+  background-color: #f8fafc !important;
+}
 
 /* 用户表 7 列 */
 table.usr-table td.seq         { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
@@ -1648,6 +1733,7 @@ th.sortable.active .sort-icon { opacity: 1; }
 @media (max-width: 1200px) {
   table.courses-table td[data-field="description"] { font-size: 12px; }
   .course-name { font-size: 12px; padding: 3px 6px; }
+  table.sel-table th, table.sel-table td { padding: 8px 6px; font-size: 12px; }
 }
 @media (max-width: 1100px) {
   .course-manage-row {
@@ -1684,6 +1770,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   .header-title h1 { font-size: 16px; letter-spacing: 2px; }
   .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
+  table.sel-table th, table.sel-table td { padding: 7px 5px; font-size: 12px; }
 }
 @media (max-width: 960px) {
   .header { padding: 10px 14px; gap: 10px; }
@@ -1697,6 +1784,8 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.courses-table td[data-field="description"] { font-size: 11px; line-height: 1.4; }
   .course-name { font-size: 11px; padding: 2px 6px; }
   .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
+  table.sel-table th, table.sel-table td { padding: 6px 5px; font-size: 11px; }
+  table.sel-table .course-link { font-size: 11px; padding: 2px 4px; }
 }
 @media (max-width: 760px) {
   .header { padding: 8px 12px; }
@@ -1713,6 +1802,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   .course-name { font-size: 11px; padding: 2px 4px; }
   .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
   .course-link { font-size: 11px; padding: 2px 4px; }
+  table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 11px; }
+  table.sel-table .course-link { font-size: 10px; padding: 1px 3px; }
+  table.sel-table .btn-sm { height: 26px; padding: 0 8px; font-size: 11px; }
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
@@ -1728,6 +1820,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   .header-title h1 { font-size: 12px; letter-spacing: 0; }
   .btn-logout { padding: 0 10px; height: 32px; min-width: 0; font-size: 11px; }
   .btn-logout-icon { display: none; }
+  table.sel-table th, table.sel-table td { padding: 4px 3px; font-size: 10px; }
+  table.sel-table .course-link { font-size: 9px; padding: 1px 2px; }
+  table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
 }
 </style>
 </head>
@@ -2719,7 +2814,6 @@ function renderSelections(){
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-sm btn-danger';
     delBtn.textContent = '删除';
-    delBtn.style.marginLeft = '6px';
     delBtn.addEventListener('click', function(){ deleteSelection(s.id); });
     tr.querySelector('.row-actions').appendChild(delBtn);
 
