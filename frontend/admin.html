@@ -1034,27 +1034,30 @@ table.courses-table tbody tr:hover td[data-field="limit_grade6"] { background-co
 table.courses-table tbody tr:hover td[data-field="limit_grade7"] { background-color: var(--col-9-h); }
 table.courses-table tbody tr:hover td.row-actions                { background-color: var(--col-10-h); }
 
-/* 选课表 - 优化样式：固定列宽、防止溢出、精确对齐 */
+/* 选课表 - 统一列宽、精确对齐、响应式优化 */
 table.sel-table {
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
   width: 100%;
+  --sel-col-w: 100px;
+  --sel-col-w-course: 200px;
+  --sel-shift: 0px;
 }
-table.sel-table colgroup col:nth-child(1),
-table.sel-table th:nth-child(1) { width: 40px; }
-table.sel-table colgroup col:nth-child(2),
-table.sel-table th:nth-child(2) { width: 60px; }
-table.sel-table colgroup col:nth-child(3),
-table.sel-table th:nth-child(3) { width: 90px; }
-table.sel-table colgroup col:nth-child(4),
-table.sel-table th:nth-child(4) { width: 110px; }
-table.sel-table colgroup col:nth-child(5),
-table.sel-table th:nth-child(5) { width: 120px; }
-table.sel-table colgroup col:nth-child(6),
-table.sel-table th:nth-child(6) { width: auto; }
-table.sel-table colgroup col:nth-child(7),
-table.sel-table th:nth-child(7) { width: 120px; }
+table.sel-table th:nth-child(1),
+table.sel-table td:nth-child(1) { width: 40px !important; min-width: 40px; max-width: 40px; }
+table.sel-table th:nth-child(2),
+table.sel-table td:nth-child(2) { width: 60px !important; min-width: 60px; max-width: 60px; }
+table.sel-table th:nth-child(3),
+table.sel-table td:nth-child(3) { width: var(--sel-col-w) !important; min-width: var(--sel-col-w); max-width: var(--sel-col-w); }
+table.sel-table th:nth-child(4),
+table.sel-table td:nth-child(4) { width: var(--sel-col-w) !important; min-width: var(--sel-col-w); max-width: var(--sel-col-w); }
+table.sel-table th:nth-child(5),
+table.sel-table td:nth-child(5) { width: var(--sel-col-w) !important; min-width: var(--sel-col-w); max-width: var(--sel-col-w); }
+table.sel-table th:nth-child(6),
+table.sel-table td:nth-child(6) { width: var(--sel-col-w-course) !important; min-width: var(--sel-col-w-course); }
+table.sel-table th:nth-child(7),
+table.sel-table td:nth-child(7) { width: var(--sel-col-w) !important; min-width: var(--sel-col-w); max-width: var(--sel-col-w); }
 
 table.sel-table thead th {
   background: #f1f5f9;
@@ -1075,9 +1078,19 @@ table.sel-table thead th {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 table.sel-table thead th:last-child {
   border-right: none;
+}
+table.sel-table thead th:nth-child(4),
+table.sel-table thead th:nth-child(5),
+table.sel-table thead th:nth-child(6),
+table.sel-table thead th:nth-child(7) {
+  padding-left: 14px;
+}
+table.sel-table thead th:nth-child(3) {
+  padding-left: 10px;
 }
 table.sel-table td {
   background-color: transparent;
@@ -1089,7 +1102,9 @@ table.sel-table td {
   color: #334155;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-sizing: border-box;
 }
+/* 序号列 */
 table.sel-table td.seq {
   background-color: transparent;
   text-align: center;
@@ -1102,38 +1117,48 @@ table.sel-table td:nth-child(2) {
   font-weight: 600;
   color: #334155;
 }
+/* 年级列 - 居中 */
 table.sel-table td:nth-child(3) {
   background-color: transparent;
   text-align: center;
   font-weight: 600;
   color: #334155;
   white-space: nowrap;
+  padding-left: 10px;
 }
+/* 班级列 - 右移对齐 */
 table.sel-table td:nth-child(4) {
   background-color: transparent;
   text-align: center;
   color: #1e293b;
   font-weight: 600;
   white-space: nowrap;
+  padding-left: 14px;
 }
+/* 姓名列 - 右移对齐 */
 table.sel-table td:nth-child(5) {
   background-color: transparent;
   text-align: left;
   color: #1e293b;
   font-weight: 500;
   white-space: nowrap;
+  padding-left: 14px;
 }
+/* 课程列 - 右移对齐 */
 table.sel-table td:nth-child(6) {
   background-color: transparent;
   text-align: left;
   color: #1e293b;
   font-weight: 500;
+  padding-left: 14px;
 }
+/* 操作列 - 右移对齐 */
 table.sel-table td.row-actions {
   background-color: transparent;
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
+  padding-left: 14px;
 }
 table.sel-table td.row-actions .btn-sm {
   display: inline-flex;
@@ -1160,6 +1185,9 @@ table.sel-table tbody tr:hover td:nth-child(4) {
   background-color: #f8fafc !important;
 }
 table.sel-table tbody tr:hover td:nth-child(5) {
+  background-color: #f8fafc !important;
+}
+table.sel-table tbody tr:hover td:nth-child(6) {
   background-color: #f8fafc !important;
 }
 table.sel-table tbody tr:hover td.row-actions {
@@ -1806,10 +1834,17 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   .header-title h1 { font-size: 16px; letter-spacing: 2px; }
   .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
-  table.sel-table th, table.sel-table td { padding: 7px 5px; font-size: 12px; }
-  table.sel-table th:nth-child(3) { width: 80px; }
-  table.sel-table th:nth-child(4) { width: 95px; }
-  table.sel-table th:nth-child(5) { width: 100px; }
+  table.sel-table { --sel-col-w: 85px; --sel-col-w-course: 170px; }
+  table.sel-table th, table.sel-table td { padding: 7px 6px; font-size: 12px; }
+  table.sel-table td:nth-child(4),
+  table.sel-table td:nth-child(5),
+  table.sel-table td:nth-child(6),
+  table.sel-table td.row-actions { padding-left: 10px; }
+  table.sel-table thead th:nth-child(4),
+  table.sel-table thead th:nth-child(5),
+  table.sel-table thead th:nth-child(6),
+  table.sel-table thead th:nth-child(7) { padding-left: 10px; }
+  table.sel-table thead th:nth-child(3) { padding-left: 8px; }
 }
 @media (max-width: 960px) {
   .header { padding: 10px 14px; gap: 10px; }
@@ -1823,11 +1858,18 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.courses-table td[data-field="description"] { font-size: 11px; line-height: 1.4; }
   .course-name { font-size: 11px; padding: 2px 6px; }
   .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
+  table.sel-table { --sel-col-w: 72px; --sel-col-w-course: 144px; }
   table.sel-table th, table.sel-table td { padding: 6px 5px; font-size: 11px; }
   table.sel-table .course-link { font-size: 11px; padding: 2px 4px; }
-  table.sel-table th:nth-child(3) { width: 70px; }
-  table.sel-table th:nth-child(4) { width: 85px; }
-  table.sel-table th:nth-child(5) { width: 90px; }
+  table.sel-table td:nth-child(4),
+  table.sel-table td:nth-child(5),
+  table.sel-table td:nth-child(6),
+  table.sel-table td.row-actions { padding-left: 8px; }
+  table.sel-table thead th:nth-child(4),
+  table.sel-table thead th:nth-child(5),
+  table.sel-table thead th:nth-child(6),
+  table.sel-table thead th:nth-child(7) { padding-left: 8px; }
+  table.sel-table thead th:nth-child(3) { padding-left: 6px; }
 }
 @media (max-width: 760px) {
   .header { padding: 8px 12px; }
@@ -1844,12 +1886,19 @@ th.sortable.active .sort-icon { opacity: 1; }
   .course-name { font-size: 11px; padding: 2px 4px; }
   .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
   .course-link { font-size: 11px; padding: 2px 4px; }
+  table.sel-table { --sel-col-w: 60px; --sel-col-w-course: 120px; }
   table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 11px; }
   table.sel-table .course-link { font-size: 10px; padding: 1px 3px; }
   table.sel-table .btn-sm { height: 26px; padding: 0 8px; font-size: 11px; }
-  table.sel-table th:nth-child(3) { width: 60px; }
-  table.sel-table th:nth-child(4) { width: 75px; }
-  table.sel-table th:nth-child(5) { width: 80px; }
+  table.sel-table td:nth-child(4),
+  table.sel-table td:nth-child(5),
+  table.sel-table td:nth-child(6),
+  table.sel-table td.row-actions { padding-left: 6px; }
+  table.sel-table thead th:nth-child(4),
+  table.sel-table thead th:nth-child(5),
+  table.sel-table thead th:nth-child(6),
+  table.sel-table thead th:nth-child(7) { padding-left: 6px; }
+  table.sel-table thead th:nth-child(3) { padding-left: 4px; }
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
@@ -1865,12 +1914,19 @@ th.sortable.active .sort-icon { opacity: 1; }
   .header-title h1 { font-size: 12px; letter-spacing: 0; }
   .btn-logout { padding: 0 10px; height: 32px; min-width: 0; font-size: 11px; }
   .btn-logout-icon { display: none; }
+  table.sel-table { --sel-col-w: 52px; --sel-col-w-course: 104px; }
   table.sel-table th, table.sel-table td { padding: 4px 3px; font-size: 10px; }
   table.sel-table .course-link { font-size: 9px; padding: 1px 2px; }
   table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
-  table.sel-table th:nth-child(3) { width: 55px; }
-  table.sel-table th:nth-child(4) { width: 70px; }
-  table.sel-table th:nth-child(5) { width: 75px; }
+  table.sel-table td:nth-child(4),
+  table.sel-table td:nth-child(5),
+  table.sel-table td:nth-child(6),
+  table.sel-table td.row-actions { padding-left: 4px; }
+  table.sel-table thead th:nth-child(4),
+  table.sel-table thead th:nth-child(5),
+  table.sel-table thead th:nth-child(6),
+  table.sel-table thead th:nth-child(7) { padding-left: 4px; }
+  table.sel-table thead th:nth-child(3) { padding-left: 2px; }
 }
 </style>
 </head>
