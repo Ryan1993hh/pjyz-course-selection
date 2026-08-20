@@ -2134,9 +2134,28 @@ async function loadCoursesFromServer() {
     if (!Array.isArray(courses)) {
       throw new Error('返回数据格式错误');
     }
-    COURSES = courses
-      .filter(function(c) { return c.is_active !== 0; })
-      .map(convertCourseFromAPI);
+    
+    console.log('[loadCoursesFromServer] 从服务器获取课程数量:', courses.length);
+    
+    // 先转换所有课程
+    const allCourses = courses.map(convertCourseFromAPI);
+    
+    // 检查是否有 is_active 字段，如果所有课程都被过滤掉，则使用全部课程
+    const activeCourses = allCourses.filter(function(c) { 
+      // 如果原数据没有is_active字段，或者is_active不为0，则保留
+      const original = courses.find(function(oc) { return oc.id === c.id; });
+      return !original || original.is_active !== 0;
+    });
+    
+    // 如果过滤后为空但原来有课程数据，则使用全部课程
+    if (activeCourses.length === 0 && allCourses.length > 0) {
+      console.warn('[loadCoursesFromServer] 所有课程都被is_active过滤，使用全部课程');
+      COURSES = allCourses;
+    } else {
+      COURSES = activeCourses;
+    }
+    
+    console.log('[loadCoursesFromServer] 最终加载课程数量:', COURSES.length);
     
     // 重新同步已保存的选课数据（如果有的话）
     try {
