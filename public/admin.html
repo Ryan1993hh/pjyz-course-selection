@@ -1084,10 +1084,10 @@ table.sel-table thead th:nth-child(1) {
   padding-left: 10px;
   padding-right: 10px;
 }
-table.sel-table thead th:nth-child(2),
-table.sel-table thead th:nth-child(3) {
+table.sel-table thead th:nth-child(2) {
   text-align: center;
 }
+table.sel-table thead th:nth-child(3),
 table.sel-table thead th:nth-child(4),
 table.sel-table thead th:nth-child(5) {
   text-align: left;
@@ -1127,12 +1127,13 @@ table.sel-table td.seq {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-/* 班级列（含年级） */
+/* 班级列（含年级） - 与姓名列样式统一 */
 table.sel-table td:nth-child(3) {
-  text-align: center;
-  font-weight: 500;
-  color: #334155;
+  text-align: left;
+  color: #1e293b;
+  font-weight: 600;
   white-space: nowrap;
+  padding-left: 14px;
 }
 /* 学生姓名列 */
 table.sel-table td:nth-child(4) {
@@ -1209,10 +1210,10 @@ table.sel-table td:nth-child(5) .course-link:hover {
   color: #fff;
 }
 
-/* 班级筛选链接 - 覆盖通用course-link样式 */
+/* 班级筛选链接 - 与姓名列样式统一 */
 table.sel-table td:nth-child(3).course-link {
   display: inline;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--primary);
   background: transparent;
   padding: 0;
@@ -1882,8 +1883,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
   table.sel-table { --sel-col-w: 80px; --sel-col-w-class: 108px; --sel-col-w-course: 160px; }
   table.sel-table th, table.sel-table td { padding: 9px 8px; font-size: 12px; }
+  table.sel-table td:nth-child(3),
   table.sel-table td:nth-child(4),
   table.sel-table td:nth-child(5) { padding-left: 10px; }
+  table.sel-table thead th:nth-child(3),
   table.sel-table thead th:nth-child(4),
   table.sel-table thead th:nth-child(5) { padding-left: 10px; }
 }
@@ -1902,8 +1905,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table { --sel-col-w: 68px; --sel-col-w-class: 96px; --sel-col-w-course: 136px; }
   table.sel-table th, table.sel-table td { padding: 7px 6px; font-size: 11px; }
   table.sel-table td:nth-child(5) .course-link { font-size: 11px; padding: 2px 4px; }
+  table.sel-table td:nth-child(3),
   table.sel-table td:nth-child(4),
   table.sel-table td:nth-child(5) { padding-left: 8px; }
+  table.sel-table thead th:nth-child(3),
   table.sel-table thead th:nth-child(4),
   table.sel-table thead th:nth-child(5) { padding-left: 8px; }
 }
@@ -1926,8 +1931,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 6px 5px; font-size: 11px; }
   table.sel-table td:nth-child(5) .course-link { font-size: 10px; padding: 1px 3px; }
   table.sel-table .btn-sm { height: 26px; padding: 0 8px; font-size: 11px; }
+  table.sel-table td:nth-child(3),
   table.sel-table td:nth-child(4),
   table.sel-table td:nth-child(5) { padding-left: 6px; }
+  table.sel-table thead th:nth-child(3),
   table.sel-table thead th:nth-child(4),
   table.sel-table thead th:nth-child(5) { padding-left: 6px; }
 }
@@ -1949,8 +1956,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 10px; }
   table.sel-table td:nth-child(5) .course-link { font-size: 9px; padding: 1px 2px; }
   table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
+  table.sel-table td:nth-child(3),
   table.sel-table td:nth-child(4),
   table.sel-table td:nth-child(5) { padding-left: 4px; }
+  table.sel-table thead th:nth-child(3),
   table.sel-table thead th:nth-child(4),
   table.sel-table thead th:nth-child(5) { padding-left: 4px; }
 }
@@ -2879,10 +2888,16 @@ function renderSelections(){
     const checked = selectionsCheckedIds.has(String(s.id));
     const checkboxHtml = '<input type="checkbox" class="sel-checkbox" data-id="' + s.id + '"' + (checked ? ' checked' : '') + '>';
     
+    // 构建班级显示文本，避免年级重复
+    let classDisplayName = (s.class_name || '').replace(/[()（）]/g, '');
+    if (s.grade && classDisplayName.indexOf(s.grade) !== 0) {
+      classDisplayName = s.grade + classDisplayName;
+    }
+
     tr.innerHTML =
       '<td>' + checkboxHtml + '</td>' +
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
-      '<td>' + escapeHtml((s.grade || '') + (s.class_name || '').replace(/[()（）]/g, '')) + '</td>' +
+      '<td>' + escapeHtml(classDisplayName) + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td></td>' +
       '<td class="row-actions"></td>';
