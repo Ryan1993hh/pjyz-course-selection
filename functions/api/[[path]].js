@@ -59,7 +59,19 @@ const INIT_STATEMENTS = [
     total_count INTEGER DEFAULT 0,
     details TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
-  )`
+  )`,
+  `CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grade TEXT DEFAULT '',
+    class_name TEXT DEFAULT '',
+    student_name TEXT NOT NULL,
+    student_no TEXT DEFAULT '',
+    is_selected INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_students_grade ON students(grade)`,
+  `CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_name)`,
+  `CREATE INDEX IF NOT EXISTS idx_students_selected ON students(is_selected)`
 ];
 
 // ---- 辅助函数 ----
@@ -563,6 +575,148 @@ async function handleClearSelections(db, request) {
   return json({ success: true });
 }
 
+// ---- Students ----
+async function handleStudentsGet(db, request, url) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  
+  const grade = url.searchParams.get('grade');
+  const cls = url.searchParams.get('class');
+  const selected = url.searchParams.get('selected');
+  const keyword = url.searchParams.get('keyword');
+  
+  let sql = 'SELECT * FROM students WHERE 1=1';
+  const params = [];
+  
+  if (grade) { sql += ' AND grade = ?'; params.push(grade); }
+  if (cls) { sql += ' AND class_name = ?'; params.push(cls); }
+  if (selected !== null) { sql += ' AND is_selected = ?'; params.push(selected === '1' ? 1 : 0); }
+  if (keyword) { sql += ' AND (student_name LIKE ? OR student_no LIKE ?)'; params.push('%' + keyword + '%', '%' + keyword + '%'); }
+  
+  sql += ' ORDER BY grade, class_name, student_name';
+  const results = await db.prepare(sql).bind(...params).all();
+  return json({ students: results.results });
+}
+
+async function handleStudentsBatchCreate(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  try {
+    const text = await request.text();
+    const body = JSON.parse(text);
+    const arr = Array.isArray(body) ? body : (body.students ? body.students : []);
+    if (arr.length === 0) return json({ error: '没有可保存的学生数据' }, 400);
+    
+    // 清空旧学生数据，重新导入
+    await db.prepare('DELETE FROM students').run();
+    
+    const results = [];
+    for (const item of arr) {
+      if (!item || !item.student_name) continue;
+      const grade = (item.grade || '').toString();
+      const className = (item.class_name || '').toString();
+      const studentName = (item.student_name || '').toString();
+      const studentNo = (item.student_no || '').toString();
+      
+      // 检查该学生是否已有选课记录
+      const existing = await db.prepare(
+        'SELECT id FROM selections WHERE grade = ? AND class_name = ? AND student_name = ? LIMIT 1'
+      ).bind(grade, className, studentName).first();
+      const isSelected = existing ? 1 : 0;
+      
+      const result = await db.prepare(
+        'INSERT INTO students (grade, class_name, student_name, student_no, is_selected) VALUES (?, ?, ?, ?, ?)'
+      ).bind(grade, className, studentName, studentNo, isSelected).run();
+      
+      results.push({ id: result.meta.last_row_id, student_name: studentName, is_selected: isSelected });
+    }
+    
+    return json({ success: true, count: results.length, students: results });
+  } catch (e) {
+    return json({ error: '保存失败：' + e.message }, 400);
+  }
+}
+
+async function handleStudentsClear(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  await db.prepare('DELETE FROM students').run();
+  return json({ success: true });
+}
+
+async function handleUnenrolledStudentsGet(db, request, url) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  
+  const grade = url.searchParams.get('grade');
+  const cls = url.searchParams.get('class');
+  const keyword = url.searchParams.get('keyword');
+  
+  let sql = `SELECT s.* FROM students s 
+             WHERE NOT EXISTS (
+               SELECT 1 FROM selections sel 
+               WHERE sel.grade = s.grade 
+               AND sel.class_name = s.class_name 
+               AND sel.student_name = s.student_name
+             )`;
+  const params = [];
+  
+  if (grade) { sql += ' AND s.grade = ?'; params.push(grade); }
+  if (cls) { sql += ' AND s.class_name = ?'; params.push(cls); }
+  if (keyword) { sql += ' AND (s.student_name LIKE ? OR s.student_no LIKE ?)'; params.push('%' + keyword + '%', '%' + keyword + '%'); }
+  
+  sql += ' ORDER BY s.grade, s.class_name, s.student_name';
+  const results = await db.prepare(sql).bind(...params).all();
+  return json({ unenrolled: results.results });
+}
+
+async function handleStudentRosterUpload(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  try {
+    const text = await request.text();
+    const body = JSON.parse(text);
+    const arr = Array.isArray(body) ? body : (body.students ? body.students : []);
+    if (arr.length === 0) return json({ error: '没有可导入的学生数据' }, 400);
+    
+    // 先清空旧数据
+    await db.prepare('DELETE FROM students').run();
+    
+    let selectedCount = 0;
+    let unselectedCount = 0;
+    
+    for (const item of arr) {
+      if (!item || !item.student_name) continue;
+      const grade = (item.grade || '').toString();
+      const className = (item.class_name || '').toString();
+      const studentName = (item.student_name || '').toString();
+      const studentNo = (item.student_no || '').toString();
+      
+      // 检查是否已选课
+      const existing = await db.prepare(
+        'SELECT id FROM selections WHERE grade = ? AND class_name = ? AND student_name = ? LIMIT 1'
+      ).bind(grade, className, studentName).first();
+      const isSelected = existing ? 1 : 0;
+      
+      if (isSelected) selectedCount++;
+      else unselectedCount++;
+      
+      await db.prepare(
+        'INSERT INTO students (grade, class_name, student_name, student_no, is_selected) VALUES (?, ?, ?, ?, ?)'
+      ).bind(grade, className, studentName, studentNo, isSelected).run();
+    }
+    
+    return json({ 
+      success: true, 
+      total: arr.length,
+      selected: selectedCount,
+      unselected: unselectedCount
+    });
+  } catch (e) {
+    return json({ error: '导入失败：' + e.message }, 400);
+  }
+}
+
 // ---- Classes ----
 async function handleClassesGet(db) {
   const results = await db.prepare('SELECT * FROM classes ORDER BY grade, class_name').all();
@@ -882,6 +1036,23 @@ export async function onRequest(context) {
     const id = parseInt(selectionMatch[1]);
     if (method === 'PUT') return handleSelectionUpdate(db, request, id);
     if (method === 'DELETE') return handleSelectionDelete(db, request, id);
+  }
+
+  // /api/students
+  if (path === '/api/students') {
+    if (method === 'GET') return handleStudentsGet(db, request, url);
+    if (method === 'POST') return handleStudentsBatchCreate(db, request);
+    if (method === 'DELETE') return handleStudentsClear(db, request);
+  }
+
+  // /api/students/roster-upload
+  if (path === '/api/students/roster-upload' && method === 'POST') {
+    return handleStudentRosterUpload(db, request);
+  }
+
+  // /api/students/unenrolled
+  if (path === '/api/students/unenrolled' && method === 'GET') {
+    return handleUnenrolledStudentsGet(db, request, url);
   }
 
   // /api/classes

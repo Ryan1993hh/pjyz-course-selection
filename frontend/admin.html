@@ -1928,6 +1928,299 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table thead th:nth-child(7) { padding-left: 4px; }
   table.sel-table thead th:nth-child(3) { padding-left: 2px; }
 }
+
+/* ===== 未选课学生表格组件样式 ===== */
+.stu-roster-upload {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafbfc;
+}
+.stu-roster-upload:hover, .stu-roster-upload.dragover {
+  border-color: var(--primary);
+  background: var(--bg-soft);
+}
+.stu-roster-upload .upload-icon { font-size: 28px; color: var(--primary); margin-bottom: 6px; }
+.stu-roster-upload .upload-text { font-size: 12px; color: var(--muted); }
+.stu-roster-upload .upload-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+.unenroll-tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+.unenroll-tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  color: var(--muted);
+  background: transparent;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.unenroll-tab:hover { color: var(--primary); }
+.unenroll-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.unenroll-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.unenroll-stat-item {
+  text-align: center;
+  padding: 10px 6px;
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.unenroll-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+.unenroll-stat-value.danger { color: var(--danger); }
+.unenroll-stat-value.warning { color: var(--warning); }
+.unenroll-stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* 高级表格组件 */
+.adv-table-container {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+.adv-table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.adv-table-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 320px;
+}
+.adv-table-search input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.adv-table-search input:focus { border-color: var(--primary); }
+.adv-table-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.adv-table-wrapper {
+  max-height: 500px;
+  overflow: auto;
+  position: relative;
+}
+table.adv-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 13px;
+}
+table.adv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 2px solid #cbd5e1;
+  border-right: 1px solid #e2e8f0;
+  cursor: select;
+  user-select: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+table.adv-table thead th:last-child { border-right: none; }
+table.adv-table thead th.sortable { cursor: pointer; }
+table.adv-table thead th.sortable:hover { background: #e2e8f0; }
+table.adv-table thead th .sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+table.adv-table thead th.sort-active .sort-arrow { opacity: 1; color: var(--primary); }
+table.adv-table thead th.col-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+  user-select: none;
+}
+table.adv-table thead th.col-resize-handle:hover { background: rgba(13,148,136,0.3); }
+table.adv-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  text-align: center;
+  vertical-align: middle;
+  background: transparent;
+  transition: background 0.15s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+table.adv-table td:last-child { border-right: none; }
+table.adv-table tbody tr:hover td { background: #f0fdfa; }
+table.adv-table tbody tr.unenrow td {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.08), rgba(251, 191, 36, 0.03));
+}
+table.adv-table tbody tr.unenrow:hover td {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.08));
+}
+table.adv-table .status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+table.adv-table .status-enrolled { background: #d1fae5; color: #065f46; }
+table.adv-table .status-unenrolled { background: #fef3c7; color: #92400e; }
+table.adv-table .col-hidden { display: none; }
+
+.adv-table-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.adv-table-empty .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+.adv-table-empty .empty-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.adv-table-empty .empty-desc { font-size: 12px; }
+
+.adv-table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.adv-table-pagination .page-controls { display: flex; gap: 4px; align-items: center; }
+.adv-table-pagination .page-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+.adv-table-pagination .page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.adv-table-pagination .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.adv-table-pagination .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.col-config-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 160px;
+  z-index: 100;
+  padding: 8px 0;
+  display: none;
+}
+.col-config-dropdown.show { display: block; }
+.col-config-dropdown .col-config-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.col-config-dropdown .col-config-item:hover { background: var(--bg-soft); }
+.col-config-dropdown .col-config-item input { margin: 0; }
+
+/* 未选课页面专属样式 */
+.unenroll-main-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.unenroll-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  align-items: center;
+}
+.unenroll-legend .legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.legend-dot.enrolled { background: #d1fae5; border: 1px solid #10b981; }
+.legend-dot.unenrolled { background: #fef3c7; border: 1px solid #f59e0b; }
+
+@media (max-width: 960px) {
+  .unenroll-stats { grid-template-columns: repeat(3, 1fr); }
+  .adv-table-toolbar { flex-direction: column; align-items: stretch; }
+  .adv-table-search { max-width: none; }
+}
+@media (max-width: 760px) {
+  .unenroll-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .unenroll-stat-value { font-size: 16px; }
+  .adv-table-pagination { flex-direction: column; align-items: stretch; }
+}
 </style>
 </head>
 <body>
@@ -1964,6 +2257,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     <div class="top-nav-items">
       <div class="nav-item" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
       <div class="nav-item active" data-section="selections"><span class="nav-icon">▦</span>选课数据</div>
+      <div class="nav-item" data-section="unenrolled"><span class="nav-icon">◈</span>未选课学生</div>
       <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
     </div>
     <div class="admin-info">
@@ -2145,6 +2439,157 @@ th.sortable.active .sort-icon { opacity: 1; }
               </table>
             </div>
             <div class="pagination" id="selectionsPagination"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 模块二点五：未选课学生 ===== -->
+    <section class="section" id="section-unenrolled">
+      <div class="section-header">
+        <div>
+          <h2>未选课学生查询</h2>
+          <p class="desc">上传学生名单，系统自动对比选课数据，精准识别未完成选课的学生</p>
+        </div>
+      </div>
+
+      <div class="selections-layout">
+        <!-- 左侧筛选面板 -->
+        <div class="selections-sidebar">
+          <div class="card filter-card">
+            <div class="card-title">📋 学生名单</div>
+            <div class="stu-roster-upload" id="stuRosterUpload">
+              <div class="upload-icon">📤</div>
+              <div class="upload-text">点击或拖拽上传学生名单</div>
+              <div class="upload-hint">支持 Excel / CSV 格式<br>需包含：年级、班级、学生姓名</div>
+            </div>
+            <input type="file" id="stuRosterFile" accept=".xlsx,.xls,.csv" style="display:none;">
+            <div id="rosterInfo" style="display:none; margin-top:10px; padding:8px; background:var(--bg-soft); border-radius:6px; font-size:12px;">
+              <div id="rosterInfoContent"></div>
+              <button type="button" class="btn btn-outline btn-sm" id="clearRosterBtn" style="margin-top:6px; width:100%;">🗑 清除名单</button>
+            </div>
+          </div>
+
+          <div class="card filter-card">
+            <div class="card-title">🔍 筛选条件</div>
+            <div class="filter-vertical">
+              <div class="f-item">
+                <label>年级</label>
+                <select class="form-select" id="unfilterGrade">
+                  <option value="">全部</option>
+                  <option value="六年级">六年级</option>
+                  <option value="七年级">七年级</option>
+                </select>
+              </div>
+              <div class="f-item">
+                <label>班级</label>
+                <select class="form-select" id="unfilterClass">
+                  <option value="">全部</option>
+                </select>
+              </div>
+              <div class="f-item">
+                <label>选课状态</label>
+                <select class="form-select" id="unfilterStatus">
+                  <option value="">全部</option>
+                  <option value="unenrolled">未选课</option>
+                  <option value="enrolled">已选课</option>
+                </select>
+              </div>
+              <div class="f-item">
+                <label>学生姓名</label>
+                <input type="text" class="form-input" id="unfilterStudent" placeholder="输入学生姓名">
+              </div>
+              <button type="button" class="btn btn-primary btn-block" id="unqueryBtn">🔍 查询</button>
+              <button type="button" class="btn btn-outline btn-block" id="unresetBtn">重置筛选</button>
+            </div>
+          </div>
+
+          <div class="card stats-card">
+            <div class="card-title">📊 选课统计</div>
+            <div class="unenroll-stats">
+              <div class="unenroll-stat-item">
+                <div class="unenroll-stat-value" id="statTotalStudents">0</div>
+                <div class="unenroll-stat-label">名单总数</div>
+              </div>
+              <div class="unenroll-stat-item">
+                <div class="unenroll-stat-value danger" id="statUnenrolled">0</div>
+                <div class="unenroll-stat-label">未选课</div>
+              </div>
+              <div class="unenroll-stat-item">
+                <div class="unenroll-stat-value" id="statEnrolled">0</div>
+                <div class="unenroll-stat-label">已选课</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧数据面板 -->
+        <div class="selections-main">
+          <div class="card data-card">
+            <div class="data-toolbar">
+              <div class="data-toolbar-left">
+                <div class="unenroll-tab-bar">
+                  <button class="unenroll-tab active" data-view="all">全部学生</button>
+                  <button class="unenroll-tab" data-view="unenrolled">仅未选课</button>
+                  <button class="unenroll-tab" data-view="enrolled">仅已选课</button>
+                </div>
+              </div>
+              <div class="data-toolbar-right">
+                <div class="unenroll-legend" style="margin-right:12px;">
+                  <span><span class="legend-dot enrolled"></span>已选课</span>
+                  <span><span class="legend-dot unenrolled"></span>未选课</span>
+                </div>
+                <button type="button" class="btn btn-outline" id="colConfigBtn">⚙ 列设置</button>
+                <button type="button" class="btn btn-success" id="exportUnenrollBtn">⬇ 导出Excel</button>
+              </div>
+            </div>
+
+            <!-- 高级表格组件 -->
+            <div class="adv-table-container" id="advTableContainer">
+              <div class="adv-table-toolbar">
+                <div class="adv-table-search">
+                  <input type="text" id="advTableSearch" placeholder="搜索学生姓名或学号...">
+                </div>
+                <div class="adv-table-actions">
+                  <span id="advTableCount" style="font-size:12px; color:var(--muted);"></span>
+                </div>
+              </div>
+              <div class="adv-table-wrapper" id="advTableWrapper">
+                <table class="adv-table" id="advStudentTable">
+                  <colgroup>
+                    <col style="width:50px;">
+                    <col style="width:70px;">
+                    <col style="width:70px;">
+                    <col style="width:80px;">
+                    <col style="width:100px;">
+                    <col style="width:160px;">
+                    <col style="width:80px;">
+                    <col style="width:120px;">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th data-col="index" class="col-fixed-left">#</th>
+                      <th data-col="grade" class="sortable">年级<span class="sort-arrow">⇅</span></th>
+                      <th data-col="class_name" class="sortable">班级<span class="sort-arrow">⇅</span></th>
+                      <th data-col="student_name" class="sortable">学生姓名<span class="sort-arrow">⇅</span></th>
+                      <th data-col="student_no">学号</th>
+                      <th data-col="course_name" class="sortable">所选课程<span class="sort-arrow">⇅</span></th>
+                      <th data-col="status" class="sortable">选课状态<span class="sort-arrow">⇅</span></th>
+                      <th data-col="actions">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="advStudentBody"></tbody>
+                </table>
+              </div>
+              <div class="adv-table-pagination" id="advTablePagination"></div>
+            </div>
+
+            <!-- 空状态 -->
+            <div class="adv-table-empty" id="advTableEmpty" style="display:none;">
+              <div class="empty-icon">📭</div>
+              <div class="empty-title" id="advTableEmptyTitle">暂无数据</div>
+              <div class="empty-desc" id="advTableEmptyDesc">请先上传学生名单以查看选课情况</div>
+            </div>
           </div>
         </div>
       </div>
@@ -3288,6 +3733,701 @@ window.deleteClassItem = function(id){
   if (el) el.addEventListener('click', openClassManager);
 })();
 
+/* ============ Module 2.5: Unenrolled Students ============ */
+let studentsRoster = [];
+let unenrollFilteredData = [];
+let unenrollViewMode = 'all';
+let unenrollCurrentPage = 1;
+let unenrollPageSize = 20;
+let unenrollSortField = '';
+let unenrollSortOrder = 'asc';
+let unenrollSearchQuery = '';
+let unenrollColConfig = {
+  index: { visible: true, width: 50 },
+  grade: { visible: true, width: 70 },
+  class_name: { visible: true, width: 70 },
+  student_name: { visible: true, width: 80 },
+  student_no: { visible: true, width: 100 },
+  course_name: { visible: true, width: 160 },
+  status: { visible: true, width: 80 },
+  actions: { visible: true, width: 120 }
+};
+
+const UNENROLL_COLUMNS = [
+  { key: 'index', label: '#', width: 50 },
+  { key: 'grade', label: '年级', width: 70, sortable: true },
+  { key: 'class_name', label: '班级', width: 70, sortable: true },
+  { key: 'student_name', label: '学生姓名', width: 80, sortable: true },
+  { key: 'student_no', label: '学号', width: 100 },
+  { key: 'course_name', label: '所选课程', width: 160, sortable: true },
+  { key: 'status', label: '选课状态', width: 80, sortable: true },
+  { key: 'actions', label: '操作', width: 120 }
+];
+
+// ===== Excel 解析 =====
+function ensureXLSXUnenroll(){
+  if (typeof XLSX !== 'undefined') return true;
+  if (typeof XLSX === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = function(){ window.__xlsxLoaded = true; };
+    s.onerror = function(){ alert('Excel 解析库加载失败，请检查网络连接'); };
+    document.head.appendChild(s);
+    return false;
+  }
+  return true;
+}
+
+async function handleRosterFile(file){
+  if (!ensureXLSXUnenroll()) {
+    setTimeout(function(){ handleRosterFile(file); }, 500);
+    return;
+  }
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    
+    if (!rows.length) {
+      toast('文件为空或格式不正确', 'error');
+      return;
+    }
+    
+    // 字段映射
+    const mapped = rows.map(function(r){
+      const grade = r['年级'] || r['grade'] || '';
+      const className = r['班级'] || r['class'] || r['class_name'] || '';
+      const studentName = r['学生姓名'] || r['姓名'] || r['student_name'] || '';
+      const studentNo = r['学号'] || r['student_no'] || r['no'] || '';
+      return {
+        grade: String(grade).trim(),
+        class_name: String(className).trim(),
+        student_name: String(studentName).trim(),
+        student_no: String(studentNo).trim()
+      };
+    }).filter(function(s){ return s.student_name; });
+    
+    if (!mapped.length) {
+      toast('未能解析到有效的学生数据，请检查文件格式', 'error');
+      return;
+    }
+    
+    // 上传到服务器
+    const btn = document.getElementById('stuRosterUpload');
+    btn.style.opacity = '0.5';
+    btn.style.pointerEvents = 'none';
+    toast('正在上传学生名单...', 'info');
+    
+    const resp = await request('POST', '/api/students/roster-upload', mapped);
+    
+    studentsRoster = mapped.map(function(s){
+      s.is_selected = 0;
+      s.course_name = '';
+      return s;
+    });
+    
+    // 对比选课数据
+    await mergeSelectionsWithRoster();
+    renderUnenrollAll();
+    
+    const total = resp.total || mapped.length;
+    const unsel = resp.unselected || 0;
+    const sel = resp.selected || 0;
+    toast('上传成功！共 ' + total + ' 人，已选课 ' + sel + ' 人，未选课 ' + unsel + ' 人', 'success');
+    
+    // 显示名单信息
+    const info = document.getElementById('rosterInfo');
+    const infoContent = document.getElementById('rosterInfoContent');
+    if (info && infoContent) {
+      info.style.display = 'block';
+      infoContent.innerHTML = '<strong>当前名单：</strong>共 ' + total + ' 人<br>已选课: ' + sel + ' 人 | 未选课: ' + unsel + ' 人';
+    }
+  } catch(e) {
+    console.error('Roster upload error:', e);
+    toast('上传失败：' + e.message, 'error');
+  }
+}
+
+async function mergeSelectionsWithRoster(){
+  try {
+    const data = await request('GET', '/api/selections');
+    const selections = Array.isArray(data) ? data : (data.selections || []);
+    
+    studentsRoster.forEach(function(s){
+      const matched = selections.find(function(sel){
+        return sel.grade === s.grade && 
+               sel.class_name === s.class_name && 
+               sel.student_name === s.student_name;
+      });
+      if (matched) {
+        s.is_selected = 1;
+        s.course_name = matched.course_name || '';
+      } else {
+        s.is_selected = 0;
+        s.course_name = '';
+      }
+    });
+  } catch(e) {
+    console.error('Merge error:', e);
+  }
+}
+
+function renderUnenrollAll(){
+  applyUnenrollFilters();
+  updateUnenrollStats();
+}
+
+function updateUnenrollStats(){
+  const total = studentsRoster.length;
+  const unenrolled = studentsRoster.filter(function(s){ return !s.is_selected; }).length;
+  const enrolled = total - unenrolled;
+  
+  const el1 = document.getElementById('statTotalStudents');
+  const el2 = document.getElementById('statUnenrolled');
+  const el3 = document.getElementById('statEnrolled');
+  if (el1) el1.textContent = total;
+  if (el2) el2.textContent = unenrolled;
+  if (el3) el3.textContent = enrolled;
+}
+
+function applyUnenrollFilters(){
+  const grade = document.getElementById('unfilterGrade').value;
+  const cls = document.getElementById('unfilterClass').value;
+  const status = document.getElementById('unfilterStatus').value;
+  const student = (document.getElementById('unfilterStudent').value || '').trim();
+  
+  unenrollFilteredData = studentsRoster.filter(function(s){
+    if (grade && s.grade !== grade) return false;
+    if (cls && s.class_name !== cls) return false;
+    if (status === 'unenrolled' && s.is_selected) return false;
+    if (status === 'enrolled' && !s.is_selected) return false;
+    if (student && s.student_name.indexOf(student) === -1) return false;
+    if (unenrollViewMode === 'unenrolled' && s.is_selected) return false;
+    if (unenrollViewMode === 'enrolled' && !s.is_selected) return false;
+    if (unenrollSearchQuery && 
+        s.student_name.indexOf(unenrollSearchQuery) === -1 && 
+        (s.student_no || '').indexOf(unenrollSearchQuery) === -1) return false;
+    return true;
+  });
+  
+  // 应用排序
+  if (unenrollSortField) {
+    const field = unenrollSortField;
+    const order = unenrollSortOrder === 'asc' ? 1 : -1;
+    unenrollFilteredData.sort(function(a, b){
+      let va = a[field] || '';
+      let vb = b[field] || '';
+      if (field === 'status') {
+        va = a.is_selected ? '已选课' : '未选课';
+        vb = b.is_selected ? '已选课' : '未选课';
+      }
+      if (field === 'index') {
+        return (a._idx || 0) - (b._idx || 0);
+      }
+      return String(va).localeCompare(String(vb), 'zh') * order;
+    });
+  }
+  
+  renderAdvTable();
+}
+
+function renderAdvTable(){
+  const tbody = document.getElementById('advStudentBody');
+  const empty = document.getElementById('advTableEmpty');
+  const tableContainer = document.getElementById('advTableContainer');
+  const countEl = document.getElementById('advTableCount');
+  
+  if (!studentsRoster.length) {
+    if (empty) {
+      empty.style.display = 'block';
+      document.getElementById('advTableEmptyTitle').textContent = '暂无数据';
+      document.getElementById('advTableEmptyDesc').textContent = '请先上传学生名单以查看选课情况';
+    }
+    if (tableContainer) tableContainer.style.display = 'none';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  
+  if (unenrollFilteredData.length === 0) {
+    if (empty) {
+      empty.style.display = 'block';
+      document.getElementById('advTableEmptyTitle').textContent = '无匹配结果';
+      document.getElementById('advTableEmptyDesc').textContent = '当前筛选条件下没有找到符合条件的学生';
+    }
+    if (tableContainer) tableContainer.style.display = 'none';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  
+  if (empty) empty.style.display = 'none';
+  if (tableContainer) tableContainer.style.display = 'block';
+  if (countEl) countEl.textContent = '共 ' + unenrollFilteredData.length + ' 条';
+  
+  // 计算分页
+  const total = unenrollFilteredData.length;
+  const totalPages = Math.max(1, Math.ceil(total / unenrollPageSize));
+  if (unenrollCurrentPage > totalPages) unenrollCurrentPage = totalPages;
+  const start = (unenrollCurrentPage - 1) * unenrollPageSize;
+  const end = Math.min(start + unenrollPageSize, total);
+  const pageData = unenrollFilteredData.slice(start, end);
+  
+  tbody.innerHTML = '';
+  pageData.forEach(function(s, idx){
+    const tr = document.createElement('tr');
+    if (!s.is_selected) tr.classList.add('unenrow');
+    
+    const displayIdx = start + idx + 1;
+    const statusText = s.is_selected ? '已选课' : '未选课';
+    const statusClass = s.is_selected ? 'status-enrolled' : 'status-unenrolled';
+    
+    tr.innerHTML =
+      '<td data-col="index" style="width:' + unenrollColConfig.index.width + 'px;">' + displayIdx + '</td>' +
+      '<td data-col="grade" style="width:' + unenrollColConfig.grade.width + 'px;">' + escapeHtml(s.grade || '') + '</td>' +
+      '<td data-col="class_name" style="width:' + unenrollColConfig.class_name.width + 'px;">' + escapeHtml(s.class_name || '') + '</td>' +
+      '<td data-col="student_name" style="width:' + unenrollColConfig.student_name.width + 'px; font-weight:600;">' + escapeHtml(s.student_name || '') + '</td>' +
+      '<td data-col="student_no" style="width:' + unenrollColConfig.student_no.width + 'px;">' + escapeHtml(s.student_no || '') + '</td>' +
+      '<td data-col="course_name" style="width:' + unenrollColConfig.course_name.width + 'px;">' + 
+        (s.is_selected ? '<span class="course-link">' + escapeHtml(s.course_name || '') + '</span>' : '<span style="color:#94a3b8;">—</span>') + 
+      '</td>' +
+      '<td data-col="status" style="width:' + unenrollColConfig.status.width + 'px;">' +
+        '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+      '</td>' +
+      '<td data-col="actions" style="width:' + unenrollColConfig.actions.width + 'px;">' +
+        (s.is_selected ? 
+          '<button class="btn btn-sm btn-outline" data-action="detail">详情</button>' :
+          '<button class="btn btn-sm btn-primary" data-action="remind">提醒</button>') +
+      '</td>';
+    
+    // 列显隐
+    UNENROLL_COLUMNS.forEach(function(col){
+      if (!unenrollColConfig[col.key].visible) {
+        const cell = tr.querySelector('[data-col="' + col.key + '"]');
+        if (cell) cell.style.display = 'none';
+      }
+    });
+    
+    // 操作按钮
+    const actionBtn = tr.querySelector('[data-action]');
+    if (actionBtn) {
+      actionBtn.addEventListener('click', function(){
+        const action = this.dataset.action;
+        if (action === 'remind') {
+          toast('已提醒 ' + s.student_name + ' 完成选课', 'info');
+        } else if (action === 'detail') {
+          toast(s.student_name + ' 的选课详情：' + (s.course_name || ''), 'info');
+        }
+      });
+    }
+    
+    tbody.appendChild(tr);
+  });
+  
+  renderUnenrollPagination(total, totalPages);
+}
+
+function renderUnenrollPagination(total, totalPages){
+  const pagEl = document.getElementById('advTablePagination');
+  if (!pagEl) return;
+  
+  let html = '<span class="page-info">共 ' + total + ' 条 | 第 ' + unenrollCurrentPage + ' / ' + totalPages + ' 页</span>';
+  html += '<div class="page-controls">';
+  html += '<button class="page-btn" id="advPrevPage"' + (unenrollCurrentPage <= 1 ? ' disabled' : '') + '>上一页</button>';
+  
+  const maxShow = 5;
+  let startPage = Math.max(1, unenrollCurrentPage - Math.floor(maxShow / 2));
+  let endPage = Math.min(totalPages, startPage + maxShow - 1);
+  if (endPage - startPage < maxShow - 1) startPage = Math.max(1, endPage - maxShow + 1);
+  
+  for (let i = startPage; i <= endPage; i++){
+    html += '<button class="page-btn' + (i === unenrollCurrentPage ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
+  }
+  
+  html += '<button class="page-btn" id="advNextPage"' + (unenrollCurrentPage >= totalPages ? ' disabled' : '') + '>下一页</button>';
+  html += '</div>';
+  html += '<select class="page-size-select" id="advPageSize" style="padding:4px 8px; border-radius:4px; border:1px solid var(--border);">';
+  [10, 20, 50, 100].forEach(function(n){
+    html += '<option value="' + n + '"' + (n === unenrollPageSize ? ' selected' : '') + '>' + n + '条/页</option>';
+  });
+  html += '</select>';
+  
+  pagEl.innerHTML = html;
+  
+  // 绑定事件
+  const prevBtn = document.getElementById('advPrevPage');
+  if (prevBtn) prevBtn.addEventListener('click', function(){
+    if (unenrollCurrentPage > 1) { unenrollCurrentPage--; renderAdvTable(); }
+  });
+  const nextBtn = document.getElementById('advNextPage');
+  if (nextBtn) nextBtn.addEventListener('click', function(){
+    if (unenrollCurrentPage < totalPages) { unenrollCurrentPage++; renderAdvTable(); }
+  });
+  pagEl.querySelectorAll('.page-btn[data-page]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      unenrollCurrentPage = parseInt(this.dataset.page);
+      renderAdvTable();
+    });
+  });
+  const sizeSel = document.getElementById('advPageSize');
+  if (sizeSel) sizeSel.addEventListener('change', function(){
+    unenrollPageSize = parseInt(this.value);
+    unenrollCurrentPage = 1;
+    renderAdvTable();
+  });
+}
+
+function exportUnenrollExcel(){
+  if (!ensureXLSXUnenroll()) {
+    toast('Excel 导出库加载中，请稍候重试', 'info');
+    return;
+  }
+  if (!unenrollFilteredData.length) {
+    toast('暂无数据可导出', 'error');
+    return;
+  }
+  
+  try {
+    const exportData = unenrollFilteredData.map(function(s){
+      return {
+        '年级': s.grade || '',
+        '班级': s.class_name || '',
+        '学生姓名': s.student_name || '',
+        '学号': s.student_no || '',
+        '所选课程': s.course_name || (s.is_selected ? '' : '未选课'),
+        '选课状态': s.is_selected ? '已选课' : '未选课'
+      };
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '未选课学生名单');
+    
+    const ts = new Date();
+    const fname = '未选课学生名单_' + ts.getFullYear() + 
+      String(ts.getMonth()+1).padStart(2,'0') + 
+      String(ts.getDate()).padStart(2,'0') + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    toast('导出成功：' + fname, 'success');
+  } catch(e) {
+    toast('导出失败：' + e.message, 'error');
+  }
+}
+
+function initUnenrollModule(){
+  // 文件上传
+  const upload = document.getElementById('stuRosterUpload');
+  const fileInput = document.getElementById('stuRosterFile');
+  
+  if (upload && fileInput) {
+    upload.addEventListener('click', function(){ fileInput.click(); });
+    fileInput.addEventListener('change', function(e){
+      if (e.target.files.length) handleRosterFile(e.target.files[0]);
+    });
+    
+    upload.addEventListener('dragover', function(e){
+      e.preventDefault();
+      upload.classList.add('dragover');
+    });
+    upload.addEventListener('dragleave', function(){
+      upload.classList.remove('dragover');
+    });
+    upload.addEventListener('drop', function(e){
+      e.preventDefault();
+      upload.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleRosterFile(e.dataTransfer.files[0]);
+    });
+  }
+  
+  // 清除名单
+  const clearBtn = document.getElementById('clearRosterBtn');
+  if (clearBtn) clearBtn.addEventListener('click', async function(){
+    if (!confirm('确定要清除当前学生名单吗？')) return;
+    try {
+      await request('DELETE', '/api/students');
+      studentsRoster = [];
+      unenrollFilteredData = [];
+      const info = document.getElementById('rosterInfo');
+      if (info) info.style.display = 'none';
+      renderAdvTable();
+      updateUnenrollStats();
+      toast('名单已清除', 'success');
+    } catch(e) {
+      toast('清除失败：' + e.message, 'error');
+    }
+  });
+  
+  // 查询按钮
+  const queryBtn = document.getElementById('unqueryBtn');
+  if (queryBtn) queryBtn.addEventListener('click', function(){
+    unenrollCurrentPage = 1;
+    applyUnenrollFilters();
+  });
+  
+  // 重置按钮
+  const resetBtn = document.getElementById('unresetBtn');
+  if (resetBtn) resetBtn.addEventListener('click', function(){
+    document.getElementById('unfilterGrade').value = '';
+    document.getElementById('unfilterClass').innerHTML = '<option value="">全部</option>';
+    document.getElementById('unfilterStatus').value = '';
+    document.getElementById('unfilterStudent').value = '';
+    unenrollSearchQuery = '';
+    const searchEl = document.getElementById('advTableSearch');
+    if (searchEl) searchEl.value = '';
+    unenrollViewMode = 'all';
+    document.querySelectorAll('.unenroll-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelector('.unenroll-tab[data-view="all"]').classList.add('active');
+    unenrollCurrentPage = 1;
+    applyUnenrollFilters();
+  });
+  
+  // 实时搜索
+  const searchInput = document.getElementById('advTableSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', function(){
+      unenrollSearchQuery = this.value.trim();
+      unenrollCurrentPage = 1;
+      applyUnenrollFilters();
+    });
+  }
+  
+  // 视图切换
+  document.querySelectorAll('.unenroll-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.unenroll-tab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      unenrollViewMode = tab.dataset.view;
+      unenrollCurrentPage = 1;
+      applyUnenrollFilters();
+    });
+  });
+  
+  // 导出
+  const exportBtn = document.getElementById('exportUnenrollBtn');
+  if (exportBtn) exportBtn.addEventListener('click', exportUnenrollExcel);
+  
+  // 筛选条件变更实时更新
+  const unfilterStudent = document.getElementById('unfilterStudent');
+  if (unfilterStudent) {
+    let timer;
+    unfilterStudent.addEventListener('input', function(){
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        unenrollCurrentPage = 1;
+        applyUnenrollFilters();
+      }, 300);
+    });
+  }
+  
+  const unfilterGrade = document.getElementById('unfilterGrade');
+  if (unfilterGrade) unfilterGrade.addEventListener('change', function(){
+    const grade = unfilterGrade.value;
+    const classSel = document.getElementById('unfilterClass');
+    if (classSel) {
+      let classCount = 10;
+      let html = '<option value="">全部</option>';
+      for (let i = 1; i <= classCount; i++){
+        html += '<option value="' + i + '班">' + i + '班</option>';
+      }
+      classSel.innerHTML = html;
+    }
+    unenrollCurrentPage = 1;
+    applyUnenrollFilters();
+  });
+  
+  const unfilterClass = document.getElementById('unfilterClass');
+  if (unfilterClass) unfilterClass.addEventListener('change', function(){
+    unenrollCurrentPage = 1;
+    applyUnenrollFilters();
+  });
+  
+  const unfilterStatus = document.getElementById('unfilterStatus');
+  if (unfilterStatus) unfilterStatus.addEventListener('change', function(){
+    unenrollCurrentPage = 1;
+    applyUnenrollFilters();
+  });
+  
+  // 年级筛选联动班级选项
+  const classSel = document.getElementById('unfilterClass');
+  const gradeSel = document.getElementById('unfilterGrade');
+  if (gradeSel && classSel) {
+    gradeSel.onchange = function(){
+      const grade = gradeSel.value;
+      let classCount = 10;
+      let html = '<option value="">全部</option>';
+      for (let i = 1; i <= classCount; i++){
+        html += '<option value="' + i + '班">' + i + '班</option>';
+      }
+      classSel.innerHTML = html;
+    };
+  }
+  
+  // 列排序
+  document.querySelectorAll('#advStudentTable thead th.sortable').forEach(function(th){
+    th.addEventListener('click', function(){
+      const col = th.dataset.col;
+      if (unenrollSortField === col) {
+        unenrollSortOrder = unenrollSortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        unenrollSortField = col;
+        unenrollSortOrder = 'asc';
+      }
+      document.querySelectorAll('#advStudentTable thead th').forEach(function(t){
+        t.classList.remove('sort-active');
+        const arrow = t.querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = '⇅';
+      });
+      th.classList.add('sort-active');
+      const arrow = th.querySelector('.sort-arrow');
+      if (arrow) arrow.textContent = unenrollSortOrder === 'asc' ? '↑' : '↓';
+      applyUnenrollFilters();
+    });
+  });
+  
+  // 列宽拖拽
+  let resizing = null;
+  document.querySelectorAll('#advStudentTable thead th').forEach(function(th){
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    th.appendChild(handle);
+    
+    handle.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      const col = th.dataset.col;
+      const startX = e.clientX;
+      const startWidth = th.offsetWidth;
+      resizing = { col: col, startX: startX, startWidth: startWidth };
+      
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
+  
+  function onMouseMove(e){
+    if (!resizing) return;
+    const diff = e.clientX - resizing.startX;
+    const newWidth = Math.max(40, resizing.startWidth + diff);
+    unenrollColConfig[resizing.col].width = newWidth;
+    
+    // 实时更新表格列宽
+    const table = document.getElementById('advStudentTable');
+    const colIndex = UNENROLL_COLUMNS.findIndex(function(c){ return c.key === resizing.col; });
+    if (table && colIndex >= 0) {
+      const colgroup = table.querySelector('colgroup');
+      if (colgroup) {
+        const cols = colgroup.querySelectorAll('col');
+        if (cols[colIndex]) cols[colIndex].style.width = newWidth + 'px';
+      }
+    }
+  }
+  
+  function onMouseUp(){
+    resizing = null;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  // 列设置下拉
+  const colConfigBtn = document.getElementById('colConfigBtn');
+  if (colConfigBtn) {
+    colConfigBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      let dropdown = document.getElementById('colConfigDropdown');
+      if (dropdown) {
+        dropdown.remove();
+        return;
+      }
+      dropdown = document.createElement('div');
+      dropdown.className = 'col-config-dropdown';
+      dropdown.id = 'colConfigDropdown';
+      
+      UNENROLL_COLUMNS.forEach(function(col){
+        const item = document.createElement('label');
+        item.className = 'col-config-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = unenrollColConfig[col.key].visible;
+        cb.addEventListener('change', function(){
+          unenrollColConfig[col.key].visible = cb.checked;
+          // 更新colgroup
+          const table = document.getElementById('advStudentTable');
+          const colIndex = UNENROLL_COLUMNS.findIndex(function(c){ return c.key === col.key; });
+          if (table && colIndex >= 0) {
+            const colgroup = table.querySelector('colgroup');
+            if (colgroup) {
+              const cols = colgroup.querySelectorAll('col');
+              if (cols[colIndex]) {
+                cols[colIndex].style.display = cb.checked ? '' : 'none';
+              }
+            }
+          }
+          renderAdvTable();
+        });
+        item.appendChild(cb);
+        item.appendChild(document.createTextNode(col.label));
+        dropdown.appendChild(item);
+      });
+      
+      const rect = colConfigBtn.getBoundingClientRect();
+      dropdown.style.left = (rect.left - 100) + 'px';
+      dropdown.style.top = (rect.bottom + 5) + 'px';
+      document.body.appendChild(dropdown);
+      
+      setTimeout(function(){
+        document.addEventListener('click', function closeDropdown(){
+          const dd = document.getElementById('colConfigDropdown');
+          if (dd) dd.remove();
+          document.removeEventListener('click', closeDropdown);
+        });
+      }, 100);
+    });
+  }
+}
+
+async function loadStudentsFromServer(){
+  try {
+    const data = await request('GET', '/api/students');
+    const students = Array.isArray(data) ? data : (data.students || []);
+    if (students.length) {
+      studentsRoster = students.map(function(s){
+        return {
+          grade: s.grade || '',
+          class_name: s.class_name || '',
+          student_name: s.student_name || '',
+          student_no: s.student_no || '',
+          is_selected: s.is_selected || 0,
+          course_name: ''
+        };
+      });
+      
+      // 如果有选课数据，合并课程信息
+      const selData = await request('GET', '/api/selections');
+      const selections = Array.isArray(selData) ? selData : (selData.selections || []);
+      studentsRoster.forEach(function(s){
+        if (s.is_selected) {
+          const match = selections.find(function(sel){
+            return sel.grade === s.grade && sel.class_name === s.class_name && sel.student_name === s.student_name;
+          });
+          if (match) s.course_name = match.course_name || '';
+        }
+      });
+      
+      const info = document.getElementById('rosterInfo');
+      const infoContent = document.getElementById('rosterInfoContent');
+      if (info && infoContent) {
+        const total = students.length;
+        const unsel = students.filter(function(s){ return !s.is_selected; }).length;
+        const sel = total - unsel;
+        info.style.display = 'block';
+        infoContent.innerHTML = '<strong>当前名单：</strong>共 ' + total + ' 人<br>已选课: ' + sel + ' 人 | 未选课: ' + unsel + ' 人';
+      }
+      
+      renderUnenrollAll();
+    }
+  } catch(e) {
+    console.error('Load students error:', e);
+  }
+}
+
 /* ============ Module 3: Users ============ */
 let usersData = [];
 let userSearchQuery = '';
@@ -4016,6 +5156,9 @@ function initAll(){
   loadCourseNames();
   loadUsers();
   setupUpload();
+  // 初始化未选课学生模块
+  initUnenrollModule();
+  loadStudentsFromServer();
   // 自动加载选课数据
   querySelections();
 }
