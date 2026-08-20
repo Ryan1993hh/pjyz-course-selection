@@ -2664,6 +2664,7 @@ function esc(str) {
 
 // ===== 渲染：信息统计栏 =====
 function renderStats() {
+  if (!statsCard) return;
   const total = students.length;
   const selected = countSelected();
   const unselected = total - selected;
@@ -2699,16 +2700,20 @@ function renderStats() {
   // 绑定年级、班级下拉联动
   const gradeSelect = document.getElementById('gradeSelect');
   const classSelect = document.getElementById('classSelect');
-  gradeSelect.addEventListener('change', e => {
-    gradeName = e.target.value;
-    classNumber = '';
-    syncCourseSlots(); // 按新年级同步各课程名额
-    renderAll();
-  });
-  classSelect.addEventListener('change', e => {
-    classNumber = e.target.value;
-    updateClassName();
-  });
+  if (gradeSelect) {
+    gradeSelect.addEventListener('change', e => {
+      gradeName = e.target.value;
+      classNumber = '';
+      syncCourseSlots(); // 按新年级同步各课程名额
+      renderAll();
+    });
+  }
+  if (classSelect) {
+    classSelect.addEventListener('change', e => {
+      classNumber = e.target.value;
+      updateClassName();
+    });
+  }
 }
 
 // 根据年级生成班级选项：六年级 10 个班，七年级 10 个班
@@ -2744,7 +2749,6 @@ function renderTable() {
         <div style="font-size:18px; font-weight:600; margin-bottom:8px;">暂无课程数据</div>
         <div style="font-size:14px; color:#aaa;">请联系管理员在后台管理系统中上传课程文件</div>
       </div>`;
-    var tableWrap = document.querySelector('.course-table-wrap');
     if (tableWrap) tableWrap.innerHTML = html;
     return;
   }
@@ -2805,10 +2809,12 @@ function renderTable() {
     html += `</td></tr>`;
   });
   html += `</tbody></table>`;
-  tableWrap.innerHTML = html;
-  tableWrap.querySelectorAll('.slot').forEach(slot => {
-    slot.addEventListener('click', onSlotClick);
-  });
+  if (tableWrap) {
+    tableWrap.innerHTML = html;
+    tableWrap.querySelectorAll('.slot').forEach(slot => {
+      slot.addEventListener('click', onSlotClick);
+    });
+  }
 }
 
 // 渲染全部
@@ -2816,7 +2822,7 @@ function renderAll() {
   renderStats();
   renderTable();
   // 导出按钮需要有学生名单才能启用
-  exportBtn.disabled = students.length === 0;
+  if (exportBtn) exportBtn.disabled = students.length === 0;
   // 状态可能发生变化 → 写入持久化（localStorage 写入通常 <1ms，失败有兜底不影响 UI）
   try { saveState(); } catch (e) { console.error('saveState failed in renderAll', e); }
 }
