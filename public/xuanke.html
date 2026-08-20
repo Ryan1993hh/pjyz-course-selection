@@ -754,6 +754,18 @@ tr.no-quota:hover td { opacity: 0.7; }
   background: var(--bg-soft);
   transform: translateY(-1px);
 }
+.slot.empty.locked {
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  background: #f1f5f9;
+  cursor: pointer;
+}
+.slot.empty.locked:hover {
+  border-color: #f59e0b;
+  color: #d97706;
+  background: #fffbeb;
+  transform: none;
+}
 .slot.filled {
   background: linear-gradient(135deg, var(--success) 0%, var(--primary) 100%);
   color: white;
@@ -2712,6 +2724,7 @@ function renderStats() {
     classSelect.addEventListener('change', e => {
       classNumber = e.target.value;
       updateClassName();
+      renderAll();
     });
   }
 }
@@ -2798,11 +2811,14 @@ function renderTable() {
     if (noQuota) {
       html += `<span class="slot disabled">本年级不开放</span>`;
     } else {
+      const needClassSel = !gradeName || !classNumber;
       c.students.forEach((name, idx) => {
         if (name) {
           html += `<span class="slot filled" data-course="${c.id}" data-slot="${idx}" title="点击取消">${esc(name)}</span>`;
         } else {
-          html += `<span class="slot empty" data-course="${c.id}" data-slot="${idx}">+ 点击选择</span>`;
+          const lockedCls = needClassSel ? ' locked' : '';
+          const lockedTitle = needClassSel ? ' title="请先选择班级后再选课"' : '';
+          html += `<span class="slot empty${lockedCls}" data-course="${c.id}" data-slot="${idx}"${lockedTitle}>+ 点击选择</span>`;
         }
       });
     }
@@ -2842,6 +2858,22 @@ function onSlotClick(e) {
     showToast(`已取消 ${currentName} 的 ${course.name}`, 'warning');
     return;
   }
+
+  // 前置条件检查：必须先选择年级和班级
+  const gSel = document.getElementById('gradeSelect');
+  const cSel = document.getElementById('classSelect');
+  const currentGrade = (gSel && gSel.value) ? gSel.value : (gradeName || '');
+  const currentClass = (cSel && cSel.value) ? cSel.value : (classNumber || '');
+  
+  if (!currentGrade || !currentClass) {
+    showToast('请先选择班级', 'error');
+    return;
+  }
+
+  // 同步状态变量
+  if (currentGrade) gradeName = currentGrade;
+  if (currentClass) classNumber = currentClass;
+
   // 空白 → 打开选课面板
   currentSelect = { courseId, slotIndex };
   openModal(course);
@@ -3041,9 +3073,12 @@ async function exportExcel() {
     return;
   }
   
-  // 构建选课数据
   const cls = className.trim() || '未填写班级';
   const grade = gradeName || '';
+  
+  const assignedNames = getAssignedNames();
+  const unselectedList = students.filter(s => !assignedNames.has(s));
+  
   const selections = [];
   COURSES.forEach(c => {
     c.students.forEach(name => {
@@ -3059,12 +3094,17 @@ async function exportExcel() {
     });
   });
   
-  if (selections.length === 0) {
-    showToast('暂无已选课学生，无法导出', 'warning');
+  const unselectedRecords = unselectedList.map(s => ({
+    grade: grade,
+    class_name: cls,
+    student_name: s
+  }));
+  
+  if (selections.length === 0 && unselectedList.length === 0) {
+    showToast('暂无学生数据，无法导出', 'warning');
     return;
   }
   
-  // 验证数据完整性
   const invalidRecords = selections.filter(s => !s.student_name || !s.course_name);
   if (invalidRecords.length > 0) {
     if (!confirm(`检测到 ${invalidRecords.length} 条数据可能不完整，是否继续？`)) {
@@ -3072,7 +3112,6 @@ async function exportExcel() {
     }
   }
   
-  // 显示加载状态
   const btn = document.getElementById('exportBtn');
   if (btn) {
     btn.disabled = true;
@@ -3080,22 +3119,31 @@ async function exportExcel() {
     btn.innerHTML = '<span>⏳</span> 正在保存数据...';
     
     try {
-      // 步骤1: 同步数据到服务器
       showToast('正在保存选课数据到服务器...', 'info');
       
-      // 先清除旧数据
       try {
         await apiRequest('DELETE', '/api/selections');
       } catch(e) {
-        console.warn('清除旧数据（可能为空）:', e.message);
+        console.warn('清除旧选课数据（可能为空）:', e.message);
       }
       
-      // 发送新数据
-      const result = await apiRequest('POST', '/api/selections', selections);
-      const count = result.count || 0;
-      showToast(`数据已保存到服务器（${count} 条）`, 'success');
+      try {
+        await apiRequest('DELETE', '/api/unselected-students');
+      } catch(e) {
+        console.warn('清除旧未选课数据:', e.message);
+      }
       
-      // 步骤2: 生成Excel并下载
+      if (selections.length > 0) {
+        const result = await apiRequest('POST', '/api/selections', selections);
+        const count = result.count || 0;
+        showToast(`已保存 ${count} 条选课数据`, 'success');
+      }
+      
+      if (unselectedRecords.length > 0) {
+        await apiRequest('POST', '/api/unselected-students', unselectedRecords);
+        showToast(`已保存 ${unselectedRecords.length} 条未选课名单`, 'info');
+      }
+      
       const excelData = selections.map(s => ({
         '年级': s.grade,
         '班级': s.class_name,
@@ -3103,17 +3151,34 @@ async function exportExcel() {
         '选课名称': s.course_name
       }));
       
-      const ws = XLSX.utils.json_to_sheet(excelData);
-      ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 24 }];
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, '选课数据');
+      
+      if (excelData.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 24 }];
+        XLSX.utils.book_append_sheet(wb, ws, '选课数据');
+      }
+      
+      if (unselectedRecords.length > 0) {
+        const unselectedData = unselectedRecords.map(s => ({
+          '年级': s.grade,
+          '班级': s.class_name,
+          '姓名': s.student_name,
+          '选课名称': '未选课'
+        }));
+        const ws2 = XLSX.utils.json_to_sheet(unselectedData);
+        ws2['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws2, '未选课名单');
+      }
+      
       const date = new Date();
       const dateStr = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
       const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
       const filename = `浦江一中拓展课选课数据_${safeClass}_${dateStr}.xlsx`;
       XLSX.writeFile(wb, filename);
       
-      showToast(`保存成功！已导出 ${selections.length} 条记录`, 'success');
+      const totalExported = selections.length + unselectedList.length;
+      showToast(`保存成功！已导出 ${totalExported} 条记录（含${unselectedList.length}条未选课）`, 'success');
     } catch(e) {
       console.error('保存失败:', e);
       showToast('保存失败：' + e.message, 'error');

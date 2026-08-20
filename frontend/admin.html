@@ -988,7 +988,7 @@ table.sel-table th:nth-child(3) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(4) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(5) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(6) { border-bottom-color: #94a3b8; }
-/* 用户表 7 列 */
+/* 用户表 10 列 */
 table.usr-table th:nth-child(1) { border-bottom-color: #546E7A; }
 table.usr-table th:nth-child(2) { border-bottom-color: #1976D2; }
 table.usr-table th:nth-child(3) { border-bottom-color: #3949AB; }
@@ -996,6 +996,9 @@ table.usr-table th:nth-child(4) { border-bottom-color: #0288D1; }
 table.usr-table th:nth-child(5) { border-bottom-color: #00838F; }
 table.usr-table th:nth-child(6) { border-bottom-color: #5C6BC0; }
 table.usr-table th:nth-child(7) { border-bottom-color: #455A64; }
+table.usr-table th:nth-child(8) { border-bottom-color: #6A1B9A; }
+table.usr-table th:nth-child(9) { border-bottom-color: #2E7D32; }
+table.usr-table th:nth-child(10){ border-bottom-color: #37474F; }
 
 /* —— 单元格基础 —— */
 td {
@@ -1163,6 +1166,23 @@ table.sel-table td.row-actions .btn-sm + .btn-sm {
   margin-left: 6px;
 }
 
+.btn-add-course {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s ease;
+}
+.btn-add-course:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+.btn-add-course:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+
 /* 斑马纹 */
 table.sel-table tbody tr:nth-child(even) td {
   background-color: #fafbfc;
@@ -1214,13 +1234,29 @@ table.sel-table td.empty {
   background: #fff;
 }
 
-/* 用户表 7 列 */
+/* 未选课学生行 - 淡蓝色阴影效果 */
+table.sel-table tbody tr.unselected-row td {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+  box-shadow: inset 3px 0 0 0 #3b82f6;
+}
+table.sel-table tbody tr.unselected-row:hover td {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+}
+table.sel-table tbody tr.unselected-row td:nth-child(5) .course-link {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}
+
+/* 用户表 10 列 */
 table.usr-table td.seq         { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
 table.usr-table td:nth-child(2){ background-color: var(--col-2); text-align: left; }
 table.usr-table td.pwd-cell    { background-color: var(--col-3); cursor: pointer; text-align: left; letter-spacing: 2px; }
 table.usr-table td:nth-child(4){ background-color: var(--col-4); text-align: left; }
 table.usr-table td:nth-child(5){ background-color: var(--col-5); text-align: center; }
-table.usr-table td:nth-child(6){ background-color: var(--col-8); text-align: center; }
+table.usr-table td:nth-child(6){ background-color: var(--col-6); text-align: left; font-size: 12px; color: #6b7280; }
+table.usr-table td:nth-child(7){ background-color: var(--col-7); text-align: left; font-size: 12px; color: #6b7280; }
+table.usr-table td:nth-child(8){ background-color: var(--col-8); text-align: center; }
+table.usr-table td:nth-child(9){ background-color: var(--col-9); text-align: center; }
 table.usr-table td.row-actions { background-color: var(--col-10); text-align: center; }
 
 table.usr-table tbody tr:hover td.seq         { background-color: var(--col-1-h); }
@@ -1228,7 +1264,10 @@ table.usr-table tbody tr:hover td:nth-child(2){ background-color: var(--col-2-h)
 table.usr-table tbody tr:hover td.pwd-cell    { background-color: var(--col-3-h); }
 table.usr-table tbody tr:hover td:nth-child(4){ background-color: var(--col-4-h); }
 table.usr-table tbody tr:hover td:nth-child(5){ background-color: var(--col-5-h); }
-table.usr-table tbody tr:hover td:nth-child(6){ background-color: var(--col-8-h); }
+table.usr-table tbody tr:hover td:nth-child(6){ background-color: var(--col-6-h); }
+table.usr-table tbody tr:hover td:nth-child(7){ background-color: var(--col-7-h); }
+table.usr-table tbody tr:hover td:nth-child(8){ background-color: var(--col-8-h); }
+table.usr-table tbody tr:hover td:nth-child(9){ background-color: var(--col-9-h); }
 table.usr-table tbody tr:hover td.row-actions { background-color: var(--col-10-h); }
 
 td.editable { cursor: pointer; transition: all 0.15s ease; }
@@ -2082,6 +2121,7 @@ th.sortable.active .sort-icon { opacity: 1; }
               </div>
               <button type="button" class="btn btn-primary btn-block" id="queryBtn">🔍 查询</button>
               <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn">重置筛选</button>
+              <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 未选课学生</button>
             </div>
           </div>
 
@@ -2141,6 +2181,7 @@ th.sortable.active .sort-icon { opacity: 1; }
           <p class="desc">管理教师与管理员账号，支持批量导入用户数据</p>
         </div>
         <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-outline" id="consistencyCheckBtn">🔍 数据校验</button>
           <button type="button" class="btn btn-outline" id="importHistoryBtn">📋 导入历史</button>
           <button type="button" class="btn btn-outline" id="importUserBtn">⬆ 导入用户</button>
           <button type="button" class="btn btn-primary" id="addUserBtn">+ 添加用户</button>
@@ -2149,19 +2190,22 @@ th.sortable.active .sort-icon { opacity: 1; }
 
       <div class="card">
         <div class="user-toolbar">
-          <input type="text" class="form-input search-input" id="userSearchInput" placeholder="🔍 搜索账号、姓名或班级...">
+          <input type="text" class="form-input search-input" id="userSearchInput" placeholder="🔍 搜索账号、姓名、班级、邮箱或手机号...">
           <span class="stat-info" id="userStatInfo"></span>
         </div>
         <div class="table-wrap" style="max-height: none;">
           <table class="usr-table" id="usersTable">
             <thead>
               <tr>
-                <th style="width:60px;" class="sortable" data-sort="index">序号<span class="sort-icon">⇅</span></th>
-                <th style="min-width:120px;" class="sortable" data-sort="username">账号<span class="sort-icon">⇅</span></th>
-                <th style="min-width:100px;">密码</th>
+                <th style="width:50px;" class="sortable" data-sort="index">序号<span class="sort-icon">⇅</span></th>
+                <th style="min-width:110px;" class="sortable" data-sort="username">账号<span class="sort-icon">⇅</span></th>
+                <th style="min-width:120px;">密码</th>
                 <th style="min-width:120px;" class="sortable" data-sort="teacher_name">教师名字<span class="sort-icon">⇅</span></th>
                 <th style="min-width:120px;" class="sortable" data-sort="class_name">班级<span class="sort-icon">⇅</span></th>
-                <th style="width:88px;" class="sortable" data-sort="role">角色<span class="sort-icon">⇅</span></th>
+                <th style="min-width:130px;" class="sortable" data-sort="email">邮箱<span class="sort-icon">⇅</span></th>
+                <th style="min-width:120px;" class="sortable" data-sort="phone">手机号<span class="sort-icon">⇅</span></th>
+                <th style="width:100px;" class="sortable" data-sort="role">角色<span class="sort-icon">⇅</span></th>
+                <th style="width:80px;" class="sortable" data-sort="status">状态<span class="sort-icon">⇅</span></th>
                 <th style="width:148px;">操作</th>
               </tr>
             </thead>
@@ -2699,6 +2743,8 @@ let selectionsPage = 1;
 let selectionsPageSize = 10;
 let selectionsCheckedIds = new Set();
 let coursesForFilter = [];
+let currentViewMode = 'selections'; // 'selections' | 'unselected'
+let unselectedData = [];
 
 let classesData = []; // 班级管理数据
 let teachersList = [];  // 教师列表
@@ -2787,6 +2833,13 @@ async function querySelections(){
   try {
     selectionsPage = 1;
     selectionsCheckedIds.clear();
+    
+    if (currentViewMode === 'unselected') {
+      await queryUnselectedStudents();
+      btn.disabled = false;
+      return;
+    }
+    
     const data = await request('GET', '/api/selections?' + buildQuery());
     selectionsData = Array.isArray(data) ? data : (data.selections || []);
     renderSelections();
@@ -2796,6 +2849,221 @@ async function querySelections(){
   } finally {
     btn.disabled = false;
   }
+}
+
+async function queryUnselectedStudents(){
+  try {
+    selectionsPage = 1;
+    selectionsCheckedIds.clear();
+    const gradeSel = document.getElementById('filterGrade');
+    const classSel = document.getElementById('filterClass');
+    const studentSel = document.getElementById('filterStudent');
+    
+    const params = new URLSearchParams();
+    if (gradeSel && gradeSel.value) params.set('grade', gradeSel.value);
+    if (classSel && classSel.value) params.set('class', classSel.value);
+    if (studentSel && studentSel.value) params.set('student_name', studentSel.value);
+    
+    const data = await request('GET', '/api/unselected-students?' + params.toString());
+    unselectedData = Array.isArray(data) ? data : (data.unselected || []);
+    renderUnselectedStudents();
+    toast('查询完成，共 ' + unselectedData.length + ' 名未选课学生', 'success');
+  } catch(e){
+    toast('查询失败：' + e.message, 'error');
+  }
+}
+
+function renderUnselectedStudents(){
+  const tbody = document.getElementById('selectionsBody');
+  const dataCountEl = document.getElementById('dataCount');
+  const statTotal = document.getElementById('statTotal');
+  const statCourseCount = document.getElementById('statCourseCount');
+  
+  if (dataCountEl) dataCountEl.textContent = '共 ' + unselectedData.length + ' 名未选课学生';
+  if (statTotal) statTotal.textContent = unselectedData.length;
+  if (statCourseCount) statCourseCount.textContent = 0;
+  
+  tbody.innerHTML = '';
+  if (!unselectedData.length){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无未选课学生数据</td></tr>';
+    renderSelectionsPagination();
+    updateBatchDeleteBtn();
+    return;
+  }
+  
+  const total = unselectedData.length;
+  const totalPages = Math.max(1, Math.ceil(total / selectionsPageSize));
+  if (selectionsPage > totalPages) selectionsPage = totalPages;
+  const start = (selectionsPage - 1) * selectionsPageSize;
+  const end = Math.min(start + selectionsPageSize, total);
+  const pageData = unselectedData.slice(start, end);
+  
+  pageData.forEach(function(s, idx){
+    const globalIdx = start + idx;
+    const tr = document.createElement('tr');
+    tr.className = 'unselected-row';
+    
+    const checkboxHtml = '<input type="checkbox" class="sel-checkbox" data-id="' + s.id + '">';
+    
+    let classDisplayName = (s.class_name || '').replace(/[()（）]/g, '');
+    if (s.grade && classDisplayName.indexOf(s.grade) !== 0) {
+      classDisplayName = s.grade + classDisplayName;
+    }
+    
+    tr.innerHTML =
+      '<td>' + checkboxHtml + '</td>' +
+      '<td class="seq">' + (globalIdx + 1) + '</td>' +
+      '<td>' + escapeHtml(classDisplayName) + '</td>' +
+      '<td>' + escapeHtml(s.student_name || '') + '</td>' +
+      '<td><span class="course-link" style="background:rgba(59,130,246,0.15);color:#2563eb;">未选课</span></td>' +
+      '<td class="row-actions">' +
+        '<button class="btn-add-course btn-sm" title="添加课程">📚 添加课程</button>' +
+      '</td>';
+    
+    const checkbox = tr.querySelector('.sel-checkbox');
+    if (checkbox) {
+      checkbox.addEventListener('change', function(){
+        const id = String(this.dataset.id);
+        if (this.checked) selectionsCheckedIds.add(id);
+        else selectionsCheckedIds.delete(id);
+        updateBatchDeleteBtn();
+        updateSelectAllState();
+      });
+    }
+    
+    const addBtn = tr.querySelector('.btn-add-course');
+    if (addBtn) {
+      addBtn.addEventListener('click', function(){
+        openAddCourseToStudent(s);
+      });
+    }
+    
+    tbody.appendChild(tr);
+  });
+  
+  renderSelectionsPagination();
+  updateBatchDeleteBtn();
+  updateSelectAllState();
+}
+
+let addCourseStudentId = null;
+
+function openAddCourseToStudent(s){
+  addCourseStudentId = s.id;
+  const grade = s.grade || '';
+  const className = s.class_name || '';
+  const studentName = s.student_name || '';
+  
+  if (!coursesData.length && !coursesForFilter.length) {
+    toast('课程数据尚未加载，请先在课程管理页面添加课程', 'warning');
+    return;
+  }
+  
+  const courseOptions = coursesForFilter.length ? coursesForFilter : coursesData;
+  
+  if (!courseOptions.length) {
+    toast('当前没有可选课程，请先添加课程', 'warning');
+    return;
+  }
+  
+  let courseHtml = '';
+  courseOptions.forEach(function(c){
+    const name = c.name || c.course_name || '';
+    if (!name) return;
+    courseHtml += '<option value="' + escapeAttr(name) + '" data-id="' + escapeAttr(c.id != null ? c.id : '') + '">' + escapeHtml(name) + '</option>';
+  });
+  
+  if (!courseHtml) {
+    toast('没有有效课程可选择', 'warning');
+    return;
+  }
+  
+  const classDisplay = className.replace(/[()（）]/g, '');
+  const fullClassDisplay = grade && classDisplay.indexOf(grade) !== 0 ? grade + classDisplay : classDisplay;
+  
+  openModal(
+    '<h3 style="display:none;">添加课程</h3>' +
+    '<div style="padding:8px 0 12px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">' +
+        '<div style="background:rgba(59,130,246,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">年级</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(grade || '—') + '</div></div>' +
+        '<div style="background:rgba(16,185,129,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">班级</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(fullClassDisplay || '—') + '</div></div>' +
+        '<div style="background:rgba(245,158,11,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">姓名</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(studentName) + '</div></div>' +
+      '</div>' +
+      '<div class="form-group"><label>选择课程 <span style="color:#ef4444;">*</span></label><select class="form-select" id="addCourseSelect">' + courseHtml + '</select></div>' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+      '<button class="btn btn-success" id="confirmAddCourseBtn">确认添加</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '为学生添加课程';
+  
+  const confirmBtn = document.getElementById('confirmAddCourseBtn');
+  confirmBtn.onclick = async function(){
+    const selectEl = document.getElementById('addCourseSelect');
+    const course_name = selectEl.value;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const course_id = opt ? opt.getAttribute('data-id') : '';
+    
+    if (!course_name) { toast('请选择课程', 'error'); return; }
+    if (!course_id) { toast('所选课程无效，请重新选择', 'error'); return; }
+    
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '添加中...';
+    
+    try {
+      await request('POST', '/api/selections', {
+        grade: grade,
+        class_name: className,
+        student_name: studentName,
+        course_id: parseInt(course_id, 10) || 0,
+        course_name: course_name
+      });
+      
+      if (addCourseStudentId != null) {
+        try {
+          await request('DELETE', '/api/unselected-students/' + addCourseStudentId);
+        } catch(e) {
+          console.warn('删除未选课记录失败（已添加选课）:', e.message);
+        }
+      }
+      
+      toast('添加课程成功！', 'success');
+      closeModal();
+      
+      await queryUnselectedStudents();
+      if (currentViewMode !== 'unselected') {
+        await querySelections();
+      }
+    } catch(e) {
+      toast('添加课程失败：' + e.message, 'error');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '确认添加';
+    }
+  };
+}
+
+function switchToUnselectedView(){
+  currentViewMode = 'unselected';
+  const btn = document.getElementById('unselectedBtn');
+  if (btn) {
+    btn.classList.add('btn-primary');
+    btn.classList.remove('btn-outline');
+  }
+  const queryBtn = document.getElementById('queryBtn');
+  if (queryBtn) queryBtn.textContent = '🔍 查询未选课';
+  queryUnselectedStudents();
+}
+
+function switchToSelectionsView(){
+  currentViewMode = 'selections';
+  const btn = document.getElementById('unselectedBtn');
+  if (btn) {
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-outline');
+  }
+  const queryBtn = document.getElementById('queryBtn');
+  if (queryBtn) queryBtn.textContent = '🔍 查询';
 }
 
 function renderSelections(){
@@ -2898,14 +3166,14 @@ function renderSelectionsPagination(){
   const pagEl = document.getElementById('selectionsPagination');
   if (!pagEl) return;
   
-  const total = selectionsData.length;
+  const currentData = currentViewMode === 'unselected' ? unselectedData : selectionsData;
+  const total = currentData.length;
   const totalPages = Math.max(1, Math.ceil(total / selectionsPageSize));
   if (selectionsPage > totalPages) selectionsPage = totalPages;
   
   let html = '<span class="page-info">第 ' + selectionsPage + ' / ' + totalPages + ' 页</span>';
   html += '<button class="page-btn" id="selPrevPage"' + (selectionsPage <= 1 ? ' disabled' : '') + '>上一页</button>';
   
-  // Page numbers
   const maxShow = 5;
   let startPage = Math.max(1, selectionsPage - Math.floor(maxShow / 2));
   let endPage = Math.min(totalPages, startPage + maxShow - 1);
@@ -2924,26 +3192,28 @@ function renderSelectionsPagination(){
   
   pagEl.innerHTML = html;
   
-  // Bind events
+  const renderFn = currentViewMode === 'unselected' ? renderUnselectedStudents : renderSelections;
+  
   const prevBtn = document.getElementById('selPrevPage');
   if (prevBtn) prevBtn.addEventListener('click', function(){
-    if (selectionsPage > 1) { selectionsPage--; renderSelections(); }
+    if (selectionsPage > 1) { selectionsPage--; renderFn(); }
   });
   const nextBtn = document.getElementById('selNextPage');
   if (nextBtn) nextBtn.addEventListener('click', function(){
-    if (selectionsPage < totalPages) { selectionsPage++; renderSelections(); }
+    if (selectionsPage < totalPages) { selectionsPage++; renderFn(); }
   });
   pagEl.querySelectorAll('.page-btn[data-page]').forEach(function(btn){
     btn.addEventListener('click', function(){
       selectionsPage = parseInt(this.dataset.page);
-      renderSelections();
+      renderFn();
     });
   });
   const sizeSel = document.getElementById('selPageSize');
   if (sizeSel) sizeSel.addEventListener('change', function(){
     selectionsPageSize = parseInt(this.value);
     selectionsPage = 1;
-    renderSelections();
+    const rFn = currentViewMode === 'unselected' ? renderUnselectedStudents : renderSelections;
+    rFn();
   });
 }
 
@@ -2975,6 +3245,7 @@ function resetFilterSelections(){
   document.getElementById('filterStudent').value = '';
   selectionsPage = 1;
   selectionsCheckedIds.clear();
+  switchToSelectionsView();
   querySelections();
 }
 
@@ -2993,6 +3264,22 @@ async function deleteSelection(id){
 async function batchDeleteSelections(){
   const ids = Array.from(selectionsCheckedIds);
   if (!ids.length) { toast('请先选择要删除的记录', 'warning'); return; }
+  
+  if (currentViewMode === 'unselected') {
+    if (!confirm('确定要删除选中的 ' + ids.length + ' 条未选课记录吗？')) return;
+    try {
+      for (const id of ids) {
+        await request('DELETE', '/api/unselected-students/' + id);
+      }
+      toast('批量删除成功', 'success');
+      selectionsCheckedIds.clear();
+      queryUnselectedStudents();
+    } catch(e){
+      toast('批量删除失败：' + e.message, 'error');
+    }
+    return;
+  }
+  
   if (!confirm('确定要删除选中的 ' + ids.length + ' 条选课记录吗？')) return;
   try {
     await request('POST', '/api/selections/batch-delete', { ids: ids });
@@ -3053,15 +3340,49 @@ async function exportSelections(){
   const btn = document.getElementById('exportBtn');
   btn.disabled = true;
   try {
-    const blob = await request('GET', '/api/selections/export?' + buildQuery());
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '选课数据导出.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    let url;
+    if (currentViewMode === 'unselected') {
+      const params = new URLSearchParams();
+      const gradeSel = document.getElementById('filterGrade');
+      const classSel = document.getElementById('filterClass');
+      const studentSel = document.getElementById('filterStudent');
+      if (gradeSel && gradeSel.value) params.set('grade', gradeSel.value);
+      if (classSel && classSel.value) params.set('class', classSel.value);
+      if (studentSel && studentSel.value) params.set('student_name', studentSel.value);
+      const data = await request('GET', '/api/unselected-students?' + params.toString());
+      const list = data.unselected || [];
+      const exportData = list.map(function(s){
+        let cls = (s.class_name || '').replace(/[()（）]/g, '');
+        if (s.grade && cls.indexOf(s.grade) !== 0) cls = s.grade + cls;
+        return { '年级': s.grade || '', '班级': cls, '姓名': s.student_name || '', '选课名称': '未选课' };
+      });
+      const XLSX = window.XLSX;
+      if (!XLSX) throw new Error('Excel库未加载');
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '未选课名单');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '未选课名单导出.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    } else {
+      const blob = await request('GET', '/api/selections/export?' + buildQuery());
+      url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '选课数据导出.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    }
     toast('导出成功', 'success');
   } catch(e){
     toast('导出失败：' + e.message, 'error');
@@ -3079,6 +3400,7 @@ async function exportSelections(){
   safeBind('exportBtn', 'click', exportSelections);
   safeBind('resetFilterBtn', 'click', resetFilterSelections);
   safeBind('batchDeleteBtn', 'click', batchDeleteSelections);
+  safeBind('unselectedBtn', 'click', switchToUnselectedView);
   var selAll = document.getElementById('selectAll');
   if (selAll) selAll.addEventListener('change', function(){
     var checked = this.checked;
@@ -3271,10 +3593,28 @@ async function loadUsers(){
   }
 }
 
-function roleLabel(r){
-  if (r === 'admin') return '<span class="role-badge admin">管理员</span>';
-  if (r === 'teacher') return '<span class="role-badge teacher">教师</span>';
+function roleLabel(r, asBadge){
+  if (r === 'admin') return asBadge ? '<span class="role-badge admin">管理员</span>' : '管理员';
+  if (r === 'teacher') return asBadge ? '<span class="role-badge teacher">教师</span>' : '教师';
   return escapeHtml(r || '');
+}
+
+async function toggleUserStatus(u){
+  const newStatus = u.status === 'active' ? 'disabled' : 'active';
+  const action = newStatus === 'disabled' ? '禁用' : '启用';
+  if (!window.confirm('确定要' + action + '用户 ' + u.username + ' 吗？')) return;
+  try {
+    const data = await request('PUT', '/api/users/' + u.id + '/status', { status: newStatus });
+    if (data.success) {
+      u.status = newStatus;
+      toast('操作成功', 'success');
+      renderUsers();
+    } else {
+      toast(data.error || '操作失败', 'error');
+    }
+  } catch(e) {
+    toast('操作失败：' + e.message, 'error');
+  }
 }
 
 function getFilteredSortedUsers(){
@@ -3284,21 +3624,27 @@ function getFilteredSortedUsers(){
     list = list.filter(function(u){
       return (u.username || '').toLowerCase().indexOf(q) > -1 ||
              (u.teacher_name || '').toLowerCase().indexOf(q) > -1 ||
-             (u.class_name || '').toLowerCase().indexOf(q) > -1;
+             (u.class_name || '').toLowerCase().indexOf(q) > -1 ||
+             (u.email || '').toLowerCase().indexOf(q) > -1 ||
+             (u.phone || '').toLowerCase().indexOf(q) > -1;
     });
   }
   list.sort(function(a, b){
     const roleOrder = { 'admin': 0, 'teacher': 1 };
-    const ra = roleOrder[a.role] !== undefined ? roleOrder[a.role] : 9;
-    const rb = roleOrder[b.role] !== undefined ? roleOrder[b.role] : 9;
+    const aPrimary = (a.roles && a.roles.length > 0) ? a.roles[0] : (a.role || '');
+    const bPrimary = (b.roles && b.roles.length > 0) ? b.roles[0] : (b.role || '');
+    const ra = roleOrder[aPrimary] !== undefined ? roleOrder[aPrimary] : 9;
+    const rb = roleOrder[bPrimary] !== undefined ? roleOrder[bPrimary] : 9;
     if (ra !== rb) return ra - rb;
     if (userSortField){
       let va = a[userSortField] || '';
       let vb = b[userSortField] || '';
       if (userSortField === 'role'){
         const ro = { 'admin': 0, 'teacher': 1 };
-        va = ro[va] !== undefined ? ro[va] : 9;
-        vb = ro[vb] !== undefined ? ro[vb] : 9;
+        const vaRole = (a.roles && a.roles.length > 0) ? a.roles[0] : (a.role || '');
+        const vbRole = (b.roles && b.roles.length > 0) ? b.roles[0] : (b.role || '');
+        va = ro[vaRole] !== undefined ? ro[vaRole] : 9;
+        vb = ro[vbRole] !== undefined ? ro[vbRole] : 9;
       }
       if (va < vb) return userSortOrder === 'asc' ? -1 : 1;
       if (va > vb) return userSortOrder === 'asc' ? 1 : -1;
@@ -3328,7 +3674,7 @@ function renderUsers(){
     '，当前第 ' + userCurrentPage + '/' + totalPages + ' 页';
 
   if (!pageList.length){
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">' +
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">' +
       (userSearchQuery ? '未找到匹配的用户' : '暂无用户') + '</td></tr>';
     renderPagination(totalPages);
     return;
@@ -3337,13 +3683,23 @@ function renderUsers(){
   pageList.forEach(function(u, idx){
     const displayIdx = start + idx + 1;
     const tr = document.createElement('tr');
+    const statusBadge = u.status === 'locked' ? '<span style="color:#dc2626;font-weight:600;">🔒 锁定</span>' :
+                        u.status === 'disabled' ? '<span style="color:#f59e0b;font-weight:600;">🚫 禁用</span>' :
+                        '<span style="color:#10b981;font-weight:600;">✓ 正常</span>';
+    const rolesDisplay = (u.roles && u.roles.length > 0) ?
+      u.roles.map(function(r){ return roleLabel(r, true); }).join(' ') :
+      roleLabel(u.role, true);
+    
     tr.innerHTML =
       '<td class="seq">' + displayIdx + '</td>' +
       '<td>' + escapeHtml(u.username || '') + '</td>' +
       '<td class="pwd-cell" data-shown="0">******</td>' +
       '<td>' + escapeHtml(u.teacher_name || '') + '</td>' +
       '<td>' + escapeHtml(u.class_name || '') + '</td>' +
-      '<td>' + roleLabel(u.role) + '</td>' +
+      '<td style="font-size:12px;color:#6b7280;">' + escapeHtml(u.email || '') + '</td>' +
+      '<td style="font-size:12px;color:#6b7280;">' + escapeHtml(u.phone || '') + '</td>' +
+      '<td>' + rolesDisplay + '</td>' +
+      '<td>' + statusBadge + '</td>' +
       '<td class="row-actions"></td>';
 
     const pwdCell = tr.querySelector('.pwd-cell');
@@ -3352,7 +3708,7 @@ function renderUsers(){
         pwdCell.textContent = '******';
         pwdCell.dataset.shown = '0';
       } else {
-        pwdCell.textContent = u.password || '';
+        pwdCell.textContent = u.password || '已加密';
         pwdCell.dataset.shown = '1';
       }
     });
@@ -3366,8 +3722,14 @@ function renderUsers(){
     delBtn.className = 'btn btn-danger btn-sm';
     delBtn.textContent = '删除';
     delBtn.addEventListener('click', function(){ deleteUser(u); });
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn btn-sm ' + (u.status === 'active' ? 'btn-warning' : 'btn-success');
+    toggleBtn.textContent = u.status === 'active' ? '禁用' : '启用';
+    toggleBtn.title = u.status === 'active' ? '禁用该用户' : '启用该用户';
+    toggleBtn.addEventListener('click', function(){ toggleUserStatus(u); });
     actions.appendChild(editBtn);
     actions.appendChild(delBtn);
+    actions.appendChild(toggleBtn);
 
     tbody.appendChild(tr);
   });
@@ -3479,7 +3841,14 @@ function openAddUser(){
     '<div class="form-group"><label>密码</label><input type="text" class="form-input" id="uPassword" autocomplete="off" placeholder="请输入登录密码"></div>' +
     '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" autocomplete="off" placeholder="请输入教师姓名"></div>' +
     '<div class="form-group"><label>班级</label><select class="form-select" id="uClassName">' + classOptions.join('') + '</select></div>' +
-    '<div class="form-group"><label>角色</label><select class="form-select" id="uRole"><option value="admin">管理员</option><option value="teacher" selected>教师</option></select></div>' +
+    '<div class="form-group"><label>邮箱</label><input type="text" class="form-input" id="uEmail" autocomplete="off" placeholder="选填"></div>' +
+    '<div class="form-group"><label>手机号</label><input type="text" class="form-input" id="uPhone" autocomplete="off" placeholder="选填"></div>' +
+    '<div class="form-group"><label>角色（可多选）</label>' +
+      '<div style="display:flex;gap:16px;margin-top:6px;">' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"> 管理员</label>' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleTeacher" value="teacher" checked> 教师</label>' +
+      '</div>' +
+    '</div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
       '<button class="btn btn-success" id="saveAddUser">添加用户</button>' +
@@ -3492,11 +3861,16 @@ function openAddUser(){
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
     const className = document.getElementById('uClassName').value;
-    const role = document.getElementById('uRole').value;
+    const email = document.getElementById('uEmail').value.trim();
+    const phone = document.getElementById('uPhone').value.trim();
+    const roles = [];
+    if (document.getElementById('uRoleAdmin').checked) roles.push('admin');
+    if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
+    if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
     if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
     saveBtn.disabled = true;
     try {
-      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, class_name: className, role: role });
+      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, class_name: className, roles: roles, email: email, phone: phone });
       if (data.success){
         toast('添加成功', 'success');
         closeModal();
@@ -3531,16 +3905,24 @@ function openEditUser(u){
     }
   });
 
+  const userRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role].filter(Boolean);
+  const isAdmin = userRoles.indexOf('admin') > -1;
+  const isTeacher = userRoles.indexOf('teacher') > -1;
+
   openModal(
     '<h3 style="display:none;">编辑用户</h3>' +
     '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" value="' + escapeAttr(u.username || '') + '"></div>' +
     '<div class="form-group"><label>密码（留空不修改）</label><input type="text" class="form-input" id="uPassword" placeholder="留空则不修改密码"></div>' +
     '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" value="' + escapeAttr(u.teacher_name || '') + '"></div>' +
     '<div class="form-group"><label>班级</label><select class="form-select" id="uClassName">' + classOptions.join('') + '</select></div>' +
-    '<div class="form-group"><label>角色</label><select class="form-select" id="uRole">' +
-      '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>管理员</option>' +
-      '<option value="teacher"' + (u.role === 'teacher' ? ' selected' : '') + '>教师</option>' +
-    '</select></div>' +
+    '<div class="form-group"><label>邮箱</label><input type="text" class="form-input" id="uEmail" value="' + escapeAttr(u.email || '') + '"></div>' +
+    '<div class="form-group"><label>手机号</label><input type="text" class="form-input" id="uPhone" value="' + escapeAttr(u.phone || '') + '"></div>' +
+    '<div class="form-group"><label>角色（可多选）</label>' +
+      '<div style="display:flex;gap:16px;margin-top:6px;">' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"' + (isAdmin ? ' checked' : '') + '> 管理员</label>' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleTeacher" value="teacher"' + (isTeacher ? ' checked' : '') + '> 教师</label>' +
+      '</div>' +
+    '</div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
       '<button class="btn btn-success" id="saveEditUser">保存修改</button>' +
@@ -3553,16 +3935,20 @@ function openEditUser(u){
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
     const className = document.getElementById('uClassName').value;
-    const role = document.getElementById('uRole').value;
+    const email = document.getElementById('uEmail').value.trim();
+    const phone = document.getElementById('uPhone').value.trim();
+    const roles = [];
+    if (document.getElementById('uRoleAdmin').checked) roles.push('admin');
+    if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
+    if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
     if (!username){ toast('请填写账号', 'error'); return; }
     saveBtn.disabled = true;
     try {
-      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, class_name: className, role: role });
+      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, class_name: className, roles: roles, email: email, phone: phone });
       if (data.success){
         toast('保存成功', 'success');
         closeModal();
         loadUsers();
-        loadTeachersList();
       } else {
         toast(data.error || '保存失败', 'error');
       }
@@ -3589,6 +3975,73 @@ async function deleteUser(u){
   }
 }
 
+async function runConsistencyCheck(){
+  const btn = document.getElementById('consistencyCheckBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ 校验中...';
+  try {
+    const data = await request('GET', '/api/users/consistency-check');
+    const { status, summary, issues, warnings } = data;
+    
+    let resultHtml = '';
+    if (status === 'ok') {
+      resultHtml = '<div style="color:#10b981;font-weight:600;margin-bottom:8px;">✓ 数据一致性检查通过！</div>' +
+                   '<div>检查时间：' + new Date(data.timestamp).toLocaleString('zh-CN') + '</div>';
+    } else {
+      resultHtml = '<div style="color:#ef4444;font-weight:600;margin-bottom:8px;">⚠ 发现数据问题：</div>';
+      if (summary.issues > 0) {
+        resultHtml += '<div style="color:#dc2626;margin-bottom:8px;">问题（' + summary.issues + '）：</div>';
+        issues.slice(0, 10).forEach(function(i){
+          resultHtml += '<div style="font-size:13px;margin-bottom:4px;">• [' + i.type + '] 用户 ' + i.username + ': ' + i.message + '</div>';
+        });
+        if (summary.issues > 10) resultHtml += '<div style="font-size:12px;color:#6b7280;">...还有 ' + (summary.issues - 10) + ' 个问题</div>';
+      }
+      if (summary.warnings > 0) {
+        resultHtml += '<div style="color:#f59e0b;margin-top:8px;margin-bottom:4px;">警告（' + summary.warnings + '）：</div>';
+        warnings.slice(0, 5).forEach(function(w){
+          resultHtml += '<div style="font-size:13px;margin-bottom:4px;">• ' + w.message + '</div>';
+        });
+      }
+      resultHtml += '<div style="margin-top:12px;">' +
+        '<button class="btn btn-sm btn-primary" id="fixLegacyBtn">🔧 修复旧密码格式</button>' +
+      '</div>';
+    }
+    
+    openModal(
+      '<h3 style="display:none;">数据校验结果</h3>' +
+      '<div style="padding:10px 0;">' + resultHtml + '</div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn btn-secondary" onclick="closeModal()">关闭</button>' +
+      '</div>'
+    );
+    document.getElementById('modalTitle').textContent = '数据一致性校验';
+    
+    const fixBtn = document.getElementById('fixLegacyBtn');
+    if (fixBtn) {
+      fixBtn.onclick = async function(){
+        fixBtn.disabled = true;
+        fixBtn.textContent = '⏳ 修复中...';
+        try {
+          const fixData = await request('POST', '/api/users/fix-legacy-passwords', { default_password: '123456' });
+          if (fixData.success) {
+            toast('已修复 ' + fixData.fixed + ' 个用户的密码格式', 'success');
+            closeModal();
+            runConsistencyCheck();
+          }
+        } catch(e) {
+          toast('修复失败：' + e.message, 'error');
+        }
+      };
+    }
+  } catch(e) {
+    toast('校验失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 /* ============ 用户导入：文件上传 ============ */
 
 let importPreviewData = [];
@@ -3599,6 +4052,7 @@ let importPreviewData = [];
     if (el) el.addEventListener(event, handler);
   }
   safeBind('addUserBtn', 'click', openAddUser);
+  safeBind('consistencyCheckBtn', 'click', runConsistencyCheck);
   safeBind('importUserBtn', 'click', openImportUsers);
   safeBind('importHistoryBtn', 'click', openImportHistory);
 })();

@@ -5,7 +5,7 @@
 
 // ---- 默认用户数据（首次部署时初始化） ----
 const DEFAULT_USERS = [
-  { username: 'admin', password: '123456', role: 'admin', teacher_name: '', class_name: '' }
+  { username: 'admin', password: '123456', roles: ['admin'], teacher_name: '', class_name: '', email: '', phone: '' }
 ];
 
 // ---- 数据库初始化 SQL ----
@@ -13,11 +13,26 @@ const INIT_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'teacher',
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL DEFAULT '',
+    roles TEXT NOT NULL DEFAULT 'teacher',
     teacher_name TEXT DEFAULT '',
-    class_name TEXT DEFAULT ''
+    class_name TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
   )`,
+  `CREATE TABLE IF NOT EXISTS user_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, role)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role)`,
   `CREATE TABLE IF NOT EXISTS courses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category TEXT DEFAULT '体育健康类',
@@ -59,8 +74,44 @@ const INIT_STATEMENTS = [
     total_count INTEGER DEFAULT 0,
     details TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE TABLE IF NOT EXISTS unselected_students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grade TEXT DEFAULT '',
+    class_name TEXT DEFAULT '',
+    student_name TEXT NOT NULL,
+    saved_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_unselected_grade ON unselected_students(grade)`,
+  `CREATE INDEX IF NOT EXISTS idx_unselected_class ON unselected_students(class_name)`,
+  `CREATE TABLE IF NOT EXISTS data_consistency_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    check_type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'ok',
+    details TEXT DEFAULT '',
+    checked_at TEXT DEFAULT (datetime('now'))
   )`
 ];
+
+// ---- 密码哈希工具 (Web Crypto API - SHA-256 + 随机盐) ----
+async function generateSalt() {
+  const buf = new Uint8Array(16);
+  crypto.getRandomValues(buf);
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPassword(password, salt) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + ':' + salt);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyPassword(password, salt, hash) {
+  const computed = await hashPassword(password, salt);
+  return computed === hash;
+}
 
 // ---- 辅助函数 ----
 function corsHeaders() {
@@ -78,10 +129,11 @@ function json(data, status = 200) {
   });
 }
 
-// ---- Token (Web Crypto API) ----
-async function createToken(userId, role) {
+// ---- Token (Web Crypto API) - 支持多角色 ----
+async function createToken(userId, roles) {
   const expiry = Date.now() + 8 * 60 * 60 * 1000;
-  const payload = `${userId}:${role}:${expiry}`;
+  const rolesStr = Array.isArray(roles) ? roles.join(',') : (roles || '');
+  const payload = `${userId}:${rolesStr}:${expiry}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(payload);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -95,9 +147,10 @@ function verifyToken(token) {
     const parts = token.split('.');
     if (parts.length !== 2) return null;
     const decoded = atob(parts[0]);
-    const [userId, role, expiry] = decoded.split(':');
+    const [userId, rolesStr, expiry] = decoded.split(':');
     if (Date.now() > parseInt(expiry)) return null;
-    return { userId: parseInt(userId), role };
+    const roles = (rolesStr || '').split(',').filter(Boolean);
+    return { userId: parseInt(userId), roles: roles.length ? roles : ['teacher'] };
   } catch (e) { return null; }
 }
 
@@ -110,7 +163,10 @@ function getAuthUser(request) {
 function requireAuth(request, allowedRoles) {
   const user = getAuthUser(request);
   if (!user) return { error: '未登录或Token已过期', status: 401 };
-  if (allowedRoles.length && !allowedRoles.includes(user.role)) return { error: '权限不足', status: 403 };
+  if (allowedRoles && allowedRoles.length > 0) {
+    const hasRole = user.roles.some(r => allowedRoles.includes(r));
+    if (!hasRole) return { error: '权限不足', status: 403 };
+  }
   return { user };
 }
 
@@ -137,13 +193,30 @@ async function handleLogin(db, request) {
     
     const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
     if (!user) return json({ error: '账号不存在' }, 401);
-    if (user.password !== password) return json({ error: '账号或密码错误' }, 401);
     
-    const token = await createToken(user.id, user.role);
+    if (user.status === 'locked') return json({ error: '账号已被锁定，请联系管理员', status: 'locked' }, 403);
+    if (user.status === 'disabled') return json({ error: '账号已被禁用，请联系管理员', status: 'disabled' }, 403);
+    
+    const passwordOk = await verifyPassword(password, user.salt || '', user.password_hash || '');
+    if (!passwordOk) return json({ error: '账号或密码错误' }, 401);
+    
+    const roles = (user.roles || 'teacher').split(',').filter(Boolean);
+    const token = await createToken(user.id, roles);
+    
     return json({
       success: true,
       token,
-      user: { id: user.id, username: user.username, role: user.role, teacher_name: user.teacher_name || '', class_name: user.class_name || '' }
+      user: {
+        id: user.id,
+        username: user.username,
+        roles: roles,
+        role: roles[0] || 'teacher',
+        teacher_name: user.teacher_name || '',
+        class_name: user.class_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        status: user.status || 'active'
+      }
     });
   } catch (e) {
     return json({ error: '请求格式错误' }, 400);
@@ -563,6 +636,56 @@ async function handleClearSelections(db, request) {
   return json({ success: true });
 }
 
+// ---- Unselected Students ----
+async function handleUnselectedStudentsGet(db, request) {
+  const url = new URL(request.url);
+  const grade = url.searchParams.get('grade');
+  const cls = url.searchParams.get('class');
+  const studentName = url.searchParams.get('student_name');
+  
+  let sql = 'SELECT * FROM unselected_students WHERE 1=1';
+  const params = [];
+  
+  if (grade) { sql += ' AND grade = ?'; params.push(grade); }
+  if (cls) { sql += ' AND class_name = ?'; params.push(cls); }
+  if (studentName) { sql += ' AND student_name LIKE ?'; params.push('%' + studentName + '%'); }
+  
+  sql += ' ORDER BY id ASC';
+  const results = await db.prepare(sql).bind(...params).all();
+  return json({ unselected: results.results });
+}
+
+async function handleUnselectedStudentsBatchCreate(db, request) {
+  try {
+    const text = await request.text();
+    const body = JSON.parse(text);
+    const arr = Array.isArray(body) ? body : [body];
+    if (arr.length === 0) return json({ count: 0 });
+    
+    let count = 0;
+    for (const item of arr) {
+      if (!item || !item.student_name) continue;
+      await db.prepare(
+        'INSERT INTO unselected_students (grade, class_name, student_name, saved_at) VALUES (?, ?, ?, ?)'
+      ).bind(
+        (item.grade || ''),
+        (item.class_name || ''),
+        String(item.student_name),
+        new Date().toISOString()
+      ).run();
+      count++;
+    }
+    return json({ count: count });
+  } catch(e) {
+    return json({ error: e.message }, 400);
+  }
+}
+
+async function handleClearUnselectedStudents(db, request) {
+  await db.prepare('DELETE FROM unselected_students').run();
+  return json({ success: true });
+}
+
 // ---- Classes ----
 async function handleClassesGet(db) {
   const results = await db.prepare('SELECT * FROM classes ORDER BY grade, class_name').all();
@@ -634,7 +757,7 @@ async function handleClassDelete(db, request, id) {
 
 // ---- Teachers ----
 async function handleTeachersGet(db) {
-  const results = await db.prepare('SELECT id, username, teacher_name FROM users WHERE role = ?').bind('teacher').all();
+  const results = await db.prepare("SELECT id, username, teacher_name FROM users WHERE roles LIKE ?").bind('%teacher%').all();
   return json(results.results);
 }
 
@@ -654,17 +777,32 @@ async function handleUsersImport(db, request) {
       const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bind(u.username).first();
       if (existing) { failed++; errors.push(`账号 ${u.username} 已存在`); continue; }
       
-      const roleRaw = (u.role || 'teacher').toLowerCase();
-      const role = (roleRaw === 'admin' || roleRaw === 'teacher') ? roleRaw : 'teacher';
+      const rolesRaw = u.roles || u.role || 'teacher';
+      const rolesArr = Array.isArray(rolesRaw) ? rolesRaw : [rolesRaw];
+      const validRoles = rolesArr.filter(r => ['admin', 'teacher'].includes(r));
+      if (validRoles.length === 0) validRoles.push('teacher');
+      const rolesStr = validRoles.join(',');
       
-      await db.prepare(`INSERT INTO users (username, password, role, teacher_name, class_name)
-        VALUES (?, ?, ?, ?, ?)`).bind(
+      const salt = await generateSalt();
+      const passwordHash = await hashPassword(u.password, salt);
+      
+      const result = await db.prepare(`INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, email, phone, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`).bind(
         u.username,
         u.password,
-        role,
+        passwordHash,
+        salt,
+        rolesStr,
         u.teacher_name || '',
-        u.class_name || ''
+        u.class_name || '',
+        u.email || '',
+        u.phone || ''
       ).run();
+      
+      const userId = result.meta.last_row_id;
+      for (const r of validRoles) {
+        await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, r).run();
+      }
       imported++;
     }
 
@@ -711,30 +849,56 @@ async function handleUsersGet(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
   
-  const results = await db.prepare('SELECT * FROM users ORDER BY CASE role WHEN "admin" THEN 0 WHEN "teacher" THEN 1 ELSE 2 END, username').all();
-  return json({ users: results.results });
+  const results = await db.prepare("SELECT * FROM users ORDER BY CASE WHEN roles LIKE '%admin%' THEN 0 WHEN roles LIKE '%teacher%' THEN 1 ELSE 2 END, username").all();
+  const users = results.results.map(u => ({
+    ...u,
+    roles: (u.roles || '').split(',').filter(Boolean),
+    role: (u.roles || 'teacher').split(',')[0] || 'teacher',
+    password: undefined,
+    password_hash: undefined,
+    salt: undefined
+  }));
+  return json({ users });
 }
 
 async function handleUserCreate(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
   const body = await request.json();
-  if (!body.username || !body.password || !body.role) return json({ error: '缺少必填字段' }, 400);
+  if (!body.username || !body.password) return json({ error: '缺少必填字段' }, 400);
   
   const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bind(body.username).first();
   if (existing) return json({ error: '账号已存在' }, 400);
   
-  const result = await db.prepare(`INSERT INTO users (username, password, role, teacher_name, class_name)
-    VALUES (?, ?, ?, ?, ?)`).bind(
+  const rolesRaw = body.roles || body.role || 'teacher';
+  const rolesArr = Array.isArray(rolesRaw) ? rolesRaw : [rolesRaw];
+  const validRoles = rolesArr.filter(r => ['admin', 'teacher'].includes(r));
+  if (validRoles.length === 0) validRoles.push('teacher');
+  const rolesStr = validRoles.join(',');
+  
+  const salt = await generateSalt();
+  const passwordHash = await hashPassword(body.password, salt);
+  
+  const result = await db.prepare(`INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, email, phone, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`).bind(
     body.username,
     body.password,
-    body.role,
+    passwordHash,
+    salt,
+    rolesStr,
     body.teacher_name || '',
-    body.class_name || ''
+    body.class_name || '',
+    body.email || '',
+    body.phone || ''
   ).run();
   
-  const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(result.meta.last_row_id).first();
-  return json({ success: true, user });
+  const userId = result.meta.last_row_id;
+  for (const r of validRoles) {
+    await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, r).run();
+  }
+  
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+  return json({ success: true, user: { ...user, roles: validRoles, role: validRoles[0] } });
 }
 
 async function handleUserUpdate(db, request, id) {
@@ -745,29 +909,49 @@ async function handleUserUpdate(db, request, id) {
   const existing = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   if (!existing) return json({ error: '用户不存在' }, 404);
   
-  // 账号唯一性检查
   if (body.username && body.username !== existing.username) {
     const duplicate = await db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').bind(body.username, id).first();
     if (duplicate) return json({ error: '账号已存在' }, 400);
   }
   
-  // 密码处理：空字符串/undefined/null → 不修改
-  let password = existing.password;
+  let passwordHash = existing.password_hash;
+  let salt = existing.salt;
   if (body.password && String(body.password).trim() !== '') {
-    password = body.password;
+    salt = await generateSalt();
+    passwordHash = await hashPassword(body.password, salt);
   }
   
-  await db.prepare(`UPDATE users SET username=?, password=?, role=?, teacher_name=?, class_name=? WHERE id=?`).bind(
+  let rolesStr = existing.roles;
+  if (body.roles || body.role) {
+    const rolesRaw = body.roles || body.role;
+    const rolesArr = Array.isArray(rolesRaw) ? rolesRaw : [rolesRaw];
+    const validRoles = rolesArr.filter(r => ['admin', 'teacher'].includes(r));
+    rolesStr = validRoles.length > 0 ? validRoles.join(',') : existing.roles;
+    
+    await db.prepare('DELETE FROM user_roles WHERE user_id = ?').bind(id).run();
+    for (const r of rolesStr.split(',').filter(Boolean)) {
+      await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(id, r).run();
+    }
+  }
+  
+  const newPlainPassword = (body.password && String(body.password).trim() !== '') ? String(body.password) : null;
+  
+  await db.prepare(`UPDATE users SET username=?, password=?, password_hash=?, salt=?, roles=?, teacher_name=?, class_name=?, email=?, phone=?, status=?, updated_at=datetime('now') WHERE id=?`).bind(
     body.username || existing.username,
-    password,
-    body.role || existing.role,
+    newPlainPassword || (existing.password || ''),
+    passwordHash,
+    salt,
+    rolesStr,
     body.teacher_name !== undefined ? body.teacher_name : existing.teacher_name,
     body.class_name !== undefined ? body.class_name : existing.class_name,
+    body.email !== undefined ? body.email : (existing.email || ''),
+    body.phone !== undefined ? body.phone : (existing.phone || ''),
+    body.status || existing.status || 'active',
     id
   ).run();
   
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
-  return json({ success: true, user });
+  return json({ success: true, user: { ...user, roles: (rolesStr || '').split(',').filter(Boolean), role: (rolesStr || 'teacher').split(',')[0] } });
 }
 
 async function handleUserDelete(db, request, id) {
@@ -777,8 +961,109 @@ async function handleUserDelete(db, request, id) {
   const existing = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   if (!existing) return json({ error: '用户不存在' }, 404);
   
+  await db.prepare('DELETE FROM user_roles WHERE user_id = ?').bind(id).run();
   await db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
   return json({ success: true });
+}
+
+// ---- User Status Toggle ----
+async function handleUserStatusUpdate(db, request, id) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const body = await request.json();
+  const existing = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
+  if (!existing) return json({ error: '用户不存在' }, 404);
+  
+  const newStatus = body.status || 'active';
+  if (!['active', 'disabled', 'locked'].includes(newStatus)) {
+    return json({ error: '无效的状态值' }, 400);
+  }
+  
+  await db.prepare("UPDATE users SET status=?, updated_at=datetime('now') WHERE id=?").bind(newStatus, id).run();
+  return json({ success: true, status: newStatus });
+}
+
+// ---- Data Consistency Check ----
+async function handleConsistencyCheck(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  
+  const issues = [];
+  const warnings = [];
+  
+  // Check 1: Users with role field but no password_hash (legacy data)
+  const legacyUsers = await db.prepare("SELECT * FROM users WHERE password_hash IS NULL OR password_hash = ''").all();
+  for (const u of legacyUsers.results) {
+    issues.push({ type: 'legacy_password', user_id: u.id, username: u.username, message: '用户使用旧密码格式，需要迁移密码' });
+  }
+  
+  // Check 2: Users without any role
+  const noRoleUsers = await db.prepare("SELECT * FROM users WHERE roles IS NULL OR roles = ''").all();
+  for (const u of noRoleUsers.results) {
+    issues.push({ type: 'no_role', user_id: u.id, username: u.username, message: '用户没有分配任何角色' });
+  }
+  
+  // Check 3: Orphaned user_roles entries
+  const orphanedRoles = await db.prepare(`SELECT ur.* FROM user_roles ur LEFT JOIN users u ON ur.user_id = u.id WHERE u.id IS NULL`).all();
+  for (const r of orphanedRoles.results) {
+    warnings.push({ type: 'orphan_role', id: r.id, message: `孤立的角色记录: user_id=${r.user_id}` });
+  }
+  
+  // Check 4: Duplicate usernames
+  const dupes = await db.prepare(`SELECT username, COUNT(*) as cnt FROM users GROUP BY username HAVING cnt > 1`).all();
+  for (const d of dupes.results) {
+    issues.push({ type: 'duplicate_username', username: d.username, count: d.cnt, message: `用户名重复: ${d.username}` });
+  }
+  
+  // Check 5: Users with role column inconsistent with user_roles table
+  const allUsers = await db.prepare('SELECT * FROM users').all();
+  for (const u of allUsers.results) {
+    const roleCount = await db.prepare('SELECT COUNT(*) as cnt FROM user_roles WHERE user_id = ?').bind(u.id).first();
+    const rolesFromCol = (u.roles || '').split(',').filter(Boolean).length;
+    if (roleCount.cnt !== rolesFromCol) {
+      warnings.push({ type: 'role_mismatch', user_id: u.id, username: u.username, message: `用户角色表与角色字段不一致` });
+    }
+  }
+  
+  const status = issues.length > 0 ? 'error' : (warnings.length > 0 ? 'warning' : 'ok');
+  
+  // Log the check
+  try {
+    await db.prepare(`INSERT INTO data_consistency_logs (check_type, status, details) VALUES (?, ?, ?)`).bind(
+      'user_consistency',
+      status,
+      JSON.stringify({ issues, warnings })
+    ).run();
+  } catch(e) { console.error('Failed to log consistency check:', e.message); }
+  
+  return json({
+    status,
+    summary: { issues: issues.length, warnings: warnings.length },
+    issues,
+    warnings,
+    timestamp: new Date().toISOString()
+  });
+}
+
+// ---- Fix Legacy Passwords ----
+async function handleFixLegacyPasswords(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  
+  const body = await request.json();
+  const defaultPassword = body.default_password || '123456';
+  
+  const legacyUsers = await db.prepare("SELECT * FROM users WHERE password_hash IS NULL OR password_hash = ''").all();
+  let fixed = 0;
+  
+  for (const u of legacyUsers.results) {
+    const salt = await generateSalt();
+    const passwordHash = await hashPassword(u.password || defaultPassword, salt);
+    await db.prepare("UPDATE users SET password_hash=?, salt=?, updated_at=datetime('now') WHERE id=?").bind(passwordHash, salt, u.id).run();
+    fixed++;
+  }
+  
+  return json({ success: true, fixed });
 }
 
 // ---- Stats ----
@@ -814,11 +1099,81 @@ export async function onRequest(context) {
       await db.prepare(sql).run();
     }
     
+    // 数据库结构迁移：确保users表有新字段
+    try {
+      const columnsRes = await db.prepare("PRAGMA table_info(users)").all();
+      const colNames = (columnsRes.results || []).map(c => c.name);
+      const requiredCols = [
+        { name: 'password_hash', def: "TEXT NOT NULL DEFAULT ''" },
+        { name: 'salt', def: "TEXT NOT NULL DEFAULT ''" },
+        { name: 'roles', def: "TEXT NOT NULL DEFAULT 'teacher'" },
+        { name: 'status', def: "TEXT NOT NULL DEFAULT 'active'" },
+        { name: 'email', def: "TEXT DEFAULT ''" },
+        { name: 'phone', def: "TEXT DEFAULT ''" },
+        { name: 'created_at', def: "TEXT DEFAULT ''" },
+        { name: 'updated_at', def: "TEXT DEFAULT ''" },
+        { name: 'password', def: "TEXT DEFAULT ''" }
+      ];
+      for (const col of requiredCols) {
+        if (!colNames.includes(col.name)) {
+          try {
+            await db.prepare(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`).run();
+          } catch(alterErr) {
+            console.warn(`Alter table add ${col.name} skipped:`, alterErr.message);
+          }
+        }
+      }
+      // Handle old password column NOT NULL constraint
+      if (colNames.includes('password')) {
+        try {
+          await db.prepare("UPDATE users SET password='' WHERE password IS NULL OR password = ''").run();
+        } catch(e) {}
+      }
+      // Set created_at for existing rows
+      if (!colNames.includes('created_at')) {
+        try {
+          await db.prepare("UPDATE users SET created_at=datetime('now') WHERE created_at='' OR created_at IS NULL").run();
+        } catch(e) {}
+      }
+    } catch(schemaErr) {
+      console.warn('Schema migration check error:', schemaErr.message);
+    }
+    
     // 检查是否需要初始化默认用户
     const adminCheck = await db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').bind('admin').first();
     if (adminCheck.count === 0) {
-      await db.prepare(`INSERT INTO users (username, password, role, teacher_name, class_name)
-        VALUES (?, ?, ?, ?, ?)`).bind('admin', '123456', 'admin', '', '').run();
+      const salt = await generateSalt();
+      const passwordHash = await hashPassword('123456', salt);
+      const result = await db.prepare(`INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, status)
+        VALUES (?, ?, ?, ?, 'admin', '', '', 'active')`).bind('admin', '123456', passwordHash, salt).run();
+      const userId = result.meta.last_row_id;
+      await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, 'admin').run();
+    }
+    
+    // 迁移旧数据：检查是否有使用旧密码格式的用户
+    try {
+      const legacyCheck = await db.prepare("SELECT COUNT(*) as count FROM users WHERE password_hash IS NULL OR password_hash = ''").first();
+      if (legacyCheck.count > 0) {
+        const legacyUsers = await db.prepare("SELECT * FROM users WHERE password_hash IS NULL OR password_hash = ''").all();
+        for (const u of legacyUsers.results) {
+          const oldPassword = u.password || '123456';
+          const oldRole = u.role || u.roles || 'teacher';
+          const rolesList = String(oldRole).split(',').filter(Boolean);
+          if (rolesList.length === 0) rolesList.push('teacher');
+          const rolesStr = rolesList.join(',');
+          
+          const salt = await generateSalt();
+          const passwordHash = await hashPassword(oldPassword, salt);
+          await db.prepare(`UPDATE users SET password_hash=?, salt=?, roles=?, status='active', updated_at=datetime('now') WHERE id=?`).bind(passwordHash, salt, rolesStr, u.id).run();
+          
+          for (const r of rolesList) {
+            await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(u.id, r).run();
+          }
+        }
+        console.log(`Migrated ${legacyCheck.count} legacy users to new password format`);
+      }
+    } catch(migrateErr) {
+      console.warn('Password migration error:', migrateErr.message);
     }
   } catch(e) {
     console.error('DB init error:', e);
@@ -832,6 +1187,82 @@ export async function onRequest(context) {
   // /api/health
   if (path === '/api/health') {
     return handleHealth(db);
+  }
+  
+  // /api/debug/migrate-passwords (migrate ALL users' passwords from old column)
+  if (path === '/api/debug/migrate-passwords' && method === 'POST') {
+    try {
+      const colsRes = await db.prepare("PRAGMA table_info(users)").all();
+      const colNames = (colsRes.results || []).map(c => c.name);
+      const hasOldPassword = colNames.includes('password');
+      const hasNewHash = colNames.includes('password_hash');
+      
+      if (!hasNewHash) {
+        return json({ error: 'No password_hash column found' }, 500);
+      }
+      
+      // Ensure updated_at column exists
+      if (!colNames.includes('updated_at')) {
+        try {
+          await db.prepare("ALTER TABLE users ADD COLUMN updated_at TEXT DEFAULT ''").run();
+        } catch(e) {}
+      }
+      if (!colNames.includes('created_at')) {
+        try {
+          await db.prepare("ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT ''").run();
+        } catch(e) {}
+      }
+      
+      const allUsers = await db.prepare('SELECT * FROM users').all();
+      const results = [];
+      let migrated = 0;
+      let errors = 0;
+      
+      for (const u of allUsers.results) {
+        try {
+          let plainPassword = null;
+          
+          if (hasOldPassword && u.password && u.password.length > 0) {
+            plainPassword = u.password;
+          } else if (u.password_hash && u.password_hash.length > 0 && u.salt && u.salt.length > 0) {
+            results.push({ id: u.id, username: u.username, status: 'skipped (already migrated)' });
+            continue;
+          } else {
+            plainPassword = '123456';
+          }
+          
+          if (!plainPassword) plainPassword = '123456';
+          
+          const salt = await generateSalt();
+          const passwordHash = await hashPassword(plainPassword, salt);
+          const role = u.roles || u.role || 'teacher';
+          
+          await db.prepare(`UPDATE users SET password_hash=?, salt=?, roles=?, status='active' WHERE id=?`)
+            .bind(passwordHash, salt, role, u.id).run();
+          
+          const roleList = String(role).split(',').filter(Boolean);
+          for (const r of roleList) {
+            await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(u.id, r).run();
+          }
+          
+          results.push({ id: u.id, username: u.username, status: 'migrated', password_was: plainPassword });
+          migrated++;
+        } catch(innerErr) {
+          results.push({ id: u.id, username: u.username, status: 'error', message: innerErr.message });
+          errors++;
+        }
+      }
+      
+      return json({
+        success: true,
+        total: allUsers.results.length,
+        migrated: migrated,
+        errors: errors,
+        results: results
+      });
+    } catch(e) {
+      return json({ error: e.message, stack: e.stack }, 500);
+    }
   }
 
   // /api/login
@@ -864,6 +1295,25 @@ export async function onRequest(context) {
     if (method === 'GET') return handleSelectionsGet(db, request, url);
     if (method === 'POST') return handleSelectionsBatchCreate(db, request);
     if (method === 'DELETE') return handleClearSelections(db, request);
+  }
+
+  // /api/unselected-students
+  if (path === '/api/unselected-students') {
+    if (method === 'GET') return handleUnselectedStudentsGet(db, request);
+    if (method === 'POST') return handleUnselectedStudentsBatchCreate(db, request);
+    if (method === 'DELETE') return handleClearUnselectedStudents(db, request);
+  }
+
+  // /api/unselected-students/:id
+  const unselectedMatch = path.match(/^\/api\/unselected-students\/(\d+)$/);
+  if (unselectedMatch) {
+    const id = parseInt(unselectedMatch[1]);
+    if (method === 'DELETE') {
+      const auth = requireAuth(request, ['admin']);
+      if (auth.error) return json({ error: auth.error }, auth.status);
+      await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
   }
 
   // /api/selections/batch-delete
@@ -921,6 +1371,23 @@ export async function onRequest(context) {
     const id = parseInt(userMatch[1]);
     if (method === 'PUT') return handleUserUpdate(db, request, id);
     if (method === 'DELETE') return handleUserDelete(db, request, id);
+  }
+
+  // /api/users/:id/status
+  const userStatusMatch = path.match(/^\/api\/users\/(\d+)\/status$/);
+  if (userStatusMatch) {
+    const id = parseInt(userStatusMatch[1]);
+    if (method === 'PUT') return handleUserStatusUpdate(db, request, id);
+  }
+
+  // /api/users/consistency-check
+  if (path === '/api/users/consistency-check' && method === 'GET') {
+    return handleConsistencyCheck(db, request);
+  }
+
+  // /api/users/fix-legacy-passwords
+  if (path === '/api/users/fix-legacy-passwords' && method === 'POST') {
+    return handleFixLegacyPasswords(db, request);
   }
 
   // /api/stats
