@@ -1034,11 +1034,28 @@ table.courses-table tbody tr:hover td[data-field="limit_grade6"] { background-co
 table.courses-table tbody tr:hover td[data-field="limit_grade7"] { background-color: var(--col-9-h); }
 table.courses-table tbody tr:hover td.row-actions                { background-color: var(--col-10-h); }
 
-/* 选课表 - 优化样式：移除背景色、加粗重要文本、精确对齐 */
+/* 选课表 - 优化样式：固定列宽、防止溢出、精确对齐 */
 table.sel-table {
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: fixed;
+  width: 100%;
 }
+table.sel-table colgroup col:nth-child(1),
+table.sel-table th:nth-child(1) { width: 40px; }
+table.sel-table colgroup col:nth-child(2),
+table.sel-table th:nth-child(2) { width: 60px; }
+table.sel-table colgroup col:nth-child(3),
+table.sel-table th:nth-child(3) { width: 90px; }
+table.sel-table colgroup col:nth-child(4),
+table.sel-table th:nth-child(4) { width: 110px; }
+table.sel-table colgroup col:nth-child(5),
+table.sel-table th:nth-child(5) { width: 120px; }
+table.sel-table colgroup col:nth-child(6),
+table.sel-table th:nth-child(6) { width: auto; }
+table.sel-table colgroup col:nth-child(7),
+table.sel-table th:nth-child(7) { width: 120px; }
+
 table.sel-table thead th {
   background: #f1f5f9;
   color: #1e293b;
@@ -1055,18 +1072,23 @@ table.sel-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 table.sel-table thead th:last-child {
   border-right: none;
 }
 table.sel-table td {
   background-color: transparent;
-  padding: 10px;
+  padding: 10px 10px;
   vertical-align: middle;
   border-top: 1px solid #e2e8f0;
   border-right: 1px solid #e2e8f0;
   font-size: 13px;
   color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 table.sel-table td.seq {
   background-color: transparent;
@@ -1085,14 +1107,23 @@ table.sel-table td:nth-child(3) {
   text-align: center;
   font-weight: 600;
   color: #334155;
+  white-space: nowrap;
 }
 table.sel-table td:nth-child(4) {
+  background-color: transparent;
+  text-align: center;
+  color: #1e293b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+table.sel-table td:nth-child(5) {
   background-color: transparent;
   text-align: left;
   color: #1e293b;
   font-weight: 500;
+  white-space: nowrap;
 }
-table.sel-table td:nth-child(5) {
+table.sel-table td:nth-child(6) {
   background-color: transparent;
   text-align: left;
   color: #1e293b;
@@ -1102,6 +1133,7 @@ table.sel-table td.row-actions {
   background-color: transparent;
   text-align: center;
   vertical-align: middle;
+  white-space: nowrap;
 }
 table.sel-table td.row-actions .btn-sm {
   display: inline-flex;
@@ -1204,17 +1236,21 @@ td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: 
 /* ===== 课程名称链接（选课表）===== */
 .course-link {
   display: inline-block;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   padding: 3px 8px;
   border-radius: 5px;
   background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 .course-link:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35); filter: brightness(1.06); }
 
@@ -1771,6 +1807,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   .header-title h1 { font-size: 16px; letter-spacing: 2px; }
   .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
   table.sel-table th, table.sel-table td { padding: 7px 5px; font-size: 12px; }
+  table.sel-table th:nth-child(3) { width: 80px; }
+  table.sel-table th:nth-child(4) { width: 95px; }
+  table.sel-table th:nth-child(5) { width: 100px; }
 }
 @media (max-width: 960px) {
   .header { padding: 10px 14px; gap: 10px; }
@@ -1786,6 +1825,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
   table.sel-table th, table.sel-table td { padding: 6px 5px; font-size: 11px; }
   table.sel-table .course-link { font-size: 11px; padding: 2px 4px; }
+  table.sel-table th:nth-child(3) { width: 70px; }
+  table.sel-table th:nth-child(4) { width: 85px; }
+  table.sel-table th:nth-child(5) { width: 90px; }
 }
 @media (max-width: 760px) {
   .header { padding: 8px 12px; }
@@ -1805,6 +1847,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 11px; }
   table.sel-table .course-link { font-size: 10px; padding: 1px 3px; }
   table.sel-table .btn-sm { height: 26px; padding: 0 8px; font-size: 11px; }
+  table.sel-table th:nth-child(3) { width: 60px; }
+  table.sel-table th:nth-child(4) { width: 75px; }
+  table.sel-table th:nth-child(5) { width: 80px; }
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
@@ -1823,6 +1868,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 4px 3px; font-size: 10px; }
   table.sel-table .course-link { font-size: 9px; padding: 1px 2px; }
   table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
+  table.sel-table th:nth-child(3) { width: 55px; }
+  table.sel-table th:nth-child(4) { width: 70px; }
+  table.sel-table th:nth-child(5) { width: 75px; }
 }
 </style>
 </head>
@@ -2754,7 +2802,7 @@ function renderSelections(){
       '<td>' + checkboxHtml + '</td>' +
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
       '<td>' + escapeHtml(s.grade || '') + '</td>' +
-      '<td>' + escapeHtml(s.class_name || '') + '</td>' +
+      '<td>' + escapeHtml((s.class_name || '').replace(/[()（）]/g, '')) + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td></td>' +
       '<td class="row-actions"></td>';
@@ -2786,7 +2834,7 @@ function renderSelections(){
     if (s.class_name) {
       classCell.style.cursor = 'pointer';
       classCell.className = 'course-link';
-      classCell.textContent = (s.grade || '') + (s.class_name || '');
+      classCell.textContent = (s.class_name || '').replace(/[()（）]/g, '');
       classCell.addEventListener('click', function(){
         document.getElementById('filterClass').value = s.class_name || '';
         if (s.grade) document.getElementById('filterGrade').value = s.grade;
