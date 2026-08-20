@@ -854,7 +854,6 @@ async function handleUsersGet(db, request) {
     ...u,
     roles: (u.roles || '').split(',').filter(Boolean),
     role: (u.roles || 'teacher').split(',')[0] || 'teacher',
-    password: undefined,
     password_hash: undefined,
     salt: undefined
   }));

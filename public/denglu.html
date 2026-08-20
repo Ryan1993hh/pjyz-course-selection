@@ -760,13 +760,6 @@
     }
   } catch (_) {}
 
-  /* ---------- 账号配置 ---------- */
-  // 用户账号 → 选课页面；管理员账号 → 管理后台
-  var ACCOUNTS = {
-    '123456': { password: '123456', role: 'user',  redirect: 'xuanke.html' },
-    'admin':  { password: '123456', role: 'admin', redirect: 'admin.html'  }
-  };
-
   /* ---------- 表单提交 ---------- */
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -787,67 +780,48 @@
       return;
     }
 
-    var account = ACCOUNTS[username];
-
-    // 账号校验
-    if (!account) {
-      showMsg('账号不存在，请重新输入', 'error');
-      usernameEl.focus();
-      return;
-    }
-    // 密码校验
-    if (password !== account.password) {
-      showMsg('密码错误，请重新输入', 'error');
-      passwordEl.focus();
-      return;
-    }
-
-    // 管理员账号：通过 API 获取真实 token
-    if (account.role === 'admin') {
-      loginBtn.disabled = true;
-      loginBtn.textContent = '登录中...';
-      try {
-        var res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: username, password: password })
-        });
-        var data = await res.json();
-        if (data.success && data.token) {
-          localStorage.setItem('admin_token', data.token);
-          if (data.user) {
-            localStorage.setItem('pjyz_user', JSON.stringify(data.user));
-          }
-        } else {
-          showMsg(data.error || '登录失败', 'error');
-          loginBtn.disabled = false;
-          loginBtn.textContent = '登 录';
-          return;
-        }
-      } catch (err) {
-        showMsg('登录请求失败：' + err.message, 'error');
-        loginBtn.disabled = false;
-        loginBtn.textContent = '登 录';
-        return;
-      }
-    }
-
-    // 记住账号 & 保存角色
+    // 所有账号统一走 API 验证
+    loginBtn.disabled = true;
+    loginBtn.textContent = '登录中...';
     try {
-      if (rememberEl.checked) {
-        localStorage.setItem('pjyz_login_user', username);
-        localStorage.setItem('pjyz_login_remember', '1');
-      } else {
-        localStorage.removeItem('pjyz_login_user');
-        localStorage.removeItem('pjyz_login_remember');
-      }
-      // 保存当前登录角色和用户名，供后续页面使用
-      localStorage.setItem('pjyz_login_role', account.role);
-      localStorage.setItem('pjyz_current_username', username);
-    } catch (_) {}
+      var res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      var data = await res.json();
+      if (data.success && data.token) {
+        localStorage.setItem('admin_token', data.token);
+        if (data.user) {
+          localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+        }
 
-    // 直接跳转到对应页面（与登录页同目录）
-    window.location.href = account.redirect;
+        // 记住账号 & 保存角色
+        try {
+          if (rememberEl.checked) {
+            localStorage.setItem('pjyz_login_user', username);
+            localStorage.setItem('pjyz_login_remember', '1');
+          } else {
+            localStorage.removeItem('pjyz_login_user');
+            localStorage.removeItem('pjyz_login_remember');
+          }
+          var userRole = (data.user && data.user.role) || ((data.user && data.user.roles && data.user.roles[0]) || 'teacher');
+          localStorage.setItem('pjyz_login_role', userRole);
+          localStorage.setItem('pjyz_current_username', username);
+        } catch (_) {}
+
+        // 根据角色跳转到对应页面
+        var redirectUrl = (userRole === 'admin') ? 'admin.html' : 'xuanke.html';
+        window.location.href = redirectUrl;
+        return;
+      } else {
+        showMsg(data.error || '登录失败', 'error');
+      }
+    } catch (err) {
+      showMsg('登录请求失败：' + err.message, 'error');
+    }
+    loginBtn.disabled = false;
+    loginBtn.textContent = '登 录';
   });
 
   /* ---------- 忘记密码 / 联系管理员 ---------- */
