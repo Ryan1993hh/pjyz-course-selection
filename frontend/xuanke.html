@@ -3118,6 +3118,16 @@ async function exportExcel() {
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span>⏳</span> 正在保存数据...';
     
+    // 获取当前用户信息
+    var currentUserId = null;
+    try {
+      var userStr = localStorage.getItem('pjyz_user');
+      if (userStr) {
+        var userObj = JSON.parse(userStr);
+        currentUserId = userObj.id;
+      }
+    } catch(_) {}
+    
     try {
       showToast('正在保存选课数据到服务器...', 'info');
       
@@ -3127,8 +3137,14 @@ async function exportExcel() {
         console.warn('清除旧选课数据（可能为空）:', e.message);
       }
       
+      // 只删除当前用户的旧未选课数据，保留其他用户数据
       try {
-        await apiRequest('DELETE', '/api/unselected-students');
+        if (currentUserId) {
+          await apiRequest('DELETE', '/api/unselected-students?user_id=' + currentUserId);
+        } else {
+          // 无用户信息时，保留所有数据，避免误删
+          console.warn('无用户信息，跳过清除旧未选课数据');
+        }
       } catch(e) {
         console.warn('清除旧未选课数据:', e.message);
       }

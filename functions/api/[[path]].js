@@ -444,7 +444,7 @@ async function handleSelectionsGet(db, request, url) {
   const params = [];
   
   if (grade) { sql += ' AND grade = ?'; params.push(grade); }
-  if (cls) { sql += ' AND class_name = ?'; params.push(cls); }
+  if (cls) { sql += ' AND class_name LIKE ?'; params.push('%' + cls + '%'); }
   if (course) {
     const courseNum = parseInt(course);
     if (!isNaN(courseNum)) {
@@ -647,7 +647,7 @@ async function handleUnselectedStudentsGet(db, request) {
   const params = [];
   
   if (grade) { sql += ' AND grade = ?'; params.push(grade); }
-  if (cls) { sql += ' AND class_name = ?'; params.push(cls); }
+  if (cls) { sql += ' AND class_name LIKE ?'; params.push('%' + cls + '%'); }
   if (studentName) { sql += ' AND student_name LIKE ?'; params.push('%' + studentName + '%'); }
   
   sql += ' ORDER BY id ASC';
@@ -662,16 +662,38 @@ async function handleUnselectedStudentsBatchCreate(db, request) {
     const arr = Array.isArray(body) ? body : [body];
     if (arr.length === 0) return json({ count: 0 });
     
+    // 获取用户信息（从请求头或body中获取）
+    let userId = null;
+    let username = '';
+    try {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const tokenData = await verifyToken(token);
+        if (tokenData && tokenData.userId) {
+          userId = tokenData.userId;
+          const user = await db.prepare('SELECT username FROM users WHERE id = ?').bind(userId).first();
+          if (user) username = user.username;
+        }
+      }
+    } catch(e) {
+      // 无用户信息时继续保存，user_id 为 null
+    }
+    
+    const uploadedAt = new Date().toISOString();
     let count = 0;
     for (const item of arr) {
       if (!item || !item.student_name) continue;
       await db.prepare(
-        'INSERT INTO unselected_students (grade, class_name, student_name, saved_at) VALUES (?, ?, ?, ?)'
+        'INSERT INTO unselected_students (grade, class_name, student_name, saved_at, user_id, username, user_uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       ).bind(
         (item.grade || ''),
         (item.class_name || ''),
         String(item.student_name),
-        new Date().toISOString()
+        uploadedAt,
+        userId,
+        username,
+        uploadedAt
       ).run();
       count++;
     }
@@ -682,7 +704,16 @@ async function handleUnselectedStudentsBatchCreate(db, request) {
 }
 
 async function handleClearUnselectedStudents(db, request) {
-  await db.prepare('DELETE FROM unselected_students').run();
+  // 支持按用户删除
+  const url = new URL(request.url);
+  const userIdStr = url.searchParams.get('user_id');
+  
+  if (userIdStr) {
+    const userId = parseInt(userIdStr);
+    await db.prepare('DELETE FROM unselected_students WHERE user_id = ?').bind(userId).run();
+  } else {
+    await db.prepare('DELETE FROM unselected_students').run();
+  }
   return json({ success: true });
 }
 
@@ -1173,6 +1204,23 @@ export async function onRequest(context) {
       }
     } catch(migrateErr) {
       console.warn('Password migration error:', migrateErr.message);
+    }
+    
+    // 迁移 unselected_students 表：添加 user_id 和 username 字段
+    try {
+      const usColsRes = await db.prepare("PRAGMA table_info(unselected_students)").all();
+      const usColNames = (usColsRes.results || []).map(c => c.name);
+      if (!usColNames.includes('user_id')) {
+        await db.prepare("ALTER TABLE unselected_students ADD COLUMN user_id INTEGER DEFAULT NULL").run();
+      }
+      if (!usColNames.includes('username')) {
+        await db.prepare("ALTER TABLE unselected_students ADD COLUMN username TEXT DEFAULT ''").run();
+      }
+      if (!usColNames.includes('user_uploaded_at')) {
+        await db.prepare("ALTER TABLE unselected_students ADD COLUMN user_uploaded_at TEXT DEFAULT ''").run();
+      }
+    } catch(usMigrateErr) {
+      console.warn('Unselected students migration error:', usMigrateErr.message);
     }
   } catch(e) {
     console.error('DB init error:', e);
