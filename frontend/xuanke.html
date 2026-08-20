@@ -4024,15 +4024,24 @@ document.addEventListener('keydown', e => {
   var userAvatarEl = document.getElementById('userAvatar');
   var logoutBtn = document.getElementById('logoutBtn');
 
-  // 从 localStorage 获取用户名
-  var username = '';
+  // 优先获取真实姓名（teacher_name），其次回退到账号名
+  var displayName = '';
   try {
-    username = localStorage.getItem('pjyz_current_username') || '';
-  } catch (_) {}
+    var userStr = localStorage.getItem('pjyz_user');
+    if (userStr) {
+      var userObj = JSON.parse(userStr);
+      displayName = (userObj.teacher_name && String(userObj.teacher_name).trim() !== '') ? String(userObj.teacher_name) : '';
+    }
+    if (!displayName) {
+      displayName = localStorage.getItem('pjyz_current_username') || '';
+    }
+  } catch (_) {
+    displayName = localStorage.getItem('pjyz_current_username') || '';
+  }
 
-  if (username) {
-    if (userNameEl) userNameEl.textContent = username;
-    if (userAvatarEl) userAvatarEl.textContent = username.charAt(0).toUpperCase();
+  if (displayName) {
+    if (userNameEl) userNameEl.textContent = displayName;
+    if (userAvatarEl) userAvatarEl.textContent = displayName.charAt(0).toUpperCase();
   }
 
   // 退出登录
