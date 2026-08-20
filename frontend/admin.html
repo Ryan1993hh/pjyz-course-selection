@@ -1084,30 +1084,27 @@ table.sel-table thead th:nth-child(1) {
   padding-left: 10px;
   padding-right: 10px;
 }
-table.sel-table thead th:nth-child(2) {
-  text-align: center;
-}
+table.sel-table thead th:nth-child(2),
 table.sel-table thead th:nth-child(3),
 table.sel-table thead th:nth-child(4),
-table.sel-table thead th:nth-child(5) {
-  text-align: left;
-  padding-left: 14px;
-}
+table.sel-table thead th:nth-child(5),
 table.sel-table thead th:nth-child(6) {
   text-align: center;
 }
 
+/* 单元格基础样式 - 统一横向分隔线 */
 table.sel-table td {
   background-color: #ffffff;
   padding: 11px 10px;
   vertical-align: middle;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
   border-right: none;
   font-size: 13px;
   color: #334155;
   overflow: hidden;
   text-overflow: ellipsis;
   box-sizing: border-box;
+  text-align: center;
 }
 /* 复选框列 */
 table.sel-table td:nth-child(1) {
@@ -1129,26 +1126,23 @@ table.sel-table td.seq {
 }
 /* 班级列（含年级） - 与姓名列样式统一 */
 table.sel-table td:nth-child(3) {
-  text-align: left;
+  text-align: center;
   color: #1e293b;
   font-weight: 600;
   white-space: nowrap;
-  padding-left: 14px;
 }
 /* 学生姓名列 */
 table.sel-table td:nth-child(4) {
-  text-align: left;
+  text-align: center;
   color: #1e293b;
   font-weight: 600;
   white-space: nowrap;
-  padding-left: 14px;
 }
 /* 所选课程列 */
 table.sel-table td:nth-child(5) {
-  text-align: left;
+  text-align: center;
   color: #475569;
   font-weight: 400;
-  padding-left: 14px;
 }
 /* 操作列 */
 table.sel-table td.row-actions {
@@ -1208,27 +1202,6 @@ table.sel-table td:nth-child(5) .course-link {
 table.sel-table td:nth-child(5) .course-link:hover {
   background: var(--primary);
   color: #fff;
-}
-
-/* 班级筛选链接 - 与姓名列样式统一 */
-table.sel-table td:nth-child(3).course-link {
-  display: inline;
-  font-weight: 600;
-  color: var(--primary);
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  cursor: pointer;
-  box-shadow: none;
-  letter-spacing: normal;
-}
-table.sel-table td:nth-child(3).course-link:hover {
-  background: transparent;
-  color: var(--primary-dark);
-  text-decoration: underline;
-  transform: none;
-  filter: none;
-  box-shadow: none;
 }
 
 /* 空数据 */
@@ -1883,12 +1856,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   .top-nav-items .nav-item { padding: 6px 10px; font-size: 12px; }
   table.sel-table { --sel-col-w: 80px; --sel-col-w-class: 108px; --sel-col-w-course: 160px; }
   table.sel-table th, table.sel-table td { padding: 9px 8px; font-size: 12px; }
-  table.sel-table td:nth-child(3),
-  table.sel-table td:nth-child(4),
-  table.sel-table td:nth-child(5) { padding-left: 10px; }
-  table.sel-table thead th:nth-child(3),
-  table.sel-table thead th:nth-child(4),
-  table.sel-table thead th:nth-child(5) { padding-left: 10px; }
 }
 @media (max-width: 960px) {
   .header { padding: 10px 14px; gap: 10px; }
@@ -1905,12 +1872,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table { --sel-col-w: 68px; --sel-col-w-class: 96px; --sel-col-w-course: 136px; }
   table.sel-table th, table.sel-table td { padding: 7px 6px; font-size: 11px; }
   table.sel-table td:nth-child(5) .course-link { font-size: 11px; padding: 2px 4px; }
-  table.sel-table td:nth-child(3),
-  table.sel-table td:nth-child(4),
-  table.sel-table td:nth-child(5) { padding-left: 8px; }
-  table.sel-table thead th:nth-child(3),
-  table.sel-table thead th:nth-child(4),
-  table.sel-table thead th:nth-child(5) { padding-left: 8px; }
 }
 @media (max-width: 760px) {
   .header { padding: 8px 12px; }
@@ -1931,12 +1892,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 6px 5px; font-size: 11px; }
   table.sel-table td:nth-child(5) .course-link { font-size: 10px; padding: 1px 3px; }
   table.sel-table .btn-sm { height: 26px; padding: 0 8px; font-size: 11px; }
-  table.sel-table td:nth-child(3),
-  table.sel-table td:nth-child(4),
-  table.sel-table td:nth-child(5) { padding-left: 6px; }
-  table.sel-table thead th:nth-child(3),
-  table.sel-table thead th:nth-child(4),
-  table.sel-table thead th:nth-child(5) { padding-left: 6px; }
 }
 @media (max-width: 560px) {
   body { padding: 8px; }
@@ -1956,12 +1911,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 10px; }
   table.sel-table td:nth-child(5) .course-link { font-size: 9px; padding: 1px 2px; }
   table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
-  table.sel-table td:nth-child(3),
-  table.sel-table td:nth-child(4),
-  table.sel-table td:nth-child(5) { padding-left: 4px; }
-  table.sel-table thead th:nth-child(3),
-  table.sel-table thead th:nth-child(4),
-  table.sel-table thead th:nth-child(5) { padding-left: 4px; }
 }
 </style>
 </head>
@@ -2911,18 +2860,6 @@ function renderSelections(){
         else selectionsCheckedIds.delete(id);
         updateBatchDeleteBtn();
         updateSelectAllState();
-      });
-    }
-
-    // Click class to filter
-    const classCell = tr.children[2];
-    if (s.grade || s.class_name) {
-      classCell.style.cursor = 'pointer';
-      classCell.className = 'course-link';
-      classCell.addEventListener('click', function(){
-        if (s.grade) document.getElementById('filterGrade').value = s.grade;
-        if (s.class_name) document.getElementById('filterClass').value = s.class_name;
-        querySelections();
       });
     }
 
