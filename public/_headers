@@ -1,0 +1,22 @@
+# 静态资源长缓存；HTML 短期校验，便于发版后尽快更新
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/*.html
+  Cache-Control: public, max-age=60, must-revalidate
+
+/css/*
+  Cache-Control: public, max-age=604800, immutable
+
+/js/*
+  Cache-Control: public, max-age=604800, immutable
+
+/images/*
+  Cache-Control: public, max-age=2592000, immutable
+
+/data/*
+  Cache-Control: public, max-age=86400
+
+/api/*
+  Cache-Control: no-store
