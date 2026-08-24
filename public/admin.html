@@ -3386,7 +3386,7 @@ function renderBoardGrid() {
         (item.location ? (' · ' + escHtml(item.location)) : '') +
       '</div>' +
       '<div class="board-card-foot">' +
-        '<span class="board-chip">课时 ' + (item.total_classes || 0) + '</span>' +
+        '<span class="board-chip">课时 ' + (item.numeric_hours_total != null ? item.numeric_hours_total : (item.total_classes || 0)) + '</span>' +
         '<span class="board-chip">学生 ' + (item.student_count || 0) + '</span>' +
         ((item.absent_count > 0)
           ? ('<span class="board-chip bad">旷课 ' + item.absent_count + '</span>')
@@ -3554,7 +3554,9 @@ function renderBoardDetail() {
       student_count: summary.student_count || listItem.student_count,
       present_count: summary.present_count || listItem.present_count
     });
-    var totalClasses = (payload.teacher && payload.teacher.totalClasses) || summary.total_classes || 0;
+    var totalClasses = (d.numeric_hours_total != null)
+      ? Number(d.numeric_hours_total) || 0
+      : ((payload.teacher && payload.teacher.totalClasses) || summary.total_classes || 0);
     body.innerHTML =
       '<div class="bd-summary-bar">' +
         '<div class="bd-rate-card">' +
@@ -4104,6 +4106,7 @@ async function openBoardDetail(courseName) {
     var data = await request('GET', '/api/teacher-classroom?course_name=' + encodeURIComponent(courseName));
     if (boardState.selectedCourse !== courseName) return;
     boardState.detail = normalizeBoardDetailPayload(data);
+    boardState.detail.numeric_hours_total = data.numeric_hours_total;
     var c = data.course || {};
     var s = data.summary || {};
     document.getElementById('bdTitle').textContent = c.name || courseName;

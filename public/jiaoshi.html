@@ -2374,7 +2374,7 @@ function studentId(s) {
   return stableStudentKey(s) || String(s.id || "");
 }
 
-/** 将按旧 id 存储的签到/奖惩等映射到稳定键，避免选课记录 id 变化后后台变空 */
+/** 将按旧 id 存储的签到/奖惩等映射到稳定键；仅保留当前学生（管理员删课后同步清除） */
 function remapKeyedMap(mapObj, students, prevStudents) {
   const src = mapObj && typeof mapObj === "object" ? mapObj : {};
   const out = {};
@@ -2384,15 +2384,27 @@ function remapKeyedMap(mapObj, students, prevStudents) {
     if (s.stableId) prevById.set(String(s.stableId), s);
     prevById.set(stableStudentKey(s), s);
   });
-  Object.keys(src).forEach(function(key) {
-    let s = prevById.get(String(key));
-    if (!s) {
-      s = (students || []).find(function(x) {
-        return String(x.id) === String(key) || studentId(x) === String(key) || stableStudentKey(x) === String(key);
-      });
+  (students || []).forEach(function(s) {
+    const nk = studentId(s);
+    const keys = [String(s.id), nk, s.stableId, stableStudentKey(s)];
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      if (key == null || key === "") continue;
+      if (src[key] != null) {
+        out[nk] = src[key];
+        return;
+      }
+      const prev = prevById.get(String(key));
+      if (prev) {
+        const prevKeys = [String(prev.id), studentId(prev), prev.stableId, stableStudentKey(prev)];
+        for (let j = 0; j < prevKeys.length; j++) {
+          if (src[prevKeys[j]] != null) {
+            out[nk] = src[prevKeys[j]];
+            return;
+          }
+        }
+      }
     }
-    const nk = s ? studentId(s) : String(key);
-    if (out[nk] == null || out[nk] === "none" || out[nk] === 0) out[nk] = src[key];
   });
   return out;
 }
@@ -2536,7 +2548,7 @@ async function syncClassroomToServer(opts) {
 function mergeClassroomFromServer(payload, summary) {
   if (!payload) return;
   const prevStudents = state.students.slice();
-  if (Array.isArray(payload.students) && payload.students.length) {
+  if (Array.isArray(payload.students)) {
     state.students = payload.students.map(function(s) {
       return Object.assign({}, s, { stableId: s.stableId || stableStudentKey(s) });
     });
@@ -3804,10 +3816,19 @@ async function syncStudentsFromServer(opts) {
       return base;
     });
     const nextKeys = nextStudents.map(s => stableStudentKey(s)).sort().join("\n");
-    // 若后台选课名单暂时为空，保留本地/已上报名单，避免冲掉签到考核
-    if (!nextStudents.length && prevStudents.length) {
-      if (!silent) toast("后台暂无选课名单，已保留本地学生与签到数据", "warning");
-      if (!silent) await syncClassroomToServer({ notify: true });
+    // 选课数据以管理员后台为准：名单为空则清空本地学生及关联记录
+    if (!nextStudents.length) {
+      if (prevStudents.length) {
+        state.students = [];
+        state.checkin = {};
+        state.rewards = {};
+        state.exams = {};
+        state.history = [];
+        ensureDailyCheckinState();
+        saveLocal({ skipSync: true });
+        renderAll();
+        await syncClassroomToServer({ notify: false });
+      }
       return;
     }
     if (silent && prevKeys === nextKeys) return;

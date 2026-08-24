@@ -2223,7 +2223,9 @@ function normalizeClassroomStudents(students) {
   });
 }
 
-function remapClassroomKeyedMap(mapObj, normalizedStudents) {
+function remapClassroomKeyedMap(mapObj, normalizedStudents, opts) {
+  opts = opts || {};
+  const dropOrphans = !!opts.dropOrphans;
   const src = mapObj && typeof mapObj === 'object' ? mapObj : {};
   const out = {};
   const used = new Set();
@@ -2236,6 +2238,7 @@ function remapClassroomKeyedMap(mapObj, normalizedStudents) {
       }
     }
   });
+  if (dropOrphans) return out;
   Object.keys(src).forEach((k) => {
     if (used.has(k) || out[k] != null) return;
     const matched = normalizedStudents.some((s) => classroomStudentKeyList(s).includes(String(k)));
@@ -2282,19 +2285,27 @@ async function syncTeacherClassroomStudentsFromSelections(db, courseName) {
   if (!payload || typeof payload !== 'object') payload = {};
 
   payload.students = normalizedStudents;
-  payload.checkin = remapClassroomKeyedMap(payload.checkin, normalizedStudents);
-  payload.rewards = remapClassroomKeyedMap(payload.rewards, normalizedStudents);
-  payload.exams = remapClassroomKeyedMap(payload.exams, normalizedStudents);
+  const remapOpts = { dropOrphans: true };
+  payload.checkin = remapClassroomKeyedMap(payload.checkin, normalizedStudents, remapOpts);
+  payload.rewards = remapClassroomKeyedMap(payload.rewards, normalizedStudents, remapOpts);
+  payload.exams = remapClassroomKeyedMap(payload.exams, normalizedStudents, remapOpts);
   payload.history = (Array.isArray(payload.history) ? payload.history : []).map((h) =>
-    Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents) })
+    Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents, remapOpts) })
   );
   if (payload.teacher && typeof payload.teacher === 'object') {
     payload.teacher.course = name;
   }
 
   const summary = summarizeClassroomPayload(payload);
+  const numericHoursTotal = await getNumericHoursTotalForCourse(db, name);
+  summary.total_classes = numericHoursTotal;
+  if (payload.teacher && typeof payload.teacher === 'object') {
+    payload.teacher.totalClasses = numericHoursTotal;
+  }
+
   await db.prepare(
     `UPDATE teacher_classroom SET
+      total_classes = ?,
       student_count = ?,
       present_count = ?,
       absent_count = ?,
@@ -2307,6 +2318,7 @@ async function syncTeacherClassroomStudentsFromSelections(db, courseName) {
       synced_at = datetime('now')
     WHERE course_name = ?`
   ).bind(
+    numericHoursTotal,
     summary.student_count,
     summary.present_count,
     summary.absent_count,
@@ -2457,6 +2469,12 @@ async function handleTeacherClassroomList(db, request) {
     classroomMap[row.course_name] = row;
   });
 
+  const hoursMatrix = await buildCourseHoursMatrix(db);
+  const hoursByCourse = {};
+  (hoursMatrix.rows || []).forEach((row) => {
+    hoursByCourse[row.course_name] = Number(row.numeric_total) || 0;
+  });
+
   const today = new Date();
   const todayKey = today.getFullYear() + '-' +
     String(today.getMonth() + 1).padStart(2, '0') + '-' +
@@ -2479,7 +2497,8 @@ async function handleTeacherClassroomList(db, request) {
       selected_count: c.selected_count || 0,
       synced: !!synced,
       today_status: todayStatus,
-      total_classes: synced ? synced.total_classes : 0,
+      total_classes: hoursByCourse[c.name] != null ? hoursByCourse[c.name] : 0,
+      numeric_hours_total: hoursByCourse[c.name] != null ? hoursByCourse[c.name] : 0,
       student_count: synced ? synced.student_count : (c.selected_count || 0),
       present_count: synced ? synced.present_count : 0,
       absent_count: synced ? synced.absent_count : 0,
@@ -2510,7 +2529,8 @@ async function handleTeacherClassroomList(db, request) {
       selected_count: synced.student_count || 0,
       synced: true,
       today_status: todayStatus,
-      total_classes: synced.total_classes || 0,
+      total_classes: hoursByCourse[name] != null ? hoursByCourse[name] : 0,
+      numeric_hours_total: hoursByCourse[name] != null ? hoursByCourse[name] : 0,
       student_count: synced.student_count || 0,
       present_count: synced.present_count || 0,
       absent_count: synced.absent_count || 0,
@@ -2530,7 +2550,7 @@ async function handleTeacherClassroomList(db, request) {
     synced_total: items.filter((i) => i.synced).length,
     today_done: items.filter((i) => i.today_status === '今日已完成').length,
     today_doing: items.filter((i) => i.today_status === '进行中').length,
-    total_classes: items.reduce((s, i) => s + (Number(i.total_classes) || 0), 0),
+    total_classes: items.reduce((s, i) => s + (Number(i.numeric_hours_total != null ? i.numeric_hours_total : i.total_classes) || 0), 0),
     absent_total: items.reduce((s, i) => s + (Number(i.absent_count) || 0), 0),
     flower_total: items.reduce((s, i) => s + (Number(i.flower_total) || 0), 0)
   };
