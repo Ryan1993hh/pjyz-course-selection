@@ -427,7 +427,8 @@ table.courses-table td[data-field="description"] {
 }
 
 .section { display: none; animation: fadeIn 0.25s ease; }
-.section.active { display: flex; flex-direction: column; gap: 12px; }
+.section.active { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.section.active > .card { width: 100%; align-self: stretch; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
 .section-header {
@@ -447,6 +448,13 @@ table.courses-table td[data-field="description"] {
   font-size: 13px;
   color: var(--muted);
   margin-top: 4px;
+}
+.section-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* ===== 卡片 ===== */
@@ -1463,9 +1471,9 @@ table.courses-table td[data-field="description"] {
 
 /* ===== 表格（严格参照页风格：浅灰蓝基础 + 列独立底色 + 磨砂玻璃表头）===== */
 .table-wrap {
+  width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-}
   border-radius: var(--radius);
   border: 1px solid #BBDEFB;
   background: var(--tbl-base);
@@ -1520,17 +1528,23 @@ table.sel-table th:nth-child(3) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(4) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(5) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(6) { border-bottom-color: #94a3b8; }
-/* 用户表 10 列 */
-table.usr-table th:nth-child(1) { border-bottom-color: #546E7A; }
-table.usr-table th:nth-child(2) { border-bottom-color: #1976D2; }
-table.usr-table th:nth-child(3) { border-bottom-color: #3949AB; }
-table.usr-table th:nth-child(4) { border-bottom-color: #0288D1; }
-table.usr-table th:nth-child(5) { border-bottom-color: #00838F; }
-table.usr-table th:nth-child(6) { border-bottom-color: #5C6BC0; }
-table.usr-table th:nth-child(7) { border-bottom-color: #455A64; }
-table.usr-table th:nth-child(8) { border-bottom-color: #6A1B9A; }
-table.usr-table th:nth-child(9) { border-bottom-color: #2E7D32; }
-table.usr-table th:nth-child(10){ border-bottom-color: #37474F; }
+/* 用户表 11 列 */
+table.usr-table {
+  width: 100%;
+  table-layout: auto;
+  min-width: 100%;
+}
+table.usr-table th:nth-child(1) { border-bottom-color: #546E7A; width: 52px; }
+table.usr-table th:nth-child(2) { border-bottom-color: #1976D2; min-width: 100px; }
+table.usr-table th:nth-child(3) { border-bottom-color: #3949AB; min-width: 88px; }
+table.usr-table th:nth-child(4) { border-bottom-color: #0288D1; min-width: 96px; }
+table.usr-table th:nth-child(5) { border-bottom-color: #00838F; min-width: 110px; }
+table.usr-table th:nth-child(6) { border-bottom-color: #5C6BC0; min-width: 100px; }
+table.usr-table th:nth-child(7) { border-bottom-color: #455A64; min-width: 120px; }
+table.usr-table th:nth-child(8) { border-bottom-color: #6A1B9A; min-width: 108px; }
+table.usr-table th:nth-child(9) { border-bottom-color: #2E7D32; min-width: 88px; }
+table.usr-table th:nth-child(10){ border-bottom-color: #37474F; width: 72px; }
+table.usr-table th:nth-child(11){ border-bottom-color: #455A64; min-width: 148px; }
 
 /* —— 单元格基础 —— */
 td {
@@ -1838,7 +1852,8 @@ table.usr-table td:nth-child(6){ background-color: var(--col-6); text-align: lef
 table.usr-table td:nth-child(7){ background-color: var(--col-7); text-align: left; font-size: 12px; color: #6b7280; }
 table.usr-table td:nth-child(8){ background-color: var(--col-8); text-align: center; }
 table.usr-table td:nth-child(9){ background-color: var(--col-9); text-align: center; }
-table.usr-table td.row-actions { background-color: var(--col-10); text-align: center; }
+table.usr-table td.row-actions { background-color: var(--col-10); text-align: center; white-space: nowrap; }
+table.usr-table td.row-actions .btn-sm { margin: 0 2px; }
 
 table.usr-table tbody tr:hover td.seq         { background-color: var(--col-1-h); }
 table.usr-table tbody tr:hover td:nth-child(2){ background-color: var(--col-2-h); }
@@ -2231,7 +2246,7 @@ table.sel-table .course-link {
 .user-toolbar .search-input {
   flex: 1;
   min-width: 200px;
-  max-width: 320px;
+  max-width: none;
 }
 .user-toolbar .stat-info {
   font-size: 12px;
@@ -2656,7 +2671,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   .header-title h1 { font-size: 13px; }
   .header-actions .admin-info span { display: none; }
   .top-nav-items .nav-item .nav-icon { margin-right: 2px; }
-  .section-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .section-header { flex-direction: column; align-items: stretch; gap: 8px; }
   .section-header h2 { font-size: 16px; }
   .control-bar { grid-template-columns: 1fr; }
   .board-kpis { grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -2664,7 +2679,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   .bd-summary-bar .btn { width: 100%; }
   table.sel-table { min-width: 640px; }
   table.courses-table { min-width: 720px; }
+  table.usr-table { min-width: 1080px; }
   .login-overlay .login-card { padding: 24px 18px; }
+  .section-header-actions { width: 100%; justify-content: stretch; }
+  .section-header-actions .btn { flex: 1 1 auto; }
 }
 
 @media (max-width: 380px) {
@@ -2991,7 +3009,7 @@ th.sortable.active .sort-icon { opacity: 1; }
           <h2>用户管理</h2>
           <p class="desc">管理教师与管理员账号，支持批量导入用户数据</p>
         </div>
-        <div style="display:flex; gap:10px;">
+        <div class="section-header-actions">
           <button type="button" class="btn btn-outline" id="consistencyCheckBtn">🔍 数据校验</button>
           <button type="button" class="btn btn-outline" id="importHistoryBtn">📋 导入历史</button>
           <button type="button" class="btn btn-outline" id="importUserBtn">⬆ 导入用户</button>
@@ -3008,17 +3026,17 @@ th.sortable.active .sort-icon { opacity: 1; }
           <table class="usr-table" id="usersTable">
             <thead>
               <tr>
-                <th style="width:50px;" class="sortable" data-sort="index">序号<span class="sort-icon">⇅</span></th>
-                <th style="min-width:110px;" class="sortable" data-sort="username">账号<span class="sort-icon">⇅</span></th>
-                <th style="min-width:120px;">密码</th>
-                <th style="min-width:120px;" class="sortable" data-sort="teacher_name">教师名字<span class="sort-icon">⇅</span></th>
-                <th style="min-width:120px;" class="sortable" data-sort="course_name">课程名称<span class="sort-icon">⇅</span></th>
-                <th style="min-width:120px;" class="sortable" data-sort="class_name">班级<span class="sort-icon">⇅</span></th>
-                <th style="min-width:130px;" class="sortable" data-sort="email">邮箱<span class="sort-icon">⇅</span></th>
-                <th style="min-width:120px;" class="sortable" data-sort="phone">手机号<span class="sort-icon">⇅</span></th>
-                <th style="width:100px;" class="sortable" data-sort="role">角色<span class="sort-icon">⇅</span></th>
-                <th style="width:80px;" class="sortable" data-sort="status">状态<span class="sort-icon">⇅</span></th>
-                <th style="width:148px;">操作</th>
+                <th class="sortable" data-sort="index">序号<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="username">账号<span class="sort-icon">⇅</span></th>
+                <th>密码</th>
+                <th class="sortable" data-sort="teacher_name">教师名字<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="course_name">课程名称<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="class_name">班级<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="email">邮箱<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="phone">手机号<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="role">角色<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="status">状态<span class="sort-icon">⇅</span></th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody id="usersBody"></tbody>
