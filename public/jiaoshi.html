@@ -3771,10 +3771,15 @@ async function loadAssignedCourse() {
   await syncStudentsFromServer();
 }
 
-async function syncStudentsFromServer() {
-  if (!state.courseName) { toast("账号未绑定课程", "error"); return; }
+async function syncStudentsFromServer(opts) {
+  opts = opts || {};
+  const silent = !!opts.silent;
+  if (!state.courseName) {
+    if (!silent) toast("账号未绑定课程", "error");
+    return;
+  }
   const btn = document.getElementById("syncBtn");
-  if (btn) btn.disabled = true;
+  if (btn && !silent) btn.disabled = true;
   try {
     const data = await api("GET", "/api/selections?course=" + encodeURIComponent(state.courseName));
     const list = data.selections || [];
@@ -3784,6 +3789,7 @@ async function syncStudentsFromServer() {
       if (!map.has(key)) map.set(key, row);
     });
     const prevStudents = state.students.slice();
+    const prevKeys = prevStudents.map(s => stableStudentKey(s)).sort().join("\n");
     const nextStudents = Array.from(map.values()).map((row, i) => {
       const base = {
         id: row.id || (i + 1),
@@ -3797,12 +3803,14 @@ async function syncStudentsFromServer() {
       base.stableId = stableStudentKey(base);
       return base;
     });
+    const nextKeys = nextStudents.map(s => stableStudentKey(s)).sort().join("\n");
     // 若后台选课名单暂时为空，保留本地/已上报名单，避免冲掉签到考核
     if (!nextStudents.length && prevStudents.length) {
-      toast("后台暂无选课名单，已保留本地学生与签到数据", "warning");
-      await syncClassroomToServer({ notify: true });
+      if (!silent) toast("后台暂无选课名单，已保留本地学生与签到数据", "warning");
+      if (!silent) await syncClassroomToServer({ notify: true });
       return;
     }
+    if (silent && prevKeys === nextKeys) return;
     state.students = nextStudents;
     state.checkin = remapKeyedMap(state.checkin, state.students, prevStudents);
     state.rewards = remapKeyedMap(state.rewards, state.students, prevStudents);
@@ -3821,11 +3829,13 @@ async function syncStudentsFromServer() {
     saveLocal({ skipSync: true });
     renderAll();
     const ok = await syncClassroomToServer({ notify: false });
-    toast("已同步 " + state.students.length + " 名学生" + (ok ? "，并上报后台" : ""), ok ? "success" : "warning");
+    if (!silent) {
+      toast("已同步 " + state.students.length + " 名学生" + (ok ? "，并上报后台" : ""), ok ? "success" : "warning");
+    }
   } catch (e) {
-    toast("同步失败：" + e.message, "error");
+    if (!silent) toast("同步失败：" + e.message, "error");
   } finally {
-    if (btn) btn.disabled = false;
+    if (btn && !silent) btn.disabled = false;
   }
 }
 
@@ -4307,7 +4317,7 @@ async function initApp() {
         return Promise.all([
           pullClassroomFromServer(),
           refreshNumericHoursTotal()
-        ]).then(() => {
+        ]).then(() => syncStudentsFromServer({ silent: true })).then(() => {
           if (ensureDailyCheckinState()) {
             renderCheckin();
             updateDateLine();
@@ -4324,7 +4334,9 @@ async function initApp() {
       if (bound !== (state.courseName || "")) {
         return loadAssignedCourse();
       }
-      return refreshNumericHoursTotal().then(() => { renderProfile(); });
+      return refreshNumericHoursTotal()
+        .then(() => syncStudentsFromServer({ silent: true }))
+        .then(() => { renderProfile(); });
     }).catch(() => {});
     if (ensureDailyCheckinState()) {
       renderCheckin();

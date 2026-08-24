@@ -1221,6 +1221,7 @@ async function handleSelectionsBatchCreate(db, request) {
     
     const results = [];
     const errors = [];
+    const affectedCourses = new Set();
     
     for (const item of arr) {
       if (!item || !item.student_name) {
@@ -1254,9 +1255,17 @@ async function handleSelectionsBatchCreate(db, request) {
             ).run();
             const updated = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(row.id).first();
             results.push(updated);
+            if (updated && updated.course_name) affectedCourses.add(String(updated.course_name).trim());
           }
           continue;
         }
+
+        const priorRows = await db.prepare(
+          'SELECT course_name FROM selections WHERE student_name = ?'
+        ).bind(studentName).all();
+        (priorRows.results || []).forEach((row) => {
+          if (row.course_name) affectedCourses.add(String(row.course_name).trim());
+        });
 
         // 同一学生只保留最新一条：先删除该学生已有未锁定选课记录
         await removeSelectionsForStudent(db, grade, className, studentName);
@@ -1280,12 +1289,14 @@ async function handleSelectionsBatchCreate(db, request) {
         
         const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
         results.push(selection);
+        if (courseName) affectedCourses.add(String(courseName).trim());
       } catch(innerErr) {
         errors.push('插入失败: ' + innerErr.message);
       }
     }
     
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
+    await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
     
     return json({
       success: true,
@@ -1323,6 +1334,7 @@ async function handlePreEnrollBatch(db, request) {
   const results = [];
   const errors = [];
   let success = 0;
+  const affectedCourses = new Set();
 
   for (const item of arr) {
     if (!item || !item.student_name) {
@@ -1356,6 +1368,7 @@ async function handlePreEnrollBatch(db, request) {
         'SELECT * FROM selections WHERE student_name = ?'
       ).bind(studentName).all();
       for (const row of (existing.results || [])) {
+        if (row.course_name) affectedCourses.add(String(row.course_name).trim());
         if (row.course_id) {
           await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?')
             .bind(row.course_id).run();
@@ -1381,11 +1394,14 @@ async function handlePreEnrollBatch(db, request) {
       }
       const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
       results.push(selection);
+      affectedCourses.add(finalCourseName);
       success++;
     } catch (e) {
       errors.push(studentName + '：' + e.message);
     }
   }
+
+  await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
 
   return json({
     success: true,
@@ -1418,6 +1434,7 @@ async function handleSelectionUpdate(db, request, id) {
   }
   
   const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
+  await syncTeacherClassroomForCourseNames(db, [existing.course_name, selection && selection.course_name]);
   return json({ selection });
 }
 
@@ -1433,6 +1450,7 @@ async function handleSelectionDelete(db, request, id) {
   }
   
   await db.prepare('DELETE FROM selections WHERE id = ?').bind(id).run();
+  await syncTeacherClassroomStudentsFromSelections(db, existing.course_name);
   return json({ success: true });
 }
 
@@ -1445,9 +1463,11 @@ async function handleSelectionBatchDelete(db, request) {
     return json({ error: '请提供要删除的ID列表' }, 400);
   }
   let deleted = 0;
+  const affectedCourses = new Set();
   for (const id of ids) {
     const existing = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
     if (existing) {
+      if (existing.course_name) affectedCourses.add(String(existing.course_name).trim());
       if (existing.course_id) {
         await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(existing.course_id).run();
       }
@@ -1455,6 +1475,7 @@ async function handleSelectionBatchDelete(db, request) {
       deleted++;
     }
   }
+  await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
   return json({ success: true, deleted });
 }
 
@@ -1534,8 +1555,10 @@ async function handleClearSelections(db, request) {
     if (cls) { sql += ' AND class_name = ?'; params.push(cls); }
 
     const toDelete = await db.prepare(sql).bind(...params).all();
+    const affectedCourses = new Set();
     for (const row of toDelete.results) {
       if (Number(row.is_locked) === 1) continue;
+      if (row.course_name) affectedCourses.add(String(row.course_name).trim());
       if (row.course_id) {
         await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(row.course_id).run();
       }
@@ -1546,6 +1569,7 @@ async function handleClearSelections(db, request) {
     if (grade) { delSql += ' AND grade = ?'; delParams.push(grade); }
     if (cls) { delSql += ' AND class_name = ?'; delParams.push(cls); }
     await db.prepare(delSql).bind(...delParams).run();
+    await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
 
     return json({
       success: true,
@@ -1558,6 +1582,7 @@ async function handleClearSelections(db, request) {
   
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
+  await syncAllTeacherClassroomsFromSelections(db);
   return json({ success: true });
 }
 
@@ -2134,6 +2159,133 @@ function summarizeClassroomPayload(body) {
   };
 }
 
+function classroomStudentKeyList(s) {
+  const name = String((s && s.student_name) || '').trim();
+  const cls = String((s && (s.class_name || s.grade)) || '').trim().replace(/[()（）\s]/g, '');
+  return [s.stableId, name + '|' + cls, s.id != null ? String(s.id) : '', name].filter(Boolean).map(String);
+}
+
+function normalizeClassroomStudents(students) {
+  return (Array.isArray(students) ? students : []).map((s, i) => {
+    const name = String((s && s.student_name) || '').trim();
+    const cls = String((s && (s.class_name || s.grade)) || '').trim().replace(/[()（）\s]/g, '');
+    const stableId = String((s && s.stableId) || (name ? (name + '|' + cls) : '') || (s && s.id) || (i + 1));
+    return Object.assign({}, s, { stableId: stableId, id: s && s.id != null ? s.id : stableId });
+  });
+}
+
+function remapClassroomKeyedMap(mapObj, normalizedStudents) {
+  const src = mapObj && typeof mapObj === 'object' ? mapObj : {};
+  const out = {};
+  const used = new Set();
+  normalizedStudents.forEach((s) => {
+    for (const k of classroomStudentKeyList(s)) {
+      if (src[k] != null) {
+        out[s.stableId] = src[k];
+        used.add(k);
+        return;
+      }
+    }
+  });
+  Object.keys(src).forEach((k) => {
+    if (used.has(k) || out[k] != null) return;
+    const matched = normalizedStudents.some((s) => classroomStudentKeyList(s).includes(String(k)));
+    if (matched) return;
+    out[k] = src[k];
+  });
+  return out;
+}
+
+function studentsFromSelectionRows(selRows) {
+  const seen = new Set();
+  const students = [];
+  (selRows || []).forEach((rowSel, i) => {
+    const key = String(rowSel.student_name || '') + '|' + String(rowSel.class_name || '');
+    if (seen.has(key)) return;
+    seen.add(key);
+    students.push({
+      id: rowSel.id || (i + 1),
+      student_name: rowSel.student_name,
+      class_name: rowSel.class_name,
+      grade: rowSel.grade,
+      gender: rowSel.gender || '',
+      course_name: rowSel.course_name,
+      course_id: rowSel.course_id
+    });
+  });
+  return students;
+}
+
+async function syncTeacherClassroomStudentsFromSelections(db, courseName) {
+  const name = String(courseName || '').trim();
+  if (!name) return;
+
+  const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(name).first();
+  if (!row) return;
+
+  const selRes = await db.prepare(
+    'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ? ORDER BY id ASC'
+  ).bind(name).all();
+  const normalizedStudents = normalizeClassroomStudents(studentsFromSelectionRows(selRes.results || []));
+
+  let payload = {};
+  try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) { payload = {}; }
+  if (!payload || typeof payload !== 'object') payload = {};
+
+  payload.students = normalizedStudents;
+  payload.checkin = remapClassroomKeyedMap(payload.checkin, normalizedStudents);
+  payload.rewards = remapClassroomKeyedMap(payload.rewards, normalizedStudents);
+  payload.exams = remapClassroomKeyedMap(payload.exams, normalizedStudents);
+  payload.history = (Array.isArray(payload.history) ? payload.history : []).map((h) =>
+    Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents) })
+  );
+  if (payload.teacher && typeof payload.teacher === 'object') {
+    payload.teacher.course = name;
+  }
+
+  const summary = summarizeClassroomPayload(payload);
+  await db.prepare(
+    `UPDATE teacher_classroom SET
+      student_count = ?,
+      present_count = ?,
+      absent_count = ?,
+      abnormal_count = ?,
+      pending_count = ?,
+      flower_total = ?,
+      exam_done_count = ?,
+      session_count = ?,
+      payload = ?,
+      synced_at = datetime('now')
+    WHERE course_name = ?`
+  ).bind(
+    summary.student_count,
+    summary.present_count,
+    summary.absent_count,
+    summary.abnormal_count,
+    summary.pending_count,
+    summary.flower_total,
+    summary.exam_done_count,
+    summary.session_count,
+    JSON.stringify(payload),
+    name
+  ).run();
+}
+
+async function syncTeacherClassroomForCourseNames(db, courseNames) {
+  const names = [...new Set((courseNames || []).map((n) => String(n || '').trim()).filter(Boolean))];
+  for (const name of names) {
+    await syncTeacherClassroomStudentsFromSelections(db, name);
+  }
+}
+
+async function syncAllTeacherClassroomsFromSelections(db) {
+  const classRes = await db.prepare('SELECT course_name FROM teacher_classroom').all();
+  await syncTeacherClassroomForCourseNames(
+    db,
+    (classRes.results || []).map((row) => row.course_name)
+  );
+}
+
 async function handleTeacherClassroomPut(db, request) {
   const auth = requireAuth(request, ['teacher', 'admin', 'banzhuren']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -2158,50 +2310,15 @@ async function handleTeacherClassroomPut(db, request) {
     (body.teacher && body.teacher.name) || body.teacher_name || body.teacherName || ''
   ).trim();
 
-  // 规范化学生稳定 ID，保证后台与教师端键一致
-  const normalizedStudents = (Array.isArray(body.students) ? body.students : []).map((s, i) => {
-    const name = String((s && s.student_name) || '').trim();
-    const cls = String((s && (s.class_name || s.grade)) || '').trim().replace(/[()（）\s]/g, '');
-    const stableId = String((s && s.stableId) || (name ? (name + '|' + cls) : '') || (s && s.id) || (i + 1));
-    return Object.assign({}, s, { stableId: stableId, id: s && s.id != null ? s.id : stableId });
-  });
-
-  function studentKeyList(s) {
-    const name = String((s && s.student_name) || '').trim();
-    const cls = String((s && (s.class_name || s.grade)) || '').trim().replace(/[()（）\s]/g, '');
-    return [s.stableId, name + '|' + cls, s.id != null ? String(s.id) : '', name].filter(Boolean).map(String);
-  }
-  function remapToStable(mapObj) {
-    const src = mapObj && typeof mapObj === 'object' ? mapObj : {};
-    const out = {};
-    const used = new Set();
-    normalizedStudents.forEach((s) => {
-      for (const k of studentKeyList(s)) {
-        if (src[k] != null) {
-          out[s.stableId] = src[k];
-          used.add(k);
-          return;
-        }
-      }
-    });
-    // 仅保留未能匹配到学生的键（防止误删），已映射的旧数字 id 不再保留
-    Object.keys(src).forEach((k) => {
-      if (used.has(k) || out[k] != null) return;
-      // 若该键能对应某位学生（已写入 out），跳过
-      const matched = normalizedStudents.some((s) => studentKeyList(s).includes(String(k)));
-      if (matched) return;
-      out[k] = src[k];
-    });
-    return out;
-  }
+  const normalizedStudents = normalizeClassroomStudents(body.students);
 
   const normalizedBody = Object.assign({}, body, {
     students: normalizedStudents,
-    checkin: remapToStable(body.checkin),
-    rewards: remapToStable(body.rewards),
-    exams: remapToStable(body.exams),
+    checkin: remapClassroomKeyedMap(body.checkin, normalizedStudents),
+    rewards: remapClassroomKeyedMap(body.rewards, normalizedStudents),
+    exams: remapClassroomKeyedMap(body.exams, normalizedStudents),
     history: (Array.isArray(body.history) ? body.history : []).map((h) =>
-      Object.assign({}, h, { checkin: remapToStable(h && h.checkin) })
+      Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents) })
     )
   });
   const summary = summarizeClassroomPayload(normalizedBody);
