@@ -12,22 +12,21 @@ const upload = multer({ storage: multer.memoryStorage() });
 let MEM_COURSES = [];
 let MEM_ID = 1;
 
-const FIELD_ALIASES = {
-  category:    ['课程类别', '类别', 'category', '课程分类'],
-  name:         ['课程名称', '名称', '课程名', 'name'],
-  description:  ['课程简介', '简介', '课程描述', 'description', '介绍'],
-  teacher:      ['授课老师', '教师', '老师', 'teacher', '授课教师'],
-  location:     ['授课地点', '地点', '教室', 'location'],
-  requirement:  ['报名要求', '要求', '限制', 'requirement'],
-  limit_grade6: ['六年级人数限制', '六年级名额', '六年级', 'limit_grade6'],
-  limit_grade7: ['七年级人数限制', '七年级名额', '七年级', 'limit_grade7']
-};
-
 function normalizeHeader(header) {
   const h = String(header || '').trim();
-  for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
-    if (aliases.some(a => h === a || h.includes(a))) return field;
-  }
+  if (/^序号$/.test(h)) return null;
+  if (/类别|课程类别|分类/.test(h)) return 'category';
+  if (/课程名称|课程名/.test(h)) return 'name';
+  if (h === '课程') return 'name';
+  if (/简介|描述|课程简介/.test(h)) return 'description';
+  if (/授课老师|任课老师|教师|老师/.test(h)) return 'teacher';
+  if (/授课地点|教室|地点|位置/.test(h)) return 'location';
+  if (/六年级人数限制|六年级.*名额|六年级.*人数/.test(h)) return 'limit_grade6';
+  if (/七年级人数限制|七年级.*名额|七年级.*人数/.test(h)) return 'limit_grade7';
+  if (/报名要求/.test(h) || h === '要求' || h === '备注') return 'requirement';
+  if (/名称|课名/.test(h)) return 'name';
+  if (h === '六年级') return 'limit_grade6';
+  if (h === '七年级') return 'limit_grade7';
   return null;
 }
 

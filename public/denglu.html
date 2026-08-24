@@ -191,16 +191,38 @@
     z-index: 2;
     animation: brandItemIn 0.7s 0.2s cubic-bezier(0.34, 1.4, 0.64, 1) both;
   }
-  .brand-logo .logo-svg {
+  .brand-logo .logo-mark {
+    position: relative;
+    flex-shrink: 0;
     width: 56px;
     height: 56px;
-    flex-shrink: 0;
-    filter: drop-shadow(0 4px 12px rgba(245,166,35,0.45));
-    animation: logoSpin 12s linear infinite;
   }
-  @keyframes logoSpin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+  .brand-logo .logo-img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(245,166,35,0.45));
+    animation: logoFloat 3.2s ease-in-out infinite;
+    transform-origin: center center;
+  }
+  .brand-logo .logo-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(245, 166, 35, 0.45);
+    animation: logoRingPulse 2.4s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes logoFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+    35% { transform: translateY(-4px) rotate(-3deg) scale(1.04); }
+    70% { transform: translateY(2px) rotate(2deg) scale(1.02); }
+  }
+  @keyframes logoRingPulse {
+    0% { transform: scale(0.92); opacity: 0.85; }
+    70% { transform: scale(1.18); opacity: 0; }
+    100% { transform: scale(1.18); opacity: 0; }
   }
   .brand-logo .logo-text {
     display: flex;
@@ -598,20 +620,10 @@
   <!-- 左侧品牌区 -->
   <div class="brand-side">
     <div class="brand-logo">
-      <!-- 与选课页面一致的校徽 SVG -->
-      <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
-        <defs>
-          <clipPath id="login-circle">
-            <circle cx="200" cy="200" r="190"/>
-          </clipPath>
-        </defs>
-        <circle cx="200" cy="200" r="190" fill="#F5A623"/>
-        <g clip-path="url(#login-circle)" fill="none" stroke="white" stroke-linecap="round">
-          <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
-          <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
-          <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
-        </g>
-      </svg>
+      <div class="logo-mark">
+        <span class="logo-ring" aria-hidden="true"></span>
+        <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
+      </div>
       <div class="logo-text">
         <span class="cn">上海市闵行区浦江第一中学</span>
         <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
@@ -696,6 +708,7 @@
   </div>
 </div>
 
+<script src="js/role-utils.js"></script>
 <script>
 (function () {
   'use strict';
@@ -760,6 +773,16 @@
     }
   } catch (_) {}
 
+  /* ---------- API 基址（同源默认，支持前后端分离） ---------- */
+  function getApiBase() {
+    try {
+      if (window.__API_BASE__ && typeof window.__API_BASE__ === 'string') return window.__API_BASE__;
+      var saved = localStorage.getItem('pjyz_api_base');
+      if (saved) return saved.replace(/\/+$/, '');
+    } catch (_) {}
+    return '';
+  }
+
   /* ---------- 表单提交 ---------- */
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -784,19 +807,22 @@
     loginBtn.disabled = true;
     loginBtn.textContent = '登录中...';
     try {
-      var res = await fetch('/api/login', {
+      var res = await fetch(getApiBase() + '/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username, password: password })
       });
       var data = await res.json();
       if (data.success && data.token) {
+        // 各端统一读取 admin_token（教师端 / 管理端 / 选课端）
         localStorage.setItem('admin_token', data.token);
+        localStorage.setItem('pjyz_token', data.token);
         if (data.user) {
           localStorage.setItem('pjyz_user', JSON.stringify(data.user));
         }
 
         // 记住账号 & 保存角色
+        var userRole = (data.user && data.user.role) || ((data.user && data.user.roles && data.user.roles[0]) || 'teacher');
         try {
           if (rememberEl.checked) {
             localStorage.setItem('pjyz_login_user', username);
@@ -805,15 +831,27 @@
             localStorage.removeItem('pjyz_login_user');
             localStorage.removeItem('pjyz_login_remember');
           }
-          var userRole = (data.user && data.user.role) || ((data.user && data.user.roles && data.user.roles[0]) || 'teacher');
-          localStorage.setItem('pjyz_login_role', userRole);
           localStorage.setItem('pjyz_current_username', username);
-        } catch (_) {}
 
-        // 根据角色跳转到对应页面
-        var redirectUrl = (userRole === 'admin') ? 'admin.html' : 'xuanke.html';
-        window.location.href = redirectUrl;
-        return;
+          // 登录成功：优先进入最近打开过的页面，并写入活动角色，避免教师端再次要求登录
+          var redirectUrl = 'xuanke';
+          if (window.PjyzRole) {
+            redirectUrl = PjyzRole.getLoginRedirectUrl(data.user);
+            var pageRoleMap = { admin: 'admin', xuanke: 'banzhuren', jiaoshi: 'teacher' };
+            userRole = pageRoleMap[redirectUrl] || userRole;
+            if (userRole) PjyzRole.setActiveRole(userRole);
+          } else if (userRole === 'admin') {
+            redirectUrl = 'admin';
+          } else if (userRole === 'teacher') {
+            redirectUrl = 'jiaoshi';
+          }
+          localStorage.setItem('pjyz_login_role', userRole);
+          window.location.href = redirectUrl;
+          return;
+        } catch (_) {
+          window.location.href = (userRole === 'admin') ? 'admin' : (userRole === 'teacher' ? 'jiaoshi' : 'xuanke');
+          return;
+        }
       } else {
         showMsg(data.error || '登录失败', 'error');
       }

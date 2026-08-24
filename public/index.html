@@ -191,16 +191,13 @@
     z-index: 2;
     animation: brandItemIn 0.7s 0.2s cubic-bezier(0.34, 1.4, 0.64, 1) both;
   }
-  .brand-logo .logo-svg {
+  .brand-logo .logo-img {
     width: 56px;
     height: 56px;
     flex-shrink: 0;
+    object-fit: contain;
+    display: block;
     filter: drop-shadow(0 4px 12px rgba(245,166,35,0.45));
-    animation: logoSpin 12s linear infinite;
-  }
-  @keyframes logoSpin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
   }
   .brand-logo .logo-text {
     display: flex;
@@ -598,20 +595,7 @@
   <!-- 左侧品牌区 -->
   <div class="brand-side">
     <div class="brand-logo">
-      <!-- 与选课页面一致的校徽 SVG -->
-      <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
-        <defs>
-          <clipPath id="login-circle">
-            <circle cx="200" cy="200" r="190"/>
-          </clipPath>
-        </defs>
-        <circle cx="200" cy="200" r="190" fill="#F5A623"/>
-        <g clip-path="url(#login-circle)" fill="none" stroke="white" stroke-linecap="round">
-          <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
-          <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
-          <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
-        </g>
-      </svg>
+      <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
       <div class="logo-text">
         <span class="cn">上海市闵行区浦江第一中学</span>
         <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
@@ -696,6 +680,7 @@
   </div>
 </div>
 
+<script src="js/role-utils.js"></script>
 <script>
 (function () {
   'use strict';
@@ -821,20 +806,12 @@
         if (!ok || !data.success || !data.token) {
           throw new Error(data.error || '登录失败，请检查账号与密码');
         }
-        // 保存 token + 用户信息
+        // 保存 token + 用户信息（各端统一读取 admin_token）
         try {
-          // 通用 token（xuanke.html 用）
+          localStorage.setItem('admin_token', data.token);
           localStorage.setItem('pjyz_token', data.token);
           localStorage.setItem('pjyz_user', JSON.stringify(data.user || {}));
-          localStorage.setItem('pjyz_login_role', (data.user && data.user.role) || '');
-
-          // 管理员 token 兼容 admin.html（admin.html 读取 admin_token）
-          if (data.user && data.user.role === 'admin') {
-            localStorage.setItem('admin_token', data.token);
-          } else {
-            // 切换账号时清理旧的 admin_token，避免误进后台
-            localStorage.removeItem('admin_token');
-          }
+          localStorage.setItem('pjyz_current_username', username);
 
           // 记住账号
           if (rememberEl.checked) {
@@ -844,14 +821,34 @@
             localStorage.removeItem('pjyz_login_user');
             localStorage.removeItem('pjyz_login_remember');
           }
+
+          // 按最近页面 / 角色确定跳转，并写入活动角色
+          if (window.PjyzRole) {
+            var targetPage = PjyzRole.getLoginRedirectUrl(data.user);
+            var pageRoleMap = { admin: 'admin', xuanke: 'banzhuren', jiaoshi: 'teacher' };
+            var redirectRole = pageRoleMap[targetPage] || null;
+            if (!redirectRole) {
+              redirectRole = PjyzRole.getActiveRole() || ((data.user && data.user.roles && data.user.roles[0]) || (data.user && data.user.role) || '');
+            }
+            if (redirectRole) PjyzRole.setActiveRole(redirectRole);
+            localStorage.setItem('pjyz_login_role', redirectRole || ((data.user && data.user.role) || ''));
+          } else {
+            localStorage.setItem('pjyz_login_role', (data.user && data.user.role) || '');
+          }
         } catch (_) {}
 
         showMsg('登录成功，正在跳转…', 'success');
 
-        // 按角色跳转
-        var role = (data.user && data.user.role) || '';
-        var redirect = role === 'admin' ? '/admin' : '/xuanke';
-        // 直接跳转，避免延迟
+        // 优先跳转最近打开的页面；否则按角色跳转
+        var redirect = '/xuanke';
+        if (window.PjyzRole && typeof PjyzRole.getLoginRedirectUrl === 'function') {
+          redirect = '/' + PjyzRole.getLoginRedirectUrl(data.user);
+        } else {
+          var role = (data.user && data.user.role) || '';
+          if (role === 'admin') redirect = '/admin';
+          else if (role === 'teacher') redirect = '/jiaoshi';
+          else redirect = '/xuanke';
+        }
         window.location.href = redirect;
       })
       .catch(function (err) {

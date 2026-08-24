@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>浦江一中拓展课选课</title>
+<script src="js/role-utils.js"></script>
 <!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
 <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -140,19 +141,13 @@ body {
   position: relative;
   z-index: 1;
 }
-.header-logo img {
-  height: 44px;
-  width: auto;
-  display: block;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-}
-/* 内嵌 SVG logo 与原 img 尺寸对齐 */
-.header-logo .logo-svg {
+.header-logo img,
+.header-logo .logo-img {
   height: 44px;
   width: 44px;
-  flex-shrink: 0;
+  object-fit: contain;
   display: block;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18));
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
 }
 .header-logo .logo-text {
   display: flex;
@@ -192,7 +187,7 @@ body {
 /* ===== 右侧操作区 + Reset 按钮 ===== */
 .header-actions {
   position: relative;
-  z-index: 2;
+  z-index: 5;
   margin-left: auto;     /* logo 占左，title 绝对居中，actions 占右 */
   flex-shrink: 0;
   display: flex;
@@ -778,6 +773,46 @@ tr.no-quota:hover td { opacity: 0.7; }
 }
 .slot.filled::after { content: ""; }
 .slot.filled:hover::after { content: " ✕"; }
+.slot.filled.locked-seat {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border-color: #f97316;
+  color: #9a3412;
+  cursor: default;
+  box-shadow: 0 1px 0 rgba(249, 115, 22, 0.25);
+}
+.slot.filled.locked-seat:hover {
+  transform: none;
+  filter: none;
+}
+.slot.filled.locked-seat::after { content: " 🔒"; opacity: 0.85; }
+.slot.filled.locked-seat:hover::after { content: " 🔒"; }
+.name-card.locked-pre {
+  opacity: 0.72;
+  cursor: not-allowed;
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+.locked-float-tip {
+  position: fixed;
+  z-index: 12000;
+  pointer-events: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(154, 52, 18, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(154, 52, 18, 0.28);
+  animation: lockedTipFloat 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes lockedTipFloat {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.92); }
+  18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  70% { opacity: 1; transform: translate(-50%, -18px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -36px) scale(0.98); }
+}
 @keyframes pop {
   0% { transform: scale(0.7); opacity: 0; }
   60% { transform: scale(1.08); }
@@ -821,6 +856,11 @@ tr.no-quota:hover td { opacity: 0.7; }
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+.btn-export.locked:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 /* ===== 选课弹窗 ===== */
@@ -931,6 +971,19 @@ tr.no-quota:hover td { opacity: 0.7; }
   color: #cbd5e1;
   transform: none;
   box-shadow: none;
+}
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-7px); }
+  40%, 80% { transform: translateX(7px); }
+}
+.name-card.shake, .slot.shake {
+  animation: shakeX 0.45s ease;
+}
+.name-card .gender-tag {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-left: 4px;
 }
 .no-students {
   text-align: center;
@@ -1811,8 +1864,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   }
   .header-logo .logo-text .en { display: none; }
   .header-logo .logo-text .cn { font-size: 12px; letter-spacing: 1px; }
-  .header-logo img { height: 36px; }
-  .header-logo .logo-svg { height: 36px; width: 36px; }
+  .header-logo img { height: 36px; width: 36px; }
   /* 窄屏：标题回归正常流式（不再绝对居中，避免与 logo 重叠） */
   .header-title {
     position: static;
@@ -1864,21 +1916,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 <!-- 顶部标题栏 -->
 <div class="header">
   <div class="header-logo">
-    <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
-      <!-- 金黄色圆形底（与参考图颜色一致：饱和橙黄） -->
-      <defs>
-        <clipPath id="pjyz-circle">
-          <circle cx="200" cy="200" r="190"/>
-        </clipPath>
-      </defs>
-      <circle cx="200" cy="200" r="190" fill="#F5A623"/>
-      <g clip-path="url(#pjyz-circle)" fill="none" stroke="white" stroke-linecap="round">
-        <!-- 三条白色飘带：从左下弧形扫向右上 -->
-        <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
-        <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
-        <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
-      </g>
-    </svg>
+    <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
     <div class="logo-text">
       <span class="cn">上海市闵行区浦江第一中学</span>
       <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
@@ -1886,6 +1924,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
   <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   <div class="header-actions">
+    <div id="roleSwitcher"></div>
     <div class="user-info" id="userInfo">
       <span class="user-avatar" id="userAvatar">U</span>
       <span class="user-name" id="userName">用户</span>
@@ -1909,7 +1948,7 @@ tr.no-quota:hover td { opacity: 0.7; }
       <span class="icon">📁</span>
       <div class="text-col" id="uploadTextCol">
         <span class="title">点击或拖拽上传学生名单</span>
-        <span class="hint">支持 .xlsx / .xls 格式，需包含"姓名"列</span>
+        <span class="hint">支持 .xlsx / .xls 格式，需包含「姓名」列（建议含「性别」列）</span>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
     </div>
@@ -2210,7 +2249,7 @@ async function loadCoursesFromServer() {
 // ====================================================================
 const PersistentStorage = (function () {
   const KEY = 'pjyz_course_selection_state_v1';
-  const VERSION = 1;
+  const VERSION = 2;
 
   // ---- 存储底层：try/catch + 可访问性检测 ----
   function isAvailable() {
@@ -2231,6 +2270,7 @@ const PersistentStorage = (function () {
       v: VERSION,
       t: Date.now(),
       students: students.slice(),
+      studentGenders: Object.assign({}, studentGenders),
       fileName: fileName,
       gradeName: gradeName,
       classNumber: classNumber,
@@ -2239,6 +2279,7 @@ const PersistentStorage = (function () {
       courses: COURSES.map(function (c) {
         return { id: c.id, students: c.students.slice() };
       }),
+      lockedStudents: Array.from(lockedStudentNames)
     };
   }
 
@@ -2269,7 +2310,7 @@ const PersistentStorage = (function () {
       if (!data || typeof data !== 'object') {
         throw new Error('invalid format');
       }
-      if (data.v !== VERSION) {
+      if (data.v !== VERSION && data.v !== 1) {
         throw new Error('version mismatch: expected ' + VERSION + ', got ' + data.v);
       }
       return { ok: true, data: data };
@@ -2287,10 +2328,20 @@ const PersistentStorage = (function () {
     try {
       // 恢复基本状态
       if (Array.isArray(data.students)) students = data.students.slice();
+      if (data.studentGenders && typeof data.studentGenders === 'object') {
+        studentGenders = Object.assign({}, data.studentGenders);
+      } else {
+        studentGenders = {};
+      }
       if (typeof data.fileName === 'string') fileName = data.fileName;
       if (typeof data.gradeName === 'string') gradeName = data.gradeName;
       if (typeof data.classNumber === 'string') classNumber = data.classNumber;
       if (typeof data.className === 'string') className = data.className;
+      if (Array.isArray(data.lockedStudents)) {
+        lockedStudentNames = new Set(data.lockedStudents);
+      } else {
+        lockedStudentNames = new Set();
+      }
 
       // 恢复已选学生（只改 students 槽位；limit/结构从 COURSES 同步）
       if (Array.isArray(data.courses)) {
@@ -2549,11 +2600,13 @@ window.PjyzTests = (function () {
 function resetState(silent) {
   // 1. 清空全局状态
   students = [];
+  studentGenders = {};
   gradeName = '';
   classNumber = '';
   className = '';
   fileName = '';
   currentSelect = null;
+  lockedStudentNames = new Set();
 
   // 2. 重置所有课程的 students 为初始空槽（按 limit 初始化）
   COURSES.forEach(function (c) {
@@ -2579,7 +2632,7 @@ function resetState(silent) {
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
       '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
-      '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列</span>';
+      '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列（建议含「性别」列）</span>';
   }
 
   // 5. 关闭可能打开的 modal / lottery
@@ -2592,11 +2645,14 @@ function resetState(silent) {
 
 // ===== 页面状态 =====
 let students = [];          // 学生姓名数组（去重后）
+let studentGenders = {};    // 姓名 → 性别（男/女）
 let gradeName = '';         // 年级名称（六年级 / 七年级）
 let classNumber = '';       // 班级序号（如 "3"）
 let className = '';         // 组合后的班级名称（如 "六年级(3)班"）
 let fileName = '';           // 上传的文件名
+let lockedStudentNames = new Set(); // 提前录课锁定学生（不可退出/改选）
 let currentSelect = null;   // 当前正在选课的位置 { courseId, slotIndex }
+let selectionEnabled = true; // 全局选课开关（后台控制）
 
 // ===== DOM 引用 =====
 const uploadArea = document.getElementById('uploadArea');
@@ -2628,6 +2684,50 @@ function getAssignedNames() {
   return set;
 }
 
+function normalizeGender(val) {
+  const v = String(val || '').trim().toLowerCase();
+  if (v === '男' || v === 'm' || v === 'male' || v === '男生' || v === '男性') return '男';
+  if (v === '女' || v === 'f' || v === 'female' || v === '女生' || v === '女性') return '女';
+  return '';
+}
+
+function getStudentGender(name) {
+  return studentGenders[name] || '';
+}
+
+function parseCourseGenderRestriction(requirement) {
+  const req = String(requirement || '').trim();
+  if (!req) return null;
+  if (/最好|优先|倾向|尽量|希望|宜/.test(req)) return null;
+  if (/只收女生|只限女生|仅限女生|限女生|女生限|只招女生|招收女生|仅限女/.test(req)) return 'female';
+  if (/只收男生|只限男生|仅限男生|限男生|男生限|只招男生|招收男生|仅限男/.test(req)) return 'male';
+  if (/女/.test(req) && /只|限|仅|招|收/.test(req) && !/男/.test(req)) return 'female';
+  if (/男/.test(req) && /只|限|仅|招|收/.test(req) && !/女/.test(req)) return 'male';
+  return null;
+}
+
+function canStudentSelectCourse(studentName, course) {
+  const restriction = parseCourseGenderRestriction(course && course.requirement);
+  if (!restriction) return { ok: true };
+  const gender = getStudentGender(studentName);
+  if (!gender) return { ok: true };
+  if (restriction === 'female' && gender !== '女') {
+    return { ok: false, msg: '该课程仅限女生选课' };
+  }
+  if (restriction === 'male' && gender !== '男') {
+    return { ok: false, msg: '该课程仅限男生选课' };
+  }
+  return { ok: true };
+}
+
+function shakeElement(el) {
+  if (!el) return;
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  setTimeout(() => el.classList.remove('shake'), 500);
+}
+
 // 根据当前年级获取课程限制人数
 // limit 为数字时所有年级一致；为对象时按年级取值
 function getCourseLimit(course) {
@@ -2640,23 +2740,67 @@ function getCourseLimit(course) {
 }
 
 // 根据当前年级同步各课程的 students 数组长度
-// 切换年级时：扩容补 null，缩容时保留已选、裁掉多余空位；若已选超出新限制则裁掉末尾已选
+// 内定学生始终保留；普通选课超出名额时才裁剪
 function syncCourseSlots() {
   COURSES.forEach(c => {
     const limit = getCourseLimit(c);
     const filled = c.students.filter(s => s != null);
-    // 已选超出新限制：保留前 limit 个已选（如超出则提示）
-    if (filled.length > limit) {
-      const overflow = filled.slice(limit);
-      const kept = filled.slice(0, limit);
-      c.students = kept.concat(Array(Math.max(0, limit - kept.length)).fill(null));
-      if (overflow.length) {
-        showToast(`年级切换：${c.name} 已超出限制，已移除 ${overflow.join('、')}`, 'warning');
-      }
-    } else {
-      // 正常扩缩容：保留已选顺序，补 null
-      c.students = filled.concat(Array(Math.max(0, limit - filled.length)).fill(null));
+    const locked = filled.filter(n => lockedStudentNames.has(n));
+    const normal = filled.filter(n => !lockedStudentNames.has(n));
+    const maxNormal = Math.max(0, limit - locked.length);
+    const keptNormal = normal.slice(0, maxNormal);
+    const overflow = normal.slice(maxNormal);
+    const kept = locked.concat(keptNormal);
+    const slotCount = Math.max(limit, kept.length);
+    c.students = kept.concat(Array(Math.max(0, slotCount - kept.length)).fill(null));
+    if (overflow.length) {
+      showToast(`${c.name} 已超出限制，已移除 ${overflow.join('、')}`, 'warning');
     }
+  });
+}
+
+function buildClassKey(grade, classNum) {
+  grade = String(grade || '').trim();
+  classNum = String(classNum || '').trim();
+  if (!grade || !classNum) return '';
+  return grade + classNum + '班';
+}
+
+function extractClassKeyFromRow(row) {
+  const rowGrade = String(row.grade || '').trim();
+  const rowClass = String(row.class_name || '').trim();
+  if (rowClass) {
+    let m = rowClass.match(/^(六年级|七年级)\s*[\(（]?(\d+)[\)）]?班$/);
+    if (m) return buildClassKey(m[1], m[2]);
+    m = rowClass.match(/^[\(（]?(\d+)[\)）]?班$/);
+    if (m && rowGrade) return buildClassKey(rowGrade, m[1]);
+  }
+  if (rowGrade && rowClass) {
+    const num = rowClass.match(/(\d+)/);
+    if (num) return buildClassKey(rowGrade, num[1]);
+  }
+  return rowClass.replace(/[()（）\s]/g, '');
+}
+
+function preEnrollRowMatchesClass(row) {
+  if (!gradeName || !classNumber) return false;
+  return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+}
+
+function resetCourseAssignmentsForClassSwitch() {
+  lockedStudentNames.clear();
+  COURSES.forEach(c => {
+    const limit = getCourseLimit(c);
+    c.students = Array(Math.max(0, limit)).fill(null);
+  });
+}
+
+function finalizeCourseSlotsAfterPreEnroll() {
+  COURSES.forEach(c => {
+    const limit = getCourseLimit(c);
+    const filled = c.students.filter(s => s);
+    const slotCount = Math.max(limit, filled.length);
+    c.students = filled.concat(Array(Math.max(0, slotCount - filled.length)).fill(null));
   });
 }
 
@@ -2716,7 +2860,9 @@ function renderStats() {
     gradeSelect.addEventListener('change', e => {
       gradeName = e.target.value;
       classNumber = '';
-      syncCourseSlots(); // 按新年级同步各课程名额
+      className = '';
+      resetCourseAssignmentsForClassSwitch();
+      syncCourseSlots();
       renderAll();
     });
   }
@@ -2724,7 +2870,7 @@ function renderStats() {
     classSelect.addEventListener('change', e => {
       classNumber = e.target.value;
       updateClassName();
-      renderAll();
+      refreshPreEnrollments();
     });
   }
 }
@@ -2747,6 +2893,53 @@ function updateClassName() {
     className = `${gradeName}(${classNumber})班`;
   } else {
     className = '';
+  }
+}
+
+// 班主任账号：从用户资料同步预填年级班级
+function parseClassNameToGradeAndNumber(classStr) {
+  const s = String(classStr || '').trim();
+  if (!s) return { grade: '', classNum: '' };
+  let m = s.match(/^(六年级|七年级)\s*[\(（](\d+)[\)）]班$/);
+  if (m) return { grade: m[1], classNum: m[2] };
+  m = s.match(/^(六年级|七年级)\s*(\d+)\s*班$/);
+  if (m) return { grade: m[1], classNum: m[2] };
+  m = s.match(/^[\(（](\d+)[\)）]班$/);
+  if (m) return { grade: '', classNum: m[1] };
+  return { grade: '', classNum: '' };
+}
+
+function applyBanzhurenClassPreset() {
+  try {
+    const userStr = localStorage.getItem('pjyz_user');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    const roles = user.roles && user.roles.length
+      ? user.roles
+      : (user.role ? [user.role] : []);
+    if (roles.indexOf('banzhuren') === -1) return;
+
+    const parsed = parseClassNameToGradeAndNumber(user.class_name || '');
+    if (!parsed.grade || !parsed.classNum) return;
+
+    gradeName = parsed.grade;
+    classNumber = parsed.classNum;
+    updateClassName();
+    syncCourseSlots();
+  } catch (e) {
+    console.warn('applyBanzhurenClassPreset:', e);
+  }
+}
+
+async function syncUserProfile() {
+  try {
+    if (!getToken()) return;
+    const data = await apiRequest('GET', '/api/auth/me');
+    if (data && data.user) {
+      localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+    }
+  } catch (e) {
+    console.warn('syncUserProfile:', e);
   }
 }
 
@@ -2814,7 +3007,10 @@ function renderTable() {
       const needClassSel = !gradeName || !classNumber;
       c.students.forEach((name, idx) => {
         if (name) {
-          html += `<span class="slot filled" data-course="${c.id}" data-slot="${idx}" title="点击取消">${esc(name)}</span>`;
+          const locked = lockedStudentNames.has(name);
+          const lockedCls = locked ? ' locked-seat' : '';
+          const tip = locked ? '该生已被确定，不可修改' : '点击取消';
+          html += `<span class="slot filled${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-locked="${locked ? '1' : '0'}" title="${tip}">${esc(name)}</span>`;
         } else {
           const lockedCls = needClassSel ? ' locked' : '';
           const lockedTitle = needClassSel ? ' title="请先选择班级后再选课"' : '';
@@ -2833,23 +3029,65 @@ function renderTable() {
   }
 }
 
+// 更新导出按钮状态（结合名单与全局选课开关）
+function updateExportButtonState() {
+  if (!exportBtn) return;
+  if (!selectionEnabled) {
+    exportBtn.disabled = true;
+    exportBtn.classList.add('locked');
+    exportBtn.innerHTML = '<span>⛔</span> 当前状态禁止选课';
+    return;
+  }
+  exportBtn.classList.remove('locked');
+  exportBtn.disabled = students.length === 0;
+  exportBtn.innerHTML = '<span>⬇</span> 保存并导出 Excel';
+}
+
+async function loadSelectionStatus() {
+  try {
+    const data = await apiRequest('GET', '/api/selection-status');
+    selectionEnabled = data.enabled !== false;
+  } catch (e) {
+    console.warn('loadSelectionStatus:', e);
+  }
+  updateExportButtonState();
+}
+
 // 渲染全部
 function renderAll() {
   renderStats();
   renderTable();
-  // 导出按钮需要有学生名单才能启用
-  if (exportBtn) exportBtn.disabled = students.length === 0;
+  updateExportButtonState();
   // 状态可能发生变化 → 写入持久化（localStorage 写入通常 <1ms，失败有兜底不影响 UI）
   try { saveState(); } catch (e) { console.error('saveState failed in renderAll', e); }
 }
 
 // ===== 选课交互 =====
+function showLockedFloatTip(anchorEl, text) {
+  const tip = document.createElement('div');
+  tip.className = 'locked-float-tip';
+  tip.textContent = text || '该生已被确定，不可修改';
+  document.body.appendChild(tip);
+  const rect = anchorEl && anchorEl.getBoundingClientRect
+    ? anchorEl.getBoundingClientRect()
+    : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 };
+  tip.style.left = Math.round(rect.left + rect.width / 2) + 'px';
+  tip.style.top = Math.round(rect.top - 6) + 'px';
+  setTimeout(() => { tip.remove(); }, 1400);
+}
+
 // 名额按钮点击
 function onSlotClick(e) {
   const courseId  = parseInt(e.currentTarget.dataset.course);
   const slotIndex = parseInt(e.currentTarget.dataset.slot);
   const course = COURSES.find(c => c.id === courseId);
   const currentName = course.students[slotIndex];
+
+  // 提前录课锁定：不可退出，漂浮提示
+  if (currentName && lockedStudentNames.has(currentName)) {
+    showLockedFloatTip(e.currentTarget, '该生已被确定，不可修改');
+    return;
+  }
 
   // 已选 → 取消选课
   if (currentName) {
@@ -2912,12 +3150,24 @@ function renderNameGrid(filter) {
     return;
   }
   nameGrid.innerHTML = list.map(name => {
+    const isLocked = lockedStudentNames.has(name);
     const isAssigned = assigned.has(name);
-    return `<div class="name-card ${isAssigned ? 'disabled' : ''}" data-name="${esc(name)}" title="${isAssigned ? '已选其他课程' : ''}">${esc(name)}${isAssigned ? ' ✓' : ''}</div>`;
+    const disabled = isAssigned || isLocked;
+    const g = getStudentGender(name);
+    const genderTag = g ? `<span class="gender-tag">${esc(g)}</span>` : '';
+    let title = '';
+    if (isLocked) title = '该生已被确定，不可修改';
+    else if (isAssigned) title = '已选其他课程';
+    const extra = isLocked ? ' 🔒' : (isAssigned ? ' ✓' : '');
+    return `<div class="name-card ${disabled ? 'disabled' : ''}${isLocked ? ' locked-pre' : ''}" data-name="${esc(name)}" data-locked="${isLocked ? '1' : '0'}" title="${title}">${esc(name)}${genderTag}${extra}</div>`;
   }).join('');
-  // 绑定可用名字的点击事件
   nameGrid.querySelectorAll('.name-card:not(.disabled)').forEach(card => {
     card.addEventListener('click', onNameClick);
+  });
+  nameGrid.querySelectorAll('.name-card.locked-pre').forEach(card => {
+    card.addEventListener('click', function(e) {
+      showLockedFloatTip(e.currentTarget, '该生已被确定，不可修改');
+    });
   });
 }
 
@@ -2925,7 +3175,17 @@ function renderNameGrid(filter) {
 function onNameClick(e) {
   const name = e.currentTarget.dataset.name;
   if (!currentSelect) return;
+  if (lockedStudentNames.has(name)) {
+    showLockedFloatTip(e.currentTarget, '该生已被确定，不可修改');
+    return;
+  }
   const course = COURSES.find(c => c.id === currentSelect.courseId);
+  const check = canStudentSelectCourse(name, course);
+  if (!check.ok) {
+    shakeElement(e.currentTarget);
+    showToast(check.msg, 'error');
+    return;
+  }
   course.students[currentSelect.slotIndex] = name;
   closeModal();
   renderAll();
@@ -2965,6 +3225,9 @@ function handleFile(file) {
       let nameIdx = header.findIndex(h =>
         h === '姓名' || h === '名字' || h === '学生姓名' || /^name$/i.test(h)
       );
+      const genderIdx = header.findIndex(h =>
+        h === '性别' || h === '学生性别' || /^gender$/i.test(h) || h === '男女'
+      );
       let headerFound = nameIdx !== -1;
       if (!headerFound) {
         // 未找到姓名列 → 退而求其次使用第一列
@@ -2977,10 +3240,17 @@ function handleFile(file) {
 
       // 提取学生姓名
       const names = [];
+      const genders = {};
       for (let i = startRow; i < rows.length; i++) {
         const cell = rows[i][nameIdx];
         const name = cell ? String(cell).trim() : '';
-        if (name) names.push(name);
+        if (name) {
+          names.push(name);
+          if (genderIdx !== -1) {
+            const g = normalizeGender(rows[i][genderIdx]);
+            if (g) genders[name] = g;
+          }
+        }
       }
       // 去重
       const unique = [...new Set(names)];
@@ -2990,6 +3260,8 @@ function handleFile(file) {
       }
       // 重置选课状态
       students = unique;
+      studentGenders = genders;
+      lockedStudentNames = new Set();
       COURSES.forEach(c => c.students = c.students.map(() => null));
       gradeName = '';
       classNumber = '';
@@ -3002,11 +3274,22 @@ function handleFile(file) {
           <span class="file-info">📋 共 ${unique.length} 名学生</span>`;
       }
       renderAll();
-      if (!headerFound) {
-        showToast(`未找到"姓名"列，已使用第一列作为姓名（共 ${unique.length} 人）`, 'warning');
-      } else {
-        showToast(`成功读取 ${unique.length} 名学生`, 'success');
-      }
+      refreshPreEnrollments().then(function(n) {
+        if (!headerFound) {
+          showToast(`未找到"姓名"列，已使用第一列作为姓名（共 ${unique.length} 人）` + (n ? '，已同步内定学生 ' + n + ' 人' : ''), 'warning');
+        } else if (n > 0) {
+          showToast(`成功读取 ${unique.length} 名学生，已同步内定学生 ${n} 人`, 'success');
+        } else {
+          showToast(`成功读取 ${unique.length} 名学生`, 'success');
+        }
+      }).catch(function() {
+        if (!headerFound) {
+          showToast(`未找到"姓名"列，已使用第一列作为姓名（共 ${unique.length} 人）`, 'warning');
+        } else {
+          showToast(`成功读取 ${unique.length} 名学生`, 'success');
+        }
+      });
+      return;
     } catch (err) {
       console.error(err);
       showToast('读取 Excel 失败：' + err.message, 'error');
@@ -3014,6 +3297,218 @@ function handleFile(file) {
   };
   reader.onerror = () => showToast('文件读取失败', 'error');
   reader.readAsArrayBuffer(file);
+}
+
+function removeStudentFromAllCourses(name) {
+  if (!name) return;
+  COURSES.forEach(function(c) {
+    if (!Array.isArray(c.students)) return;
+    c.students = c.students.map(function(s) { return s === name ? null : s; });
+  });
+}
+
+/** 切换班级或上传名单后：按当前年级班级重新同步内定学生 */
+async function refreshPreEnrollments() {
+  resetCourseAssignmentsForClassSwitch();
+  syncCourseSlots();
+  if (!students.length || !gradeName || !classNumber) {
+    renderAll();
+    return 0;
+  }
+  return applyPreEnrollments({ skipReset: true });
+}
+
+/** 识别管理员提前录课学生，按当前班级自动占位并锁定（可超出课程名额；一人一课以内定为准） */
+async function applyPreEnrollments(opts) {
+  opts = opts || {};
+  if (!students.length || !COURSES.length) return 0;
+  if (!getToken()) return 0;
+  if (!gradeName || !classNumber) {
+    if (!opts.skipRender) renderAll();
+    return 0;
+  }
+  if (!opts.skipReset) {
+    resetCourseAssignmentsForClassSwitch();
+    syncCourseSlots();
+  }
+
+  let lockedRows = [];
+  try {
+    const data = await apiRequest('GET', '/api/selections?locked=1');
+    lockedRows = data.selections || [];
+  } catch (e) {
+    console.warn('load pre-enroll failed:', e.message);
+    if (!opts.skipRender) renderAll();
+    return 0;
+  }
+  if (!lockedRows.length) {
+    if (!opts.skipRender) renderAll();
+    return 0;
+  }
+
+  // 同一学生多条内定时只保留一条（优先匹配当前班级）
+  const byName = new Map();
+  lockedRows.forEach(function(row) {
+    const name = String(row.student_name || '').trim();
+    if (!name) return;
+    const prev = byName.get(name);
+    if (!prev) {
+      byName.set(name, row);
+      return;
+    }
+    const prevMatch = preEnrollRowMatchesClass(prev) ? 1 : 0;
+    const curMatch = preEnrollRowMatchesClass(row) ? 1 : 0;
+    if (curMatch > prevMatch || ((row.id || 0) > (prev.id || 0) && curMatch === prevMatch)) {
+      byName.set(name, row);
+    }
+  });
+
+  const nameSet = new Set(students);
+  let placed = 0;
+
+  byName.forEach(function(row) {
+    if (!preEnrollRowMatchesClass(row)) return;
+    const name = String(row.student_name || '').trim();
+    if (!name || !nameSet.has(name)) return;
+
+    const course = COURSES.find(function(c) {
+      if (row.course_id && String(c.id) === String(row.course_id)) return true;
+      return c.name === row.course_name;
+    });
+    if (!course) return;
+
+    // 内定优先：先从其他课程移除，再放入目标课程
+    removeStudentFromAllCourses(name);
+
+    const emptyIdx = course.students.findIndex(function(s) { return !s; });
+    if (emptyIdx < 0) {
+      course.students.push(name);
+    } else {
+      course.students[emptyIdx] = name;
+    }
+    lockedStudentNames.add(name);
+    if (row.gender) {
+      const g = normalizeGender(row.gender);
+      if (g && !studentGenders[name]) studentGenders[name] = g;
+    }
+    placed++;
+  });
+
+  finalizeCourseSlotsAfterPreEnroll();
+  if (!opts.skipRender) renderAll();
+  return placed;
+}
+
+/** 本地无草稿时，从后台恢复本班选课数据（与选课数据页一致） */
+async function restoreSelectionsFromServer() {
+  if (!getToken() || !COURSES.length) return false;
+  if (!gradeName || !classNumber) {
+    applyBanzhurenClassPreset();
+  }
+  if (!gradeName || !classNumber) return false;
+  updateClassName();
+
+  let rows = [];
+  try {
+    const qs = new URLSearchParams();
+    qs.set('grade', gradeName);
+    qs.set('class_name', classNumber + '班');
+    const data = await apiRequest('GET', '/api/selections?' + qs.toString());
+    rows = Array.isArray(data) ? data : (data.selections || []);
+  } catch (e) {
+    console.warn('restoreSelectionsFromServer selections:', e.message);
+    return false;
+  }
+
+  rows = rows.filter(function(row) {
+    return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+  });
+
+  let unselected = [];
+  try {
+    const uq = new URLSearchParams();
+    uq.set('grade', gradeName);
+    uq.set('class', classNumber + '班');
+    const udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
+    unselected = (udata && udata.unselected) || [];
+    unselected = unselected.filter(function(row) {
+      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+    });
+  } catch (e) {
+    console.warn('restoreSelectionsFromServer unselected:', e.message);
+  }
+
+  if (!rows.length && !unselected.length) return false;
+
+  const nameSet = new Set();
+  const genders = {};
+  rows.forEach(function(row) {
+    const name = String(row.student_name || '').trim();
+    if (!name) return;
+    nameSet.add(name);
+    const g = normalizeGender(row.gender);
+    if (g) genders[name] = g;
+  });
+  unselected.forEach(function(row) {
+    const name = String(row.student_name || '').trim();
+    if (!name) return;
+    nameSet.add(name);
+  });
+
+  students = Array.from(nameSet);
+  studentGenders = genders;
+  lockedStudentNames = new Set();
+  fileName = fileName || '已从服务器恢复本班选课';
+
+  COURSES.forEach(function(c) {
+    const limit = getCourseLimit(c);
+    c.students = Array(Math.max(0, limit)).fill(null);
+  });
+
+  // 普通选课先占位；随后内定覆盖（一人一课）
+  rows.forEach(function(row) {
+    if (Number(row.is_locked) === 1) return;
+    const name = String(row.student_name || '').trim();
+    if (!name) return;
+    const course = COURSES.find(function(c) {
+      if (row.course_id && String(c.id) === String(row.course_id)) return true;
+      return c.name === row.course_name;
+    });
+    if (!course) return;
+    if (getAssignedNames().has(name)) return;
+    const emptyIdx = course.students.findIndex(function(s) { return !s; });
+    if (emptyIdx < 0) course.students.push(name);
+    else course.students[emptyIdx] = name;
+  });
+
+  await applyPreEnrollments({ skipReset: true, skipRender: true });
+
+  // 再放入内定（若 apply 因名单已含而完成则已处理）；确保锁定行都在
+  rows.forEach(function(row) {
+    if (Number(row.is_locked) !== 1) return;
+    const name = String(row.student_name || '').trim();
+    if (!name) return;
+    const course = COURSES.find(function(c) {
+      if (row.course_id && String(c.id) === String(row.course_id)) return true;
+      return c.name === row.course_name;
+    });
+    if (!course) return;
+    removeStudentFromAllCourses(name);
+    const emptyIdx = course.students.findIndex(function(s) { return !s; });
+    if (emptyIdx < 0) course.students.push(name);
+    else course.students[emptyIdx] = name;
+    lockedStudentNames.add(name);
+  });
+
+  finalizeCourseSlotsAfterPreEnroll();
+
+  var uploadTextCol = document.getElementById('uploadTextCol');
+  if (uploadTextCol) {
+    uploadTextCol.innerHTML =
+      '<span class="title">✓ ' + esc(fileName) + '</span>' +
+      '<span class="file-info">📋 共 ' + students.length + ' 名学生（与后台选课数据同步）</span>';
+  }
+  return students.length > 0;
 }
 
 // ===== API 辅助函数 =====
@@ -3028,7 +3523,7 @@ function apiBase(){
 
 function getToken(){
   try {
-    return localStorage.getItem('admin_token') || '';
+    return localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token') || '';
   } catch(_) {
     return '';
   }
@@ -3050,6 +3545,12 @@ async function apiRequest(method, url, body){
     throw new Error('网络请求失败，请检查后端服务是否启动');
   }
   if (res.status === 401 && url !== '/api/login'){
+    try {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('pjyz_token');
+      localStorage.removeItem('pjyz_user');
+    } catch (_) {}
+    window.location.href = 'denglu';
     throw new Error('登录已过期，请重新登录');
   }
   var ct = res.headers.get('content-type') || '';
@@ -3067,6 +3568,10 @@ async function apiRequest(method, url, body){
 
 // ===== 同步并导出 Excel =====
 async function exportExcel() {
+  if (!selectionEnabled) {
+    showToast('当前状态禁止选课，无法保存', 'error');
+    return;
+  }
   if (!ensureXLSX()) return;
   if (students.length === 0) {
     showToast('请先上传学生名单', 'error');
@@ -3087,6 +3592,7 @@ async function exportExcel() {
           grade: grade,
           class_name: cls,
           student_name: name,
+          gender: getStudentGender(name),
           course_id: c.id,
           course_name: c.name
         });
@@ -3132,9 +3638,13 @@ async function exportExcel() {
       showToast('正在保存选课数据到服务器...', 'info');
       
       try {
-        await apiRequest('DELETE', '/api/selections');
+        const delParams = new URLSearchParams();
+        if (grade) delParams.set('grade', grade);
+        if (cls) delParams.set('class_name', cls);
+        const delQuery = delParams.toString();
+        await apiRequest('DELETE', '/api/selections' + (delQuery ? '?' + delQuery : ''));
       } catch(e) {
-        console.warn('清除旧选课数据（可能为空）:', e.message);
+        console.warn('清除本班旧选课数据（可能为空）:', e.message);
       }
       
       // 只删除当前用户的旧未选课数据，保留其他用户数据
@@ -3164,6 +3674,7 @@ async function exportExcel() {
         '年级': s.grade,
         '班级': s.class_name,
         '姓名': s.student_name,
+        '性别': s.gender || '',
         '选课名称': s.course_name
       }));
       
@@ -3199,8 +3710,7 @@ async function exportExcel() {
       console.error('保存失败:', e);
       showToast('保存失败：' + e.message, 'error');
     } finally {
-      btn.disabled = students.length === 0;
-      btn.innerHTML = originalText;
+      updateExportButtonState();
     }
   }
 }
@@ -3872,18 +4382,29 @@ document.addEventListener('keydown', e => {
   try {
     // 1. 先从服务器加载课程数据
     await loadCoursesFromServer();
+
+    // 2. 加载全局选课开关状态
+    await loadSelectionStatus();
+
+    // 2.5 同步用户资料（班主任班级等）
+    await syncUserProfile();
     
-    // 2. 加载本地持久化的选课状态（恢复已选学生等）
+    // 3. 加载本地持久化；若已重置/无本地草稿，则从后台恢复本班选课
     var loaded = loadStateFromStorage();
-    if (loaded) {
-      // 还原上传模块文案（如果已有学生名单）
-      if (students.length > 0) {
-        var uploadTextCol = document.getElementById('uploadTextCol');
-        if (uploadTextCol) {
-          uploadTextCol.innerHTML =
-            '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
-            '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
-        }
+    applyBanzhurenClassPreset();
+    if (loaded && students.length > 0) {
+      var uploadTextCol = document.getElementById('uploadTextCol');
+      if (uploadTextCol) {
+        uploadTextCol.innerHTML =
+          '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
+          '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
+      }
+      // 本地草稿也强制以内定课程为准，避免一人两课（保留其他学生已选）
+      await applyPreEnrollments({ skipReset: true });
+    } else {
+      const restored = await restoreSelectionsFromServer();
+      if (restored) {
+        showToast('已从后台恢复本班选课数据', 'success');
       }
     }
   } catch (e) {
@@ -3897,6 +4418,9 @@ document.addEventListener('keydown', e => {
   if (COURSES.length === 0) {
     showToast('暂无课程数据，请联系管理员上传课程', 'warning');
   }
+
+  // 定时刷新选课开关状态（管理员可能在后台切换）
+  setInterval(loadSelectionStatus, 30000);
 })();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
@@ -4060,18 +4584,25 @@ document.addEventListener('keydown', e => {
     if (userAvatarEl) userAvatarEl.textContent = displayName.charAt(0).toUpperCase();
   }
 
+  if (window.PjyzRole) {
+    PjyzRole.enforcePageAccess();
+    PjyzRole.initRoleSwitcher('roleSwitcher');
+  }
+
   // 退出登录
   if (logoutBtn) {
     logoutBtn.addEventListener('click', function () {
       try {
         localStorage.removeItem('pjyz_current_username');
         localStorage.removeItem('pjyz_login_role');
+        // 保留 pjyz_active_role / pjyz_last_page，下次登录回到最近页面
         localStorage.removeItem('admin_token');
+        localStorage.removeItem('pjyz_token');
         localStorage.removeItem('pjyz_user');
         // 跳转到登录页
-        window.location.href = 'denglu.html';
+        window.location.href = 'denglu';
       } catch (e) {
-        window.location.href = 'denglu.html';
+        window.location.href = 'denglu';
       }
     });
   }

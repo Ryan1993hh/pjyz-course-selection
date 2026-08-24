@@ -1,0 +1,186 @@
+/**
+ * 电子木鱼样式（参考 fish.leixf.cn 视觉）
+ * 雪碧图来源：fish.leixf.cn/assets/sprites/all.webp
+ */
+.clock-muyu-zone {
+  --muyu-gold-300: #E8C97A;
+  --muyu-gold-500: #C9A66B;
+  --muyu-text-secondary: #A89F8C;
+  --muyu-text-muted: #6B6558;
+  --muyu-gradient-gold: linear-gradient(135deg, #F0DCAA 0%, #C9A66B 100%);
+  --muyu-gradient-glow: radial-gradient(circle, rgba(232, 201, 122, 0.28) 0%, transparent 70%);
+  width: min(360px, 92vw);
+  margin: 8px 0 16px;
+  padding: 20px 20px 14px;
+  border-radius: 24px;
+  background: radial-gradient(ellipse at 50% 38%, #171C26 0%, #0B0E13 72%);
+  border: 1px solid rgba(201, 166, 107, 0.16);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+.clock-muyu-zone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+  pointer-events: none;
+}
+.clock-muyu-zone .merit-display {
+  text-align: center;
+  margin-bottom: 8px;
+  z-index: 2;
+  position: relative;
+}
+.clock-muyu-zone .merit-count {
+  font-family: "Songti SC", "Noto Serif SC", "KaiTi", serif;
+  font-size: clamp(40px, 10vw, 56px);
+  font-weight: 700;
+  line-height: 1;
+  background: var(--muyu-gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 18px rgba(232, 201, 122, 0.25));
+  transition: filter 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.clock-muyu-zone .merit-count.bump {
+  filter: drop-shadow(0 0 28px rgba(232, 201, 122, 0.55));
+  transform: scale(1.08);
+}
+.clock-muyu-zone .merit-label {
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 15px;
+  color: var(--muyu-text-secondary);
+  margin-top: 6px;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+}
+.clock-muyu-zone .fish-stage {
+  position: relative;
+  width: 280px;
+  height: 240px;
+  margin: 0 auto;
+  cursor: pointer;
+  z-index: 2;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.clock-muyu-zone .stage-halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 260px;
+  height: 260px;
+  transform: translate(-50%, -50%);
+  background: var(--muyu-gradient-glow);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.clock-muyu-zone .fish-assembly {
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+  transform: translateX(-50%);
+  width: 82%;
+  aspect-ratio: 1 / 1.08;
+  z-index: 1;
+  pointer-events: none;
+}
+.clock-muyu-zone .wooden-fish {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  aspect-ratio: 1 / 1;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+  z-index: 1;
+  transition: transform 0.08s ease-out;
+}
+.clock-muyu-zone .wooden-hammer {
+  position: absolute;
+  top: -4%;
+  left: 40%;
+  width: 54%;
+  aspect-ratio: 1 / 1;
+  transform: rotate(16deg);
+  transform-origin: 80% 85%;
+  z-index: 3;
+  pointer-events: none;
+  transition: transform 0.1s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.clock-muyu-zone .fish-stage.tapping .wooden-hammer {
+  transform: rotate(42deg);
+}
+.clock-muyu-zone .fish-stage.tapping .wooden-fish {
+  transform: translateX(-50%) scale(0.96);
+}
+.clock-muyu-zone .particles-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+.clock-muyu-zone .merit-particle {
+  position: absolute;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muyu-gold-300);
+  text-shadow: 0 0 12px rgba(232, 201, 122, 0.8);
+  pointer-events: none;
+  animation: muyuMeritFloat 1s ease forwards;
+  white-space: nowrap;
+}
+@keyframes muyuMeritFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-48px) scale(1.1); }
+}
+.clock-muyu-zone .tap-hint {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muyu-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 2;
+  position: relative;
+}
+.clock-muyu-zone .tap-hint kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(237, 230, 214, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muyu-text-secondary);
+}
+.clock-muyu-zone .spr {
+  display: block;
+  background-repeat: no-repeat;
+  background-image: url("../images/muyu/all.webp");
+}
+.clock-muyu-zone .spr-muyu {
+  background-size: 200% 979.296875%;
+  background-position: 0 0;
+}
+.clock-muyu-zone .spr-hammer {
+  background-size: 533.333333% 2611.458333%;
+  background-position: 92.788462% 85.275819%;
+}
+
+@media (max-width: 480px) {
+  .clock-muyu-zone .fish-stage {
+    width: 240px;
+    height: 200px;
+  }
+  .clock-muyu-zone .stage-halo {
+    width: 220px;
+    height: 220px;
+  }
+}

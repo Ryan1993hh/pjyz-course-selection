@@ -3,7 +3,6 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,12 +12,10 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// 静态文件（前端）- 优先使用 public/（Cloudflare 部署用），回退 frontend/
+// 静态文件（前端）- public/ 为 Cloudflare Pages 部署目录
 const publicDir = path.join(__dirname, '..', 'public');
-const frontendDir = path.join(__dirname, '..', 'frontend');
-const staticDir = fs.existsSync(publicDir) ? publicDir : frontendDir;
-app.use(express.static(staticDir));
-console.log('[Static] 静态文件目录:', staticDir);
+app.use(express.static(publicDir));
+console.log('[Static] 静态文件目录:', publicDir);
 
 // 注册路由
 const authRoutes = require('./routes/auth');
@@ -35,7 +32,7 @@ app.use('/api', classRoutes);
 
 // 根路径返回登录页
 app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendDir, 'denglu.html'));
+  res.sendFile(path.join(publicDir, 'denglu.html'));
 });
 
 // 健康检查

@@ -1,0 +1,4345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<title>浦江一中拓展课 教师端</title>
+<link rel="stylesheet" href="css/muyu.css">
+<script src="js/role-utils.js"></script>
+<script src="js/teacher-quotes.js"></script>
+<script src="js/muyu.js"></script>
+<style>
+:root {
+  --primary: #0d9488;
+  --primary-soft: rgba(13, 148, 136, 0.12);
+  --primary-dark: #0f766e;
+  --accent: #0ea5e9;
+  --bg: #f0fdfa;
+  --bg2: #ecfeff;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: rgba(0, 0, 0, 0.06);
+  --success: #34c759;
+  --danger: #ff3b30;
+  --warning: #ff9500;
+  --info: #5ac8fa;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --shadow: 0 4px 12px rgba(13, 148, 136, 0.08);
+  --shadow-lg: 0 10px 30px rgba(13, 148, 136, 0.15);
+  --header-grad: linear-gradient(135deg, #14b8a6 0%, #0d9488 45%, #0f766e 100%);
+  --profile-grad: linear-gradient(160deg, #0d9488 0%, #0f766e 55%, #115e59 100%);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --page-pad-x: clamp(10px, 3.2vw, 14px);
+  --main-pad: clamp(10px, 3vw, 16px);
+  --card-pad: clamp(12px, 3.5vw, 16px);
+  --section-gap: clamp(10px, 2.5vw, 14px);
+  --tabbar-h: calc(clamp(56px, 14vw, 64px) + var(--safe-bottom));
+  --touch-min: 44px;
+}
+
+/* 皮肤：紫罗兰 */
+html[data-skin="violet"] {
+  --primary: #7c3aed;
+  --primary-soft: rgba(124, 58, 237, 0.12);
+  --primary-dark: #6d28d9;
+  --accent: #a78bfa;
+  --bg: #f5f3ff;
+  --bg2: #ede9fe;
+  --shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+  --shadow-lg: 0 10px 30px rgba(124, 58, 237, 0.18);
+  --header-grad: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+  --profile-grad: linear-gradient(160deg, #8b5cf6 0%, #7c3aed 50%, #5b21b6 100%);
+}
+/* 皮肤：海蓝 */
+html[data-skin="ocean"] {
+  --primary: #0284c7;
+  --primary-soft: rgba(2, 132, 199, 0.12);
+  --primary-dark: #0369a1;
+  --accent: #38bdf8;
+  --bg: #f0f9ff;
+  --bg2: #e0f2fe;
+  --shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
+  --shadow-lg: 0 10px 30px rgba(2, 132, 199, 0.18);
+  --header-grad: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+  --profile-grad: linear-gradient(160deg, #0ea5e9 0%, #0284c7 50%, #075985 100%);
+}
+/* 皮肤：暖橙 */
+html[data-skin="sunset"] {
+  --primary: #ea580c;
+  --primary-soft: rgba(234, 88, 12, 0.12);
+  --primary-dark: #c2410c;
+  --accent: #fb923c;
+  --bg: #fff7ed;
+  --bg2: #ffedd5;
+  --shadow: 0 4px 12px rgba(234, 88, 12, 0.1);
+  --shadow-lg: 0 10px 30px rgba(234, 88, 12, 0.18);
+  --header-grad: linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #c2410c 100%);
+  --profile-grad: linear-gradient(160deg, #fb923c 0%, #ea580c 50%, #9a3412 100%);
+}
+/* 皮肤：森绿 */
+html[data-skin="forest"] {
+  --primary: #16a34a;
+  --primary-soft: rgba(22, 163, 74, 0.12);
+  --primary-dark: #15803d;
+  --accent: #4ade80;
+  --bg: #f0fdf4;
+  --bg2: #dcfce7;
+  --shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
+  --shadow-lg: 0 10px 30px rgba(22, 163, 74, 0.18);
+  --header-grad: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+  --profile-grad: linear-gradient(160deg, #22c55e 0%, #16a34a 50%, #14532d 100%);
+}
+/* 皮肤：墨夜 */
+html[data-skin="ink"] {
+  --primary: #38bdf8;
+  --primary-soft: rgba(56, 189, 248, 0.16);
+  --primary-dark: #0ea5e9;
+  --accent: #818cf8;
+  --bg: #0f172a;
+  --bg2: #1e293b;
+  --card: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: rgba(148, 163, 184, 0.18);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --header-grad: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #020617 100%);
+  --profile-grad: linear-gradient(160deg, #334155 0%, #1e293b 50%, #0f172a 100%);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  line-height: 1.5;
+  padding: var(--page-pad-x) var(--page-pad-x) var(--tabbar-h);
+  overflow-x: hidden;
+}
+
+/* ===== 顶栏（与选课页一致的渐变动效） ===== */
+.app-header {
+  color: white;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+  background: var(--header-grad);
+  background-size: 200% 200%;
+  animation: headerGradientShift 12s ease-in-out infinite;
+}
+@keyframes headerGradientShift {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+.app-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(600px 120px at 50% 0%, rgba(255,255,255,0.18), transparent 60%);
+}
+.header-logo {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.header-logo .logo-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+  animation: logoFloat 4s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.03); }
+}
+.header-title-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: center;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+.header-title-btn:hover { background: rgba(255,255,255,0.12); }
+.header-title-btn h1 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  white-space: nowrap;
+}
+.header-title-btn small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+.header-actions {
+  position: relative;
+  z-index: 5;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.header-user-meta {
+  text-align: right;
+  line-height: 1.3;
+  max-width: 140px;
+}
+.header-user-meta .meta-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-user-meta .meta-course {
+  display: block;
+  font-size: 11px;
+  opacity: 0.88;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== 全屏时钟 ===== */
+.clock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: linear-gradient(160deg, #042f2e 0%, #0f766e 45%, #0d9488 100%);
+  color: #fff;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.clock-overlay.show { display: flex; }
+.clock-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+}
+.clock-time {
+  font-size: clamp(56px, 14vw, 96px);
+  font-weight: 200;
+  letter-spacing: 4px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+.clock-date {
+  font-size: 18px;
+  opacity: 0.9;
+  margin-bottom: 32px;
+}
+.clock-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 12px;
+  width: min(420px, 100%);
+}
+.clock-info-item {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+.clock-info-item .lbl { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+.clock-info-item .val { font-size: 16px; font-weight: 700; }
+.clock-greeting {
+  font-size: clamp(20px, 4vw, 28px);
+  font-weight: 600;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.clock-quote-wrap {
+  max-width: min(560px, 92vw);
+  margin-bottom: 16px;
+  padding: 18px 24px 20px;
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: quoteFadeIn 0.6s ease;
+}
+.clock-quote-wrap::before,
+.clock-quote-wrap::after {
+  position: absolute;
+  font-family: "KaiTi", "STKaiti", "FangSong", serif;
+  font-size: 42px;
+  line-height: 1;
+  color: rgba(253, 230, 138, 0.35);
+  pointer-events: none;
+}
+.clock-quote-wrap::before {
+  content: "「";
+  top: 6px;
+  left: 12px;
+}
+.clock-quote-wrap::after {
+  content: "」";
+  bottom: 4px;
+  right: 12px;
+}
+.clock-quote-label {
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 10px;
+  text-align: center;
+}
+.clock-quote {
+  text-align: center;
+  font-family: "KaiTi", "STKaiti", "FangSong", "LXGW WenKai", "Songti SC", serif;
+  font-size: clamp(20px, 4.2vw, 28px);
+  line-height: 1.85;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: #fef9c3;
+  text-shadow:
+    0 2px 16px rgba(0, 0, 0, 0.45),
+    0 0 32px rgba(250, 204, 21, 0.35);
+  padding: 0 8px;
+  margin: 0;
+  opacity: 1;
+}
+@keyframes quoteFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.clock-quote-wrap.quote-refresh {
+  animation: quoteFadeIn 0.55s ease;
+}
+
+/* ===== 顶栏（旧样式保留兼容） ===== */
+.topbar { display: none; }
+
+/* ===== 主内容 ===== */
+.main { max-width: 980px; margin: 0 auto; padding: var(--main-pad); }
+
+.session-blocked-banner {
+  display: none;
+  background: linear-gradient(90deg, #fef2f2, #fff7ed);
+  border-bottom: 1px solid #fecaca;
+  color: #b91c1c;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.session-blocked-banner.show { display: block; }
+#panel-checkin.session-blocked .stats-start-btn,
+#panel-checkin.session-blocked .student-actions button,
+#panel-checkin.session-blocked .action-bar button,
+#panel-checkin.session-blocked .btn-copy-absent {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.panel { display: none; animation: fadeIn 0.25s ease; }
+.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--card-pad);
+  margin-bottom: var(--section-gap);
+  border: 1px solid var(--border);
+}
+.card-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.card-toolbar .card-title { margin: 0; }
+.card-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.card-toolbar-actions .btn {
+  flex: none;
+  min-width: auto;
+  padding: 8px 14px;
+}
+.flex-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: stretch;
+}
+.flex-input-row .form-input { flex: 1; min-width: 0; }
+.flex-input-row .btn { flex: 0 0 auto; min-width: auto; }
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.2px;
+}
+.subtitle { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+
+/* ===== 统计卡片（紧凑横排） ===== */
+.stats-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stats-start-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+.stats-start-btn:active { transform: scale(0.97); }
+.stats-cards {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  min-height: 44px;
+}
+.stat-card .icon { font-size: 16px; flex-shrink: 0; line-height: 1; margin: 0; }
+.stat-card .stat-meta { min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.stat-card .num { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+.stat-card .label { font-size: 11px; color: var(--muted); margin: 0; line-height: 1.2; }
+.stat-card.ok .num { color: var(--success); }
+.stat-card.bad .num { color: var(--danger); }
+.stat-card.warn .num { color: var(--warning); }
+@media (max-width: 420px) {
+  .stats-row { flex-wrap: wrap; }
+  .stats-start-btn { width: 100%; min-height: 40px; }
+  .stats-cards { width: 100%; }
+  .stat-card { padding: 7px 8px; gap: 6px; }
+  .stat-card .num { font-size: 16px; }
+}
+
+/* ===== 标签 ===== */
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f2f2f7;
+  color: var(--text);
+}
+.tag.warn { background: #fff4e5; color: #b45309; }
+.tag.bad { background: #ffeceb; color: #c41e16; }
+.tag.sick { background: #e0f2fe; color: #0369a1; }
+
+/* ===== 学生网格 ===== */
+.student-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  gap: 10px;
+}
+.student-item {
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.student-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #c7c7cc;
+}
+.status-dot.present { background: var(--success); }
+.status-dot.absent { background: var(--danger); }
+.status-dot.late { background: var(--warning); }
+.status-dot.sick { background: #0ea5e9; }
+.student-item.is-present { border-color: rgba(52,199,89,0.35); background: #f0fdf4; }
+.student-item.is-absent { border-color: rgba(255,59,48,0.35); background: #fff5f5; }
+.student-item.is-sick { border-color: rgba(14,165,233,0.4); background: #f0f9ff; }
+.student-item.is-late { border-color: rgba(255,149,0,0.4); background: #fffbeb; }
+.student-name { font-size: 14px; font-weight: 600; }
+.student-class { font-size: 11px; color: var(--muted); }
+.student-status-badge {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.student-status-badge.present { background: #dcfce7; color: #15803d; }
+.student-status-badge.absent { background: #fee2e2; color: #b91c1c; }
+.student-status-badge.sick { background: #e0f2fe; color: #0369a1; }
+.student-status-badge.late { background: #ffedd5; color: #c2410c; }
+.student-actions { display: flex; gap: 6px; }
+
+/* ===== 未到选择弹窗 ===== */
+.absence-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+.absence-overlay.show { display: flex; }
+.absence-sheet {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px 16px 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.22);
+  animation: sheetUp 0.22s ease;
+}
+@keyframes sheetUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.absence-sheet h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.absence-sheet .sub {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.absence-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.absence-choice {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 10px;
+  background: #fafafa;
+  cursor: pointer;
+  text-align: center;
+}
+.absence-choice:active { transform: scale(0.97); }
+.absence-choice .ico { font-size: 28px; display: block; margin-bottom: 6px; }
+.absence-choice .ttl { font-size: 15px; font-weight: 700; }
+.absence-choice .desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.absence-choice.sick { background: #f0f9ff; border-color: rgba(14,165,233,0.35); }
+.absence-choice.sick .ttl { color: #0369a1; }
+.absence-choice.absent { background: #fff5f5; border-color: rgba(255,59,48,0.3); }
+.absence-choice.absent .ttl { color: #b91c1c; }
+.absence-cancel {
+  width: 100%;
+  border: none;
+  background: #f2f2f7;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+}
+
+/* ===== 全屏签到 ===== */
+.fs-checkin {
+  position: fixed;
+  inset: 0;
+  z-index: 8800;
+  background: #f2f2f7;
+  display: none;
+  flex-direction: column;
+  /* 模拟手机网页：居中窄屏容器 */
+  max-width: 430px;
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 0 40px rgba(0,0,0,0.18);
+}
+.fs-checkin.show { display: flex; }
+@media (min-width: 480px) {
+  .fs-checkin.show {
+    top: 12px;
+    bottom: 12px;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  body.fs-checkin-open::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 8790;
+    background: rgba(15, 23, 42, 0.55);
+  }
+}
+.fs-checkin-header {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #fff;
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fs-checkin-header h2 { font-size: 17px; font-weight: 700; margin: 0; }
+.fs-checkin-header .fs-sub { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+.fs-checkin-close {
+  width: 36px; height: 36px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+}
+.fs-checkin-stats {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.7);
+  border-bottom: 1px solid var(--border);
+}
+.fs-checkin-stats .fs-stat {
+  text-align: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+}
+.fs-checkin-stats .fs-stat .n { font-size: 18px; font-weight: 700; line-height: 1.1; display: inline-block; }
+.fs-checkin-stats .fs-stat .l { font-size: 11px; color: var(--muted); }
+.fs-checkin-stats .ok .n { color: var(--success); }
+.fs-checkin-stats .bad .n { color: var(--danger); }
+.fs-checkin-stats .warn .n { color: var(--warning); }
+.fs-checkin-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 12px 100px;
+}
+.fs-student-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 380px) {
+  .fs-student-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.fs-student-card {
+  position: relative;
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 12px 12px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition:
+    border-color 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fs-student-card.is-present {
+  border-color: #34c759;
+  background: linear-gradient(180deg, #ecfdf5 0%, #fff 55%);
+}
+.fs-student-card.fs-card-enter-present {
+  animation: fsCardPresentGlow 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes fsCardPresentGlow {
+  0% { transform: scale(1); box-shadow: var(--shadow); }
+  35% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.22), 0 10px 28px rgba(52, 199, 89, 0.14);
+  }
+  100% { transform: scale(1); box-shadow: var(--shadow); }
+}
+.fs-student-card.is-absent {
+  border-color: #ff3b30;
+  background: linear-gradient(180deg, #fff1f0 0%, #fff 55%);
+}
+.fs-student-card.is-sick {
+  border-color: #0ea5e9;
+  background: linear-gradient(180deg, #e0f2fe 0%, #fff 55%);
+}
+.fs-student-card .fs-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 8px 0 4px;
+  letter-spacing: 0.02em;
+}
+.fs-student-card .fs-class {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.fs-student-card .fs-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.fs-student-card .fs-badge.fs-badge-enter {
+  animation: fsBadgeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fsBadgeIn {
+  0% { opacity: 0; transform: scale(0.72) translateY(-5px); }
+  55% { opacity: 1; transform: scale(1.04) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.fs-student-card .fs-badge.present {
+  background: #dcfce7;
+  color: #15803d;
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.12);
+}
+.fs-student-card .fs-badge.absent { background: #fee2e2; color: #b91c1c; }
+.fs-student-card .fs-badge.sick { background: #e0f2fe; color: #0369a1; }
+.fs-student-card .fs-actions {
+  margin-top: auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  transition: opacity 0.28s ease;
+}
+.fs-student-card.fs-actions-changing .fs-actions {
+  opacity: 0.45;
+}
+.fs-student-card .fs-act {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.fs-student-card .fs-act:active {
+  transform: scale(0.96);
+}
+.fs-act.present-btn { background: var(--primary); color: #fff; }
+.fs-act.present-change-btn {
+  background: transparent;
+  color: var(--primary-dark);
+  border: 1.5px solid rgba(0,0,0,0.12);
+  box-shadow: none;
+  font-weight: 600;
+}
+html[data-skin="ink"] .fs-act.present-change-btn {
+  border-color: rgba(148,163,184,0.35);
+  color: var(--primary);
+}
+.fs-act.absent-btn { background: #ffeceb; color: var(--danger); }
+.fs-act.cancel-btn { background: #e8e8ed; color: var(--text); }
+html[data-skin="ink"] .fs-act.cancel-btn { background: #334155; color: var(--text); }
+.fs-check-anim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.35);
+  animation: fsOverlayFade 0.75s ease-out forwards;
+}
+.fs-check-anim .ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(52, 199, 89, 0.94);
+  color: #fff;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fsCheckSoft 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  box-shadow: 0 6px 20px rgba(52, 199, 89, 0.35);
+}
+@keyframes fsCheckSoft {
+  0% { transform: scale(0.45); opacity: 0; }
+  38% { transform: scale(1.06); opacity: 1; }
+  68% { transform: scale(1); opacity: 0.92; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+@keyframes fsOverlayFade {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.fs-checkin-stats .fs-stat .n.fs-stat-bump {
+  animation: fsStatBump 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes fsStatBump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.fs-checkin-footer {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  background: linear-gradient(180deg, transparent 0%, rgba(240,253,250,0.95) 28%, #f0fdfa 100%);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.fs-finish-btn {
+  pointer-events: auto;
+  width: min(420px, 100%);
+  border: none;
+  border-radius: 14px;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(13,148,136,0.35);
+}
+.fs-finish-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* 异常名单 + 复制旷课信息 */
+.abnormal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.abnormal-head .card-title { margin-bottom: 0; }
+.abnormal-actions {
+  flex-shrink: 0;
+  text-align: right;
+  max-width: 46%;
+}
+.btn-copy-absent {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #e8e8ed;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-copy-absent:active { transform: scale(0.97); }
+.copy-absent-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.btn-sm {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-sm.primary { background: var(--primary); color: #fff; }
+.btn-sm.ghost { background: #e8e8ed; color: var(--text); }
+.btn-sm.danger { background: #ffeceb; color: var(--danger); }
+.btn-sm.outline {
+  background: transparent;
+  color: var(--primary-dark);
+  border: 1.5px solid rgba(0,0,0,0.12);
+}
+
+/* ===== 底部操作 ===== */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-secondary { background: #e8e8ed; color: var(--text); }
+.btn-danger { background: #ffeceb; color: var(--danger); }
+
+/* ===== 底部导航 ===== */
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 200;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--border);
+  padding: 8px 8px calc(8px + var(--safe-bottom));
+  display: flex;
+  justify-content: space-around;
+  max-width: 980px;
+  margin: 0 auto;
+  box-shadow: 0 -4px 20px rgba(13,148,136,0.06);
+}
+.tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.tab-btn .ico { display: block; font-size: 20px; margin-bottom: 2px; }
+.tab-btn.active { color: var(--primary); background: var(--primary-soft); font-weight: 600; }
+
+/* ===== 课堂助手 ===== */
+.flower-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.flower-tag {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.flower-tag:active { transform: scale(0.96); }
+.flower-tag.pop { animation: flowerPopBtn 0.35s ease; }
+@keyframes flowerPopBtn {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); box-shadow: 0 4px 16px rgba(255,59,48,0.35); }
+  100% { transform: scale(1); }
+}
+.flower-pop-fx {
+  position: fixed;
+  z-index: 8500;
+  font-size: 32px;
+  pointer-events: none;
+  animation: flowerFly 0.75s ease forwards;
+}
+@keyframes flowerFly {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+  60% { opacity: 1; transform: translate(-50%, -120%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -180%) scale(0.8); }
+}
+.flower-pop-text {
+  position: fixed;
+  z-index: 8501;
+  background: rgba(29,29,31,0.9);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  animation: flowerTextPop 0.9s ease forwards;
+}
+@keyframes flowerTextPop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  20% { opacity: 1; transform: translate(-50%, -80%) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(0.9); }
+}
+.lottery-box {
+  text-align: center;
+  padding: 28px 16px;
+  background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.lottery-result {
+  font-size: clamp(22px, 6vw, 28px);
+  font-weight: 700;
+  min-height: 42px;
+  letter-spacing: -0.5px;
+}
+.lottery-result.spinning {
+  animation: lotteryRollPulse 0.08s linear infinite;
+}
+@keyframes lotteryRollPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.lottery-result.winner {
+  animation: lotteryWinnerIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@keyframes lotteryWinnerIn {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.lottery-pool-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.lottery-draw-btn {
+  margin-top: 12px;
+  display: none;
+}
+.lottery-draw-btn.show { display: inline-flex; }
+
+/* 选人抽签弹层 */
+.ta-picker-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9200;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.ta-picker-mask.show { display: flex; }
+.ta-picker-box {
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  background: linear-gradient(160deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ta-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  flex-shrink: 0;
+}
+.ta-picker-head h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.ta-picker-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+.ta-picker-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  color: rgba(255,255,255,0.75);
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
+}
+.ta-picker-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ta-picker-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid rgba(255,255,255,0.22);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.ta-picker-chip:hover {
+  background: rgba(255,255,255,0.14);
+  transform: translateY(-1px);
+}
+.ta-picker-chip.selected {
+  background: linear-gradient(135deg, rgba(34,197,94,0.5), rgba(22,163,74,0.5));
+  border-color: rgba(134,239,172,0.85);
+}
+.ta-picker-chip .chip-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.55);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+}
+.ta-picker-chip.selected .chip-dot {
+  background: #16a34a;
+  border-color: #fff;
+}
+.ta-picker-chip .chip-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ta-picker-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: rgba(255,255,255,0.55);
+  padding: 28px 10px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.ta-picker-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
+}
+.ta-picker-foot .btn { flex: 1; }
+.ta-picker-foot .btn-confirm-pick {
+  background: linear-gradient(135deg, #f43f5e, #fb7185);
+  color: #fff;
+  border: none;
+}
+@media (max-width: 520px) {
+  .ta-picker-body { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 360px) {
+  .ta-picker-body { grid-template-columns: 1fr; }
+}
+.timer-display {
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: clamp(36px, 10vw, 48px);
+  font-weight: 300;
+  text-align: center;
+  letter-spacing: 2px;
+  margin: 16px 0;
+}
+.timer-modes { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.mode-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mode-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+.timer-controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.activity-item .info { flex: 1; }
+.activity-item .name { font-weight: 600; font-size: 14px; }
+.activity-item .meta { font-size: 12px; color: var(--muted); }
+
+/* ===== 考核表格 ===== */
+.grade-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.grade-stat {
+  text-align: center;
+  padding: 12px 6px;
+  background: #fafafa;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.grade-stat .n { font-size: 20px; font-weight: 700; }
+.grade-stat .l { font-size: 11px; color: var(--muted); }
+.table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 720px;
+}
+table.data-table th, table.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+table.data-table th {
+  background: #f5f5f7;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+}
+table.data-table tr:last-child td { border-bottom: none; }
+table.attendance-table th, table.attendance-table td {
+  border: 1px solid #d1d5db;
+  text-align: center;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+table.attendance-table th:first-child,
+table.attendance-table td:first-child { text-align: left; font-weight: 600; }
+table.attendance-table th { background: #f5f5f7; color: var(--muted); font-size: 12px; }
+.cell-ok { color: var(--text); font-size: 16px; font-weight: 700; }
+.cell-bad { color: var(--danger); font-weight: 600; }
+.cell-warn { color: var(--warning); font-weight: 600; }
+.stars {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  vertical-align: middle;
+}
+.stars .star-icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.stars .star-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.stars .star-icon.on {
+  filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.45));
+}
+.stars .star-icon.on svg { fill: #ff9f1a; stroke: #ffb347; }
+.stars .star-icon.off svg { fill: #e8e8ed; stroke: #d8d8de; }
+.stars .star-icon:hover { transform: scale(1.12); }
+.stars .star-icon.pop {
+  animation: starBounce 0.45s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+@keyframes starBounce {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35) rotate(-8deg); }
+  65% { transform: scale(0.92) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.stars-row-pop { animation: starsRowGlow 0.55s ease; }
+@keyframes starsRowGlow {
+  0% { filter: brightness(1); }
+  40% { filter: brightness(1.15); }
+  100% { filter: brightness(1); }
+}
+.exam-pop-fx {
+  position: fixed;
+  z-index: 8500;
+  font-size: 28px;
+  pointer-events: none;
+  animation: examStarFly 0.8s ease forwards;
+}
+@keyframes examStarFly {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.4) rotate(-20deg); }
+  50% { opacity: 1; transform: translate(-50%, -130%) scale(1.25) rotate(8deg); }
+  100% { opacity: 0; transform: translate(-50%, -200%) scale(0.7) rotate(0); }
+}
+.exam-pop-text {
+  position: fixed;
+  z-index: 8501;
+  max-width: min(90vw, 320px);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(13, 148, 136, 0.95));
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.35);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: examTextPop 1.1s ease forwards;
+}
+@keyframes examTextPop {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(0.85); }
+  18% { opacity: 1; transform: translate(-50%, -90%) scale(1); }
+  75% { opacity: 1; transform: translate(-50%, -120%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -150%) scale(0.95); }
+}
+@media (max-width: 640px) {
+  .stars .star-icon { width: 32px; height: 32px; }
+  .exam-pop-text { font-size: 12px; padding: 7px 12px; white-space: normal; text-align: center; }
+}
+
+/* ===== 教师信息（头图 + 悬浮统计 + 分组列表） ===== */
+.profile-page { width: 100%; }
+.profile-banner {
+  position: relative;
+  background: var(--profile-grad);
+  border-radius: var(--radius);
+  padding: 28px 20px 56px;
+  color: #fff;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.profile-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 45%);
+  pointer-events: none;
+}
+.profile-banner .profile-name {
+  position: relative;
+  z-index: 1;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.profile-banner .profile-role {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  opacity: 0.92;
+}
+.profile-stat-card {
+  position: relative;
+  z-index: 2;
+  margin: -36px 12px 16px;
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 16px 8px;
+}
+.profile-stat-card .ps {
+  text-align: center;
+  padding: 0 6px;
+  border-right: 1px solid var(--border);
+}
+.profile-stat-card .ps:last-child { border-right: none; }
+.profile-stat-card .ps .n {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.15;
+}
+.profile-stat-card .ps .n.loc {
+  font-size: 13px;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.profile-stat-card .ps .l {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.profile-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 8px 4px 8px;
+}
+.profile-group {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.profile-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-item:last-child { border-bottom: none; }
+.profile-item .pi-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  background: var(--primary-soft);
+}
+.profile-item .pi-body { flex: 1; min-width: 0; }
+.profile-item .pi-label { font-size: 12px; color: var(--muted); }
+.profile-item .pi-value {
+  font-size: 15px;
+  font-weight: 650;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-item .pi-chevron { color: #c7c7cc; font-size: 18px; flex-shrink: 0; }
+.profile-item .pi-action {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 14px;
+}
+.skin-swatch {
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 10px 8px;
+  cursor: pointer;
+  background: var(--bg);
+  text-align: center;
+}
+.skin-swatch.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.skin-swatch .swatch-bar {
+  height: 28px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.skin-swatch .swatch-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.profile-pass-panel { display: none; padding: 0 14px 14px; }
+.profile-pass-panel.show { display: block; }
+.profile-pass-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-pass-row .form-input { flex: 1; }
+.profile-pass-toggle {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 42px;
+}
+.profile-pass-toggle:hover { background: #f8fafc; color: var(--text); }
+.profile-pass-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.profile-note {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.absent-alert-card { margin-top: 14px; }
+.absent-alert-list { display: flex; flex-direction: column; gap: 10px; }
+.absent-alert-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fffaf5;
+}
+html[data-skin="ink"] .absent-alert-item { background: #292524; }
+.absent-alert-item .ai-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.absent-alert-item .ai-name { font-size: 15px; font-weight: 700; }
+.absent-alert-item .ai-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.absent-alert-item .ai-reason {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.absent-alert-item .ai-copy {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #e8e8ed;
+  color: var(--text);
+  cursor: pointer;
+}
+html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
+
+/* ===== 教师信息表单 ===== */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.form-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  background: #fafafa;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+}
+
+/* ===== 登录遮罩 ===== */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(160deg, #042f2e, #0f766e 50%, #0d9488);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-overlay.hidden { display: none; }
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow: var(--shadow-lg);
+}
+.login-card h2 { font-size: 22px; margin-bottom: 6px; }
+.login-card p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+/* ===== 庆祝遮罩 ===== */
+.celebrate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(0,0,0,0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.celebrate-overlay.show { display: flex; }
+.celebrate-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px 24px;
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+  animation: popIn 0.35s ease;
+}
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.celebrate-card .emoji { font-size: 56px; margin-bottom: 12px; }
+.celebrate-card h3 { font-size: 22px; margin-bottom: 8px; }
+.celebrate-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: rgba(29,29,31,0.92);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  z-index: 8000;
+  transition: transform 0.3s ease;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+
+.login-card .login-logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-card .login-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr; }
+  .grade-stats { grid-template-columns: repeat(2, 1fr); }
+  .student-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .header-title-btn h1 { font-size: clamp(13px, 3.6vw, 15px); letter-spacing: 1px; }
+  .header-user-meta { max-width: 88px; }
+}
+
+/* ===== 移动端自适应（手机端布局 / 间距 / 字号） ===== */
+@media (max-width: 768px) {
+  .app-header { padding: 10px 12px; margin-bottom: 12px; }
+  .header-logo .logo-img { width: 38px; height: 38px; }
+  .header-title-btn { padding: 4px 8px; }
+  .header-title-btn h1 { font-size: clamp(13px, 3.8vw, 16px); }
+  .header-title-btn small { font-size: 10px; }
+  .header-user-meta .meta-name { font-size: 12px; }
+  .header-user-meta .meta-course { font-size: 10px; }
+  .session-blocked-banner { font-size: 13px; padding: 8px 12px; }
+  .tabbar {
+    max-width: none;
+    padding: 6px 4px calc(6px + var(--safe-bottom));
+  }
+  .tab-btn {
+    font-size: clamp(10px, 2.8vw, 11px);
+    padding: 8px 2px;
+    min-height: var(--touch-min);
+  }
+  .tab-btn .ico { font-size: clamp(18px, 5vw, 20px); }
+  .card-title { font-size: clamp(14px, 3.8vw, 15px); }
+  .subtitle { font-size: clamp(12px, 3.2vw, 13px); }
+  .btn {
+    min-width: 0;
+    padding: clamp(10px, 2.8vw, 12px) clamp(14px, 4vw, 18px);
+    font-size: clamp(13px, 3.5vw, 14px);
+    min-height: var(--touch-min);
+  }
+  .btn-sm { min-height: 36px; padding: 8px 0; font-size: 12px; }
+  .student-item { padding: clamp(10px, 2.8vw, 12px); }
+  .student-name { font-size: clamp(13px, 3.5vw, 14px); }
+  .student-grid { gap: clamp(8px, 2vw, 10px); }
+  .lottery-box { padding: clamp(20px, 5vw, 28px) clamp(12px, 3vw, 16px); }
+  .flower-tag { padding: clamp(7px, 2vw, 8px) clamp(10px, 2.8vw, 12px); font-size: clamp(12px, 3.2vw, 13px); }
+  .mode-btn { padding: clamp(7px, 2vw, 8px) clamp(12px, 3.5vw, 16px); font-size: clamp(12px, 3.2vw, 13px); }
+  .grade-stat { padding: clamp(10px, 2.8vw, 12px) 6px; }
+  .grade-stat .n { font-size: clamp(18px, 4.8vw, 20px); }
+  .table-wrap {
+    margin-left: calc(-1 * var(--card-pad));
+    margin-right: calc(-1 * var(--card-pad));
+    width: calc(100% + 2 * var(--card-pad));
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  table.data-table {
+    min-width: 560px;
+    font-size: 12px;
+  }
+  table.data-table th, table.data-table td {
+    padding: clamp(7px, 2vw, 10px) clamp(8px, 2.2vw, 12px);
+  }
+  .profile-banner { padding: clamp(22px, 5vw, 28px) clamp(16px, 4vw, 20px) clamp(44px, 10vw, 56px); }
+  .profile-banner .profile-name { font-size: clamp(20px, 5.5vw, 26px); }
+  .profile-banner .profile-role { font-size: clamp(12px, 3.2vw, 14px); }
+  .profile-stat-card {
+    margin: clamp(-32px, -8vw, -36px) clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
+    padding: clamp(12px, 3vw, 16px) 4px;
+  }
+  .profile-stat-card .ps .n { font-size: clamp(18px, 4.8vw, 22px); }
+  .profile-stat-card .ps .n.loc { font-size: clamp(12px, 3.2vw, 13px); }
+  .profile-item { padding: clamp(12px, 3vw, 14px); gap: clamp(10px, 2.5vw, 12px); }
+  .profile-item .pi-value { font-size: clamp(14px, 3.6vw, 15px); }
+  .form-input {
+    font-size: 16px;
+    padding: clamp(10px, 2.8vw, 12px);
+  }
+  .login-card { padding: clamp(24px, 6vw, 32px) clamp(20px, 5vw, 28px); margin: 12px; }
+  .fs-checkin { max-width: none; box-shadow: none; }
+}
+
+@media (max-width: 480px) {
+  .header-title-btn small { display: none; }
+  .header-user-meta .meta-course { display: none; }
+  .header-user-meta { max-width: 72px; }
+  .stats-start-btn { font-size: clamp(12px, 3.2vw, 13px); padding: 0 clamp(10px, 2.8vw, 14px); }
+  .stat-card .num { font-size: clamp(15px, 4vw, 18px); }
+  .stat-card .label { font-size: clamp(10px, 2.8vw, 11px); }
+  .action-bar { flex-direction: column; }
+  .action-bar .btn { width: 100%; }
+  .card-toolbar { flex-direction: column; align-items: stretch; }
+  .card-toolbar-actions { width: 100%; }
+  .card-toolbar-actions .btn { flex: 1; }
+  .flex-input-row { flex-direction: column; }
+  .flex-input-row .btn { width: 100%; }
+  .abnormal-head { flex-direction: column; align-items: stretch; }
+  .abnormal-actions { max-width: none; text-align: left; }
+  .btn-copy-absent { width: 100%; }
+  .timer-controls { flex-direction: column; }
+  .timer-controls .btn { width: 100%; }
+  .skin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 12px; }
+  .profile-pass-row { flex-wrap: wrap; }
+  .profile-pass-row .btn, .profile-pass-row .profile-pass-toggle { width: 100%; }
+  .clock-info-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .clock-quote-wrap { padding: 14px 18px 16px; }
+}
+
+@media (max-width: 380px) {
+  .student-grid { grid-template-columns: 1fr; }
+  .grade-stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-card { flex-direction: column; text-align: center; padding: 8px 6px; gap: 4px; }
+  .stat-card .stat-meta { align-items: center; }
+  .tab-btn { font-size: 10px; letter-spacing: -0.2px; }
+  .tab-btn .ico { font-size: 17px; margin-bottom: 1px; }
+  .header-title-btn h1 { font-size: 12px; letter-spacing: 0; }
+  .header-logo .logo-img { width: 32px; height: 32px; }
+  table.data-table { min-width: 480px; font-size: 11px; }
+  .profile-stat-card { grid-template-columns: 1fr; }
+  .profile-stat-card .ps {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+  }
+  .profile-stat-card .ps:last-child { border-bottom: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo"><img src="images/logo.png" alt="浦江一中校徽"></div>
+    <h2>教师端登录</h2>
+    <p>浦江一中拓展课 · 智慧课堂考勤</p>
+    <div class="form-group">
+      <label>账号</label>
+      <input type="text" class="form-input" id="loginUser" placeholder="教师账号" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" class="form-input" id="loginPass" placeholder="密码" autocomplete="current-password">
+    </div>
+    <button type="button" class="btn btn-primary" style="width:100%" id="loginBtn">登 录</button>
+    <p style="margin-top:14px;font-size:12px;color:var(--muted);text-align:center">
+      <a href="denglu" style="color:var(--primary)">返回统一登录</a>
+    </p>
+  </div>
+</div>
+
+<header class="app-header">
+  <div class="header-logo">
+    <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
+  </div>
+  <button type="button" class="header-title-btn" id="headerTitleBtn" title="点击查看全屏时钟">
+    <h1>浦江一中拓展课 教师端</h1>
+    <small id="dateLine">今日签到</small>
+  </button>
+  <div class="header-actions">
+    <div class="header-user-meta">
+      <span class="meta-name" id="headerTeacherName">—</span>
+      <span class="meta-course" id="headerCourseName">—</span>
+    </div>
+    <div id="roleSwitcher"></div>
+  </div>
+</header>
+
+<div class="session-blocked-banner" id="sessionBlockedBanner" role="alert">
+  <span id="sessionBlockedMsg">非上课时间 不可使用</span>
+</div>
+
+<div class="clock-overlay" id="clockOverlay">
+  <button type="button" class="clock-close" id="clockClose" aria-label="关闭">✕</button>
+  <div class="clock-greeting" id="clockGreeting">老师，您好</div>
+  <div class="clock-time" id="clockTime">00:00:00</div>
+  <div class="clock-date" id="clockDate"></div>
+  <div class="clock-quote-wrap" id="clockQuoteWrap">
+    <div class="clock-quote-label">今日寄语</div>
+    <p class="clock-quote" id="clockQuote">愿每一堂课都值得回味。</p>
+  </div>
+  <div class="clock-muyu-zone" id="clockMuyuZone">
+    <div class="merit-display" role="status" aria-live="polite">
+      <div class="merit-count" id="meritCount">0</div>
+      <div class="merit-label">功德</div>
+    </div>
+    <div class="fish-stage" id="fishStage" role="button" aria-label="点击敲木鱼">
+      <div class="stage-halo" aria-hidden="true"></div>
+      <div class="fish-assembly">
+        <div class="wooden-fish spr spr-muyu" id="woodenFish" aria-hidden="true"></div>
+        <div class="wooden-hammer spr spr-hammer" id="woodenHammer" aria-hidden="true"></div>
+      </div>
+      <div class="particles-container" id="meritParticles" aria-hidden="true"></div>
+    </div>
+    <div class="tap-hint"><kbd>空格</kbd> 或 👆 点击敲击木鱼</div>
+  </div>
+  <div class="clock-info-grid">
+    <div class="clock-info-item"><div class="lbl">课程</div><div class="val" id="clockCourse">—</div></div>
+    <div class="clock-info-item"><div class="lbl">教师</div><div class="val" id="clockTeacher">—</div></div>
+    <div class="clock-info-item"><div class="lbl">地点</div><div class="val" id="clockLocation">—</div></div>
+    <div class="clock-info-item"><div class="lbl">学生人数</div><div class="val" id="clockStudents">0</div></div>
+  </div>
+</div>
+
+<main class="main">
+  <!-- 签到 -->
+  <section class="panel active" id="panel-checkin">
+    <div class="stats-row">
+      <button type="button" class="stats-start-btn" id="startCheckinBtn">▶ 开始签到</button>
+      <div class="stats-cards">
+        <div class="stat-card ok"><span class="icon">✔</span><div class="stat-meta"><div class="num" id="statPresent">0</div><div class="label">已签到</div></div></div>
+        <div class="stat-card bad"><span class="icon">✖</span><div class="stat-meta"><div class="num" id="statAbsent">0</div><div class="label">未签到</div></div></div>
+        <div class="stat-card warn"><span class="icon">⚠</span><div class="stat-meta"><div class="num" id="statAbnormal">0</div><div class="label">异常</div></div></div>
+      </div>
+    </div>
+    <div class="card" id="abnormalCard">
+      <div class="abnormal-head">
+        <div class="card-title">异常名单</div>
+        <div class="abnormal-actions">
+          <button type="button" class="btn-copy-absent" id="reportBtn">复制旷课信息</button>
+          <div class="copy-absent-hint">点击生成旷课学生信息</div>
+        </div>
+      </div>
+      <div class="tags" id="abnormalTags"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">学生名单</div>
+      <div class="subtitle" id="studentCountHint">正在加载绑定课程…</div>
+      <div class="student-grid" id="studentGrid"></div>
+      <div class="empty-hint" id="emptyStudents" style="display:none">暂无学生，请在「教师信息」中同步选课数据</div>
+    </div>
+    <div class="action-bar">
+      <button type="button" class="btn btn-primary" id="finishCheckinBtn">保存签到</button>
+      <button type="button" class="btn btn-danger" id="resetCheckinBtn">重置</button>
+    </div>
+  </section>
+
+  <!-- 课堂助手 -->
+  <section class="panel" id="panel-assistant">
+    <div class="card">
+      <div class="card-title">🌺 小红花加分</div>
+      <p class="subtitle">单击赠送小红花，双击减少一朵；每朵 +0.2 分</p>
+      <div class="flower-grid" id="flowerGrid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 幸运抽签</div>
+      <div class="lottery-box">
+        <div class="lottery-result" id="lotteryResult">🎯 点击抽签</div>
+        <div class="lottery-pool-hint" id="lotteryPoolHint"></div>
+        <button type="button" class="btn btn-primary lottery-draw-btn" id="lotteryDrawBtn">🎲 开始抽取</button>
+      </div>
+      <div class="action-bar">
+        <button type="button" class="btn btn-primary" id="lotteryAllBtn">全班随机抽签</button>
+        <button type="button" class="btn btn-secondary" id="lotteryPickBtn">选人抽签</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⏱ 课堂计时器</div>
+      <div class="timer-modes">
+        <button type="button" class="mode-btn active" data-mode="up">正计时</button>
+        <button type="button" class="mode-btn" data-mode="down">倒计时</button>
+      </div>
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div style="text-align:center;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted)">倒计时分钟 </label>
+        <input type="number" id="timerMinutes" value="5" min="1" max="120" style="width:60px;padding:6px;border-radius:8px;border:1px solid var(--border);text-align:center">
+      </div>
+      <div class="timer-controls">
+        <button type="button" class="btn btn-primary" id="timerPlay">▶ 开始</button>
+        <button type="button" class="btn btn-secondary" id="timerPause">⏸ 暂停</button>
+        <button type="button" class="btn btn-danger" id="timerStop">⏹ 停止</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📝 课堂活动</div>
+      <div class="flex-input-row">
+        <input type="text" class="form-input" id="activityInput" placeholder="活动名称，如：小组讨论">
+        <button type="button" class="btn btn-primary" id="createActivityBtn">创建</button>
+      </div>
+      <div id="activityList"></div>
+    </div>
+  </section>
+
+  <!-- 考核看板 -->
+  <section class="panel" id="panel-grade">
+    <div class="card">
+      <div class="card-toolbar">
+        <div class="card-title">签到记录</div>
+        <div class="card-toolbar-actions">
+          <button type="button" class="btn btn-secondary" id="refreshGradeBtn">刷新</button>
+          <button type="button" class="btn btn-primary" id="exportGradeBtn">导出 Excel</button>
+        </div>
+      </div>
+      <p class="subtitle" style="margin-top:0">每次完成签到生成一列记录；同一天多次签到显示最近一次</p>
+      <div class="table-wrap">
+        <table class="data-table attendance-table" id="attendanceTable">
+          <thead id="attendanceTableHead"><tr><th>序号</th><th>班级</th><th>姓名</th></tr></thead>
+          <tbody id="attendanceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card absent-alert-card" id="absentAlertCard">
+      <div class="card-title">旷课预警</div>
+      <p class="subtitle" style="margin-top:0">连续 2 次或累计 4 次旷课的学生将显示在此，可复制给班主任</p>
+      <div class="absent-alert-list" id="absentAlertList">
+        <span class="subtitle">暂无预警学生</span>
+      </div>
+    </div>
+    <div class="grade-stats">
+      <div class="grade-stat"><div class="n" id="gradeTotal">0</div><div class="l">总人数</div></div>
+      <div class="grade-stat"><div class="n" id="gradeA">0</div><div class="l">A 等第</div></div>
+      <div class="grade-stat"><div class="n" id="gradeB">0</div><div class="l">B 等第</div></div>
+      <div class="grade-stat"><div class="n" id="gradeC">0</div><div class="l">C 等第</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">综合考核</div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>序号</th><th>班级</th><th>姓名</th><th>签到</th><th>旷课</th>
+              <th>小红花</th><th>期末考核</th><th>总分</th><th>等第</th>
+            </tr>
+          </thead>
+          <tbody id="gradeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 教师信息 -->
+  <section class="panel" id="panel-profile">
+    <div class="profile-page">
+      <div class="profile-banner">
+        <div class="profile-name" id="profileDisplayName">教师</div>
+        <div class="profile-role" id="profileRoleLine">拓展课 · 教师</div>
+      </div>
+      <div class="profile-stat-card">
+        <div class="ps">
+          <div class="n" id="profileStudentCount">0</div>
+          <div class="l">选课学生</div>
+        </div>
+        <div class="ps">
+          <div class="n" id="tagClasses">0</div>
+          <div class="l">累计课时</div>
+        </div>
+        <div class="ps">
+          <div class="n loc" id="tagLocation">—</div>
+          <div class="l">上课地点</div>
+        </div>
+      </div>
+
+      <div class="profile-section-title">课程信息</div>
+      <div class="profile-group">
+        <div class="profile-item">
+          <div class="pi-ico">👨‍🏫</div>
+          <div class="pi-body">
+            <div class="pi-label">教师姓名</div>
+            <div class="pi-value" id="teacherNameDisplay">—</div>
+          </div>
+          <span class="pi-chevron">›</span>
+        </div>
+        <div class="profile-item">
+          <div class="pi-ico">🎵</div>
+          <div class="pi-body">
+            <div class="pi-label">课程名称</div>
+            <div class="pi-value" id="teacherCourseDisplay">—</div>
+          </div>
+          <span class="pi-chevron">›</span>
+        </div>
+        <div class="profile-item">
+          <div class="pi-ico">📍</div>
+          <div class="pi-body">
+            <div class="pi-label">上课地点</div>
+            <div class="pi-value" id="teacherLocationDisplay">—</div>
+          </div>
+          <span class="pi-chevron">›</span>
+        </div>
+      </div>
+
+      <div class="profile-section-title">数据管理</div>
+      <div class="profile-group">
+        <div class="profile-item">
+          <div class="pi-ico">🔄</div>
+          <div class="pi-body">
+            <div class="pi-label">同步学生名单</div>
+            <div class="pi-value">从后台拉取选课数据</div>
+          </div>
+          <button type="button" class="pi-action" id="profileSyncBtn">同步</button>
+        </div>
+        <div class="profile-item" id="exportStudentRow" style="cursor:pointer">
+          <div class="pi-ico">📊</div>
+          <div class="pi-body">
+            <div class="pi-label">Excel 导出</div>
+            <div class="pi-value">导出学生名单表格</div>
+          </div>
+          <span class="pi-chevron">›</span>
+        </div>
+      </div>
+
+      <div class="profile-section-title">更换皮肤</div>
+      <div class="profile-group">
+        <div class="skin-grid" id="skinGrid">
+          <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
+          <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
+          <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
+          <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
+          <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
+          <button type="button" class="skin-swatch" data-skin="ink"><div class="swatch-bar" style="background:linear-gradient(135deg,#334155,#0f172a)"></div><div class="swatch-name">墨夜</div></button>
+        </div>
+      </div>
+
+      <div class="profile-section-title">账号密码</div>
+      <div class="profile-group">
+        <div class="profile-item" id="togglePassBtn" style="cursor:pointer">
+          <div class="pi-ico">🔐</div>
+          <div class="pi-body">
+            <div class="pi-label">账号密码</div>
+            <div class="pi-value" id="passPanelHint">点击查看 / 修改登录密码</div>
+          </div>
+          <span class="pi-chevron">›</span>
+        </div>
+        <div class="profile-pass-panel" id="profilePassPanel">
+          <p class="profile-pass-hint">可查看当前密码；修改后将同步到后台用户管理。</p>
+          <div class="form-group">
+            <label>登录账号</label>
+            <input type="text" class="form-input" id="accountUsername" readonly>
+          </div>
+          <div class="form-group">
+            <label>当前密码</label>
+            <div class="profile-pass-row">
+              <input type="password" class="form-input" id="currentPassView" readonly placeholder="加载中…">
+              <button type="button" class="profile-pass-toggle" id="toggleCurrentPassBtn">显示</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>新密码</label>
+            <input type="password" class="form-input" id="newPass" placeholder="至少 4 位" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label>确认新密码</label>
+            <input type="password" class="form-input" id="confirmPass" placeholder="再次输入新密码" autocomplete="new-password">
+          </div>
+          <button type="button" class="btn btn-secondary" id="updatePassBtn" style="width:100%">更新密码</button>
+        </div>
+      </div>
+
+      <div class="profile-section-title">账号</div>
+      <div class="profile-group">
+        <div class="profile-item">
+          <div class="pi-ico">👤</div>
+          <div class="pi-body">
+            <div class="pi-label">当前登录</div>
+            <div class="pi-value" id="profileAccountHint">—</div>
+          </div>
+        </div>
+        <div class="profile-item">
+          <button type="button" class="btn btn-danger" id="profileLogoutBtn" style="width:100%;margin:4px 0">退出登录</button>
+        </div>
+      </div>
+      <p class="profile-note">教师信息由账号绑定，如需修改请联系管理员</p>
+      <input type="hidden" id="teacherName"><input type="hidden" id="teacherCourse"><input type="hidden" id="teacherLocation"><input type="hidden" id="teacherClasses" value="0">
+      <span id="tagCourse" style="display:none"></span>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button type="button" class="tab-btn active" data-tab="checkin"><span class="ico">📝</span>学生签到</button>
+  <button type="button" class="tab-btn" data-tab="assistant"><span class="ico">🎯</span>课堂助手</button>
+  <button type="button" class="tab-btn" data-tab="grade"><span class="ico">📊</span>考核看板</button>
+  <button type="button" class="tab-btn" data-tab="profile"><span class="ico">👤</span>教师信息</button>
+</nav>
+
+<div class="celebrate-overlay" id="celebrateOverlay">
+  <div class="celebrate-card">
+    <div class="emoji">🎉</div>
+    <h3>签到完成</h3>
+    <p id="celebrateText"></p>
+    <button type="button" class="btn btn-primary" style="width:100%;margin-top:16px" id="celebrateClose">查看详情</button>
+  </div>
+</div>
+
+<!-- 未到：病假 / 旷课 -->
+<div class="absence-overlay" id="absenceOverlay">
+  <div class="absence-sheet" role="dialog" aria-modal="true" aria-labelledby="absenceTitle">
+    <h3 id="absenceTitle">标记未到</h3>
+    <div class="sub" id="absenceStudentName">请选择原因</div>
+    <div class="absence-choices">
+      <button type="button" class="absence-choice sick" data-absence="sick">
+        <span class="ico">🤒</span>
+        <span class="ttl">病假</span>
+        <span class="desc">因病请假</span>
+      </button>
+      <button type="button" class="absence-choice absent" data-absence="absent">
+        <span class="ico">🚫</span>
+        <span class="ttl">旷课</span>
+        <span class="desc">无故缺席</span>
+      </button>
+    </div>
+    <button type="button" class="absence-cancel" id="absenceCancel">取消</button>
+  </div>
+</div>
+
+<!-- 全屏签到 -->
+<div class="fs-checkin" id="fsCheckin">
+  <div class="fs-checkin-header">
+    <div>
+      <h2>全屏签到</h2>
+      <div class="fs-sub" id="fsCheckinSub">点击学生卡片完成签到</div>
+    </div>
+    <button type="button" class="fs-checkin-close" id="fsCheckinClose" aria-label="关闭">✕</button>
+  </div>
+  <div class="fs-checkin-stats">
+    <div class="fs-stat ok"><div class="n" id="fsStatPresent">0</div><div class="l">已签到</div></div>
+    <div class="fs-stat bad"><div class="n" id="fsStatPending">0</div><div class="l">未处理</div></div>
+    <div class="fs-stat warn"><div class="n" id="fsStatAbnormal">0</div><div class="l">异常</div></div>
+  </div>
+  <div class="fs-checkin-body">
+    <div class="fs-student-grid" id="fsStudentGrid"></div>
+  </div>
+  <div class="fs-checkin-footer">
+    <button type="button" class="fs-finish-btn" id="fsFinishBtn">保存签到</button>
+  </div>
+</div>
+
+<div class="ta-picker-mask" id="taPickerMask" role="dialog" aria-modal="true">
+  <div class="ta-picker-box">
+    <div class="ta-picker-head">
+      <h4>🎲 随机抽签系统</h4>
+      <button type="button" class="ta-picker-close" id="taPickerClose" aria-label="关闭">×</button>
+    </div>
+    <div class="ta-picker-sub">
+      <span>从学生名单中选择参与抽签人员</span>
+      <span id="taPickerCount">已选 0 人</span>
+    </div>
+    <div class="ta-picker-body" id="taPickerBody"></div>
+    <div class="ta-picker-foot">
+      <button type="button" class="btn btn-secondary" id="taPickerCancel">取消</button>
+      <button type="button" class="btn btn-confirm-pick" id="taPickerConfirm">确认选人</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+const TOKEN_KEY = "admin_token";
+const USER_KEY = "pjyz_user";
+const STORE_PREFIX = "pjyz_teacher_attendance_";
+
+const STATUS_LABEL = { none: "未签到", present: "已签到", absent: "旷课", late: "迟到", sick: "病假" };
+const ABNORMAL = new Set(["absent", "late", "sick"]);
+
+let state = {
+  students: [],
+  checkin: {},
+  checkinDay: "",
+  checkinDone: false,
+  rewards: {},
+  exams: {},
+  activities: [],
+  history: [],
+  teacher: { name: "", course: "", location: "", totalClasses: 0 },
+  password: "123456",
+  courseId: "",
+  courseName: "",
+  courses: [],
+  classTeachers: {},
+  numericHoursTotal: null
+};
+
+let timer = { mode: "up", seconds: 0, interval: null, running: false, target: 300 };
+let scheduleState = { allowed: true, reason: "", mode: "default", suspended: false, date: "" };
+
+function isCheckinSessionAllowed() {
+  return scheduleState.allowed !== false;
+}
+
+async function loadClassScheduleStatus() {
+  try {
+    scheduleState = await api("GET", "/api/class-schedule-status");
+    applyClassScheduleUI();
+  } catch (e) {
+    console.warn("loadClassScheduleStatus:", e);
+  }
+}
+
+function applyClassScheduleUI() {
+  const banner = document.getElementById("sessionBlockedBanner");
+  const panel = document.getElementById("panel-checkin");
+  const allowed = isCheckinSessionAllowed();
+  if (banner) banner.classList.toggle("show", !allowed);
+  const msg = document.getElementById("sessionBlockedMsg");
+  if (msg) msg.textContent = scheduleState.reason || "非上课时间 不可使用";
+  if (panel) panel.classList.toggle("session-blocked", !allowed);
+  updateCheckinStartBtn();
+  ["finishCheckinBtn", "resetCheckinBtn"].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !allowed;
+  });
+}
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem("pjyz_token") || "";
+}
+function getUser() {
+  try { return JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch (_) { return null; }
+}
+
+function setUser(user) {
+  if (!user) return;
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch (_) {}
+}
+
+/** 从服务端刷新当前用户资料（课程绑定等），保证管理员改绑后教师端即时生效 */
+async function refreshUserProfile() {
+  try {
+    const data = await api("GET", "/api/auth/me");
+    if (data && data.user) {
+      const prev = getUser() || {};
+      const next = Object.assign({}, prev, data.user);
+      setUser(next);
+      return next;
+    }
+  } catch (e) {
+    console.warn("refreshUserProfile:", e);
+  }
+  return getUser();
+}
+
+function storeKey() { return STORE_PREFIX + (state.courseId || state.courseName || "default"); }
+function classroomMetaKey() { return storeKey() + "_sync"; }
+
+function stableStudentKey(s) {
+  const name = String((s && s.student_name) || "").trim();
+  const cls = String((s && (s.class_name || s.grade)) || "").trim().replace(/[()（）\s]/g, "");
+  return name + "|" + cls;
+}
+
+function studentId(s) {
+  if (!s) return "";
+  if (s.stableId) return String(s.stableId);
+  return stableStudentKey(s) || String(s.id || "");
+}
+
+/** 将按旧 id 存储的签到/奖惩等映射到稳定键，避免选课记录 id 变化后后台变空 */
+function remapKeyedMap(mapObj, students, prevStudents) {
+  const src = mapObj && typeof mapObj === "object" ? mapObj : {};
+  const out = {};
+  const prevById = new Map();
+  (prevStudents || []).forEach(function(s) {
+    prevById.set(String(s.id), s);
+    if (s.stableId) prevById.set(String(s.stableId), s);
+    prevById.set(stableStudentKey(s), s);
+  });
+  Object.keys(src).forEach(function(key) {
+    let s = prevById.get(String(key));
+    if (!s) {
+      s = (students || []).find(function(x) {
+        return String(x.id) === String(key) || studentId(x) === String(key) || stableStudentKey(x) === String(key);
+      });
+    }
+    const nk = s ? studentId(s) : String(key);
+    if (out[nk] == null || out[nk] === "none" || out[nk] === 0) out[nk] = src[key];
+  });
+  return out;
+}
+
+function remapHistoryKeys(history, students, prevStudents) {
+  return (history || []).map(function(h) {
+    return Object.assign({}, h, {
+      checkin: remapKeyedMap(h.checkin || {}, students, prevStudents)
+    });
+  });
+}
+
+function loadClassroomMeta() {
+  try {
+    const raw = localStorage.getItem(classroomMetaKey());
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  return { syncedAt: null };
+}
+
+function saveClassroomMeta(meta) {
+  try { localStorage.setItem(classroomMetaKey(), JSON.stringify(meta || {})); } catch (_) {}
+}
+
+function resolveTotalClasses(teacherTotal) {
+  // 优先使用课时记录表中「纯数字」累加结果（文本如「张娜代课」不计）
+  if (state.numericHoursTotal != null && !isNaN(Number(state.numericHoursTotal))) {
+    return Number(state.numericHoursTotal);
+  }
+  const unique = countUniqueClassDays();
+  const stored = Number(teacherTotal) || 0;
+  return Math.max(unique, stored);
+}
+
+async function refreshNumericHoursTotal() {
+  const courseName = (state.courseName || state.teacher.course || "").trim();
+  if (!courseName || !getToken()) return;
+  try {
+    const data = await api("GET", "/api/course-hours/total?course_name=" + encodeURIComponent(courseName));
+    state.numericHoursTotal = Number(data.total) || 0;
+    state.teacher.totalClasses = state.numericHoursTotal;
+    const tag = document.getElementById("tagClasses");
+    if (tag) tag.textContent = String(state.numericHoursTotal);
+    const inp = document.getElementById("teacherClasses");
+    if (inp) inp.value = state.numericHoursTotal;
+  } catch (e) {
+    console.warn("refreshNumericHoursTotal:", e);
+  }
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(storeKey());
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    state.checkin = data.checkin || {};
+    state.checkinDay = data.checkinDay || "";
+    state.checkinDone = !!data.checkinDone;
+    state.rewards = data.rewards || {};
+    state.exams = data.exams || {};
+    state.activities = data.activities || [];
+    state.history = data.history || [];
+    if (Array.isArray(data.students) && data.students.length) {
+      state.students = data.students.map(function(s) {
+        return Object.assign({}, s, { stableId: s.stableId || stableStudentKey(s) });
+      });
+    }
+    state.history.forEach(h => {
+      if (h.date && !h.dateLabel) {
+        const d = new Date(h.date);
+        h.dateLabel = !isNaN(d.getTime()) ? formatDateLabel(d) : h.date;
+      }
+    });
+    state.teacher = Object.assign(state.teacher, data.teacher || {});
+    state.teacher.totalClasses = resolveTotalClasses(state.teacher.totalClasses);
+    if (data.password) state.password = data.password;
+  } catch (_) {}
+}
+
+function saveLocal(opts) {
+  state.teacher.totalClasses = resolveTotalClasses(state.teacher.totalClasses);
+  localStorage.setItem(storeKey(), JSON.stringify({
+    checkin: state.checkin,
+    checkinDay: state.checkinDay,
+    checkinDone: state.checkinDone,
+    rewards: state.rewards,
+    exams: state.exams,
+    activities: state.activities,
+    history: state.history,
+    students: state.students,
+    teacher: state.teacher,
+    password: state.password
+  }));
+  if (!opts || !opts.skipSync) scheduleClassroomSync();
+}
+
+let classroomSyncTimer = null;
+function scheduleClassroomSync() {
+  clearTimeout(classroomSyncTimer);
+  classroomSyncTimer = setTimeout(() => { syncClassroomToServer().catch(() => {}); }, 800);
+}
+
+async function syncClassroomToServer(opts) {
+  opts = opts || {};
+  if (!getToken()) {
+    if (opts.notify) toast("未登录，无法同步到后台", "error");
+    return false;
+  }
+  const courseName = (state.courseName || state.teacher.course || "").trim();
+  if (!courseName) {
+    if (opts.notify) toast("未绑定课程，无法同步到后台", "error");
+    return false;
+  }
+  try {
+    const data = await api("PUT", "/api/teacher-classroom", {
+      course_id: state.courseId || "",
+      course_name: courseName,
+      checkin: state.checkin,
+      checkinDay: state.checkinDay,
+      checkinDone: state.checkinDone,
+      rewards: state.rewards,
+      exams: state.exams,
+      history: state.history,
+      activities: state.activities,
+      students: state.students,
+      teacher: state.teacher,
+      location: state.teacher.location || "",
+      total_classes: state.teacher.totalClasses || 0
+    });
+    const syncedAt = (data && data.synced_at) || new Date().toISOString();
+    saveClassroomMeta({ syncedAt: syncedAt });
+    if (opts.notify) toast("已同步到后台管理", "success");
+    return true;
+  } catch (e) {
+    if (opts.notify) toast("同步后台失败：" + (e && e.message ? e.message : e), "error");
+    console.warn("syncClassroomToServer failed:", e);
+    return false;
+  }
+}
+
+function mergeClassroomFromServer(payload, summary) {
+  if (!payload) return;
+  const prevStudents = state.students.slice();
+  if (Array.isArray(payload.students) && payload.students.length) {
+    state.students = payload.students.map(function(s) {
+      return Object.assign({}, s, { stableId: s.stableId || stableStudentKey(s) });
+    });
+  }
+  state.checkin = remapKeyedMap(payload.checkin || {}, state.students, prevStudents);
+  state.checkinDay = payload.checkinDay || state.checkinDay || "";
+  state.checkinDone = !!payload.checkinDone;
+  state.rewards = remapKeyedMap(payload.rewards || {}, state.students, prevStudents);
+  state.exams = remapKeyedMap(payload.exams || {}, state.students, prevStudents);
+  state.activities = payload.activities || [];
+  state.history = remapHistoryKeys(payload.history || [], state.students, prevStudents);
+  state.history.forEach(h => {
+    if (h.date && !h.dateLabel) {
+      const d = new Date(h.date);
+      h.dateLabel = !isNaN(d.getTime()) ? formatDateLabel(d) : h.date;
+    }
+  });
+  if (payload.teacher) {
+    state.teacher.name = payload.teacher.name || state.teacher.name;
+    state.teacher.course = payload.teacher.course || state.teacher.course;
+    state.teacher.location = payload.teacher.location || state.teacher.location;
+  }
+  if (summary && summary.numeric_hours_total != null) {
+    state.numericHoursTotal = Number(summary.numeric_hours_total) || 0;
+  }
+  const serverTotal = (state.numericHoursTotal != null)
+    ? state.numericHoursTotal
+    : (Number(payload.teacher && payload.teacher.totalClasses) || Number(summary && summary.total_classes) || 0);
+  state.teacher.totalClasses = resolveTotalClasses(serverTotal);
+}
+
+async function pullClassroomFromServer() {
+  if (!getToken()) return;
+  const courseName = (state.courseName || state.teacher.course || "").trim();
+  if (!courseName) return;
+  const hasLocal = !!localStorage.getItem(storeKey());
+  const meta = loadClassroomMeta();
+  try {
+    // 用 query 传课程名，避免名称含 / 时路径截断
+    const data = await api("GET", "/api/teacher-classroom?course_name=" + encodeURIComponent(courseName));
+    if (data.numeric_hours_total != null) {
+      state.numericHoursTotal = Number(data.numeric_hours_total) || 0;
+      state.teacher.totalClasses = state.numericHoursTotal;
+    } else if (data.summary && data.summary.numeric_hours_total != null) {
+      state.numericHoursTotal = Number(data.summary.numeric_hours_total) || 0;
+      state.teacher.totalClasses = state.numericHoursTotal;
+    }
+    if (!data.synced || !data.payload) {
+      if (hasLocal) scheduleClassroomSync();
+      return;
+    }
+    const serverAt = (data.summary && data.summary.synced_at) ? String(data.summary.synced_at) : "";
+    const localAt = meta.syncedAt ? String(meta.syncedAt) : "";
+    const serverTime = serverAt ? Date.parse(serverAt.replace(" ", "T")) : 0;
+    const localTime = localAt ? Date.parse(localAt.replace(" ", "T")) : 0;
+    if (!hasLocal || serverTime > localTime) {
+      mergeClassroomFromServer(data.payload, data.summary);
+      saveLocal({ skipSync: true });
+      if (serverAt) saveClassroomMeta({ syncedAt: serverAt });
+    } else if (hasLocal && (localTime > serverTime || !serverAt)) {
+      scheduleClassroomSync();
+    }
+  } catch (_) {
+    if (hasLocal) scheduleClassroomSync();
+  }
+}
+
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function updateCheckinStartBtn() {
+  const btn = document.getElementById("startCheckinBtn");
+  if (!btn) return;
+  if (!isCheckinSessionAllowed()) {
+    btn.disabled = true;
+    btn.textContent = "▶ 开始签到";
+    return;
+  }
+  btn.disabled = false;
+  if (state.checkinDone && state.checkinDay === todayKey()) {
+    btn.textContent = "▶ 今日已完成 · 查看/调整";
+  } else {
+    btn.textContent = "▶ 开始签到";
+  }
+}
+
+/** 跨日自动清空当日签到状态，回到「开始签到」初始态（历史记录保留） */
+function ensureDailyCheckinState() {
+  const today = todayKey();
+  if (!state.checkinDay) {
+    const todayHist = state.history.find(h => h.date === today);
+    if (todayHist) {
+      state.checkinDay = today;
+      state.checkinDone = true;
+      if (todayHist.checkin && Object.keys(todayHist.checkin).length) {
+        state.checkin = Object.assign({}, todayHist.checkin);
+      }
+    } else {
+      state.checkinDay = today;
+      state.checkinDone = false;
+    }
+    saveLocal();
+    updateCheckinStartBtn();
+    return false;
+  }
+  if (state.checkinDay === today) {
+    updateCheckinStartBtn();
+    return false;
+  }
+  state.checkin = {};
+  state.students.forEach(s => { state.checkin[studentId(s)] = "none"; });
+  state.checkinDay = today;
+  state.checkinDone = false;
+  saveLocal();
+  updateCheckinStartBtn();
+  return true;
+}
+
+function toast(msg, type) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast show" + (type ? " " + type : "");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.className = "toast"; }, 2800);
+}
+
+async function api(method, url, body) {
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = "Bearer " + token;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(apiBase() + url, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+  if (res.status === 401 && url !== "/api/login") {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("pjyz_token");
+      localStorage.removeItem(USER_KEY);
+    } catch (_) {}
+    const overlay = document.getElementById("loginOverlay");
+    if (overlay) overlay.classList.remove("hidden");
+    throw new Error("登录已过期，请重新登录");
+  }
+  const ct = res.headers.get("content-type") || "";
+  const data = ct.includes("json") ? await res.json() : await res.text();
+  if (!res.ok) throw new Error((data && data.error) || data || "请求失败");
+  return data;
+}
+
+function apiBase() {
+  try {
+    if (window.__API_BASE__ && typeof window.__API_BASE__ === "string") return window.__API_BASE__;
+    const saved = localStorage.getItem("pjyz_api_base");
+    if (saved) return saved.replace(/\/+$/, "");
+  } catch (_) {}
+  return "";
+}
+
+function updateDateLine() {
+  const d = new Date();
+  const weekdays = ["周日","周一","周二","周三","周四","周五","周六"];
+  const line = d.getFullYear() + "年" + String(d.getMonth()+1).padStart(2,"0") + "月" + String(d.getDate()).padStart(2,"0") + "日 " + weekdays[d.getDay()] + " · 今日签到";
+  const el = document.getElementById("dateLine");
+  if (el) el.textContent = line;
+}
+
+function updateHeaderMeta() {
+  const user = getUser();
+  const name = state.teacher.name || (user && user.teacher_name) || (user && user.username) || "—";
+  const course = state.teacher.course || state.courseName || "—";
+  const nameEl = document.getElementById("headerTeacherName");
+  const courseEl = document.getElementById("headerCourseName");
+  if (nameEl) nameEl.textContent = name;
+  if (courseEl) courseEl.textContent = course;
+  document.getElementById("clockCourse").textContent = course;
+  document.getElementById("clockTeacher").textContent = name;
+  document.getElementById("clockLocation").textContent = state.teacher.location || "—";
+  document.getElementById("clockStudents").textContent = String(state.students.length);
+}
+
+function formatDateLabel(d) {
+  return (d.getMonth() + 1) + "月" + d.getDate() + "日";
+}
+
+function getTimeGreeting(hour) {
+  if (hour >= 5 && hour < 11) return "上午好";
+  if (hour >= 11 && hour < 14) return "中午好";
+  if (hour >= 14 && hour < 18) return "下午好";
+  return "晚上好";
+}
+
+function formatClockGreeting(teacherName, hour) {
+  let raw = String(teacherName || "").trim();
+  if (!raw || raw === "—") return "老师，" + getTimeGreeting(hour);
+  raw = raw.replace(/老师$/u, "");
+  return raw + "老师" + getTimeGreeting(hour);
+}
+
+function updateClockQuote() {
+  const el = document.getElementById("clockQuote");
+  const wrap = document.getElementById("clockQuoteWrap");
+  if (!el) return;
+  if (window.TeacherQuotes && typeof TeacherQuotes.getRandom === "function") {
+    el.textContent = TeacherQuotes.getRandom();
+  }
+  if (wrap) {
+    wrap.classList.remove("quote-refresh");
+    void wrap.offsetWidth;
+    wrap.classList.add("quote-refresh");
+  }
+}
+
+let clockTimer = null;
+function openClockOverlay() {
+  const overlay = document.getElementById("clockOverlay");
+  overlay.classList.add("show");
+  updateClockQuote();
+  function tick() {
+    const now = new Date();
+    const hour = now.getHours();
+    document.getElementById("clockTime").textContent =
+      String(hour).padStart(2,"0") + ":" + String(now.getMinutes()).padStart(2,"0") + ":" + String(now.getSeconds()).padStart(2,"0");
+    const weekdays = ["周日","周一","周二","周三","周四","周五","周六"];
+    document.getElementById("clockDate").textContent =
+      now.getFullYear() + "年" + (now.getMonth()+1) + "月" + now.getDate() + "日 " + weekdays[now.getDay()];
+    const user = getUser();
+    const name = state.teacher.name || (user && user.teacher_name) || (user && user.username) || "—";
+    const greetEl = document.getElementById("clockGreeting");
+    if (greetEl) greetEl.textContent = formatClockGreeting(name, hour);
+    updateHeaderMeta();
+  }
+  tick();
+  clearInterval(clockTimer);
+  clockTimer = setInterval(tick, 1000);
+}
+function closeClockOverlay() {
+  document.getElementById("clockOverlay").classList.remove("show");
+  clearInterval(clockTimer);
+}
+
+function getStatus(id) { return state.checkin[id] || "none"; }
+
+function setStatus(id, status, opts) {
+  if (!isCheckinSessionAllowed()) {
+    toast(scheduleState.reason || "非上课时间 不可使用", "error");
+    return;
+  }
+  opts = opts || {};
+  const fsOpen = document.getElementById("fsCheckin").classList.contains("show");
+  const prevFsStats = fsOpen ? calcFsStats() : null;
+  state.checkin[id] = status;
+  saveLocal();
+  renderCheckin();
+  if (fsOpen) {
+    updateFsCheckinAfterStatus(id, status, opts, prevFsStats);
+  }
+  renderFlowers();
+  renderGradeTable();
+}
+
+function buildFsCardActions(id, st) {
+  if (st === "present") {
+    return '<button type="button" class="fs-act cancel-btn" data-fs-act="cancel" data-id="' + id + '">取消</button>' +
+      '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">改未到</button>';
+  }
+  if (st === "sick" || st === "absent" || st === "late") {
+    return '<button type="button" class="fs-act present-change-btn" data-fs-act="present" data-id="' + id + '">改签到</button>' +
+      '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">改未到</button>';
+  }
+  return '<button type="button" class="fs-act present-btn" data-fs-act="present" data-id="' + id + '">签到</button>' +
+    '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">未到</button>';
+}
+
+function buildFsCardBadge(st) {
+  if (st === "present") return '<span class="fs-badge present">已签到</span>';
+  if (st === "sick") return '<span class="fs-badge sick">病假</span>';
+  if (st === "absent") return '<span class="fs-badge absent">旷课</span>';
+  if (st === "late") return '<span class="fs-badge absent">迟到</span>';
+  return "";
+}
+
+function bindFsCardActions(card) {
+  if (!card) return;
+  card.querySelectorAll("[data-fs-act]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const act = btn.dataset.fsAct;
+      if (act === "present") setStatus(id, "present", { animateId: id });
+      else if (act === "cancel") setStatus(id, "none");
+      else if (act === "absent-pick") openAbsencePicker(id);
+    });
+  });
+}
+
+function bumpFsStat(el) {
+  if (!el) return;
+  el.classList.remove("fs-stat-bump");
+  void el.offsetWidth;
+  el.classList.add("fs-stat-bump");
+  setTimeout(() => el.classList.remove("fs-stat-bump"), 460);
+}
+
+function updateFsStatsHighlight(prevStats, stats) {
+  if (!prevStats) return;
+  if (stats.present !== prevStats.present) bumpFsStat(document.getElementById("fsStatPresent"));
+  if (stats.pending !== prevStats.pending) bumpFsStat(document.getElementById("fsStatPending"));
+  if (stats.abnormal !== prevStats.abnormal) bumpFsStat(document.getElementById("fsStatAbnormal"));
+}
+
+function updateFsStatsUI(stats) {
+  document.getElementById("fsStatPresent").textContent = stats.present;
+  document.getElementById("fsStatPending").textContent = stats.pending;
+  document.getElementById("fsStatAbnormal").textContent = stats.abnormal;
+  document.getElementById("fsCheckinSub").textContent =
+    "已处理 " + (stats.total - stats.pending) + " / " + stats.total + " · 下滑到底可完成签到";
+  const finishBtn = document.getElementById("fsFinishBtn");
+  if (finishBtn) {
+    finishBtn.disabled = stats.total === 0;
+    finishBtn.textContent = stats.pending > 0
+      ? ("保存签到（还剩 " + stats.pending + " 人未处理）")
+      : "保存签到";
+  }
+}
+
+function updateFsCard(id, opts) {
+  opts = opts || {};
+  const grid = document.getElementById("fsStudentGrid");
+  if (!grid) return false;
+  const card = grid.querySelector('[data-card-id="' + id + '"]');
+  if (!card) return false;
+
+  const st = getStatus(id);
+  const s = state.students.find(x => studentId(x) === String(id));
+  if (!s) return false;
+
+  card.classList.remove("is-present", "is-absent", "is-sick", "is-late", "fs-card-enter-present", "fs-actions-changing");
+  if (st !== "none") card.classList.add("is-" + st);
+
+  const oldBadge = card.querySelector(".fs-badge");
+  const newBadgeHtml = buildFsCardBadge(st);
+  if (newBadgeHtml) {
+    if (oldBadge) {
+      oldBadge.outerHTML = newBadgeHtml;
+    } else {
+      card.insertAdjacentHTML("afterbegin", newBadgeHtml);
+    }
+    if (opts.animatePresent && st === "present") {
+      const badgeEl = card.querySelector(".fs-badge");
+      if (badgeEl) badgeEl.classList.add("fs-badge-enter");
+    }
+  } else if (oldBadge) {
+    oldBadge.remove();
+  }
+
+  const actionsEl = card.querySelector(".fs-actions");
+  if (actionsEl) {
+    card.classList.add("fs-actions-changing");
+    actionsEl.innerHTML = buildFsCardActions(id, st);
+    bindFsCardActions(card);
+    setTimeout(() => card.classList.remove("fs-actions-changing"), 220);
+  }
+
+  if (opts.animatePresent && st === "present") {
+    card.classList.add("fs-card-enter-present");
+    playCheckAnim(card);
+    setTimeout(() => card.classList.remove("fs-card-enter-present"), 720);
+  }
+
+  return true;
+}
+
+function updateFsCheckinAfterStatus(id, status, opts, prevStats) {
+  const stats = calcFsStats();
+  updateFsStatsUI(stats);
+  updateFsStatsHighlight(prevStats, stats);
+
+  const animatePresent = status === "present" && (opts.animateId === id || opts.animatePresent);
+  const updated = updateFsCard(id, { animatePresent: animatePresent });
+  if (!updated) renderFsCheckin(animatePresent ? id : null);
+}
+
+let pendingAbsenceId = null;
+
+function openAbsencePicker(id) {
+  pendingAbsenceId = id;
+  const s = state.students.find(x => studentId(x) === String(id));
+  const nameEl = document.getElementById("absenceStudentName");
+  if (nameEl) {
+    nameEl.textContent = s ? (s.student_name + " · 请选择原因") : "请选择原因";
+  }
+  document.getElementById("absenceOverlay").classList.add("show");
+}
+
+function closeAbsencePicker() {
+  pendingAbsenceId = null;
+  document.getElementById("absenceOverlay").classList.remove("show");
+}
+
+function calcStats() {
+  let present = 0, absent = 0, abnormal = 0;
+  state.students.forEach(s => {
+    const st = getStatus(studentId(s));
+    if (st === "present") present++;
+    else {
+      absent++;
+      if (ABNORMAL.has(st)) abnormal++;
+    }
+  });
+  return { present, absent, abnormal, total: state.students.length };
+}
+
+function calcFsStats() {
+  let present = 0, pending = 0, abnormal = 0;
+  state.students.forEach(s => {
+    const st = getStatus(studentId(s));
+    if (st === "present") present++;
+    else if (st === "none") pending++;
+    else if (ABNORMAL.has(st)) abnormal++;
+  });
+  return { present, pending, abnormal, total: state.students.length };
+}
+
+function renderCheckin() {
+  ensureDailyCheckinState();
+  const stats = calcStats();
+  document.getElementById("statPresent").textContent = stats.present;
+  document.getElementById("statAbsent").textContent = stats.absent;
+  document.getElementById("statAbnormal").textContent = stats.abnormal;
+  document.getElementById("studentCountHint").textContent = "共 " + stats.total + " 名学生";
+  const profileCount = document.getElementById("profileStudentCount");
+  if (profileCount) profileCount.textContent = stats.total;
+
+  const abnormalList = [];
+  state.students.forEach(s => {
+    const st = getStatus(studentId(s));
+    if (ABNORMAL.has(st)) abnormalList.push({ name: s.student_name, cls: s.class_name, st });
+  });
+  const abCard = document.getElementById("abnormalCard");
+  const abTags = document.getElementById("abnormalTags");
+  if (abnormalList.length) {
+    abCard.style.display = "";
+    abTags.innerHTML = abnormalList.map(x =>
+      '<span class="tag ' + (x.st === "absent" ? "bad" : (x.st === "sick" ? "sick" : "warn")) + '">' +
+      esc(x.name) + " · " + STATUS_LABEL[x.st] + "</span>"
+    ).join("");
+  } else {
+    abCard.style.display = "";
+    abTags.innerHTML = '<span class="tag" style="background:#f3f4f6;color:#9ca3af;">暂无异常学生</span>';
+  }
+
+  const grid = document.getElementById("studentGrid");
+  const empty = document.getElementById("emptyStudents");
+  if (!state.students.length) {
+    grid.innerHTML = "";
+    empty.style.display = "";
+    updateCheckinStartBtn();
+    return;
+  }
+  empty.style.display = "none";
+  grid.innerHTML = state.students.map(s => {
+    const id = studentId(s);
+    const st = getStatus(id);
+    const cls = formatClass(s);
+    const itemCls = "student-item" + (st !== "none" ? " is-" + st : "");
+    let badge = "";
+    if (st !== "none") {
+      badge = '<div class="student-status-badge ' + st + '">' + STATUS_LABEL[st] + '</div>';
+    }
+    let actions = "";
+    if (st === "present") {
+      actions = '<button type="button" class="btn-sm danger" data-act="cancel" data-id="' + id + '">取消签到</button>';
+    } else if (st === "sick" || st === "absent" || st === "late") {
+      actions = '<button type="button" class="btn-sm outline" data-act="present" data-id="' + id + '">改签到</button>';
+      actions += '<button type="button" class="btn-sm ghost" data-act="absent-pick" data-id="' + id + '">改未到</button>';
+    } else {
+      actions = '<button type="button" class="btn-sm primary" data-act="present" data-id="' + id + '">签到</button>';
+      actions += '<button type="button" class="btn-sm ghost" data-act="absent-pick" data-id="' + id + '">未到</button>';
+    }
+    return '<div class="' + itemCls + '">' +
+      '<div class="student-head"><span class="status-dot ' + st + '"></span>' +
+      '<div><div class="student-name">' + esc(s.student_name) + '</div><div class="student-class">' + esc(cls) + '</div>' + badge + '</div></div>' +
+      '<div class="student-actions">' + actions + '</div></div>';
+  }).join("");
+
+  grid.querySelectorAll("[data-act]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      if (act === "present") setStatus(id, "present");
+      else if (act === "cancel") setStatus(id, "none");
+      else if (act === "absent-pick") openAbsencePicker(id);
+    });
+  });
+  updateCheckinStartBtn();
+}
+
+function playCheckAnim(card) {
+  if (!card) return;
+  const old = card.querySelector(".fs-check-anim");
+  if (old) old.remove();
+  const wrap = document.createElement("div");
+  wrap.className = "fs-check-anim";
+  wrap.innerHTML = '<div class="ring">✓</div>';
+  card.appendChild(wrap);
+  setTimeout(() => wrap.remove(), 780);
+}
+
+function renderFsCheckin(animateId) {
+  const stats = calcFsStats();
+  updateFsStatsUI(stats);
+
+  const grid = document.getElementById("fsStudentGrid");
+  if (!grid) return;
+  grid.innerHTML = state.students.map(s => {
+    const id = studentId(s);
+    const st = getStatus(id);
+    const cls = formatClass(s);
+    const cardCls = "fs-student-card" + (st !== "none" ? " is-" + st : "");
+    const badge = buildFsCardBadge(st);
+    const actions = buildFsCardActions(id, st);
+    return '<div class="' + cardCls + '" data-card-id="' + id + '">' + badge +
+      '<div class="fs-name">' + esc(s.student_name) + '</div>' +
+      '<div class="fs-class">' + esc(cls) + '</div>' +
+      '<div class="fs-actions">' + actions + '</div></div>';
+  }).join("");
+
+  if (animateId) {
+    const card = grid.querySelector('[data-card-id="' + animateId + '"]');
+    if (card) {
+      card.classList.add("fs-card-enter-present");
+      const badgeEl = card.querySelector(".fs-badge.present");
+      if (badgeEl) badgeEl.classList.add("fs-badge-enter");
+      playCheckAnim(card);
+      setTimeout(() => card.classList.remove("fs-card-enter-present"), 720);
+    }
+  }
+
+  grid.querySelectorAll(".fs-student-card").forEach(bindFsCardActions);
+}
+
+function openFsCheckin() {
+  if (!isCheckinSessionAllowed()) {
+    toast(scheduleState.reason || "非上课时间 不可使用", "error");
+    return;
+  }
+  if (!state.students.length) {
+    toast("暂无学生，请先同步选课数据", "error");
+    return;
+  }
+  document.getElementById("fsCheckin").classList.add("show");
+  document.body.classList.add("fs-checkin-open");
+  document.body.style.overflow = "hidden";
+  renderFsCheckin();
+}
+
+function closeFsCheckin() {
+  document.getElementById("fsCheckin").classList.remove("show");
+  document.body.classList.remove("fs-checkin-open");
+  document.body.style.overflow = "";
+  renderCheckin();
+}
+
+function completeCheckinSession() {
+  if (!isCheckinSessionAllowed()) {
+    toast(scheduleState.reason || "非上课时间 不可使用", "error");
+    return;
+  }
+  const stats = calcStats();
+  const now = new Date();
+  const today = todayKey();
+  const snapshot = {};
+  state.students.forEach(s => { snapshot[studentId(s)] = getStatus(studentId(s)); });
+  const record = {
+    date: today,
+    dateLabel: formatDateLabel(now),
+    updatedAt: Date.now(),
+    checkin: snapshot
+  };
+  const idx = state.history.findIndex(h => h.date === today);
+  if (idx >= 0) state.history[idx] = record;
+  else state.history.push(record);
+  state.history.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  state.teacher.totalClasses = resolveTotalClasses(state.teacher.totalClasses);
+  state.checkinDay = today;
+  state.checkinDone = true;
+  saveLocal({ skipSync: true });
+  syncClassroomToServer({ notify: true }).then(function() {
+    return refreshNumericHoursTotal();
+  }).then(function() {
+    renderProfile();
+  }).catch(function() {});
+
+  const abnormal = [];
+  state.students.forEach(s => {
+    const st = getStatus(studentId(s));
+    if (ABNORMAL.has(st)) abnormal.push(s.student_name + "（" + STATUS_LABEL[st] + "）");
+  });
+  const fsStats = calcFsStats();
+  document.getElementById("celebrateText").innerHTML =
+    "签到日期 <strong>" + formatDateLabel(now) + "</strong><br>" +
+    "总人数 <strong>" + stats.total + "</strong> · 已签到 <strong>" + stats.present + "</strong> · 未签到 <strong>" + stats.absent + "</strong>" +
+    (fsStats.pending ? "<br>仍有 <strong>" + fsStats.pending + "</strong> 人未处理" : "") +
+    (abnormal.length ? "<br><br>异常：" + esc(abnormal.join("、")) : "");
+  document.getElementById("celebrateOverlay").classList.add("show");
+  renderCheckin();
+  renderGradeTable();
+  renderProfile();
+}
+
+function showFlowerPop(btn, name, delta) {
+  const rect = btn.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  btn.classList.add("pop");
+  setTimeout(() => btn.classList.remove("pop"), 350);
+  const flower = document.createElement("div");
+  flower.className = "flower-pop-fx";
+  flower.textContent = "🌺";
+  flower.style.left = x + "px";
+  flower.style.top = y + "px";
+  document.body.appendChild(flower);
+  const tip = document.createElement("div");
+  tip.className = "flower-pop-text";
+  tip.textContent = (delta < 0 ? "-1 " : "+1 ") + name;
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+  if (delta < 0) tip.style.background = "rgba(220,38,38,0.9)";
+  document.body.appendChild(tip);
+  setTimeout(() => { flower.remove(); tip.remove(); }, 900);
+}
+
+function countUniqueClassDays() {
+  const dates = new Set();
+  (state.history || []).forEach(h => {
+    if (h && h.date) dates.add(h.date);
+  });
+  return dates.size;
+}
+
+function renderFlowers() {
+  const grid = document.getElementById("flowerGrid");
+  if (!state.students.length) {
+    grid.innerHTML = '<span class="subtitle">暂无学生</span>';
+    return;
+  }
+  grid.innerHTML = state.students.map(s => {
+    const id = studentId(s);
+    const n = state.rewards[id] || 0;
+    return '<button type="button" class="flower-tag" data-flower="' + id + '">' + esc(s.student_name) + ' 🌺×' + n + '</button>';
+  }).join("");
+  grid.querySelectorAll("[data-flower]").forEach(btn => {
+    let clickTimer = null;
+    const applyDelta = (delta) => {
+      const id = btn.dataset.flower;
+      const s = state.students.find(x => studentId(x) === id);
+      const cur = state.rewards[id] || 0;
+      const next = Math.max(0, cur + delta);
+      if (next === cur) {
+        if (delta < 0) toast("已无小红花可减", "error");
+        return;
+      }
+      state.rewards[id] = next;
+      saveLocal();
+      showFlowerPop(btn, s ? s.student_name : "", delta);
+      renderFlowers();
+      renderGradeTable();
+    };
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(() => applyDelta(1), 280);
+    });
+    btn.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      clearTimeout(clickTimer);
+      applyDelta(-1);
+    });
+  });
+}
+
+function renderActivities() {
+  const list = document.getElementById("activityList");
+  if (!state.activities.length) {
+    list.innerHTML = '<p class="subtitle">暂无活动</p>';
+    return;
+  }
+  list.innerHTML = state.activities.map(a => {
+    const opts = state.students.map(s =>
+      '<option value="' + studentId(s) + '">' + esc(s.student_name) + "</option>"
+    ).join("");
+    return '<div class="activity-item" data-aid="' + a.id + '">' +
+      '<div class="info"><div class="name">' + esc(a.name) + '</div><div class="meta">参与 ' + (a.participants || []).length + ' 人</div></div>' +
+      '<select class="form-input act-pick" style="width:110px;padding:8px;font-size:12px"><option value="">选择学生</option>' + opts + '</select>' +
+      '<button type="button" class="btn-sm primary act-join">参与</button>' +
+      '<button type="button" class="btn-sm ghost act-del">✕</button></div>';
+  }).join("");
+
+  list.querySelectorAll(".act-join").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const item = btn.closest(".activity-item");
+      const aid = Number(item.dataset.aid);
+      const sel = item.querySelector(".act-pick");
+      const sid = sel.value;
+      if (!sid) return toast("请选择学生", "error");
+      const act = state.activities.find(x => x.id === aid);
+      if (!act.participants.includes(sid)) act.participants.push(sid);
+      state.rewards[sid] = (state.rewards[sid] || 0) + 1;
+      saveLocal();
+      renderActivities();
+      renderFlowers();
+      renderGradeTable();
+      toast("已记录参与并赠送小红花", "success");
+    });
+  });
+  list.querySelectorAll(".act-del").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const aid = Number(btn.closest(".activity-item").dataset.aid);
+      state.activities = state.activities.filter(x => x.id !== aid);
+      saveLocal();
+      renderActivities();
+    });
+  });
+}
+
+function countHistoryPresent(id) {
+  let n = 0;
+  state.history.forEach(h => { if (h.checkin && h.checkin[id] === "present") n++; });
+  return n;
+}
+
+function countHistoryAbsent(id) {
+  let n = 0;
+  state.history.forEach(h => { if (h.checkin && h.checkin[id] === "absent") n++; });
+  return n;
+}
+
+function calcTotalScore(s) {
+  const id = studentId(s);
+  const flowers = state.rewards[id] || 0;
+  const exam = state.exams[id] || 0;
+  const checkins = countHistoryPresent(id);
+  return checkins * 1 + flowers * 0.2 + exam;
+}
+
+function buildGradeRows() {
+  const rows = state.students.map((s, i) => {
+    const id = studentId(s);
+    const flowers = state.rewards[id] || 0;
+    const exam = state.exams[id] || 0;
+    const total = calcTotalScore(s);
+    return {
+      idx: i + 1,
+      s,
+      id,
+      checkins: countHistoryPresent(id),
+      absents: countHistoryAbsent(id),
+      flowers,
+      flowerScore: (flowers * 0.2).toFixed(1),
+      exam,
+      total
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  const n = rows.length;
+  rows.forEach((r, i) => {
+    if (n === 0 || (r.total === 0 && r.checkins === 0)) r.grade = "—";
+    else if (i < Math.ceil(n * 0.6)) r.grade = "A";
+    else if (i < Math.ceil(n * 0.9)) r.grade = "B";
+    else r.grade = "C";
+  });
+  return rows;
+}
+
+function getHistoryStatus(studentId, dateKey) {
+  const session = state.history.find(h => h.date === dateKey);
+  if (!session || !session.checkin) return "";
+  return session.checkin[studentId] || "";
+}
+
+function renderAttendanceCell(status) {
+  if (status === "present") return '<span class="cell-ok">✔</span>';
+  if (status === "absent") return '<span class="cell-bad">旷课</span>';
+  if (status === "late") return '<span class="cell-warn">迟到</span>';
+  if (status === "sick") return '<span class="cell-warn">病假</span>';
+  return "";
+}
+
+function renderAttendanceTable() {
+  const sessions = state.history.slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const thead = document.getElementById("attendanceTableHead");
+  const tbody = document.getElementById("attendanceTableBody");
+  if (!thead || !tbody) return;
+
+  let headHtml = "<tr><th>序号</th><th>班级</th><th>姓名</th>";
+  sessions.forEach(s => {
+    headHtml += "<th>" + esc(s.dateLabel || s.date || "") + "</th>";
+  });
+  headHtml += "</tr>";
+  thead.innerHTML = headHtml;
+
+  const colCount = 3 + sessions.length;
+  if (!state.students.length) {
+    tbody.innerHTML = '<tr><td colspan="' + Math.max(3, colCount) + '">暂无学生</td></tr>';
+    return;
+  }
+  if (!sessions.length) {
+    tbody.innerHTML = '<tr><td colspan="3">暂无签到记录，完成签到后将在此显示</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = state.students.map((s, i) => {
+    const id = studentId(s);
+    let row = "<tr>" +
+      "<td>" + (i + 1) + "</td>" +
+      "<td>" + esc(formatClassCompact(s)) + "</td>" +
+      "<td>" + esc(s.student_name) + "</td>";
+    sessions.forEach(sess => {
+      row += "<td>" + renderAttendanceCell(getHistoryStatus(id, sess.date)) + "</td>";
+    });
+    return row + "</tr>";
+  }).join("");
+}
+
+function renderGradeTable() {
+  renderAttendanceTable();
+  renderAbsentAlerts();
+  const rows = buildGradeRows();
+
+  let a = 0, b = 0, c = 0;
+  rows.forEach(r => { if (r.grade === "A") a++; else if (r.grade === "B") b++; else if (r.grade === "C") c++; });
+  document.getElementById("gradeTotal").textContent = rows.length;
+  document.getElementById("gradeA").textContent = a;
+  document.getElementById("gradeB").textContent = b;
+  document.getElementById("gradeC").textContent = c;
+
+  const starSvg =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" ' +
+    'd="M12 3.4c.35 0 .66.2.8.52l1.85 4.18c.1.22.28.38.5.42l4.5.55c.74.09 1.04 1.02.48 1.52l-3.35 3.05c-.18.16-.26.4-.21.63l.92 4.4c.15.73-.64 1.28-1.28.9L12.7 17.4c-.21-.12-.47-.12-.68 0l-3.51 2.17c-.64.4-1.43-.15-1.28-.9l.92-4.4c.05-.23-.03-.47-.21-.63L4.59 10.6c-.56-.5-.26-1.43.48-1.52l4.5-.55c.22-.03.4-.2.5-.42l1.85-4.18c.14-.32.45-.52.8-.52z"/>' +
+    '</svg>';
+
+  document.getElementById("gradeTableBody").innerHTML = rows.map(r => {
+    const stars = [1,2,3,4,5].map(n =>
+      '<span class="star-icon ' + (n <= r.exam ? "on" : "off") + '" data-star="' + n + '" data-id="' + r.id + '">' + starSvg + '</span>'
+    ).join("");
+    return "<tr>" +
+      "<td>" + r.idx + "</td>" +
+      "<td>" + esc(formatClassCompact(r.s)) + "</td>" +
+      "<td>" + esc(r.s.student_name) + "</td>" +
+      "<td>" + r.checkins + "</td>" +
+      "<td>" + r.absents + "</td>" +
+      "<td>" + r.flowers + "（" + r.flowerScore + "分）</td>" +
+      '<td class="stars" data-id="' + r.id + '" data-name="' + esc(r.s.student_name) + '">' + stars + "</td>" +
+      "<td>" + r.total.toFixed(1) + "</td>" +
+      "<td>" + r.grade + "</td></tr>";
+  }).join("");
+
+  document.querySelectorAll(".stars").forEach(cell => {
+    cell.addEventListener("click", e => {
+      const star = e.target.closest("[data-star]");
+      if (!star) return;
+      const id = cell.dataset.id;
+      const name = cell.dataset.name || "";
+      const n = Number(star.dataset.star);
+      const next = (state.exams[id] === n) ? 0 : n;
+      const rect = star.getBoundingClientRect();
+      state.exams[id] = next;
+      saveLocal();
+      renderGradeTable();
+      if (next > 0) {
+        showExamPopAt(rect.left + rect.width / 2, rect.top + rect.height / 2, name);
+        const newCell = document.querySelector('.stars[data-id="' + id + '"]');
+        const newStar = newCell && newCell.querySelector('[data-star="' + next + '"]');
+        if (newStar) {
+          newStar.classList.add("pop");
+          if (newCell) newCell.classList.add("stars-row-pop");
+          setTimeout(() => {
+            newStar.classList.remove("pop");
+            if (newCell) newCell.classList.remove("stars-row-pop");
+          }, 450);
+        }
+      }
+    });
+  });
+}
+
+function showExamPopAt(x, y, name) {
+  const fx = document.createElement("div");
+  fx.className = "exam-pop-fx";
+  fx.textContent = "⭐";
+  fx.style.left = x + "px";
+  fx.style.top = y + "px";
+  document.body.appendChild(fx);
+
+  const tip = document.createElement("div");
+  tip.className = "exam-pop-text";
+  tip.textContent = "已完成" + (name || "该") + "学生期末考核";
+  tip.style.left = x + "px";
+  tip.style.top = (y - 8) + "px";
+  document.body.appendChild(tip);
+  setTimeout(() => { fx.remove(); tip.remove(); }, 1100);
+}
+
+function hasConsecutiveAbsents(id, need) {
+  const sessions = state.history.slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  let streak = 0;
+  for (let i = 0; i < sessions.length; i++) {
+    const st = getHistoryStatus(id, sessions[i].date);
+    if (st === "absent") {
+      streak++;
+      if (streak >= need) return true;
+    } else {
+      streak = 0;
+    }
+  }
+  return false;
+}
+
+function getBanzhurenName(s) {
+  const grade = String(s.grade || "").trim();
+  const cls = String(s.class_name || "").trim();
+  const compact = formatClassCompact(s);
+  const keys = [
+    grade + "|" + cls,
+    compact,
+    cls,
+    grade + cls.replace(/[()（）\s]/g, "")
+  ];
+  for (let i = 0; i < keys.length; i++) {
+    if (state.classTeachers[keys[i]]) return state.classTeachers[keys[i]];
+  }
+  // fuzzy match
+  const entries = Object.keys(state.classTeachers);
+  for (let i = 0; i < entries.length; i++) {
+    const k = entries[i];
+    if (compact && (k.indexOf(compact) > -1 || compact.indexOf(k) > -1)) {
+      return state.classTeachers[k];
+    }
+  }
+  return "";
+}
+
+function genderPronoun(gender) {
+  const g = String(gender || "").trim();
+  if (g === "女") return "她";
+  if (g === "男") return "他";
+  return "他/她";
+}
+
+function buildAbsentFollowupText(s, reason) {
+  const bzr = getBanzhurenName(s) || "班主任";
+  const bzrName = String(bzr).replace(/老师$/u, "");
+  let courseName = (state.courseName || state.teacher.course || "").trim();
+  courseName = courseName.replace(/拓展课$/u, "").trim() || "拓展课";
+  const reasonText = reason === "consecutive"
+    ? "连续2次"
+    : "累计4次";
+  const pronoun = genderPronoun(s.gender);
+  return bzrName + "老师您好，您班级的" + (s.student_name || "") +
+    "学生" + reasonText + "未来上《" + courseName + "》拓展课，麻烦您跟进了解下，并提醒" +
+    pronoun + "按时来上课，谢谢";
+}
+
+function renderAbsentAlerts() {
+  const list = document.getElementById("absentAlertList");
+  if (!list) return;
+  const alerts = [];
+  state.students.forEach(s => {
+    const id = studentId(s);
+    const total = countHistoryAbsent(id);
+    const consecutive = hasConsecutiveAbsents(id, 2);
+    if (!consecutive && total < 4) return;
+    const reason = consecutive ? "consecutive" : "total";
+    alerts.push({ s, id, total, reason, reasonLabel: consecutive ? "连续2次旷课" : ("累计" + total + "次旷课") });
+  });
+  if (!alerts.length) {
+    list.innerHTML = '<span class="subtitle">暂无预警学生</span>';
+    return;
+  }
+  list.innerHTML = alerts.map((a, idx) => {
+    const grade = String(a.s.grade || "").trim() || "—";
+    const cls = formatClassCompact(a.s);
+    const bzr = getBanzhurenName(a.s) || "未绑定";
+    return '<div class="absent-alert-item">' +
+      '<div class="ai-top">' +
+        '<div><div class="ai-name">' + esc(a.s.student_name || "") + '</div>' +
+        '<div class="ai-meta">年级：' + esc(grade) + ' · 班级：' + esc(cls) + ' · 班主任：' + esc(bzr) + '</div></div>' +
+        '<span class="ai-reason">' + esc(a.reasonLabel) + '</span>' +
+      '</div>' +
+      '<button type="button" class="ai-copy" data-alert-idx="' + idx + '">复制提醒文案</button>' +
+    '</div>';
+  }).join("");
+  list.querySelectorAll("[data-alert-idx]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const a = alerts[Number(btn.dataset.alertIdx)];
+      if (!a) return;
+      const text = buildAbsentFollowupText(a.s, a.reason);
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("已复制给班主任的提醒文案", "success");
+      } catch (_) {
+        prompt("请手动复制：", text);
+      }
+    });
+  });
+}
+
+function renderProfile() {
+  const user = getUser();
+  const name = state.teacher.name || (user && user.teacher_name) || (user && user.username) || "";
+  const course = state.teacher.course || state.courseName || "";
+  const location = state.teacher.location || "";
+  const classes = (state.numericHoursTotal != null)
+    ? Number(state.numericHoursTotal) || 0
+    : resolveTotalClasses(state.teacher.totalClasses);
+  state.teacher.totalClasses = classes;
+
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  setVal("teacherName", name);
+  setVal("teacherCourse", course);
+  setVal("teacherLocation", location);
+  setVal("teacherClasses", classes);
+
+  setText("profileDisplayName", name || "教师");
+  setText("profileRoleLine", (course || "拓展课") + " · 教师");
+  setText("tagCourse", course || "未绑定课程");
+  setText("tagLocation", location || "未设置地点");
+  setText("tagClasses", String(classes));
+  setText("profileStudentCount", String(state.students.length));
+  setText("teacherNameDisplay", name || "—");
+  setText("teacherCourseDisplay", course || "—");
+  setText("teacherLocationDisplay", location || "—");
+
+  const hintEl = document.getElementById("profileAccountHint");
+  if (hintEl) {
+    const account = (user && user.username) || "";
+    hintEl.textContent = name && account && name !== account
+      ? name + "（" + account + "）"
+      : (account || name || "—");
+  }
+  const accountUserEl = document.getElementById("accountUsername");
+  if (accountUserEl && user && user.username) {
+    accountUserEl.value = user.username;
+  }
+  updateHeaderMeta();
+  renderSkinSwatches();
+}
+
+let accountPasswordCache = "";
+
+async function loadAccountPassword() {
+  const viewEl = document.getElementById("currentPassView");
+  const userEl = document.getElementById("accountUsername");
+  const hintEl = document.getElementById("passPanelHint");
+  if (!getToken()) return;
+  try {
+    if (viewEl) viewEl.placeholder = "加载中…";
+    const data = await api("GET", "/api/account");
+    const account = data.account || {};
+    if (userEl) userEl.value = account.username || (getUser() && getUser().username) || "";
+    const pwd = account.password || "";
+    accountPasswordCache = pwd;
+    state.password = pwd || state.password;
+    if (viewEl) {
+      viewEl.value = pwd || "";
+      viewEl.placeholder = pwd ? "" : "暂无明文密码（请联系管理员重置）";
+    }
+    if (hintEl) hintEl.textContent = pwd ? "已加载当前密码，可点击显示或修改" : "点击查看 / 修改登录密码";
+  } catch (e) {
+    accountPasswordCache = state.password || "";
+    if (viewEl) {
+      viewEl.value = accountPasswordCache;
+      viewEl.placeholder = "无法从服务器加载密码";
+    }
+    toast("加载账号信息失败：" + e.message, "error");
+  }
+}
+
+function setCurrentPassVisible(visible) {
+  const viewEl = document.getElementById("currentPassView");
+  const btn = document.getElementById("toggleCurrentPassBtn");
+  if (!viewEl || !btn) return;
+  viewEl.type = visible ? "text" : "password";
+  btn.textContent = visible ? "隐藏" : "显示";
+  btn.dataset.visible = visible ? "1" : "0";
+}
+
+const SKIN_KEY = "pjyz_teacher_skin";
+const SKIN_LIST = ["teal", "violet", "ocean", "sunset", "forest", "ink"];
+
+function applySkin(skin) {
+  const name = SKIN_LIST.indexOf(skin) > -1 ? skin : "teal";
+  if (name === "teal") document.documentElement.removeAttribute("data-skin");
+  else document.documentElement.setAttribute("data-skin", name);
+  try { localStorage.setItem(SKIN_KEY, name); } catch (_) {}
+  renderSkinSwatches();
+}
+
+function renderSkinSwatches() {
+  const grid = document.getElementById("skinGrid");
+  if (!grid) return;
+  let cur = "teal";
+  try { cur = localStorage.getItem(SKIN_KEY) || "teal"; } catch (_) {}
+  grid.querySelectorAll(".skin-swatch").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.skin === cur);
+  });
+}
+
+function initSkin() {
+  let cur = "teal";
+  try { cur = localStorage.getItem(SKIN_KEY) || "teal"; } catch (_) {}
+  applySkin(cur);
+}
+
+async function loadClassTeachers() {
+  try {
+    const data = await api("GET", "/api/classes");
+    const list = Array.isArray(data) ? data : (data.classes || []);
+    const map = {};
+    list.forEach(c => {
+      const grade = String(c.grade || "").trim();
+      const cls = String(c.class_name || "").trim();
+      const teacher = String(c.teacher_name || "").trim();
+      if (!teacher) return;
+      map[grade + "|" + cls] = teacher;
+      map[cls] = teacher;
+      const compact = formatClassCompact({ grade: grade, class_name: cls });
+      if (compact && compact !== "—") map[compact] = teacher;
+    });
+    // also map banzhuren users if accessible (admin only usually) — ignore failures
+    state.classTeachers = map;
+  } catch (_) {
+    state.classTeachers = state.classTeachers || {};
+  }
+}
+
+function logoutAccount() {
+  try {
+    localStorage.removeItem("pjyz_current_username");
+    localStorage.removeItem("pjyz_login_role");
+    // 保留 pjyz_active_role / pjyz_last_page，便于下次登录回到最近页面
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("pjyz_token");
+    localStorage.removeItem(USER_KEY);
+  } catch (_) {}
+  window.location.href = "denglu";
+}
+
+function renderAll() {
+  renderCheckin();
+  renderFlowers();
+  renderActivities();
+  renderGradeTable();
+  renderProfile();
+}
+
+function esc(s) {
+  return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function formatClass(s) {
+  return formatClassCompact(s);
+}
+
+function formatClassCompact(s) {
+  const grade = String(s.grade || "").trim();
+  let cls = String(s.class_name || "").trim();
+  if (!cls && !grade) return "—";
+  if (grade && cls.indexOf(grade) === 0) {
+    cls = cls.slice(grade.length).replace(/^[\s·\-]+/, "");
+  }
+  cls = cls.replace(/[()（）\s]/g, "");
+  if (grade && cls) return grade + cls;
+  return cls || grade;
+}
+
+async function loadAssignedCourse() {
+  const user = await refreshUserProfile() || getUser();
+  const assignedName = (user && user.course_name) ? String(user.course_name).trim() : "";
+
+  if (!assignedName) {
+    state.courseName = "";
+    state.courseId = "";
+    state.teacher.course = "";
+    updateHeaderMeta();
+    const hint = document.getElementById("studentCountHint");
+    if (hint) hint.textContent = "账号未绑定课程，请联系管理员";
+    toast("账号未绑定课程，请联系管理员", "error");
+    return;
+  }
+
+  const data = await api("GET", "/api/courses");
+  state.courses = (data.courses || []).filter(c => c.is_active !== 0 && c.is_active !== false);
+  const course = state.courses.find(c => c.name === assignedName);
+
+  if (!course) {
+    state.courseName = assignedName;
+    state.courseId = "";
+    toast("绑定的课程在课程库中不存在", "warning");
+    updateHeaderMeta();
+    return;
+  }
+
+  state.courseId = String(course.id);
+  state.courseName = course.name;
+
+  state.teacher.name = (user && user.teacher_name) || course.teacher || (user && user.username) || "";
+  state.teacher.course = course.name;
+  state.teacher.location = course.location || "";
+
+  loadLocal();
+  await pullClassroomFromServer();
+  await refreshNumericHoursTotal();
+  ensureDailyCheckinState();
+  if (!state.teacher.name) state.teacher.name = (user && user.teacher_name) || course.teacher || "";
+  if (!state.teacher.course) state.teacher.course = course.name;
+  if (!state.teacher.location) state.teacher.location = course.location || "";
+
+  updateHeaderMeta();
+  await loadClassScheduleStatus();
+  renderAll();
+  await syncStudentsFromServer();
+}
+
+async function syncStudentsFromServer() {
+  if (!state.courseName) { toast("账号未绑定课程", "error"); return; }
+  const btn = document.getElementById("syncBtn");
+  if (btn) btn.disabled = true;
+  try {
+    const data = await api("GET", "/api/selections?course=" + encodeURIComponent(state.courseName));
+    const list = data.selections || [];
+    const map = new Map();
+    list.forEach(row => {
+      const key = (row.student_name || "") + "|" + (row.class_name || "");
+      if (!map.has(key)) map.set(key, row);
+    });
+    const prevStudents = state.students.slice();
+    const nextStudents = Array.from(map.values()).map((row, i) => {
+      const base = {
+        id: row.id || (i + 1),
+        student_name: row.student_name,
+        class_name: row.class_name,
+        grade: row.grade,
+        gender: row.gender || "",
+        course_name: row.course_name,
+        course_id: row.course_id
+      };
+      base.stableId = stableStudentKey(base);
+      return base;
+    });
+    // 若后台选课名单暂时为空，保留本地/已上报名单，避免冲掉签到考核
+    if (!nextStudents.length && prevStudents.length) {
+      toast("后台暂无选课名单，已保留本地学生与签到数据", "warning");
+      await syncClassroomToServer({ notify: true });
+      return;
+    }
+    state.students = nextStudents;
+    state.checkin = remapKeyedMap(state.checkin, state.students, prevStudents);
+    state.rewards = remapKeyedMap(state.rewards, state.students, prevStudents);
+    state.exams = remapKeyedMap(state.exams, state.students, prevStudents);
+    state.history = remapHistoryKeys(state.history, state.students, prevStudents);
+    state.students.forEach(s => {
+      const id = studentId(s);
+      if (!state.checkin[id]) state.checkin[id] = "none";
+    });
+    ensureDailyCheckinState();
+    const course = state.courses.find(c => String(c.id) === String(state.courseId));
+    if (course) {
+      state.teacher.course = course.name;
+      state.teacher.location = state.teacher.location || course.location || "";
+    }
+    saveLocal({ skipSync: true });
+    renderAll();
+    const ok = await syncClassroomToServer({ notify: false });
+    toast("已同步 " + state.students.length + " 名学生" + (ok ? "，并上报后台" : ""), ok ? "success" : "warning");
+  } catch (e) {
+    toast("同步失败：" + e.message, "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function formatTimer(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+
+function updateTimerDisplay() {
+  document.getElementById("timerDisplay").textContent = formatTimer(timer.seconds);
+  if (timer.mode === "down" && timer.seconds <= 0 && timer.running) {
+    timer.running = false;
+    clearInterval(timer.interval);
+    document.getElementById("timerDisplay").style.color = "var(--danger)";
+    toast("倒计时结束", "success");
+  } else {
+    document.getElementById("timerDisplay").style.color = "";
+  }
+}
+
+function exportCsv(filename, headers, rows) {
+  const bom = "\uFEFF";
+  const lines = [headers.join(",")].concat(rows.map(r =>
+    r.map(c => '"' + String(c ?? "").replace(/"/g, '""') + '"').join(",")
+  ));
+  const blob = new Blob([bom + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ===== 事件绑定 ===== */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+document.getElementById("headerTitleBtn").addEventListener("click", openClockOverlay);
+document.getElementById("clockClose").addEventListener("click", closeClockOverlay);
+document.getElementById("clockOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "clockOverlay") closeClockOverlay();
+});
+
+document.getElementById("profileSyncBtn").addEventListener("click", syncStudentsFromServer);
+
+document.getElementById("startCheckinBtn").addEventListener("click", openFsCheckin);
+document.getElementById("fsCheckinClose").addEventListener("click", closeFsCheckin);
+document.getElementById("fsFinishBtn").addEventListener("click", () => {
+  const fsStats = calcFsStats();
+  if (fsStats.pending > 0) {
+    if (!confirm("还有 " + fsStats.pending + " 人未处理，确定保存签到吗？")) return;
+  }
+  closeFsCheckin();
+  completeCheckinSession();
+});
+
+document.getElementById("absenceCancel").addEventListener("click", closeAbsencePicker);
+document.getElementById("absenceOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "absenceOverlay") closeAbsencePicker();
+});
+document.querySelectorAll("[data-absence]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (!pendingAbsenceId) return;
+    const status = btn.getAttribute("data-absence");
+    const id = pendingAbsenceId;
+    closeAbsencePicker();
+    setStatus(id, status);
+  });
+});
+
+document.getElementById("finishCheckinBtn").addEventListener("click", () => {
+  completeCheckinSession();
+});
+
+document.getElementById("celebrateClose").addEventListener("click", () => {
+  document.getElementById("celebrateOverlay").classList.remove("show");
+});
+
+document.getElementById("reportBtn").addEventListener("click", async () => {
+  const absent = state.students.filter(s => getStatus(studentId(s)) === "absent");
+  if (!absent.length) { toast("当前无旷课学生", "error"); return; }
+  let courseName = (state.courseName || state.teacher.course || "").trim();
+  courseName = courseName.replace(/拓展课$/u, "").trim() || "拓展课";
+  const lines = ["《" + courseName + "》拓展课"];
+  absent.forEach(s => {
+    lines.push(formatClassCompact(s) + " " + (s.student_name || ""));
+  });
+  lines.push("以上学生未到班级，请相关班主任核查并提醒学生上课，谢谢！");
+  const text = lines.join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("旷课信息已复制到剪贴板", "success");
+  } catch (_) {
+    prompt("请手动复制旷课信息：", text);
+  }
+});
+
+document.getElementById("resetCheckinBtn").addEventListener("click", () => {
+  if (!isCheckinSessionAllowed()) {
+    toast(scheduleState.reason || "非上课时间 不可使用", "error");
+    return;
+  }
+  if (!confirm("确定将所有学生重置为未签到？")) return;
+  state.students.forEach(s => { state.checkin[studentId(s)] = "none"; });
+  state.checkinDay = todayKey();
+  state.checkinDone = false;
+  saveLocal();
+  renderCheckin();
+  toast("已重置", "success");
+});
+
+let lotteryPool = [];
+let lotterySpinTimer = null;
+let lotterySpinning = false;
+
+function setLotteryHint(text) {
+  const el = document.getElementById("lotteryPoolHint");
+  if (el) el.textContent = text || "";
+}
+
+function showLotteryDrawBtn(show) {
+  const btn = document.getElementById("lotteryDrawBtn");
+  if (!btn) return;
+  btn.classList.toggle("show", !!show);
+  btn.disabled = false;
+}
+
+function runLotterySpin(pool, onDone) {
+  if (!pool || !pool.length) return;
+  if (lotterySpinning) return;
+  lotterySpinning = true;
+  const resultEl = document.getElementById("lotteryResult");
+  const drawBtn = document.getElementById("lotteryDrawBtn");
+  if (drawBtn) drawBtn.disabled = true;
+  resultEl.classList.remove("winner");
+  resultEl.classList.add("spinning");
+  let ticks = 0;
+  const total = 28 + Math.floor(Math.random() * 12);
+  clearInterval(lotterySpinTimer);
+  lotterySpinTimer = setInterval(() => {
+    const s = pool[Math.floor(Math.random() * pool.length)];
+    resultEl.textContent = s.student_name;
+    ticks++;
+    if (ticks >= total) {
+      clearInterval(lotterySpinTimer);
+      lotterySpinTimer = null;
+      const winner = pool[Math.floor(Math.random() * pool.length)];
+      resultEl.classList.remove("spinning");
+      resultEl.classList.add("winner");
+      resultEl.textContent = "🎉 " + winner.student_name;
+      lotterySpinning = false;
+      if (drawBtn) drawBtn.disabled = false;
+      if (typeof onDone === "function") onDone(winner);
+    }
+  }, 70);
+}
+
+function openTaPicker() {
+  if (!state.students.length) {
+    toast("暂无学生，请先同步名单", "error");
+    return;
+  }
+  const body = document.getElementById("taPickerBody");
+  const countEl = document.getElementById("taPickerCount");
+  const selected = new Set();
+  body.innerHTML = state.students.map(s => {
+    const id = studentId(s);
+    return '<div class="ta-picker-chip" data-id="' + id + '">' +
+      '<span class="chip-dot"></span>' +
+      '<span class="chip-name">' + esc(s.student_name) + '</span></div>';
+  }).join("");
+  countEl.textContent = "已选 0 人";
+  body.querySelectorAll(".ta-picker-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const id = chip.dataset.id;
+      if (selected.has(id)) {
+        selected.delete(id);
+        chip.classList.remove("selected");
+        chip.querySelector(".chip-dot").textContent = "";
+      } else {
+        selected.add(id);
+        chip.classList.add("selected");
+        chip.querySelector(".chip-dot").textContent = "✓";
+      }
+      countEl.textContent = "已选 " + selected.size + " 人";
+    });
+  });
+  document.getElementById("taPickerMask").classList.add("show");
+  document.getElementById("taPickerMask")._selected = selected;
+}
+
+function closeTaPicker() {
+  document.getElementById("taPickerMask").classList.remove("show");
+}
+
+document.getElementById("lotteryAllBtn").addEventListener("click", () => {
+  if (!state.students.length) { toast("暂无学生", "error"); return; }
+  lotteryPool = state.students.slice();
+  setLotteryHint("抽签范围：全班 " + lotteryPool.length + " 人");
+  showLotteryDrawBtn(false);
+  document.getElementById("lotteryResult").textContent = "抽签中…";
+  runLotterySpin(lotteryPool);
+});
+
+document.getElementById("lotteryPickBtn").addEventListener("click", () => {
+  openTaPicker();
+});
+
+document.getElementById("lotteryDrawBtn").addEventListener("click", () => {
+  if (!lotteryPool.length) { toast("请先选人", "error"); return; }
+  runLotterySpin(lotteryPool);
+});
+
+document.getElementById("taPickerClose").addEventListener("click", closeTaPicker);
+document.getElementById("taPickerCancel").addEventListener("click", closeTaPicker);
+document.getElementById("taPickerMask").addEventListener("click", (e) => {
+  if (e.target.id === "taPickerMask") closeTaPicker();
+});
+document.getElementById("taPickerConfirm").addEventListener("click", () => {
+  const selected = document.getElementById("taPickerMask")._selected;
+  if (!selected || !selected.size) {
+    toast("请至少选择一名学生", "error");
+    return;
+  }
+  lotteryPool = state.students.filter(s => selected.has(studentId(s)));
+  closeTaPicker();
+  setLotteryHint("已选 " + lotteryPool.length + " 人，点击下方开始抽取");
+  document.getElementById("lotteryResult").textContent = "🎯 准备抽取";
+  showLotteryDrawBtn(true);
+  toast("已确认 " + lotteryPool.length + " 人，可开始抽取", "success");
+});
+
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    timer.mode = btn.dataset.mode;
+    timer.seconds = timer.mode === "down" ? (Number(document.getElementById("timerMinutes").value) || 5) * 60 : 0;
+    updateTimerDisplay();
+  });
+});
+
+document.getElementById("timerPlay").addEventListener("click", () => {
+  if (timer.running) return;
+  if (timer.mode === "down" && timer.seconds <= 0) {
+    timer.seconds = (Number(document.getElementById("timerMinutes").value) || 5) * 60;
+  }
+  timer.running = true;
+  timer.interval = setInterval(() => {
+    if (timer.mode === "up") timer.seconds++;
+    else timer.seconds = Math.max(0, timer.seconds - 1);
+    updateTimerDisplay();
+    if (timer.mode === "down" && timer.seconds <= 0) {
+      clearInterval(timer.interval);
+      timer.running = false;
+    }
+  }, 1000);
+});
+
+document.getElementById("timerPause").addEventListener("click", () => {
+  timer.running = false;
+  clearInterval(timer.interval);
+});
+
+document.getElementById("timerStop").addEventListener("click", () => {
+  timer.running = false;
+  clearInterval(timer.interval);
+  timer.seconds = timer.mode === "down" ? (Number(document.getElementById("timerMinutes").value) || 5) * 60 : 0;
+  updateTimerDisplay();
+});
+
+document.getElementById("createActivityBtn").addEventListener("click", () => {
+  const name = document.getElementById("activityInput").value.trim();
+  if (!name) { toast("请输入活动名称", "error"); return; }
+  state.activities.push({ id: Date.now(), name, participants: [] });
+  document.getElementById("activityInput").value = "";
+  saveLocal();
+  renderActivities();
+});
+
+document.getElementById("refreshGradeBtn").addEventListener("click", () => { renderGradeTable(); toast("已刷新"); });
+document.getElementById("exportGradeBtn").addEventListener("click", () => {
+  if (!state.students.length) {
+    toast("暂无学生数据可导出", "error");
+    return;
+  }
+  const sessions = state.history.slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const gradeById = {};
+  buildGradeRows().forEach(r => { gradeById[r.id] = r; });
+
+  const headers = ["序号", "班级", "姓名"]
+    .concat(sessions.map(s => s.dateLabel || s.date || "日期签到情况"))
+    .concat(["期末考核", "总分", "等第"]);
+
+  const rows = state.students.map((s, i) => {
+    const id = studentId(s);
+    const g = gradeById[id] || {
+      exam: state.exams[id] || 0,
+      total: calcTotalScore(s),
+      grade: "—"
+    };
+    const row = [i + 1, formatClassCompact(s), s.student_name];
+    sessions.forEach(sess => {
+      const st = getHistoryStatus(id, sess.date);
+      if (st === "present") row.push("✔");
+      else if (st === "absent") row.push("旷课");
+      else if (st === "late") row.push("迟到");
+      else if (st === "sick") row.push("病假");
+      else row.push("");
+    });
+    row.push(g.exam, Number(g.total).toFixed(1), g.grade);
+    return row;
+  });
+  const courseName = (state.courseName || state.teacher.course || "拓展课").trim() || "拓展课";
+  const safeName = courseName.replace(/[\\/:*?"<>|]/g, "_");
+  exportCsv(safeName + " 考核表.csv", headers, rows);
+  toast("已导出：" + safeName + " 考核表", "success");
+});
+
+document.getElementById("saveTeacherBtn") && document.getElementById("saveTeacherBtn").addEventListener("click", () => {
+  toast("教师信息已锁定，如需修改请联系管理员", "info");
+});
+
+document.getElementById("updatePassBtn").addEventListener("click", async () => {
+  const currentView = document.getElementById("currentPassView");
+  const currentPassword = accountPasswordCache || (currentView && currentView.value) || state.password || "";
+  const p1 = document.getElementById("newPass").value.trim();
+  const p2 = document.getElementById("confirmPass").value.trim();
+  if (!currentPassword) {
+    toast("无法验证当前密码，请先展开并加载账号信息", "error");
+    return;
+  }
+  if (p1.length < 4) { toast("新密码至少 4 位", "error"); return; }
+  if (p1 !== p2) { toast("两次密码不一致", "error"); return; }
+  if (p1 === currentPassword) { toast("新密码不能与当前密码相同", "error"); return; }
+
+  const btn = document.getElementById("updatePassBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "更新中…"; }
+  try {
+    const data = await api("PUT", "/api/account/password", {
+      current_password: currentPassword,
+      new_password: p1
+    });
+    state.password = p1;
+    accountPasswordCache = p1;
+    saveLocal({ skipSync: true });
+    if (currentView) currentView.value = p1;
+    document.getElementById("newPass").value = "";
+    document.getElementById("confirmPass").value = "";
+    setCurrentPassVisible(false);
+    const hintEl = document.getElementById("passPanelHint");
+    if (hintEl) hintEl.textContent = "密码已更新，已同步到后台";
+    toast((data && data.message) || "密码已更新并同步到后台", "success");
+  } catch (e) {
+    toast(e.message || "更新密码失败", "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "更新密码"; }
+  }
+});
+
+document.getElementById("togglePassBtn") && document.getElementById("togglePassBtn").addEventListener("click", () => {
+  const panel = document.getElementById("profilePassPanel");
+  if (!panel) return;
+  const willShow = !panel.classList.contains("show");
+  panel.classList.toggle("show", willShow);
+  if (willShow) {
+    setCurrentPassVisible(false);
+    loadAccountPassword();
+  }
+});
+
+document.getElementById("toggleCurrentPassBtn") && document.getElementById("toggleCurrentPassBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const btn = document.getElementById("toggleCurrentPassBtn");
+  const visible = btn && btn.dataset.visible === "1";
+  setCurrentPassVisible(!visible);
+});
+
+document.getElementById("skinGrid") && document.getElementById("skinGrid").addEventListener("click", (e) => {
+  const btn = e.target.closest(".skin-swatch");
+  if (!btn) return;
+  applySkin(btn.dataset.skin);
+  toast("已切换皮肤", "success");
+});
+
+function exportStudentsExcel() {
+  if (!state.students.length) {
+    toast("暂无学生可导出", "error");
+    return;
+  }
+  let html = '<html><head><meta charset="UTF-8"></head><body><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:12pt;">';
+  html += "<tr>";
+  ["序号", "班级", "姓名"].forEach(h => { html += '<th style="border:1px solid #000;padding:4px 8px;">' + h + "</th>"; });
+  for (let i = 0; i < 16; i++) html += '<th style="border:1px solid #000;padding:4px 8px;"></th>';
+  html += "</tr>";
+  state.students.forEach((s, i) => {
+    html += "<tr>";
+    html += '<td style="border:1px solid #000;padding:4px 8px;">' + (i + 1) + "</td>";
+    html += '<td style="border:1px solid #000;padding:4px 8px;">' + esc(formatClassCompact(s)) + "</td>";
+    html += '<td style="border:1px solid #000;padding:4px 8px;">' + esc(s.student_name) + "</td>";
+    for (let j = 0; j < 16; j++) html += '<td style="border:1px solid #000;padding:4px 8px;"></td>';
+    html += "</tr>";
+  });
+  html += "</table></body></html>";
+  const blob = new Blob(["\uFEFF" + html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "学生名单.xls";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已导出学生名单", "success");
+}
+
+document.getElementById("exportStudentRow") && document.getElementById("exportStudentRow").addEventListener("click", exportStudentsExcel);
+
+document.getElementById("profileLogoutBtn").addEventListener("click", () => logoutAccount());
+
+/* ===== 登录 ===== */
+async function doLogin() {
+  const username = document.getElementById("loginUser").value.trim();
+  const password = document.getElementById("loginPass").value;
+  if (!username || !password) { toast("请输入账号和密码", "error"); return; }
+  try {
+    const data = await api("POST", "/api/login", { username, password });
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem("pjyz_token", data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    if (window.PjyzRole) PjyzRole.setActiveRole('teacher');
+    document.getElementById("loginOverlay").classList.add("hidden");
+    await initApp();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("loginPass").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+async function initApp() {
+  if (window.PjyzRole) {
+    var roles = PjyzRole.getUserRoles();
+    if (roles.length && roles.indexOf('teacher') === -1) {
+      location.href = PjyzRole.getLoginRedirectUrl();
+      return;
+    }
+    PjyzRole.enforcePageAccess();
+    PjyzRole.initRoleSwitcher('roleSwitcher');
+  }
+  initSkin();
+  updateDateLine();
+  if (window.TeacherQuotes && typeof TeacherQuotes.init === "function") {
+    TeacherQuotes.init().catch(function () {});
+  }
+  if (window.MuyuFish && typeof MuyuFish.init === "function") {
+    MuyuFish.init();
+  }
+  try {
+    await loadClassTeachers();
+    await loadAssignedCourse();
+  } catch (e) {
+    toast("加载课程失败：" + e.message, "error");
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      loadClassScheduleStatus().catch(() => {});
+      refreshUserProfile().then(function(user) {
+        var bound = user && user.course_name ? String(user.course_name).trim() : "";
+        if (bound !== (state.courseName || "")) {
+          return loadAssignedCourse();
+        }
+        return Promise.all([
+          pullClassroomFromServer(),
+          refreshNumericHoursTotal()
+        ]).then(() => {
+          if (ensureDailyCheckinState()) {
+            renderCheckin();
+            updateDateLine();
+          }
+          renderAll();
+        });
+      }).catch(() => {});
+    }
+  });
+  setInterval(() => {
+    loadClassScheduleStatus().catch(() => {});
+    refreshUserProfile().then(function(user) {
+      var bound = user && user.course_name ? String(user.course_name).trim() : "";
+      if (bound !== (state.courseName || "")) {
+        return loadAssignedCourse();
+      }
+      return refreshNumericHoursTotal().then(() => { renderProfile(); });
+    }).catch(() => {});
+    if (ensureDailyCheckinState()) {
+      renderCheckin();
+      updateDateLine();
+    }
+  }, 60000);
+}
+
+if (getToken()) {
+  document.getElementById("loginOverlay").classList.add("hidden");
+  initApp();
+} else {
+  const u = localStorage.getItem("pjyz_login_user");
+  if (u) document.getElementById("loginUser").value = u;
+}
+</script>
+</body>
+</html>

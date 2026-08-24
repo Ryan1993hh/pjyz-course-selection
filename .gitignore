@@ -1,7 +1,26 @@
+# Dependencies & env
 node_modules/
 .env
+.env.*
+!.env.example
+
+# Logs & OS
 *.log
 .DS_Store
 Thumbs.db
+
+# Cloudflare / Wrangler local state
 .wrangler/
+_worker.bundle
+.dev.vars
+
+# Local backups & temp artifacts
 backups/
+.tmp-*/
+.tmp*
+*.tmp
+*.bak
+
+# Editor
+.vscode/
+.idea/
