@@ -3245,6 +3245,10 @@ async function doLogin(){
 /* ============ Navigation ============ */
 document.querySelectorAll('.nav-item').forEach(function(item){
   item.addEventListener('click', function(){
+    if (item.dataset.section === 'selections') {
+      activateSelectionsSection({ silent: true });
+      return;
+    }
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
     item.classList.add('active');
     document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
@@ -4616,36 +4620,56 @@ function buildQuery(){
   return params.toString();
 }
 
-async function querySelections(){
+function activateSelectionsSection(opts) {
+  opts = opts || {};
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  var nav = document.querySelector('.nav-item[data-section="selections"]');
+  if (nav) nav.classList.add('active');
+  var section = document.getElementById('section-selections');
+  if (section) section.classList.add('active');
+  if (opts.courseName != null) {
+    var courseSel = document.getElementById('filterCourse');
+    if (courseSel) courseSel.value = opts.courseName;
+  }
+  if (opts.viewMode === 'pre_enroll') return switchToPreEnrollView();
+  if (opts.viewMode === 'unselected') return switchToUnselectedView();
+  switchToSelectionsView();
+  return querySelections({ silent: !!opts.silent });
+}
+
+async function querySelections(opts){
+  opts = opts || {};
+  const silent = !!opts.silent;
   const btn = document.getElementById('queryBtn');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   try {
     selectionsPage = 1;
     selectionsCheckedIds.clear();
     
     if (currentViewMode === 'unselected') {
-      await queryUnselectedStudents();
-      btn.disabled = false;
+      await queryUnselectedStudents({ silent: silent });
       return;
     }
     if (currentViewMode === 'pre_enroll') {
-      await queryPreEnrollStudents();
-      btn.disabled = false;
+      await queryPreEnrollStudents({ silent: silent });
       return;
     }
     
     const data = await request('GET', '/api/selections?' + buildQuery());
     selectionsData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     renderSelections();
-    toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
+    if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
   } catch(e){
-    toast('查询失败：' + e.message, 'error');
+    if (!silent) toast('查询失败：' + e.message, 'error');
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
-async function queryUnselectedStudents(){
+async function queryUnselectedStudents(opts){
+  opts = opts || {};
+  const silent = !!opts.silent;
   try {
     selectionsPage = 1;
     selectionsCheckedIds.clear();
@@ -4661,9 +4685,9 @@ async function queryUnselectedStudents(){
     const data = await request('GET', '/api/unselected-students?' + params.toString());
     unselectedData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.unselected || []));
     renderUnselectedStudents();
-    toast('查询完成，共 ' + unselectedData.length + ' 名未选课学生', 'success');
+    if (!silent) toast('查询完成，共 ' + unselectedData.length + ' 名未选课学生', 'success');
   } catch(e){
-    toast('查询失败：' + e.message, 'error');
+    if (!silent) toast('查询失败：' + e.message, 'error');
   }
 }
 
@@ -4835,7 +4859,9 @@ function openAddCourseToStudent(s){
   };
 }
 
-async function queryPreEnrollStudents(){
+async function queryPreEnrollStudents(opts){
+  opts = opts || {};
+  const silent = !!opts.silent;
   try {
     selectionsPage = 1;
     selectionsCheckedIds.clear();
@@ -4852,9 +4878,9 @@ async function queryPreEnrollStudents(){
     const data = await request('GET', '/api/selections?' + params.toString());
     preEnrollData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     renderPreEnrollStudents();
-    toast('查询完成，共 ' + preEnrollData.length + ' 名内定学生', 'success');
+    if (!silent) toast('查询完成，共 ' + preEnrollData.length + ' 名内定学生', 'success');
   } catch(e){
-    toast('查询失败：' + e.message, 'error');
+    if (!silent) toast('查询失败：' + e.message, 'error');
   }
 }
 
@@ -4898,7 +4924,7 @@ function switchToPreEnrollView() {
   updateSelectionSidebarButtons('pre_enroll');
   var queryBtn = document.getElementById('queryBtn');
   if (queryBtn) queryBtn.textContent = '🔍 查询内定';
-  queryPreEnrollStudents();
+  return queryPreEnrollStudents({ silent: true });
 }
 
 function switchToUnselectedView(){
@@ -4906,7 +4932,7 @@ function switchToUnselectedView(){
   updateSelectionSidebarButtons('unselected');
   const queryBtn = document.getElementById('queryBtn');
   if (queryBtn) queryBtn.textContent = '🔍 查询未选课';
-  queryUnselectedStudents();
+  return queryUnselectedStudents({ silent: true });
 }
 
 function switchToSelectionsView(){
@@ -5050,9 +5076,7 @@ function renderSelectionsTable(data, opts){
     link.textContent = s.course_name || '';
     link.title = s.course_name || '';
     link.addEventListener('click', function(){
-      switchToSelectionsView();
-      document.getElementById('filterCourse').value = s.course_name || '';
-      querySelections();
+      activateSelectionsSection({ courseName: s.course_name || '', silent: true });
     });
     courseCell.appendChild(link);
 
@@ -5329,8 +5353,12 @@ async function exportSelections(){
   safeBind('resetFilterBtn', 'click', resetFilterSelections);
   safeBind('batchDeleteBtn', 'click', batchDeleteSelections);
   safeBind('toggleSelectionBtn', 'click', toggleSelectionLock);
-  safeBind('unselectedBtn', 'click', switchToUnselectedView);
-  safeBind('preEnrollListBtn', 'click', switchToPreEnrollView);
+  safeBind('unselectedBtn', 'click', function(){
+    activateSelectionsSection({ viewMode: 'unselected', silent: true });
+  });
+  safeBind('preEnrollListBtn', 'click', function(){
+    activateSelectionsSection({ viewMode: 'pre_enroll', silent: true });
+  });
   safeBind('preEnrollBtn', 'click', function(){
     var input = document.getElementById('preEnrollFile');
     if (input) { input.value = ''; input.click(); }

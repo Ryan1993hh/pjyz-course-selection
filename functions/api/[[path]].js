@@ -1156,6 +1156,52 @@ async function cleanupDuplicateSelections(db) {
   return toDelete.length;
 }
 
+/** 管理员查选课：将教师端已上报但选课表缺失的学生补写入 selections */
+async function syncMissingSelectionsFromClassroom(db, courseFilter) {
+  let classroomRows = [];
+  if (courseFilter) {
+    const row = await db.prepare('SELECT course_name, payload FROM teacher_classroom WHERE course_name = ?')
+      .bind(courseFilter).first();
+    if (row) classroomRows = [row];
+  } else {
+    const res = await db.prepare('SELECT course_name, payload FROM teacher_classroom').all();
+    classroomRows = res.results || [];
+  }
+
+  for (const row of classroomRows) {
+    let payload = {};
+    try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) { continue; }
+    const students = Array.isArray(payload.students) ? payload.students : [];
+    if (!students.length) continue;
+
+    const courseRow = await db.prepare('SELECT id FROM courses WHERE name = ?').bind(row.course_name).first();
+    const courseId = courseRow ? courseRow.id : null;
+
+    for (const s of students) {
+      const studentName = String((s && s.student_name) || '').trim();
+      if (!studentName) continue;
+      const existing = await db.prepare(
+        'SELECT id FROM selections WHERE student_name = ? AND course_name = ?'
+      ).bind(studentName, row.course_name).first();
+      if (existing) continue;
+
+      const parsed = parseGradeClassFields(s.grade, s.class_name);
+      await db.prepare(
+        `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
+      ).bind(
+        parsed.grade || s.grade || '',
+        parsed.class_name || s.class_name || '',
+        studentName,
+        String(s.gender || ''),
+        courseId,
+        row.course_name,
+        new Date().toISOString()
+      ).run();
+    }
+  }
+}
+
 async function handleSelectionsGet(db, request, url) {
   const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -1192,6 +1238,9 @@ async function handleSelectionsGet(db, request, url) {
   if (studentName) { sql += ' AND student_name = ?'; params.push(studentName); }
   
   sql += ' ORDER BY id ASC';
+  if (isAdmin && !lockedOnly) {
+    await syncMissingSelectionsFromClassroom(db, course || '');
+  }
   const results = await db.prepare(sql).bind(...params).all();
   if (!lockedOnly) await cleanupDuplicateSelections(db);
   let list = lockedOnly ? sortSelectionsByClass(results.results || []) : dedupeSelectionRows(results.results);
