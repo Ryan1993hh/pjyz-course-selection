@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>后台管理 - 浦江一中拓展课选课</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js" crossorigin="anonymous"></script>
@@ -52,9 +52,17 @@
   --col-8-h: rgba(99, 102, 241, 0.18);
   --col-9-h: rgba(79, 70, 229, 0.20);
   --col-10-h: rgba(148, 163, 184, 0.13);
+  --page-pad-x: clamp(8px, 3.2vw, 14px);
+  --touch-min: 44px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 html, body { height: 100%; }
 body {
@@ -62,8 +70,11 @@ body {
   background: linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 100%);
   color: var(--text);
   min-height: 100vh;
-  padding: 14px 14px 14px 14px;
+  min-height: 100dvh;
+  padding: var(--page-pad-x);
+  padding-bottom: calc(var(--page-pad-x) + var(--safe-bottom));
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 /* ===== 顶部标题栏 — 左中右三栏布局 ===== */
@@ -1453,6 +1464,8 @@ table.courses-table td[data-field="description"] {
 /* ===== 表格（严格参照页风格：浅灰蓝基础 + 列独立底色 + 磨砂玻璃表头）===== */
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
   border-radius: var(--radius);
   border: 1px solid #BBDEFB;
   background: var(--tbl-base);
@@ -2550,6 +2563,117 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 10px; }
   table.sel-table td:nth-child(6) .course-link { font-size: 9px; padding: 1px 2px; }
   table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
+}
+
+/* ===== 移动端自适应（手机完整显示） ===== */
+@media (max-width: 768px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .header-logo .logo-text .en { display: none; }
+  .header-logo .logo-text .cn { font-size: 11px; letter-spacing: 0.5px; }
+  .header-logo .logo-img { width: 36px; height: 36px; }
+  .header-title {
+    position: static;
+    transform: none;
+    flex: 1 1 100%;
+    order: 10;
+    text-align: center;
+    pointer-events: auto;
+    margin-top: 2px;
+  }
+  .header-title h1 {
+    font-size: clamp(13px, 3.8vw, 16px);
+    letter-spacing: 1px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+  .header-actions {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+  .top-nav-items {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 4px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .top-nav-items::-webkit-scrollbar { display: none; }
+  .top-nav-items .nav-item {
+    flex-shrink: 0;
+    padding: 8px 10px;
+    min-height: var(--touch-min);
+    font-size: clamp(11px, 3vw, 12px);
+  }
+  .header-actions .admin-info span { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-logout { min-height: var(--touch-min); }
+  .card { padding: clamp(10px, 3vw, 14px); }
+  .card-title { font-size: clamp(14px, 3.6vw, 15px); }
+  .form-row { flex-direction: column; }
+  .form-row > * { min-width: 0; width: 100%; }
+  .form-input, .form-select { font-size: 16px; min-height: var(--touch-min); }
+  .btn { min-height: var(--touch-min); font-size: clamp(12px, 3.2vw, 13px); }
+  .selections-sidebar { flex-direction: column; }
+  .selections-sidebar .filter-card,
+  .selections-sidebar .stats-card { flex: 1 1 100%; min-width: 0; }
+  .filter-vertical { flex-direction: column; }
+  .filter-vertical .f-item { flex: 1 1 100%; min-width: 0; }
+  .filter-actions,
+  .selection-toolbar,
+  .board-toolbar { flex-direction: column; align-items: stretch; }
+  .filter-actions .btn,
+  .selection-toolbar .btn,
+  .board-toolbar .btn { width: 100%; }
+  .table-wrap {
+    margin-left: calc(-1 * clamp(10px, 3vw, 14px));
+    margin-right: calc(-1 * clamp(10px, 3vw, 14px));
+    width: calc(100% + 2 * clamp(10px, 3vw, 14px));
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  .upload-area { flex-direction: column; text-align: center; padding: 14px 12px; }
+  .upload-area .text-col { align-items: center; }
+  .upload-area .hint { white-space: normal; text-align: center; line-height: 1.45; }
+  .course-list-title { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .card-title-right { margin-left: 0; width: 100%; flex-wrap: wrap; }
+  .modal-box, .login-card { width: min(92vw, 420px); margin: 12px; }
+  .import-stats { grid-template-columns: 1fr 1fr; }
+  .board-kpis { grid-template-columns: repeat(2, 1fr); }
+  .bd-overview-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+  body { padding: 8px; padding-bottom: calc(8px + var(--safe-bottom)); }
+  .header-title h1 { font-size: 13px; }
+  .header-actions .admin-info span { display: none; }
+  .top-nav-items .nav-item .nav-icon { margin-right: 2px; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .section-header h2 { font-size: 16px; }
+  .control-bar { grid-template-columns: 1fr; }
+  .board-kpis { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .board-side { max-height: 240px; }
+  .bd-summary-bar .btn { width: 100%; }
+  table.sel-table { min-width: 640px; }
+  table.courses-table { min-width: 720px; }
+  .login-overlay .login-card { padding: 24px 18px; }
+}
+
+@media (max-width: 380px) {
+  .header-logo .logo-text { display: none; }
+  .top-nav-items .nav-item { padding: 8px 8px; font-size: 10px; }
+  .board-kpis { grid-template-columns: 1fr; }
+  .bd-overview-grid { grid-template-columns: 1fr; }
+  .import-stats { grid-template-columns: 1fr; }
+  .btn-logout span:not(.btn-logout-icon) { display: none; }
 }
 </style>
 </head>

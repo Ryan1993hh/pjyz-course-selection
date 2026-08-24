@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课选课</title>
 <script src="js/role-utils.js"></script>
 <!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
@@ -92,17 +92,28 @@ setTimeout(function () {
   --col-5-h: rgba(14, 116, 144, 0.18);
   --col-6-h: rgba(79, 70, 229, 0.18);
   --col-7-h: rgba(148, 163, 184, 0.13);
+  --page-pad-x: clamp(8px, 3.2vw, 14px);
+  --touch-min: 44px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
   font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   background: linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 100%);
   color: var(--text);
   min-height: 100vh;
-  padding: 14px 14px 14px 14px;
+  min-height: 100dvh;
+  padding: var(--page-pad-x);
+  padding-bottom: calc(var(--page-pad-x) + var(--safe-bottom));
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 /* ===== 顶部标题栏 — 居中标题 + 渐变流动动效 ===== */
@@ -560,6 +571,7 @@ body {
 /* ===== 表格 ===== */
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius);
   border: 1px solid #BBDEFB;
   background: var(--tbl-base);
@@ -1908,6 +1920,82 @@ tr.no-quota:hover td { opacity: 0.7; }
   .reset-confirm-box { padding: 18px 16px 16px; }
   .reset-confirm-icon { width: 38px; height: 38px; font-size: 19px; }
   .reset-confirm-title { font-size: 15.5px; }
+}
+
+/* ===== 移动端自适应（手机完整显示） ===== */
+@media (max-width: 480px) {
+  body { padding: 8px; padding-bottom: calc(8px + var(--safe-bottom)); }
+  .header { padding: 10px 12px; gap: 6px; }
+  .header-logo .logo-text { display: none; }
+  .header-logo img, .header-logo .logo-img { width: 32px; height: 32px; }
+  .header-title h1 { font-size: clamp(14px, 4vw, 16px); letter-spacing: 2px; }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .user-name { max-width: 56px; font-size: 11px; }
+  .btn-reset span:not(.btn-reset-icon),
+  .btn-logout span:not(.btn-logout-icon) { display: none; }
+  .btn-reset, .btn-logout, .btn-lottery {
+    min-width: 0;
+    min-height: var(--touch-min);
+    padding: 0 10px;
+  }
+  .card { padding: 10px; margin-bottom: 10px; }
+  .control-bar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .control-bar .upload-area { grid-column: 1; }
+  .upload-area {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px 10px;
+    gap: 8px;
+  }
+  .upload-area .text-col { align-items: center; }
+  .upload-area .title,
+  .upload-area .hint { white-space: normal; text-align: center; line-height: 1.4; }
+  .upload-area .title { font-size: clamp(12px, 3.2vw, 13px); }
+  .upload-area .hint { font-size: 11px; }
+  .stat-input, .stat-card { min-height: var(--touch-min); }
+  .stat-input select, .stat-input input { font-size: 16px; }
+  .stat-card .value { font-size: clamp(18px, 5vw, 22px); }
+  .table-wrap {
+    max-height: none;
+    margin-left: -8px;
+    margin-right: -8px;
+    width: calc(100% + 16px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  table { min-width: 680px; table-layout: auto; }
+  th, td { font-size: 11px; padding: 6px 5px; }
+  .course-name { font-size: 11px; white-space: normal; word-break: break-all; }
+  .name-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .name-card { font-size: 13px; padding: 10px 4px; min-height: var(--touch-min); display: flex; align-items: center; justify-content: center; }
+  .modal {
+    width: 100%;
+    max-width: none;
+    max-height: 92dvh;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+  }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-body { padding: 14px 12px; }
+  .course-tip { max-width: min(92vw, 360px); }
+}
+
+@media (max-width: 380px) {
+  .header-title h1 { font-size: 13px; letter-spacing: 1px; }
+  .name-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-card .label { font-size: 11px; }
+  table { min-width: 600px; }
+  th, td { font-size: 10px; padding: 5px 4px; }
+  .lottery-content .name-list { grid-template-columns: 1fr; }
 }
 </style>
 </head>
