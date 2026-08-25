@@ -3,9 +3,10 @@
  */
 (function (global) {
   var MERIT_KEY = "pjyz_merit_count";
+  var AUDIO_SRC = "audio/muyu-tap.mp3";
   var meritCount = 0;
-  var audioCtx = null;
-  var tapLock = false;
+  var tapAudio = null;
+  var tapAnimTimer = null;
   var initialized = false;
 
   function loadMerit() {
@@ -28,71 +29,23 @@
     if (el) el.textContent = String(meritCount);
   }
 
-  function ensureAudio() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume();
-    }
-    return audioCtx;
+  function preloadTapAudio() {
+    if (tapAudio) return;
+    try {
+      tapAudio = new Audio(AUDIO_SRC);
+      tapAudio.preload = "auto";
+      tapAudio.load();
+    } catch (_) {}
   }
 
-  /** 木鱼敲击音：短促空心木声 + 衰减 */
   function playMuyuSound() {
     try {
-      var ctx = ensureAudio();
-      var t = ctx.currentTime;
-
-      var len = Math.floor(ctx.sampleRate * 0.18);
-      var buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-      var data = buffer.getChannelData(0);
-      for (var i = 0; i < len; i++) {
-        var env = Math.pow(1 - i / len, 2.2);
-        data[i] = (Math.random() * 2 - 1) * env;
+      var audio = tapAudio ? tapAudio.cloneNode() : new Audio(AUDIO_SRC);
+      audio.volume = 1;
+      var p = audio.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(function () {});
       }
-      var noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-      var bp = ctx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.setValueAtTime(920, t);
-      bp.Q.setValueAtTime(0.9, t);
-      var bp2 = ctx.createBiquadFilter();
-      bp2.type = "lowpass";
-      bp2.frequency.setValueAtTime(1400, t);
-      var nGain = ctx.createGain();
-      nGain.gain.setValueAtTime(0.55, t);
-      nGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-      noise.connect(bp);
-      bp.connect(bp2);
-      bp2.connect(nGain);
-      nGain.connect(ctx.destination);
-      noise.start(t);
-      noise.stop(t + 0.16);
-
-      var osc1 = ctx.createOscillator();
-      osc1.type = "sine";
-      osc1.frequency.setValueAtTime(520, t);
-      osc1.frequency.exponentialRampToValueAtTime(220, t + 0.06);
-      var g1 = ctx.createGain();
-      g1.gain.setValueAtTime(0.42, t);
-      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-      osc1.connect(g1);
-      g1.connect(ctx.destination);
-      osc1.start(t);
-      osc1.stop(t + 0.24);
-
-      var osc2 = ctx.createOscillator();
-      osc2.type = "triangle";
-      osc2.frequency.setValueAtTime(780, t);
-      osc2.frequency.exponentialRampToValueAtTime(340, t + 0.04);
-      var g2 = ctx.createGain();
-      g2.gain.setValueAtTime(0.18, t);
-      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-      osc2.connect(g2);
-      g2.connect(ctx.destination);
-      osc2.start(t);
-      osc2.stop(t + 0.12);
     } catch (_) {}
   }
 
@@ -113,7 +66,6 @@
     node.className = "merit-particle";
     node.textContent = "功德 +1";
     var rect = stage.getBoundingClientRect();
-    var cRect = container.getBoundingClientRect();
     var x = rect.width * (0.35 + Math.random() * 0.3);
     var y = rect.height * (0.25 + Math.random() * 0.2);
     node.style.left = x + "px";
@@ -125,8 +77,14 @@
   function playTapAnim() {
     var stage = document.getElementById("fishStage");
     if (!stage) return;
+    stage.classList.remove("tapping");
+    void stage.offsetWidth;
     stage.classList.add("tapping");
-    setTimeout(function () { stage.classList.remove("tapping"); }, 120);
+    if (tapAnimTimer) clearTimeout(tapAnimTimer);
+    tapAnimTimer = setTimeout(function () {
+      stage.classList.remove("tapping");
+      tapAnimTimer = null;
+    }, 260);
   }
 
   function isClockOpen() {
@@ -135,12 +93,8 @@
   }
 
   function tap() {
-    if (tapLock) return;
-    tapLock = true;
-    setTimeout(function () { tapLock = false; }, 80);
-
-    playMuyuSound();
     playTapAnim();
+    playMuyuSound();
     meritCount += 1;
     saveMerit();
     updateMeritDisplay();
@@ -159,7 +113,9 @@
   function bind() {
     var stage = document.getElementById("fishStage");
     if (stage) {
-      stage.addEventListener("click", function (e) {
+      stage.addEventListener("pointerdown", function (e) {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        e.preventDefault();
         e.stopPropagation();
         tap();
       });
@@ -172,6 +128,7 @@
     initialized = true;
     loadMerit();
     updateMeritDisplay();
+    preloadTapAudio();
     bind();
   }
 

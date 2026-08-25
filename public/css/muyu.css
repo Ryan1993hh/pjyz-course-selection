@@ -98,7 +98,6 @@
   transform-origin: 50% 100%;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
   z-index: 1;
-  transition: transform 0.08s ease-out;
 }
 .clock-muyu-zone .wooden-hammer {
   position: absolute;
@@ -110,13 +109,21 @@
   transform-origin: 80% 85%;
   z-index: 3;
   pointer-events: none;
-  transition: transform 0.1s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 .clock-muyu-zone .fish-stage.tapping .wooden-hammer {
-  transform: rotate(42deg);
+  animation: muyuHammerStrike 0.24s ease-out;
 }
 .clock-muyu-zone .fish-stage.tapping .wooden-fish {
-  transform: translateX(-50%) scale(0.96);
+  animation: muyuFishHit 0.24s ease-out;
+}
+@keyframes muyuHammerStrike {
+  0% { transform: rotate(16deg); }
+  42% { transform: rotate(52deg); }
+  100% { transform: rotate(16deg); }
+}
+@keyframes muyuFishHit {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  42% { transform: translateX(-50%) scale(0.92); }
 }
 .clock-muyu-zone .particles-container {
   position: absolute;
