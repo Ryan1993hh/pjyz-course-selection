@@ -575,6 +575,7 @@ body {
 .stat-card .label { font-size: 12px; opacity: 0.95; white-space: nowrap; }
 .stat-card .value { font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 2px; }
 .desktop-only { display: block; }
+.mob-only { display: none !important; }
 
 /* ===== 表格 ===== */
 .table-wrap {
@@ -1878,43 +1879,55 @@ tr.no-quota:hover td { opacity: 0.7; }
 @media (max-width: 768px) {
   body { padding: 12px; }
   .desktop-only { display: none !important; }
-  /* 顶栏一行：logo + 标题 + 角色 + 重置 + 退出 */
+  .mob-only { display: inline !important; }
+  /* 顶栏：第一行标题居中放大，第二行 logo + 操作按钮 */
   .header {
-    padding: 8px 10px;
-    flex-wrap: nowrap;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 6px 8px;
+    padding: 10px 12px 8px;
+    flex-wrap: unset;
     align-items: center;
   }
   .header-brand {
-    flex: 1;
-    min-width: 0;
-    gap: 6px;
+    display: contents;
   }
   .header-brand .header-title {
+    grid-column: 1 / -1;
+    grid-row: 1;
     position: static;
     transform: none;
     pointer-events: auto;
-    flex: 1;
+    flex: unset;
     min-width: 0;
-    text-align: left;
+    text-align: center;
   }
   .header-brand .header-title h1 {
-    font-size: clamp(10px, 2.8vw, 13px);
-    letter-spacing: 0;
+    font-size: clamp(16px, 4.8vw, 20px);
+    letter-spacing: 2px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.25;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.3;
+  }
+  .header-logo {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
   }
   .header-logo .logo-text { display: none; }
   .header-logo img,
   .header-logo .logo-img { width: 28px; height: 28px; }
   .header-actions {
+    grid-column: 2;
+    grid-row: 2;
     flex-shrink: 0;
     gap: 4px;
     width: auto;
     flex-wrap: nowrap;
     margin-left: 0;
+    justify-self: end;
   }
   .btn-reset,
   .btn-logout {
@@ -2006,7 +2019,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 /* ===== 移动端自适应（小屏微调，继承 768px 布局） ===== */
 @media (max-width: 480px) {
   body { padding: 8px; padding-bottom: calc(8px + var(--safe-bottom)); }
-  .header-brand .header-title h1 { font-size: clamp(9px, 2.6vw, 12px); }
+  .header-brand .header-title h1 { font-size: clamp(15px, 4.5vw, 18px); letter-spacing: 1.5px; }
   .btn-reset, .btn-logout { min-height: var(--touch-min); padding: 0 8px; }
   .stat-input, .stat-card { min-height: var(--touch-min); }
   .stat-input select, .stat-input input { font-size: 16px; }
@@ -2027,7 +2040,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 }
 
 @media (max-width: 380px) {
-  .header-brand .header-title h1 { font-size: 9px; }
+  .header-brand .header-title h1 { font-size: 14px; letter-spacing: 1px; }
   .name-grid { grid-template-columns: repeat(2, 1fr); }
   .stat-card .label { font-size: 10px; }
   table { min-width: 640px; }
@@ -2049,7 +2062,7 @@ tr.no-quota:hover td { opacity: 0.7; }
         <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
       </div>
     </div>
-    <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
+    <div class="header-title"><h1><span class="desktop-only">浦江一中拓展课选课</span><span class="mob-only">浦江一中拓展课 · 选课</span></h1></div>
   </div>
   <div class="header-actions">
     <div id="roleSwitcher"></div>
@@ -2075,7 +2088,7 @@ tr.no-quota:hover td { opacity: 0.7; }
     <div class="upload-area" id="uploadArea" title="点击或拖拽上传学生名单 Excel">
       <span class="icon">📁</span>
       <div class="text-col" id="uploadTextCol">
-        <span class="title">点击或拖拽上传学生名单</span>
+        <span class="title"><span class="desktop-only">点击或拖拽上传学生名单</span><span class="mob-only">点击上传学生名单</span></span>
         <span class="hint">支持 .xlsx / .xls 格式，需包含「姓名」列（建议含「性别」列）</span>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
