@@ -29,11 +29,12 @@
       '.role-switcher { position: relative; display: inline-flex; align-items: center; }' +
       '.role-switch-btn { border: 1px solid rgba(13,148,136,0.35); background: rgba(255,255,255,0.95); color: #0f766e; border-radius: 10px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; line-height: 1.2; }' +
       '.role-switch-btn:hover { background: #f0fdfa; }' +
-      '.role-switch-menu { position: fixed; min-width: 132px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.16); padding: 4px; display: none; z-index: 10050; }' +
+      '.role-switch-menu { position: fixed; min-width: 132px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.16); padding: 4px; display: none; z-index: 15000; }' +
       '.role-switch-menu.show { display: block; }' +
       '.role-switch-item { display: block; width: 100%; border: none; background: transparent; text-align: left; padding: 8px 12px; font-size: 13px; border-radius: 8px; cursor: pointer; color: #1f2937; }' +
       '.role-switch-item:hover { background: #f0fdfa; }' +
-      '.role-switch-item.active { background: #ccfbf1; color: #0f766e; font-weight: 600; }';
+      '.role-switch-item.active { background: #ccfbf1; color: #0f766e; font-weight: 600; }' +
+      '@media (max-width: 768px) { .role-switch-menu { max-height: min(280px, calc(100vh - 16px)); overflow-y: auto; -webkit-overflow-scrolling: touch; } }';
     document.head.appendChild(style);
   }
 
@@ -134,8 +135,26 @@
 
   function positionRoleMenu(btn, menu) {
     var rect = btn.getBoundingClientRect();
-    menu.style.top = Math.round(rect.bottom + 6) + 'px';
-    menu.style.left = Math.round(rect.right - Math.max(rect.width, 132)) + 'px';
+    var gap = 6;
+    var pad = 8;
+    var menuWidth = Math.max(menu.offsetWidth || 0, 132);
+    var menuHeight = menu.offsetHeight || 0;
+
+    var left = Math.round(rect.right - menuWidth);
+    left = Math.max(pad, Math.min(left, window.innerWidth - menuWidth - pad));
+
+    var topBelow = Math.round(rect.bottom + gap);
+    var topAbove = Math.round(rect.top - menuHeight - gap);
+    var top = topBelow;
+    if (menuHeight && topBelow + menuHeight > window.innerHeight - pad && topAbove >= pad) {
+      top = topAbove;
+    }
+    if (menuHeight) {
+      top = Math.max(pad, Math.min(top, window.innerHeight - menuHeight - pad));
+    }
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
     menu.style.right = 'auto';
   }
 
@@ -166,13 +185,21 @@
     var menu = document.getElementById('roleSwitchMenu');
     if (!btn || !menu) return;
 
+    // 挂到 body，避免顶栏 overflow:hidden 裁切下拉项（如「教师」）
+    if (menu.parentNode !== document.body) {
+      document.body.appendChild(menu);
+    }
+
     function closeMenu() {
       menu.classList.remove('show');
+      menu.style.visibility = '';
     }
 
     function openMenu() {
-      positionRoleMenu(btn, menu);
       menu.classList.add('show');
+      menu.style.visibility = 'hidden';
+      positionRoleMenu(btn, menu);
+      menu.style.visibility = 'visible';
     }
 
     btn.addEventListener('click', function (e) {
@@ -189,7 +216,7 @@
     });
 
     function onDocClick(e) {
-      if (!el.contains(e.target)) {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
         closeMenu();
       }
       document.removeEventListener('click', onDocClick, true);
