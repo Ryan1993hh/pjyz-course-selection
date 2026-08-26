@@ -4,7 +4,7 @@
  */
 (function (global) {
   var MERIT_KEY = "pjyz_merit_daily";
-  var AUDIO_SRC = "audio/muyu-tap.mp3";
+  var AUDIO_SRC = "audio/muyu-tap.mp3?v=20260826b";
   var meritCount = 0;
   var meritDate = "";
   var tapAudio = null;

@@ -1,19 +1,22 @@
-# 静态资源长缓存；HTML 短期校验，便于发版后尽快更新
+# 静态资源缓存：HTML 短缓存；JS/CSS/音频发版后可及时更新
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
 /*.html
-  Cache-Control: public, max-age=60, must-revalidate
+  Cache-Control: public, max-age=0, must-revalidate
 
 /css/*
-  Cache-Control: public, max-age=604800, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /js/*
-  Cache-Control: public, max-age=604800, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/audio/*
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /images/*
-  Cache-Control: public, max-age=2592000, immutable
+  Cache-Control: public, max-age=604800, immutable
 
 /data/*
   Cache-Control: public, max-age=86400
