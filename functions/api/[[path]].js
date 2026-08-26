@@ -1610,31 +1610,42 @@ async function handleClearSelections(db, request) {
     const auth = requireAuth(request, ['admin', 'banzhuren']);
     if (auth.error) return json({ error: auth.error }, auth.status);
 
+    const want = parseGradeClassFields(grade || '', cls || '');
     let sql = 'SELECT * FROM selections WHERE 1=1';
     const params = [];
-    if (grade) { sql += ' AND grade = ?'; params.push(grade); }
-    if (cls) { sql += ' AND class_name = ?'; params.push(cls); }
+    if (want.grade || grade) {
+      sql += ' AND (grade = ? OR class_name LIKE ?)';
+      const g = want.grade || grade;
+      params.push(g, '%' + g + '%');
+    }
+    const toDelete = params.length
+      ? await db.prepare(sql).bind(...params).all()
+      : await db.prepare(sql).all();
 
-    const toDelete = await db.prepare(sql).bind(...params).all();
     const affectedCourses = new Set();
-    for (const row of toDelete.results) {
+    let deleted = 0;
+    for (const row of (toDelete.results || [])) {
       if (Number(row.is_locked) === 1) continue;
+      if (want.classNum) {
+        const got = parseGradeClassFields(row.grade, row.class_name);
+        if (want.grade && got.grade && want.grade !== got.grade) continue;
+        if (got.classNum !== want.classNum) continue;
+      } else if (cls) {
+        const raw = String(row.class_name || '');
+        if (!raw.includes(cls) && raw.replace(/[()（）\s]/g, '') !== String(cls).replace(/[()（）\s]/g, '')) continue;
+      }
       if (row.course_name) affectedCourses.add(String(row.course_name).trim());
       if (row.course_id) {
         await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(row.course_id).run();
       }
+      await db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id).run();
+      deleted++;
     }
-
-    let delSql = 'DELETE FROM selections WHERE 1=1 AND (is_locked IS NULL OR is_locked = 0)';
-    const delParams = [];
-    if (grade) { delSql += ' AND grade = ?'; delParams.push(grade); }
-    if (cls) { delSql += ' AND class_name = ?'; delParams.push(cls); }
-    await db.prepare(delSql).bind(...delParams).run();
     await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
 
     return json({
       success: true,
-      deleted: (toDelete.results || []).filter((r) => Number(r.is_locked) !== 1).length
+      deleted: deleted
     });
   }
 
@@ -1718,14 +1729,53 @@ async function handleUnselectedStudentsBatchCreate(db, request) {
 }
 
 async function handleClearUnselectedStudents(db, request) {
-  // 支持按用户删除
   const url = new URL(request.url);
   const userIdStr = url.searchParams.get('user_id');
-  
+  const grade = String(url.searchParams.get('grade') || '').trim();
+  const cls = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+
+  // 按年级+班级覆盖清除（班主任保存时）
+  if (grade || cls) {
+    const auth = requireAuth(request, ['admin', 'banzhuren']);
+    if (auth.error) return json({ error: auth.error }, auth.status);
+
+    const parsed = parseGradeClassFields(grade, cls);
+    let sql = 'SELECT id, grade, class_name FROM unselected_students WHERE 1=1';
+    const params = [];
+    if (parsed.grade || grade) {
+      sql += ' AND (grade = ? OR class_name LIKE ?)';
+      const g = parsed.grade || grade;
+      params.push(g, '%' + g + '%');
+    }
+    const rows = params.length
+      ? await db.prepare(sql).bind(...params).all()
+      : await db.prepare(sql).all();
+
+    const want = parsed.classNum
+      ? parseGradeClassFields(parsed.grade || grade, cls)
+      : null;
+    let deleted = 0;
+    for (const row of (rows.results || [])) {
+      if (want && want.classNum) {
+        const got = parseGradeClassFields(row.grade, row.class_name);
+        if (want.grade && got.grade && want.grade !== got.grade) continue;
+        if (got.classNum !== want.classNum) continue;
+      } else if (cls) {
+        const raw = String(row.class_name || '');
+        if (!raw.includes(cls) && raw.replace(/[()（）\s]/g, '') !== String(cls).replace(/[()（）\s]/g, '')) continue;
+      }
+      await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
+      deleted++;
+    }
+    return json({ success: true, deleted: deleted });
+  }
+
   if (userIdStr) {
     const userId = parseInt(userIdStr);
     await db.prepare('DELETE FROM unselected_students WHERE user_id = ?').bind(userId).run();
   } else {
+    const auth = requireAuth(request, ['admin']);
+    if (auth.error) return json({ error: auth.error }, auth.status);
     await db.prepare('DELETE FROM unselected_students').run();
   }
   return json({ success: true });
@@ -1861,6 +1911,72 @@ async function handleSchoolStudentsImport(db, request) {
     total: (totalRes && totalRes.c) || count,
     errors: errors.slice(0, 50)
   });
+}
+
+/** 班主任保存后：用本班最新名单覆盖 school_students 中该班数据 */
+async function handleSchoolStudentsSyncClass(db, request) {
+  const auth = requireAuth(request, ['admin', 'banzhuren']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+
+  let grade = String(body.grade || '').trim();
+  let className = String(body.class_name || body.class || '').trim();
+  const parsed = parseGradeClassFields(grade, className);
+  grade = parsed.grade || grade;
+  className = parsed.class_name || className;
+  if (!grade || !className) {
+    return json({ error: '缺少年级或班级' }, 400);
+  }
+
+  // 班主任只能同步自己的班级
+  const roles = auth.user.roles || [];
+  if (roles.indexOf('admin') === -1) {
+    const me = await db.prepare('SELECT class_name FROM users WHERE id = ?').bind(auth.user.userId).first();
+    const myClass = String((me && me.class_name) || '').trim();
+    const myParsed = parseGradeClassFields('', myClass);
+    if (!myClass || myParsed.class_name !== className) {
+      return json({ error: '只能同步自己负责班级的学生名单' }, 403);
+    }
+  }
+
+  const list = Array.isArray(body.students) ? body.students : [];
+  const prepared = [];
+  const seen = new Set();
+  for (const item of list) {
+    const name = String((item && (item.student_name || item.name)) || '').trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    prepared.push({
+      student_name: name,
+      gender: normalizeSchoolGender(item && item.gender)
+    });
+  }
+
+  // 删除该班旧花名册后写入最新名单
+  const existing = await db.prepare(
+    'SELECT id, grade, class_name FROM school_students WHERE grade = ?'
+  ).bind(grade).all();
+  for (const row of (existing.results || [])) {
+    const got = parseGradeClassFields(row.grade, row.class_name);
+    if (got.classNum === parsed.classNum && (!got.grade || got.grade === grade)) {
+      await db.prepare('DELETE FROM school_students WHERE id = ?').bind(row.id).run();
+    }
+  }
+
+  let count = 0;
+  for (const s of prepared) {
+    await db.prepare(
+      `INSERT INTO school_students (grade, class_name, student_name, gender, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))`
+    ).bind(grade, className, s.student_name, s.gender).run();
+    count++;
+  }
+
+  return json({ success: true, count: count, grade: grade, class_name: className });
 }
 
 // ---- Classes ----
@@ -3253,6 +3369,9 @@ export async function onRequest(context) {
   }
   if (path === '/api/school-students/import' && method === 'POST') {
     return handleSchoolStudentsImport(db, request);
+  }
+  if (path === '/api/school-students/sync-class' && method === 'POST') {
+    return handleSchoolStudentsSyncClass(db, request);
   }
 
   // /api/teachers

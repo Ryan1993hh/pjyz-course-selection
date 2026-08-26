@@ -2572,7 +2572,8 @@ const PersistentStorage = (function () {
       courses: COURSES.map(function (c) {
         return { id: c.id, students: c.students.slice() };
       }),
-      lockedStudents: Array.from(lockedStudentNames)
+      lockedStudents: Array.from(lockedStudentNames),
+      studentListSource: studentListSource || ''
     };
   }
 
@@ -2634,6 +2635,11 @@ const PersistentStorage = (function () {
         lockedStudentNames = new Set(data.lockedStudents);
       } else {
         lockedStudentNames = new Set();
+      }
+      if (typeof data.studentListSource === 'string') {
+        studentListSource = data.studentListSource;
+      } else if (Array.isArray(data.students) && data.students.length) {
+        studentListSource = 'local';
       }
 
       // 恢复已选学生（只改 students 槽位；limit/结构从 COURSES 同步）
@@ -2900,6 +2906,8 @@ function resetState(silent) {
   fileName = '';
   currentSelect = null;
   lockedStudentNames = new Set();
+  studentListSource = '';
+  rosterReadyTip = false;
 
   // 2. 重置所有课程的 students 为初始空槽（按 limit 初始化）
   COURSES.forEach(function (c) {
@@ -2940,6 +2948,7 @@ function resetState(silent) {
 let students = [];          // 学生姓名数组（去重后）
 let studentGenders = {};    // 姓名 → 性别（男/女）
 let rosterReadyTip = false; // 后台已录入本班名单时显示提示
+let studentListSource = ''; // upload | roster | local | server — 名单来源优先级：upload > roster/local/server
 let gradeName = '';         // 年级名称（六年级 / 七年级）
 let classNumber = '';       // 班级序号（如 "3"）
 let className = '';         // 组合后的班级名称（如 "六年级(3)班"）
@@ -3170,10 +3179,15 @@ function renderStats() {
       classNumber = e.target.value;
       updateClassName();
       await refreshPreEnrollments();
-      const hadStudents = students.length > 0;
-      await loadSchoolRosterForClass({ force: !hadStudents });
+      // 仅在非上传来源时，尝试用后台名单补齐
+      if (studentListSource !== 'upload') {
+        const hadStudents = students.length > 0;
+        await loadSchoolRosterForClass({ force: !hadStudents });
+      } else {
+        rosterReadyTip = false;
+      }
       renderAll();
-      if (rosterReadyTip) await applyPreEnrollments({ skipReset: true });
+      if (rosterReadyTip || lockedStudentNames.size) await applyPreEnrollments({ skipReset: true });
     });
   }
 }
@@ -3234,12 +3248,23 @@ function applyBanzhurenClassPreset() {
   }
 }
 
-/** 从后台全校名单按当前年级班级加载学生；有数据时显示「已录入…」动效提示 */
+/** 从后台全校名单按当前年级班级加载学生；有数据时显示「已录入…」动效提示
+ *  优先级：班主任自行上传(upload) > 后台录入名单(roster)
+ */
 async function loadSchoolRosterForClass(opts) {
   opts = opts || {};
-  rosterReadyTip = false;
-  if (!gradeName || !classNumber) return false;
+  if (!gradeName || !classNumber) {
+    rosterReadyTip = false;
+    return false;
+  }
   if (!getToken()) return false;
+
+  // 班主任已上传本班文件时，不以后台名单覆盖学生信息
+  if (studentListSource === 'upload' && !opts.force) {
+    rosterReadyTip = false;
+    return false;
+  }
+
   try {
     const qs = new URLSearchParams();
     qs.set('grade', gradeName);
@@ -3247,10 +3272,13 @@ async function loadSchoolRosterForClass(opts) {
     qs.set('class', gradeName + '(' + classNumber + ')班');
     const data = await apiRequest('GET', '/api/school-students?' + qs.toString());
     const list = (data && data.students) || [];
-    if (!list.length) return false;
-    rosterReadyTip = true;
+    if (!list.length) {
+      if (studentListSource === 'roster') rosterReadyTip = false;
+      return false;
+    }
 
-    if (students.length === 0 || opts.force) {
+    const shouldFill = (students.length === 0 || opts.force) && studentListSource !== 'upload';
+    if (shouldFill) {
       const names = [];
       const genders = {};
       list.forEach(function(row) {
@@ -3264,7 +3292,8 @@ async function loadSchoolRosterForClass(opts) {
       if (unique.length) {
         students = unique;
         studentGenders = Object.assign({}, studentGenders, genders);
-        if (!fileName) fileName = '已录入学生信息';
+        studentListSource = 'roster';
+        fileName = '已录入学生信息';
         const uploadTextCol = document.getElementById('uploadTextCol');
         if (uploadTextCol) {
           uploadTextCol.innerHTML =
@@ -3273,7 +3302,10 @@ async function loadSchoolRosterForClass(opts) {
         }
       }
     }
-    return true;
+
+    // 仅当实际使用后台录入名单时显示动效提示
+    rosterReadyTip = studentListSource === 'roster' && students.length > 0;
+    return rosterReadyTip;
   } catch (e) {
     console.warn('loadSchoolRosterForClass:', e.message || e);
     return false;
@@ -3607,20 +3639,26 @@ function handleFile(file) {
         showToast('未读取到任何学生姓名', 'error');
         return;
       }
-      // 重置选课状态
+      // 重置选课状态；班主任上传名单优先于后台录入
       students = unique;
       studentGenders = genders;
       lockedStudentNames = new Set();
+      studentListSource = 'upload';
+      rosterReadyTip = false;
       COURSES.forEach(c => c.students = c.students.map(() => null));
-      gradeName = '';
-      classNumber = '';
-      className = '';
+      // 保留班主任账号已绑定的年级班级；非班主任则清空等待手动选择
+      applyBanzhurenClassPreset();
+      if (!gradeName || !classNumber) {
+        gradeName = '';
+        classNumber = '';
+        className = '';
+      }
       // 显示文件信息：替换上传模块的 text-col 为成功状态
       const uploadTextCol = document.getElementById('uploadTextCol');
       if (uploadTextCol) {
         uploadTextCol.innerHTML = `
           <span class="title">✓ ${esc(fileName)}</span>
-          <span class="file-info">📋 共 ${unique.length} 名学生</span>`;
+          <span class="file-info">📋 共 ${unique.length} 名学生（本班上传）</span>`;
       }
       renderAll();
       refreshPreEnrollments().then(function(n) {
@@ -3718,7 +3756,13 @@ async function applyPreEnrollments(opts) {
   byName.forEach(function(row) {
     if (!preEnrollRowMatchesClass(row)) return;
     const name = String(row.student_name || '').trim();
-    if (!name || !nameSet.has(name)) return;
+    if (!name) return;
+
+    // 内定学生即使不在当前上传名单中，也加入本班名单（内定优先级最高）
+    if (!nameSet.has(name)) {
+      students.push(name);
+      nameSet.add(name);
+    }
 
     const course = COURSES.find(function(c) {
       if (row.course_id && String(c.id) === String(row.course_id)) return true;
@@ -3738,7 +3782,7 @@ async function applyPreEnrollments(opts) {
     lockedStudentNames.add(name);
     if (row.gender) {
       const g = normalizeGender(row.gender);
-      if (g && !studentGenders[name]) studentGenders[name] = g;
+      if (g) studentGenders[name] = g;
     }
     placed++;
   });
@@ -3807,6 +3851,7 @@ async function restoreSelectionsFromServer() {
   students = Array.from(nameSet);
   studentGenders = genders;
   lockedStudentNames = new Set();
+  if (studentListSource !== 'upload') studentListSource = 'server';
   fileName = fileName || '已从服务器恢复本班选课';
 
   COURSES.forEach(function(c) {
@@ -3916,6 +3961,39 @@ async function apiRequest(method, url, body){
 }
 
 // ===== 同步并导出 Excel =====
+/** 一人一课：内定(锁定)课程优先；同一学生多门课时只保留内定/第一条 */
+function buildSelectionsForSave(grade, cls) {
+  const byName = new Map();
+  COURSES.forEach(function(c) {
+    (c.students || []).forEach(function(name) {
+      if (!name) return;
+      const locked = lockedStudentNames.has(name);
+      const prev = byName.get(name);
+      if (!prev) {
+        byName.set(name, { course: c, locked: locked });
+        return;
+      }
+      // 内定优先：已锁定覆盖未锁定；两个都锁定时保留先出现的
+      if (locked && !prev.locked) {
+        byName.set(name, { course: c, locked: true });
+      }
+    });
+  });
+  const selections = [];
+  byName.forEach(function(info, name) {
+    selections.push({
+      grade: grade,
+      class_name: cls,
+      student_name: name,
+      gender: getStudentGender(name),
+      course_id: info.course.id,
+      course_name: info.course.name,
+      is_locked: info.locked ? 1 : 0
+    });
+  });
+  return selections;
+}
+
 async function exportExcel() {
   if (!selectionEnabled) {
     showToast('当前状态禁止选课，无法保存', 'error');
@@ -3929,25 +4007,13 @@ async function exportExcel() {
   
   const cls = className.trim() || '未填写班级';
   const grade = gradeName || '';
+
+  // 保存前再次以内定为准校正占位，避免一人两课
+  try { await applyPreEnrollments({ skipReset: true, skipRender: true }); } catch (_) {}
   
-  const assignedNames = getAssignedNames();
+  const selections = buildSelectionsForSave(grade, cls);
+  const assignedNames = new Set(selections.map(function(s) { return s.student_name; }));
   const unselectedList = students.filter(s => !assignedNames.has(s));
-  
-  const selections = [];
-  COURSES.forEach(c => {
-    c.students.forEach(name => {
-      if (name) {
-        selections.push({
-          grade: grade,
-          class_name: cls,
-          student_name: name,
-          gender: getStudentGender(name),
-          course_id: c.id,
-          course_name: c.name
-        });
-      }
-    });
-  });
   
   const unselectedRecords = unselectedList.map(s => ({
     grade: grade,
@@ -3970,18 +4036,7 @@ async function exportExcel() {
   const btn = document.getElementById('exportBtn');
   if (btn) {
     btn.disabled = true;
-    const originalText = btn.innerHTML;
     btn.innerHTML = '<span>⏳</span> 正在保存数据...';
-    
-    // 获取当前用户信息
-    var currentUserId = null;
-    try {
-      var userStr = localStorage.getItem('pjyz_user');
-      if (userStr) {
-        var userObj = JSON.parse(userStr);
-        currentUserId = userObj.id;
-      }
-    } catch(_) {}
     
     try {
       showToast('正在保存选课数据到服务器...', 'info');
@@ -3991,21 +4046,20 @@ async function exportExcel() {
         if (grade) delParams.set('grade', grade);
         if (cls) delParams.set('class_name', cls);
         const delQuery = delParams.toString();
+        // 仅清除本班未锁定选课；内定(is_locked=1)保留
         await apiRequest('DELETE', '/api/selections' + (delQuery ? '?' + delQuery : ''));
       } catch(e) {
         console.warn('清除本班旧选课数据（可能为空）:', e.message);
       }
       
-      // 只删除当前用户的旧未选课数据，保留其他用户数据
+      // 按班级覆盖未选课名单（班主任最近一次保存为准）
       try {
-        if (currentUserId) {
-          await apiRequest('DELETE', '/api/unselected-students?user_id=' + currentUserId);
-        } else {
-          // 无用户信息时，保留所有数据，避免误删
-          console.warn('无用户信息，跳过清除旧未选课数据');
-        }
+        const uq = new URLSearchParams();
+        if (grade) uq.set('grade', grade);
+        if (cls) uq.set('class_name', cls);
+        await apiRequest('DELETE', '/api/unselected-students?' + uq.toString());
       } catch(e) {
-        console.warn('清除旧未选课数据:', e.message);
+        console.warn('清除本班旧未选课数据:', e.message);
       }
       
       if (selections.length > 0) {
@@ -4017,6 +4071,19 @@ async function exportExcel() {
       if (unselectedRecords.length > 0) {
         await apiRequest('POST', '/api/unselected-students', unselectedRecords);
         showToast(`已保存 ${unselectedRecords.length} 条未选课名单`, 'info');
+      }
+
+      // 用班主任当前名单覆盖后台该班学生花名册（含性别）
+      try {
+        await apiRequest('POST', '/api/school-students/sync-class', {
+          grade: grade,
+          class_name: cls,
+          students: students.map(function(name) {
+            return { student_name: name, gender: getStudentGender(name) || '' };
+          })
+        });
+      } catch (e) {
+        console.warn('同步班级学生名单:', e.message);
       }
       
       const excelData = selections.map(s => ({
@@ -4031,7 +4098,7 @@ async function exportExcel() {
       
       if (excelData.length > 0) {
         const ws = XLSX.utils.json_to_sheet(excelData);
-        ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 24 }];
+        ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 24 }];
         XLSX.utils.book_append_sheet(wb, ws, '选课数据');
       }
       
@@ -4055,6 +4122,7 @@ async function exportExcel() {
       
       const totalExported = selections.length + unselectedList.length;
       showToast(`保存成功！已导出 ${totalExported} 条记录（含${unselectedList.length}条未选课）`, 'success');
+      try { saveState(); } catch (_) {}
     } catch(e) {
       console.error('保存失败:', e);
       showToast('保存失败：' + e.message, 'error');
@@ -4742,6 +4810,7 @@ document.addEventListener('keydown', e => {
     var loaded = loadStateFromStorage();
     applyBanzhurenClassPreset();
     if (loaded && students.length > 0) {
+      if (!studentListSource) studentListSource = 'local';
       var uploadTextCol = document.getElementById('uploadTextCol');
       if (uploadTextCol) {
         uploadTextCol.innerHTML =
@@ -4756,9 +4825,14 @@ document.addEventListener('keydown', e => {
         showToast('已从后台恢复本班选课数据', 'success');
       }
     }
-    // 班主任班级已确定时：读取管理员导入的全校名单，并显示「已录入…」提示
-    await loadSchoolRosterForClass();
-    if (rosterReadyTip && students.length > 0) {
+    // 班主任班级已确定时：若未自行上传名单，则读取管理员导入的全校名单并显示提示
+    if (studentListSource !== 'upload') {
+      await loadSchoolRosterForClass();
+      if (rosterReadyTip && students.length > 0) {
+        await applyPreEnrollments({ skipReset: true });
+      }
+    } else {
+      rosterReadyTip = false;
       await applyPreEnrollments({ skipReset: true });
     }
   } catch (e) {
