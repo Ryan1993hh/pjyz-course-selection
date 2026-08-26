@@ -2988,6 +2988,7 @@ th.sortable.active .sort-icon { opacity: 1; }
               <div class="filter-row filter-row-actions">
                 <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 内定学生</button>
                 <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 未选课学生</button>
+                <button type="button" class="btn btn-outline btn-block mob-only" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 导入学生名单</button>
                 <button type="button" class="btn btn-danger btn-block mob-only" id="batchDeleteBtnMob" disabled>🗑 批量删除</button>
                 <button type="button" class="btn btn-primary btn-block mob-only" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 提前录课</button>
               </div>
@@ -3024,6 +3025,8 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-danger" id="batchDeleteBtn">🗑 批量删除</button>
                 <button type="button" class="btn btn-primary" id="preEnrollBtn" title="上传已确定选课的学生名单">📌 提前录课</button>
                 <input type="file" id="preEnrollFile" accept=".xlsx,.xls" style="display:none">
+                <button type="button" class="btn btn-outline" id="importRosterBtn" title="导入全校六、七年级学生名单">📥 导入学生名单</button>
+                <input type="file" id="importRosterFile" accept=".xlsx,.xls,.csv" style="display:none">
                 <button type="button" class="btn btn-success" id="exportBtn">⬇ 导出 Excel</button>
               </div>
             </div>
@@ -5520,6 +5523,16 @@ async function exportSelections(){
     var file = e.target.files && e.target.files[0];
     if (file) handlePreEnrollUpload(file);
   });
+  function openRosterImportPicker(){
+    var input = document.getElementById('importRosterFile');
+    if (input) { input.value = ''; input.click(); }
+  }
+  safeBind('importRosterBtn', 'click', openRosterImportPicker);
+  safeBind('importRosterBtnMob', 'click', openRosterImportPicker);
+  safeBind('importRosterFile', 'change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if (file) handleSchoolRosterImport(file);
+  });
   var selAll = document.getElementById('selectAll');
   if (selAll) selAll.addEventListener('change', function(){
     var checked = this.checked;
@@ -5551,6 +5564,87 @@ function mapPreEnrollColumns(headerRow) {
     else if (/课程|所选课程|course/.test(t) && map.course_name < 0) map.course_name = i;
   });
   return map;
+}
+
+function mapSchoolRosterColumns(headerRow) {
+  var map = { grade: -1, class_name: -1, student_name: -1, gender: -1 };
+  headerRow.forEach(function(h, i) {
+    var t = normalizePreEnrollHeader(h);
+    if (/年级|grade/.test(t) && map.grade < 0) map.grade = i;
+    else if (/班级|class/.test(t) && map.class_name < 0) map.class_name = i;
+    else if (/姓名|名字|学生姓名|name/.test(t) && map.student_name < 0) map.student_name = i;
+    else if (/性别|gender/.test(t) && map.gender < 0) map.gender = i;
+  });
+  return map;
+}
+
+async function handleSchoolRosterImport(file) {
+  if (!file) return;
+  if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
+    toast('请上传 Excel / CSV 文件', 'error');
+    return;
+  }
+  if (typeof window.XLSX === 'undefined') {
+    toast('Excel 组件未加载，请刷新页面后重试', 'error');
+    return;
+  }
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (!rows.length) {
+      toast('文件为空', 'error');
+      return;
+    }
+    const header = rows[0];
+    const col = mapSchoolRosterColumns(header);
+    if (col.student_name < 0) {
+      toast('表头需包含「姓名」列', 'error');
+      return;
+    }
+    if (col.class_name < 0 && col.grade < 0) {
+      toast('表头需包含「班级」或「年级」列，以便识别班级信息', 'error');
+      return;
+    }
+    const items = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const student_name = String(row[col.student_name] || '').trim();
+      if (!student_name) continue;
+      let grade = col.grade >= 0 ? String(row[col.grade] || '').trim() : '';
+      let class_name = col.class_name >= 0 ? String(row[col.class_name] || '').trim() : '';
+      if (!grade && class_name) {
+        const gm = class_name.match(/(六年级|七年级)/);
+        if (gm) grade = gm[1];
+      }
+      items.push({
+        grade: grade,
+        class_name: class_name,
+        student_name: student_name,
+        gender: col.gender >= 0 ? String(row[col.gender] || '').trim() : ''
+      });
+    }
+    if (!items.length) {
+      toast('未解析到有效学生名单', 'error');
+      return;
+    }
+    if (!confirm('即将导入 ' + items.length + ' 名学生，并覆盖更新数据库中的全校名单。是否继续？')) {
+      return;
+    }
+    toast('正在导入学生名单…', 'info');
+    const data = await request('POST', '/api/school-students/import', { students: items, replace: true });
+    const errCount = (data.errors && data.errors.length) || 0;
+    let msg = '已导入 ' + (data.count || 0) + ' 名学生';
+    if (data.total != null) msg += '（库中共 ' + data.total + ' 人）';
+    if (errCount) msg += '，跳过 ' + errCount + ' 条';
+    toast(msg, errCount && !(data.count) ? 'error' : 'success');
+    if (errCount && data.errors) {
+      console.warn('school roster import errors', data.errors);
+    }
+  } catch (e) {
+    toast('导入学生名单失败：' + e.message, 'error');
+  }
 }
 
 async function handlePreEnrollUpload(file) {
@@ -6083,9 +6177,9 @@ function buildUserGradeOptions(selectedGrade) {
 
 function buildUserClassNumOptions(grade, selectedClassNum) {
   if (!grade) {
-    return '<option value="">请先选择年级</option>';
+    return '<option value="">不指定</option>';
   }
-  var html = '<option value="">请选择班级</option>';
+  var html = '<option value="">不指定</option>';
   for (var i = 1; i <= 10; i++) {
     var v = String(i);
     html += '<option value="' + v + '"' + (selectedClassNum === v ? ' selected' : '') + '>' + i + '班</option>';
@@ -6098,7 +6192,7 @@ function buildUserClassFormHtml(selectedGrade, selectedClassNum) {
     '<div class="form-group"><label>年级</label><select class="form-select" id="uUserGrade">' +
       buildUserGradeOptions(selectedGrade) +
     '</select></div>' +
-    '<div class="form-group"><label>班级</label><select class="form-select" id="uUserClass"' + (!selectedGrade ? ' disabled' : '') + '>' +
+    '<div class="form-group"><label>班级</label><select class="form-select" id="uUserClass">' +
       buildUserClassNumOptions(selectedGrade, selectedClassNum) +
     '</select></div>'
   );
@@ -6110,7 +6204,7 @@ function bindUserClassSelects() {
   if (!gradeEl || !classEl) return;
   gradeEl.addEventListener('change', function () {
     var g = gradeEl.value;
-    classEl.disabled = !g;
+    classEl.disabled = false;
     classEl.innerHTML = buildUserClassNumOptions(g, '');
   });
 }
@@ -6165,11 +6259,10 @@ function openAddUser(){
     if (document.getElementById('uRoleBanzhuren').checked) roles.push('banzhuren');
     if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
     if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
-    if (roles.indexOf('banzhuren') > -1 && !className) { toast('班主任请选择年级和班级', 'error'); return; }
     if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
     saveBtn.disabled = true;
     try {
-      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, course_name: courseName, class_name: className, roles: roles, email: email, phone: phone });
+      const data = await request('POST', '/api/users', { username: username, password: password, teacher_name: teacherName, course_name: courseName || '', class_name: className || '', roles: roles, email: email, phone: phone });
       if (data.success){
         toast('添加成功', 'success');
         closeModal();
@@ -6229,11 +6322,10 @@ function openEditUser(u){
     if (document.getElementById('uRoleBanzhuren').checked) roles.push('banzhuren');
     if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
     if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
-    if (roles.indexOf('banzhuren') > -1 && !className) { toast('班主任请选择年级和班级', 'error'); return; }
     if (!username){ toast('请填写账号', 'error'); return; }
     saveBtn.disabled = true;
     try {
-      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, course_name: courseName, class_name: className, roles: roles, email: email, phone: phone });
+      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, course_name: courseName || '', class_name: className || '', roles: roles, email: email, phone: phone });
       if (data.success){
         toast('保存成功', 'success');
         closeModal();

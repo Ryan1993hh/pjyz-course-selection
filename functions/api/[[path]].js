@@ -87,6 +87,18 @@ const INIT_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_unselected_grade ON unselected_students(grade)`,
   `CREATE INDEX IF NOT EXISTS idx_unselected_class ON unselected_students(class_name)`,
+  `CREATE TABLE IF NOT EXISTS school_students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grade TEXT NOT NULL DEFAULT '',
+    class_name TEXT NOT NULL DEFAULT '',
+    student_name TEXT NOT NULL,
+    gender TEXT DEFAULT '',
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(grade, class_name, student_name)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_school_students_grade ON school_students(grade)`,
+  `CREATE INDEX IF NOT EXISTS idx_school_students_class ON school_students(class_name)`,
+  `CREATE INDEX IF NOT EXISTS idx_school_students_name ON school_students(student_name)`,
   `CREATE TABLE IF NOT EXISTS data_consistency_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     check_type TEXT NOT NULL,
@@ -982,7 +994,7 @@ async function handleCourseUpload(db, request) {
     const formData = await request.formData();
     const file = formData.get('file');
     if (!file) return json({ error: '缺少上传文件' }, 400);
-
+    
     const name = (file.name || '').toLowerCase();
     const buffer = await file.arrayBuffer();
     let rows = [];
@@ -991,8 +1003,8 @@ async function handleCourseUpload(db, request) {
       rows = await parseExcelBufferToRows(buffer, name);
     } else if (name.endsWith('.csv') || name.endsWith('.txt')) {
       const text = new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/, '');
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      if (lines.length < 2) return json({ error: '文件内容为空或格式不正确' }, 400);
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return json({ error: '文件内容为空或格式不正确' }, 400);
       rows = lines.map(parseCSVLine);
     } else if (name.endsWith('.docx')) {
       rows = await parseDocxBufferToRows(buffer);
@@ -1004,7 +1016,7 @@ async function handleCourseUpload(db, request) {
     if (courses.length === 0) {
       return json({ error: '未能解析出课程数据，请检查表头是否包含：' + COURSE_HEADER_HINT }, 400);
     }
-
+    
     return json({ success: true, count: courses.length, courses });
   } catch (e) {
     return json({ error: '解析失败：' + e.message }, 400);
@@ -1205,7 +1217,7 @@ async function syncMissingSelectionsFromClassroom(db, courseFilter) {
 async function handleSelectionsGet(db, request, url) {
   const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
   if (auth.error) return json({ error: auth.error }, auth.status);
-
+  
   const isAdmin = auth.user.roles.includes('admin');
   const isBanzhuren = auth.user.roles.includes('banzhuren');
   const grade = url.searchParams.get('grade');
@@ -1717,6 +1729,138 @@ async function handleClearUnselectedStudents(db, request) {
     await db.prepare('DELETE FROM unselected_students').run();
   }
   return json({ success: true });
+}
+
+function normalizeSchoolGender(val) {
+  const s = String(val == null ? '' : val).trim();
+  if (!s) return '';
+  if (/^(男|男生|male|m)$/i.test(s)) return '男';
+  if (/^(女|女生|female|f)$/i.test(s)) return '女';
+  return s;
+}
+
+/** 管理员导入全校学生名单；班主任/管理员可按班级查询 */
+async function handleSchoolStudentsGet(db, request, url) {
+  const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  const roles = auth.user.roles || [];
+  let grade = String(url.searchParams.get('grade') || '').trim();
+  let clsRaw = String(url.searchParams.get('class') || url.searchParams.get('class_name') || '').trim();
+  const classNum = String(url.searchParams.get('class_num') || '').trim();
+
+  // 班主任仅可查看自己班级
+  if (roles.indexOf('admin') === -1 && roles.indexOf('banzhuren') > -1) {
+    const me = await db.prepare('SELECT class_name FROM users WHERE id = ?').bind(auth.user.userId).first();
+    const myClass = String((me && me.class_name) || '').trim();
+    if (!myClass) return json({ success: true, count: 0, students: [] });
+    const parsedMe = parseGradeClassFields('', myClass);
+    grade = parsedMe.grade || grade;
+    clsRaw = parsedMe.class_name || myClass;
+  }
+
+  let sql = 'SELECT id, grade, class_name, student_name, gender, updated_at FROM school_students WHERE 1=1';
+  const params = [];
+
+  if (grade) {
+    sql += ' AND grade = ?';
+    params.push(grade);
+  }
+  if (clsRaw || (grade && classNum)) {
+    const parsed = parseGradeClassFields(grade, clsRaw || (classNum ? classNum + '班' : ''));
+    if (parsed.class_name) {
+      sql += ' AND class_name = ?';
+      params.push(parsed.class_name);
+    } else if (clsRaw) {
+      sql += ' AND class_name LIKE ?';
+      params.push('%' + clsRaw + '%');
+    }
+  }
+
+  sql += ' ORDER BY grade, class_name, student_name';
+  const res = params.length
+    ? await db.prepare(sql).bind(...params).all()
+    : await db.prepare(sql).all();
+  const students = res.results || [];
+  return json({ success: true, count: students.length, students: students });
+}
+
+async function handleSchoolStudentsImport(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const list = Array.isArray(body.students) ? body.students : (Array.isArray(body) ? body : []);
+  if (!list.length) return json({ error: '没有可导入的学生数据' }, 400);
+
+  const replaceAll = body.replace !== false;
+  const prepared = [];
+  const errors = [];
+  const seen = new Set();
+
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i] || {};
+    const studentName = String(item.student_name || item.name || '').trim();
+    if (!studentName) {
+      errors.push('第 ' + (i + 1) + ' 行缺少学生姓名');
+      continue;
+    }
+    let grade = String(item.grade || '').trim();
+    let className = String(item.class_name || item.class || '').trim();
+    const parsed = parseGradeClassFields(grade, className);
+    grade = parsed.grade || grade;
+    className = parsed.class_name || className;
+    if (!grade || !/六年级|七年级/.test(grade)) {
+      errors.push(studentName + '：缺少或无法识别年级（需六年级/七年级）');
+      continue;
+    }
+    if (!className) {
+      errors.push(studentName + '：缺少班级信息');
+      continue;
+    }
+    const gender = normalizeSchoolGender(item.gender);
+    const key = grade + '|' + className + '|' + studentName;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    prepared.push({ grade: grade, class_name: className, student_name: studentName, gender: gender });
+  }
+
+  if (!prepared.length) {
+    return json({ error: '未解析到有效学生数据', errors: errors }, 400);
+  }
+
+  if (replaceAll) {
+    await db.prepare('DELETE FROM school_students').run();
+  }
+
+  let count = 0;
+  for (const s of prepared) {
+    if (replaceAll) {
+      await db.prepare(
+        `INSERT INTO school_students (grade, class_name, student_name, gender, updated_at)
+         VALUES (?, ?, ?, ?, datetime('now'))`
+      ).bind(s.grade, s.class_name, s.student_name, s.gender).run();
+    } else {
+      await db.prepare(
+        `INSERT INTO school_students (grade, class_name, student_name, gender, updated_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(grade, class_name, student_name)
+         DO UPDATE SET gender=excluded.gender, updated_at=datetime('now')`
+      ).bind(s.grade, s.class_name, s.student_name, s.gender).run();
+    }
+    count++;
+  }
+
+  const totalRes = await db.prepare('SELECT COUNT(*) as c FROM school_students').first();
+  return json({
+    success: true,
+    count: count,
+    total: (totalRes && totalRes.c) || count,
+    errors: errors.slice(0, 50)
+  });
 }
 
 // ---- Classes ----
@@ -3101,6 +3245,14 @@ export async function onRequest(context) {
     const id = parseInt(classMatch[1]);
     if (method === 'PUT') return handleClassUpdate(db, request, id);
     if (method === 'DELETE') return handleClassDelete(db, request, id);
+  }
+
+  // /api/school-students — 全校学生名单（管理员导入，班主任按班读取）
+  if (path === '/api/school-students') {
+    if (method === 'GET') return handleSchoolStudentsGet(db, request, url);
+  }
+  if (path === '/api/school-students/import' && method === 'POST') {
+    return handleSchoolStudentsImport(db, request);
   }
 
   // /api/teachers
