@@ -1665,14 +1665,20 @@ async function handleUnselectedStudentsGet(db, request) {
   const cls = url.searchParams.get('class');
   const studentName = url.searchParams.get('student_name');
   
-  let sql = 'SELECT * FROM unselected_students WHERE 1=1';
+  let sql = `
+    SELECT u.id, u.grade, u.class_name, u.student_name, u.saved_at,
+           COALESCE(s.gender, '') AS gender
+    FROM unselected_students u
+    LEFT JOIN school_students s
+      ON u.grade = s.grade AND u.class_name = s.class_name AND u.student_name = s.student_name
+    WHERE 1=1`;
   const params = [];
   
-  if (grade) { sql += ' AND grade = ?'; params.push(grade); }
-  if (cls) { sql += ' AND class_name LIKE ?'; params.push('%' + cls + '%'); }
-  if (studentName) { sql += ' AND student_name LIKE ?'; params.push('%' + studentName + '%'); }
+  if (grade) { sql += ' AND u.grade = ?'; params.push(grade); }
+  if (cls) { sql += ' AND u.class_name LIKE ?'; params.push('%' + cls + '%'); }
+  if (studentName) { sql += ' AND u.student_name LIKE ?'; params.push('%' + studentName + '%'); }
   
-  sql += ' ORDER BY id ASC';
+  sql += ' ORDER BY u.grade, u.class_name, u.student_name';
   const results = await db.prepare(sql).bind(...params).all();
   return json({ unselected: results.results });
 }
@@ -1789,6 +1795,28 @@ function normalizeSchoolGender(val) {
   return s;
 }
 
+function normalizeSchoolGrade(val) {
+  const s = String(val == null ? '' : val).trim();
+  if (!s) return '';
+  if (/六年级/.test(s)) return '六年级';
+  if (/七年级/.test(s)) return '七年级';
+  if (/^六$|^6$|6年级|小学六年/.test(s)) return '六年级';
+  if (/^七$|^7$|7年级|初中/.test(s)) return '七年级';
+  return s;
+}
+
+async function fetchUnselectedWithGender(db) {
+  const res = await db.prepare(`
+    SELECT u.id, u.grade, u.class_name, u.student_name, u.saved_at,
+           COALESCE(s.gender, '') AS gender
+    FROM unselected_students u
+    LEFT JOIN school_students s
+      ON u.grade = s.grade AND u.class_name = s.class_name AND u.student_name = s.student_name
+    ORDER BY u.grade, u.class_name, u.student_name
+  `).all();
+  return res.results || [];
+}
+
 function unselectedStudentKey(grade, className, studentName) {
   return selectionStudentKey(grade, className, studentName);
 }
@@ -1852,10 +1880,13 @@ async function rebuildUnselectedFromSchoolRoster(db, opts) {
     await clearUnselectedForClassScope(db, grade, className);
   }
 
-  const rosterRes = await db.prepare(
-    'SELECT grade, class_name, student_name FROM school_students ORDER BY grade, class_name, student_name'
-  ).all();
-  let roster = rosterRes.results || [];
+  let roster = Array.isArray(opts.roster) ? opts.roster.slice() : null;
+  if (!roster) {
+    const rosterRes = await db.prepare(
+      'SELECT grade, class_name, student_name FROM school_students ORDER BY grade, class_name, student_name'
+    ).all();
+    roster = rosterRes.results || [];
+  }
   if (mode === 'class') {
     roster = roster.filter(function(row) {
       return schoolStudentMatchesClassScope(row, grade, className);
@@ -1960,8 +1991,11 @@ async function handleSchoolStudentsImport(db, request) {
       errors.push('第 ' + (i + 1) + ' 行缺少学生姓名');
       continue;
     }
-    let grade = String(item.grade || '').trim();
+    let grade = normalizeSchoolGrade(String(item.grade || '').trim());
     let className = String(item.class_name || item.class || '').trim();
+    if (!grade && className) {
+      grade = normalizeSchoolGrade(className);
+    }
     const parsed = parseGradeClassFields(grade, className);
     grade = parsed.grade || grade;
     className = parsed.class_name || className;
@@ -2007,8 +2041,10 @@ async function handleSchoolStudentsImport(db, request) {
   }
 
   const unselectedCount = await rebuildUnselectedFromSchoolRoster(db, {
-    mode: replaceAll ? 'full' : 'merge'
+    mode: replaceAll ? 'full' : 'merge',
+    roster: prepared
   });
+  const unselected = await fetchUnselectedWithGender(db);
 
   const totalRes = await db.prepare('SELECT COUNT(*) as c FROM school_students').first();
   return json({
@@ -2016,6 +2052,7 @@ async function handleSchoolStudentsImport(db, request) {
     count: count,
     total: (totalRes && totalRes.c) || count,
     unselected_count: unselectedCount,
+    unselected: unselected,
     errors: errors.slice(0, 50)
   });
 }

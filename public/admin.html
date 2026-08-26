@@ -4873,7 +4873,7 @@ function renderUnselectedStudents(){
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
       '<td>' + escapeHtml(classDisplayName) + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
-      '<td></td>' +
+      '<td>' + escapeHtml(s.gender || '') + '</td>' +
       '<td><span class="course-link" style="background:rgba(59,130,246,0.15);color:#2563eb;">未选课</span></td>' +
       '<td class="row-actions">' +
         '<button class="btn-add-course btn-sm" title="添加课程">📚 添加课程</button>' +
@@ -5347,6 +5347,29 @@ function resetFilterSelections(){
   querySelections();
 }
 
+function clearSelectionFilters(){
+  const gradeSel = document.getElementById('filterGrade');
+  const classSel = document.getElementById('filterClass');
+  const courseSel = document.getElementById('filterCourse');
+  const studentSel = document.getElementById('filterStudent');
+  if (gradeSel) gradeSel.value = '';
+  if (classSel) classSel.innerHTML = '<option value="">全部</option>';
+  if (courseSel) courseSel.value = '';
+  if (studentSel) studentSel.value = '';
+  selectionsPage = 1;
+  selectionsCheckedIds.clear();
+}
+
+function showUnselectedAfterImport(unselectedRows){
+  clearSelectionFilters();
+  currentViewMode = 'unselected';
+  updateSelectionSidebarButtons('unselected');
+  const queryBtn = document.getElementById('queryBtn');
+  if (queryBtn) queryBtn.textContent = '🔍 查询未选课';
+  unselectedData = sortSelectionsByClassClient(Array.isArray(unselectedRows) ? unselectedRows : []);
+  renderUnselectedStudents();
+}
+
 async function deleteSelection(id){
   if (!confirm('确定要删除这条选课记录吗？')) return;
   try {
@@ -5578,6 +5601,26 @@ function mapSchoolRosterColumns(headerRow) {
   return map;
 }
 
+function normalizeImportGrade(raw) {
+  var s = String(raw || '').trim();
+  if (!s) return '';
+  if (/六年级/.test(s)) return '六年级';
+  if (/七年级/.test(s)) return '七年级';
+  if (/^六$|^6$|6年级/.test(s)) return '六年级';
+  if (/^七$|^7$|7年级/.test(s)) return '七年级';
+  return s;
+}
+
+function normalizeImportClassName(grade, raw) {
+  var class_name = String(raw || '').trim();
+  if (!class_name) return '';
+  if (/^[\(（]?\d+[\)）]?\s*班$/.test(class_name) && grade) {
+    var n = class_name.match(/(\d+)/);
+    if (n) return grade + '(' + n[1] + ')班';
+  }
+  return class_name;
+}
+
 async function handleSchoolRosterImport(file) {
   if (!file) return;
   if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
@@ -5612,12 +5655,12 @@ async function handleSchoolRosterImport(file) {
       const row = rows[i] || [];
       const student_name = String(row[col.student_name] || '').trim();
       if (!student_name) continue;
-      let grade = col.grade >= 0 ? String(row[col.grade] || '').trim() : '';
+      let grade = col.grade >= 0 ? normalizeImportGrade(row[col.grade]) : '';
       let class_name = col.class_name >= 0 ? String(row[col.class_name] || '').trim() : '';
       if (!grade && class_name) {
-        const gm = class_name.match(/(六年级|七年级)/);
-        if (gm) grade = gm[1];
+        grade = normalizeImportGrade(class_name);
       }
+      class_name = normalizeImportClassName(grade, class_name);
       items.push({
         grade: grade,
         class_name: class_name,
@@ -5646,7 +5689,12 @@ async function handleSchoolRosterImport(file) {
       console.warn('school roster import errors', data.errors);
     }
     if (data.count > 0) {
-      switchToUnselectedView();
+      if (Array.isArray(data.unselected)) {
+        showUnselectedAfterImport(data.unselected);
+      } else {
+        clearSelectionFilters();
+        switchToUnselectedView();
+      }
     }
   } catch (e) {
     toast('导入学生名单失败：' + e.message, 'error');
