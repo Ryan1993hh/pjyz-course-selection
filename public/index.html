@@ -706,7 +706,7 @@
 
       <div class="form-options">
         <label class="remember">
-          <input type="checkbox" id="remember" /> 记住账号
+          <input type="checkbox" id="remember" /> 记住密码
         </label>
         <a href="javascript:void(0)" class="forgot" id="forgotLink">忘记密码？</a>
       </div>
@@ -778,14 +778,17 @@
     setTimeout(function () { ripple.remove(); }, 600);
   });
 
-  /* ---------- 记住账号 ---------- */
-  // 读取本地存储
+  /* ---------- 记住密码 / 账号 ---------- */
   try {
     var savedUser = localStorage.getItem('pjyz_login_user');
     var savedRemember = localStorage.getItem('pjyz_login_remember');
-    if (savedRemember === '1' && savedUser) {
+    if (savedUser) {
       usernameEl.value = savedUser;
+    }
+    if (savedRemember === '1') {
       rememberEl.checked = true;
+      var savedPass = localStorage.getItem('pjyz_login_pass');
+      if (savedPass) passwordEl.value = savedPass;
     }
   } catch (_) {}
 
@@ -857,13 +860,14 @@
           localStorage.setItem('pjyz_user', JSON.stringify(data.user || {}));
           localStorage.setItem('pjyz_current_username', username);
 
-          // 记住账号
+          // 记住密码：勾选则保存账号+密码；未勾选仅保留账号供下次显示
+          localStorage.setItem('pjyz_login_user', username);
           if (rememberEl.checked) {
-            localStorage.setItem('pjyz_login_user', username);
             localStorage.setItem('pjyz_login_remember', '1');
+            localStorage.setItem('pjyz_login_pass', password);
           } else {
-            localStorage.removeItem('pjyz_login_user');
             localStorage.removeItem('pjyz_login_remember');
+            localStorage.removeItem('pjyz_login_pass');
           }
 
           // 按最近页面 / 角色确定跳转，并写入活动角色
@@ -914,8 +918,12 @@
   usernameEl.addEventListener('input', hideMsg);
   passwordEl.addEventListener('input', hideMsg);
 
-  /* ---------- 自动聚焦账号输入框 ---------- */
-  setTimeout(function () { usernameEl.focus(); }, 600);
+  /* ---------- 自动聚焦 ---------- */
+  setTimeout(function () {
+    if (rememberEl.checked && passwordEl.value) loginBtn.focus();
+    else if (usernameEl.value && !passwordEl.value) passwordEl.focus();
+    else usernameEl.focus();
+  }, 600);
 })();
 </script>
 </body>
