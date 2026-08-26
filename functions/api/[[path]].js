@@ -1789,6 +1789,108 @@ function normalizeSchoolGender(val) {
   return s;
 }
 
+function unselectedStudentKey(grade, className, studentName) {
+  return selectionStudentKey(grade, className, studentName);
+}
+
+function schoolStudentMatchesClassScope(row, grade, className) {
+  const want = parseGradeClassFields(grade, className);
+  const got = parseGradeClassFields(row.grade, row.class_name);
+  if (want.grade && got.grade && want.grade !== got.grade) return false;
+  if (want.classNum && got.classNum !== want.classNum) return false;
+  if (className && !want.classNum) {
+    const raw = String(row.class_name || '');
+    const cls = String(className || '');
+    if (!raw.includes(cls) && raw.replace(/[()（）\s]/g, '') !== cls.replace(/[()（）\s]/g, '')) return false;
+  }
+  return true;
+}
+
+/** 清除指定班级范围内的未选课记录 */
+async function clearUnselectedForClassScope(db, grade, className) {
+  const parsed = parseGradeClassFields(grade, className);
+  let sql = 'SELECT id, grade, class_name FROM unselected_students WHERE 1=1';
+  const params = [];
+  if (parsed.grade || grade) {
+    sql += ' AND (grade = ? OR class_name LIKE ?)';
+    const g = parsed.grade || grade;
+    params.push(g, '%' + g + '%');
+  }
+  const rows = params.length
+    ? await db.prepare(sql).bind(...params).all()
+    : await db.prepare(sql).all();
+
+  let deleted = 0;
+  for (const row of (rows.results || [])) {
+    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+    await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
+    deleted++;
+  }
+  return deleted;
+}
+
+/**
+ * 根据 school_students 与 selections 重建未选课名单。
+ * mode: 'full' 全量覆盖 | 'class' 按班覆盖 | 'merge' 增量合并（保留其他班未选课）
+ */
+async function rebuildUnselectedFromSchoolRoster(db, opts) {
+  opts = opts || {};
+  const mode = opts.mode || 'full';
+  const grade = String(opts.grade || '').trim();
+  const className = String(opts.class_name || opts.className || '').trim();
+  const savedAt = new Date().toISOString();
+
+  const selRes = await db.prepare('SELECT grade, class_name, student_name FROM selections').all();
+  const selectedKeys = new Set();
+  for (const row of (selRes.results || [])) {
+    selectedKeys.add(unselectedStudentKey(row.grade, row.class_name, row.student_name));
+  }
+
+  if (mode === 'full') {
+    await db.prepare('DELETE FROM unselected_students').run();
+  } else if (mode === 'class') {
+    await clearUnselectedForClassScope(db, grade, className);
+  }
+
+  const rosterRes = await db.prepare(
+    'SELECT grade, class_name, student_name FROM school_students ORDER BY grade, class_name, student_name'
+  ).all();
+  let roster = rosterRes.results || [];
+  if (mode === 'class') {
+    roster = roster.filter(function(row) {
+      return schoolStudentMatchesClassScope(row, grade, className);
+    });
+  }
+
+  let existingKeys = null;
+  if (mode === 'merge') {
+    const unRes = await db.prepare('SELECT id, grade, class_name, student_name FROM unselected_students').all();
+    for (const row of (unRes.results || [])) {
+      const key = unselectedStudentKey(row.grade, row.class_name, row.student_name);
+      if (selectedKeys.has(key)) {
+        await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
+      }
+    }
+    existingKeys = new Set();
+    const remainRes = await db.prepare('SELECT grade, class_name, student_name FROM unselected_students').all();
+    for (const row of (remainRes.results || [])) {
+      existingKeys.add(unselectedStudentKey(row.grade, row.class_name, row.student_name));
+    }
+  }
+
+  let inserted = 0;
+  for (const row of roster) {
+    const key = unselectedStudentKey(row.grade, row.class_name, row.student_name);
+    if (selectedKeys.has(key)) continue;
+    if (mode === 'merge' && existingKeys && existingKeys.has(key)) continue;
+    await db.prepare(
+      'INSERT INTO unselected_students (grade, class_name, student_name, saved_at) VALUES (?, ?, ?, ?)'
+    ).bind(row.grade, row.class_name, row.student_name, savedAt).run();
+    inserted++;
+  }
+  return inserted;
+}
+
 /** 管理员导入全校学生名单；班主任/管理员可按班级查询 */
 async function handleSchoolStudentsGet(db, request, url) {
   const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
@@ -1904,11 +2006,16 @@ async function handleSchoolStudentsImport(db, request) {
     count++;
   }
 
+  const unselectedCount = await rebuildUnselectedFromSchoolRoster(db, {
+    mode: replaceAll ? 'full' : 'merge'
+  });
+
   const totalRes = await db.prepare('SELECT COUNT(*) as c FROM school_students').first();
   return json({
     success: true,
     count: count,
     total: (totalRes && totalRes.c) || count,
+    unselected_count: unselectedCount,
     errors: errors.slice(0, 50)
   });
 }
@@ -1976,7 +2083,19 @@ async function handleSchoolStudentsSyncClass(db, request) {
     count++;
   }
 
-  return json({ success: true, count: count, grade: grade, class_name: className });
+  const unselectedCount = await rebuildUnselectedFromSchoolRoster(db, {
+    mode: 'class',
+    grade: grade,
+    class_name: className
+  });
+
+  return json({
+    success: true,
+    count: count,
+    grade: grade,
+    class_name: className,
+    unselected_count: unselectedCount
+  });
 }
 
 // ---- Classes ----

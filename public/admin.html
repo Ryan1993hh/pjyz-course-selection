@@ -5638,9 +5638,15 @@ async function handleSchoolRosterImport(file) {
     let msg = '已导入 ' + (data.count || 0) + ' 名学生';
     if (data.total != null) msg += '（库中共 ' + data.total + ' 人）';
     if (errCount) msg += '，跳过 ' + errCount + ' 条';
+    if (data.unselected_count != null) {
+      msg += '，已同步 ' + data.unselected_count + ' 名未选课学生';
+    }
     toast(msg, errCount && !(data.count) ? 'error' : 'success');
     if (errCount && data.errors) {
       console.warn('school roster import errors', data.errors);
+    }
+    if (data.count > 0) {
+      switchToUnselectedView();
     }
   } catch (e) {
     toast('导入学生名单失败：' + e.message, 'error');
