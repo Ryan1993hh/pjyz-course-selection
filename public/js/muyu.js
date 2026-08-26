@@ -1,26 +1,59 @@
 /**
  * 电子木鱼交互与音效（视觉参考 fish.leixf.cn）
+ * 功德仅统计当天，跨日自动清零
  */
 (function (global) {
-  var MERIT_KEY = "pjyz_merit_count";
+  var MERIT_KEY = "pjyz_merit_daily";
   var AUDIO_SRC = "audio/muyu-tap.mp3";
   var meritCount = 0;
+  var meritDate = "";
   var tapAudio = null;
   var tapAnimTimer = null;
+  var dayWatchTimer = null;
   var initialized = false;
+
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+  }
 
   function loadMerit() {
     try {
-      var n = parseInt(localStorage.getItem(MERIT_KEY), 10);
-      meritCount = isNaN(n) ? 0 : Math.max(0, n);
+      var raw = localStorage.getItem(MERIT_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        meritDate = String((data && data.date) || "");
+        meritCount = parseInt(data && data.count, 10);
+        if (isNaN(meritCount) || meritCount < 0) meritCount = 0;
+      } else {
+        meritDate = "";
+        meritCount = 0;
+      }
     } catch (_) {
+      meritDate = "";
       meritCount = 0;
+    }
+    ensureTodayMerit();
+  }
+
+  function ensureTodayMerit() {
+    var today = todayKey();
+    if (meritDate !== today) {
+      meritDate = today;
+      meritCount = 0;
+      saveMerit();
+      updateMeritDisplay();
     }
   }
 
   function saveMerit() {
     try {
-      localStorage.setItem(MERIT_KEY, String(meritCount));
+      localStorage.setItem(MERIT_KEY, JSON.stringify({
+        date: meritDate || todayKey(),
+        count: meritCount
+      }));
     } catch (_) {}
   }
 
@@ -93,6 +126,7 @@
   }
 
   function tap() {
+    ensureTodayMerit();
     playTapAnim();
     playMuyuSound();
     meritCount += 1;
@@ -108,6 +142,16 @@
       e.preventDefault();
       tap();
     }
+  }
+
+  function startDayWatch() {
+    if (dayWatchTimer) return;
+    dayWatchTimer = setInterval(function () {
+      ensureTodayMerit();
+    }, 30000);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") ensureTodayMerit();
+    });
   }
 
   function bind() {
@@ -130,6 +174,7 @@
     updateMeritDisplay();
     preloadTapAudio();
     bind();
+    startDayWatch();
   }
 
   global.MuyuFish = {
