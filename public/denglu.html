@@ -197,31 +197,47 @@
     width: 56px;
     height: 56px;
   }
-  .brand-logo .logo-svg {
+  .brand-logo .logo-img {
     width: 56px;
     height: 56px;
+    object-fit: contain;
     display: block;
+    border-radius: 50%;
     filter: drop-shadow(0 4px 12px rgba(245,166,35,0.45));
-    animation: logoSpin 10s linear infinite;
+    animation: logoBreath 2.8s ease-in-out infinite;
     transform-origin: 50% 50%;
-    will-change: transform;
+    will-change: transform, filter;
   }
   .brand-logo .logo-ring {
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    border: 2px solid rgba(245, 166, 35, 0.5);
-    animation: logoRingPulse 2.4s ease-out infinite;
+    border: 2px solid rgba(245, 166, 35, 0.55);
+    animation: logoRipple 2.8s ease-out infinite;
     pointer-events: none;
   }
-  @keyframes logoSpin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+  .brand-logo .logo-ring-2 {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 185, 64, 0.4);
+    animation: logoRipple 2.8s 0.9s ease-out infinite;
+    pointer-events: none;
   }
-  @keyframes logoRingPulse {
-    0% { transform: scale(0.92); opacity: 0.85; }
-    70% { transform: scale(1.2); opacity: 0; }
-    100% { transform: scale(1.2); opacity: 0; }
+  @keyframes logoBreath {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+      filter: drop-shadow(0 4px 12px rgba(245,166,35,0.4));
+    }
+    50% {
+      transform: translateY(-5px) scale(1.06);
+      filter: drop-shadow(0 8px 20px rgba(245,166,35,0.75));
+    }
+  }
+  @keyframes logoRipple {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    70% { transform: scale(1.28); opacity: 0; }
+    100% { transform: scale(1.28); opacity: 0; }
   }
   .brand-logo .logo-text {
     display: flex;
@@ -621,19 +637,8 @@
     <div class="brand-logo">
       <div class="logo-mark">
         <span class="logo-ring" aria-hidden="true"></span>
-        <svg class="logo-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="浦江一中校徽">
-          <defs>
-            <clipPath id="login-circle">
-              <circle cx="200" cy="200" r="190"/>
-            </clipPath>
-          </defs>
-          <circle cx="200" cy="200" r="190" fill="#F5A623"/>
-          <g clip-path="url(#login-circle)" fill="none" stroke="white" stroke-linecap="round">
-            <path d="M 35 280 C 120 250, 210 200, 380 120" stroke-width="44"/>
-            <path d="M 115 355 C 200 320, 300 270, 405 205" stroke-width="56"/>
-            <path d="M 195 392 C 280 370, 355 325, 412 290" stroke-width="38"/>
-          </g>
-        </svg>
+        <span class="logo-ring-2" aria-hidden="true"></span>
+        <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
       </div>
       <div class="logo-text">
         <span class="cn">上海市闵行区浦江第一中学</span>
