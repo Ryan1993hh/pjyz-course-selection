@@ -144,6 +144,13 @@ body {
   pointer-events: none;
   background: radial-gradient(600px 120px at 50% 0%, rgba(255,255,255,0.18), transparent 60%);
 }
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 2;
+}
 .header-logo {
   display: flex;
   align-items: center;
@@ -567,6 +574,7 @@ body {
 .stat-card.unselected { background: linear-gradient(135deg, #fbbf24 0%, var(--warning) 100%); box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25); }
 .stat-card .label { font-size: 12px; opacity: 0.95; white-space: nowrap; }
 .stat-card .value { font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 2px; }
+.desktop-only { display: block; }
 
 /* ===== 表格 ===== */
 .table-wrap {
@@ -1869,112 +1877,141 @@ tr.no-quota:hover td { opacity: 0.7; }
 }
 @media (max-width: 768px) {
   body { padding: 12px; }
+  .desktop-only { display: none !important; }
+  /* 顶栏一行：logo + 标题 + 角色 + 重置 + 退出 */
   .header {
-    padding: 12px 14px;
-    flex-wrap: wrap;
-    gap: 8px;
+    padding: 8px 10px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
   }
-  .header-logo .logo-text .en { display: none; }
-  .header-logo .logo-text .cn { font-size: 12px; letter-spacing: 1px; }
-  .header-logo img { height: 36px; width: 36px; }
-  /* 窄屏：标题回归正常流式（不再绝对居中，避免与 logo 重叠） */
-  .header-title {
+  .header-brand {
+    flex: 1;
+    min-width: 0;
+    gap: 6px;
+  }
+  .header-brand .header-title {
     position: static;
     transform: none;
-    flex: 1 1 100%;
-    order: 3;
-    text-align: center;
+    pointer-events: auto;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
   }
-  .header-title h1 { font-size: 17px; letter-spacing: 3px; }
+  .header-brand .header-title h1 {
+    font-size: clamp(10px, 2.8vw, 13px);
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+  }
+  .header-logo .logo-text { display: none; }
+  .header-logo img,
+  .header-logo .logo-img { width: 28px; height: 28px; }
   .header-actions {
-    order: 2;
+    flex-shrink: 0;
+    gap: 4px;
     width: auto;
+    flex-wrap: nowrap;
+    margin-left: 0;
   }
-  .btn-reset { height: 36px; padding: 0 12px; font-size: 12px; min-width: 72px; }
-  .user-info { height: 36px; padding: 0 10px; font-size: 12px; }
-  .user-avatar { width: 22px; height: 22px; font-size: 11px; }
-  .user-name { max-width: 70px; }
-  .btn-logout { height: 36px; padding: 0 12px; font-size: 12px; min-width: 72px; }
-  .btn-lottery { padding: 0 12px; font-size: 11px; height: 32px; }
-  .card { padding: 12px; }
+  .btn-reset,
+  .btn-logout {
+    height: 30px;
+    min-width: 0;
+    padding: 0 7px;
+    font-size: 10px;
+  }
+  .btn-reset span:not(.btn-reset-icon),
+  .btn-logout span:not(.btn-logout-icon) { display: none; }
+  .btn-lottery { padding: 0 10px; font-size: 11px; height: 32px; }
+  .card { padding: 10px; }
+  /* 控制条：上传+年级+班级 一行；统计三卡 一行 */
   .control-bar {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: 1.15fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 6px;
   }
-  .control-bar .upload-area { grid-column: 1 / -1; padding: 6px 10px; }
-  .stat-input { min-width: 0; padding: 6px 10px; }
-  .stat-input select { font-size: 14px; }
-  .stat-card { min-width: 0; padding: 6px 10px; }
-  .stat-card .value { font-size: 20px; }
+  .control-bar .upload-area {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: row;
+    padding: 6px 8px;
+    gap: 4px;
+    align-items: center;
+  }
+  .control-bar .upload-area .icon { font-size: 18px; }
+  .control-bar .upload-area .hint { display: none; }
+  .control-bar .upload-area .title {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .control-bar .stat-grade { grid-column: 2; grid-row: 1; }
+  .control-bar .stat-class { grid-column: 3; grid-row: 1; }
+  .control-bar .stat-total { grid-column: 1; grid-row: 2; }
+  .control-bar .stat-selected { grid-column: 2; grid-row: 2; }
+  .control-bar .stat-unselected { grid-column: 3; grid-row: 2; }
+  .stat-input { min-width: 0; padding: 6px 8px; }
+  .stat-input label { font-size: 11px; margin-bottom: 2px; }
+  .stat-input select { font-size: 14px; padding-right: 18px; }
+  .stat-card { min-width: 0; padding: 6px 8px; }
+  .stat-card .label { font-size: 11px; }
+  .stat-card .value { font-size: 18px; }
+  /* 课程表：横向滚动时冻结课程名称列 */
+  table { min-width: 720px; table-layout: auto; }
+  th:nth-child(2),
+  td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    min-width: 92px;
+    max-width: 120px;
+    box-shadow: 2px 0 6px rgba(13, 71, 161, 0.12);
+  }
+  th:nth-child(2) {
+    z-index: 5;
+    background: linear-gradient(135deg, rgba(100, 181, 246, 0.92) 0%, rgba(66, 165, 245, 0.88) 100%);
+  }
+  td:nth-child(2) {
+    z-index: 3;
+    background-color: var(--col-2);
+  }
+  tbody tr:hover td:nth-child(2) { background-color: var(--col-2-h); }
   .name-grid { grid-template-columns: repeat(4, 1fr); }
   th, td { padding: 6px 4px; font-size: 12px; }
-  .course-name { font-size: 11px; padding: 2px 4px; }
+  .course-name { font-size: 11px; padding: 2px 4px; white-space: normal; word-break: break-all; }
   .limit-badge, .req-tag { font-size: 10px; padding: 1px 4px; }
-  /* 窄屏：表头学生姓名列内按钮和标签垂直堆叠 */
   .th-students-inner {
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
   }
   .btn-lottery { width: 100%; }
+  .table-wrap {
+    max-height: none;
+    margin-left: -10px;
+    margin-right: -10px;
+    width: calc(100% + 20px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
   .reset-confirm-box { padding: 18px 16px 16px; }
   .reset-confirm-icon { width: 38px; height: 38px; font-size: 19px; }
   .reset-confirm-title { font-size: 15.5px; }
 }
 
-/* ===== 移动端自适应（手机完整显示） ===== */
+/* ===== 移动端自适应（小屏微调，继承 768px 布局） ===== */
 @media (max-width: 480px) {
   body { padding: 8px; padding-bottom: calc(8px + var(--safe-bottom)); }
-  .header { padding: 10px 12px; gap: 6px; }
-  .header-logo .logo-text { display: none; }
-  .header-logo img, .header-logo .logo-img { width: 32px; height: 32px; }
-  .header-title h1 { font-size: clamp(14px, 4vw, 16px); letter-spacing: 2px; }
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .user-name { max-width: 56px; font-size: 11px; }
-  .btn-reset span:not(.btn-reset-icon),
-  .btn-logout span:not(.btn-logout-icon) { display: none; }
-  .btn-reset, .btn-logout, .btn-lottery {
-    min-width: 0;
-    min-height: var(--touch-min);
-    padding: 0 10px;
-  }
-  .card { padding: 10px; margin-bottom: 10px; }
-  .control-bar {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  .control-bar .upload-area { grid-column: 1; }
-  .upload-area {
-    flex-direction: column;
-    text-align: center;
-    padding: 12px 10px;
-    gap: 8px;
-  }
-  .upload-area .text-col { align-items: center; }
-  .upload-area .title,
-  .upload-area .hint { white-space: normal; text-align: center; line-height: 1.4; }
-  .upload-area .title { font-size: clamp(12px, 3.2vw, 13px); }
-  .upload-area .hint { font-size: 11px; }
+  .header-brand .header-title h1 { font-size: clamp(9px, 2.6vw, 12px); }
+  .btn-reset, .btn-logout { min-height: var(--touch-min); padding: 0 8px; }
   .stat-input, .stat-card { min-height: var(--touch-min); }
   .stat-input select, .stat-input input { font-size: 16px; }
-  .stat-card .value { font-size: clamp(18px, 5vw, 22px); }
-  .table-wrap {
-    max-height: none;
-    margin-left: -8px;
-    margin-right: -8px;
-    width: calc(100% + 16px);
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-  table { min-width: 680px; table-layout: auto; }
+  .stat-card .value { font-size: clamp(16px, 4.5vw, 20px); }
   th, td { font-size: 11px; padding: 6px 5px; }
-  .course-name { font-size: 11px; white-space: normal; word-break: break-all; }
   .name-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .name-card { font-size: 13px; padding: 10px 4px; min-height: var(--touch-min); display: flex; align-items: center; justify-content: center; }
   .modal {
@@ -1990,11 +2027,12 @@ tr.no-quota:hover td { opacity: 0.7; }
 }
 
 @media (max-width: 380px) {
-  .header-title h1 { font-size: 13px; letter-spacing: 1px; }
+  .header-brand .header-title h1 { font-size: 9px; }
   .name-grid { grid-template-columns: repeat(2, 1fr); }
-  .stat-card .label { font-size: 11px; }
-  table { min-width: 600px; }
+  .stat-card .label { font-size: 10px; }
+  table { min-width: 640px; }
   th, td { font-size: 10px; padding: 5px 4px; }
+  th:nth-child(2), td:nth-child(2) { min-width: 80px; max-width: 100px; }
   .lottery-content .name-list { grid-template-columns: 1fr; }
 }
 </style>
@@ -2003,17 +2041,19 @@ tr.no-quota:hover td { opacity: 0.7; }
 
 <!-- 顶部标题栏 -->
 <div class="header">
-  <div class="header-logo">
-    <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
-    <div class="logo-text">
-      <span class="cn">上海市闵行区浦江第一中学</span>
-      <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
+  <div class="header-brand">
+    <div class="header-logo">
+      <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
+      <div class="logo-text">
+        <span class="cn">上海市闵行区浦江第一中学</span>
+        <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
+      </div>
     </div>
+    <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   </div>
-  <div class="header-title"><h1>浦江一中拓展课选课</h1></div>
   <div class="header-actions">
     <div id="roleSwitcher"></div>
-    <div class="user-info" id="userInfo">
+    <div class="user-info desktop-only" id="userInfo">
       <span class="user-avatar" id="userAvatar">U</span>
       <span class="user-name" id="userName">用户</span>
     </div>
@@ -2914,7 +2954,7 @@ function renderStats() {
   const unselected = total - selected;
   // 直接输出子节点（父容器 statsCard 本身就是 .stats-bar 且 display: contents，平铺到控制条 grid）
   statsCard.innerHTML = `
-      <div class="stat-input stat-input-class">
+      <div class="stat-input stat-input-class stat-grade">
         <label>年级</label>
         <select id="gradeSelect">
           <option value="">请选择</option>
@@ -2922,22 +2962,22 @@ function renderStats() {
           <option value="七年级" ${gradeName === '七年级' ? 'selected' : ''}>七年级</option>
         </select>
       </div>
-      <div class="stat-input stat-input-class">
+      <div class="stat-input stat-input-class stat-class">
         <label>班级</label>
         <select id="classSelect" ${!gradeName ? 'disabled' : ''}>
           <option value="">请先选择年级</option>
           ${buildClassOptions()}
         </select>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-total">
         <div class="label">总人数</div>
         <div class="value">${total}</div>
       </div>
-      <div class="stat-card selected">
+      <div class="stat-card stat-selected selected">
         <div class="label">已选人数</div>
         <div class="value">${selected}</div>
       </div>
-      <div class="stat-card unselected">
+      <div class="stat-card stat-unselected unselected">
         <div class="label">未选人数</div>
         <div class="value">${unselected}</div>
       </div>`;
