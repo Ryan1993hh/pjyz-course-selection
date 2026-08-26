@@ -2300,6 +2300,16 @@ let state = {
 
 let timer = { mode: "up", seconds: 0, interval: null, running: false, target: 300 };
 let scheduleState = { allowed: true, reason: "", mode: "default", suspended: false, date: "" };
+let serverSelectionRevision = 0;
+
+async function fetchSelectionDataRevision() {
+  try {
+    const data = await api("GET", "/api/selection-data-sync");
+    return data.revision || 0;
+  } catch (e) {
+    return serverSelectionRevision;
+  }
+}
 
 function isCheckinSessionAllowed() {
   return scheduleState.allowed !== false;
@@ -4324,12 +4334,16 @@ async function initApp() {
   try {
     await loadClassTeachers();
     await loadAssignedCourse();
+    serverSelectionRevision = await fetchSelectionDataRevision();
   } catch (e) {
     toast("加载课程失败：" + e.message, "error");
   }
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       loadClassScheduleStatus().catch(() => {});
+      fetchSelectionDataRevision().then(function(rev) {
+        if (rev !== serverSelectionRevision) serverSelectionRevision = rev;
+      }).catch(() => {});
       refreshUserProfile().then(function(user) {
         var bound = user && user.course_name ? String(user.course_name).trim() : "";
         if (bound !== (state.courseName || "")) {
@@ -4350,6 +4364,12 @@ async function initApp() {
   });
   setInterval(() => {
     loadClassScheduleStatus().catch(() => {});
+    fetchSelectionDataRevision().then(function(rev) {
+      if (rev !== serverSelectionRevision) {
+        serverSelectionRevision = rev;
+        return syncStudentsFromServer({ silent: true }).then(function() { renderAll(); });
+      }
+    }).catch(() => {});
     refreshUserProfile().then(function(user) {
       var bound = user && user.course_name ? String(user.course_name).trim() : "";
       if (bound !== (state.courseName || "")) {

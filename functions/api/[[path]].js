@@ -142,6 +142,7 @@ const INIT_STATEMENTS = [
 ];
 
 const SELECTION_STATUS_KEY = 'selection_enabled';
+const SELECTION_DATA_REVISION_KEY = 'selection_data_revision';
 const CLASS_SCHEDULE_KEY = 'class_schedule_control';
 const COURSE_HOURS_HIDDEN_DATES_KEY = 'course_hours_hidden_dates';
 const COURSE_HOURS_EXTRA_DATES_KEY = 'course_hours_extra_dates';
@@ -242,6 +243,34 @@ async function setSelectionEnabled(db, enabled) {
   await db.prepare(
     'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   ).bind(SELECTION_STATUS_KEY, enabled ? '1' : '0').run();
+}
+
+async function getSelectionDataRevision(db) {
+  try {
+    const row = await db.prepare('SELECT value FROM system_settings WHERE key = ?').bind(SELECTION_DATA_REVISION_KEY).first();
+    return parseInt(row && row.value, 10) || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+async function bumpSelectionDataRevision(db) {
+  const rev = (await getSelectionDataRevision(db)) + 1;
+  await db.prepare(
+    'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  ).bind(SELECTION_DATA_REVISION_KEY, String(rev)).run();
+  return rev;
+}
+
+async function handleSelectionDataSyncGet(db) {
+  const revision = await getSelectionDataRevision(db);
+  const selRow = await db.prepare('SELECT COUNT(*) as c FROM selections').first();
+  const unselRow = await db.prepare('SELECT COUNT(*) as c FROM unselected_students').first();
+  return json({
+    revision: revision,
+    selections_count: (selRow && selRow.c) || 0,
+    unselected_count: (unselRow && unselRow.c) || 0
+  });
 }
 
 function selectionStatusPayload(enabled) {
@@ -363,6 +392,7 @@ async function ensureDbReady(db) {
     }
 
     await db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').bind(SELECTION_STATUS_KEY, '1').run();
+    await db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').bind(SELECTION_DATA_REVISION_KEY, '0').run();
 
     try {
       const legacyCheck = await db.prepare("SELECT COUNT(*) as count FROM users WHERE password_hash IS NULL OR password_hash = ''").first();
@@ -1358,6 +1388,7 @@ async function handleSelectionsBatchCreate(db, request) {
     
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
     await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+    await bumpSelectionDataRevision(db);
     
     return json({
       success: true,
@@ -1463,6 +1494,7 @@ async function handlePreEnrollBatch(db, request) {
   }
 
   await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+  await bumpSelectionDataRevision(db);
 
   return json({
     success: true,
@@ -1496,6 +1528,7 @@ async function handleSelectionUpdate(db, request, id) {
   
   const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
   await syncTeacherClassroomForCourseNames(db, [existing.course_name, selection && selection.course_name]);
+  await bumpSelectionDataRevision(db);
   return json({ selection });
 }
 
@@ -1512,6 +1545,7 @@ async function handleSelectionDelete(db, request, id) {
   
   await db.prepare('DELETE FROM selections WHERE id = ?').bind(id).run();
   await syncTeacherClassroomStudentsFromSelections(db, existing.course_name);
+  await bumpSelectionDataRevision(db);
   return json({ success: true });
 }
 
@@ -1537,6 +1571,7 @@ async function handleSelectionBatchDelete(db, request) {
     }
   }
   await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+  await bumpSelectionDataRevision(db);
   return json({ success: true, deleted });
 }
 
@@ -1642,6 +1677,7 @@ async function handleClearSelections(db, request) {
       deleted++;
     }
     await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+    await bumpSelectionDataRevision(db);
 
     return json({
       success: true,
@@ -1655,6 +1691,7 @@ async function handleClearSelections(db, request) {
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
   await syncAllTeacherClassroomsFromSelections(db);
+  await bumpSelectionDataRevision(db);
   return json({ success: true });
 }
 
@@ -1728,6 +1765,7 @@ async function handleUnselectedStudentsBatchCreate(db, request) {
       ).run();
       count++;
     }
+    await bumpSelectionDataRevision(db);
     return json({ count: count });
   } catch(e) {
     return json({ error: e.message }, 400);
@@ -1773,6 +1811,7 @@ async function handleClearUnselectedStudents(db, request) {
       await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
       deleted++;
     }
+    await bumpSelectionDataRevision(db);
     return json({ success: true, deleted: deleted });
   }
 
@@ -1784,6 +1823,7 @@ async function handleClearUnselectedStudents(db, request) {
     if (auth.error) return json({ error: auth.error }, auth.status);
     await db.prepare('DELETE FROM unselected_students').run();
   }
+  await bumpSelectionDataRevision(db);
   return json({ success: true });
 }
 
@@ -2045,6 +2085,7 @@ async function handleSchoolStudentsImport(db, request) {
     roster: prepared
   });
   const unselected = await fetchUnselectedWithGender(db);
+  await bumpSelectionDataRevision(db);
 
   const totalRes = await db.prepare('SELECT COUNT(*) as c FROM school_students').first();
   return json({
@@ -2125,6 +2166,7 @@ async function handleSchoolStudentsSyncClass(db, request) {
     grade: grade,
     class_name: className
   });
+  await bumpSelectionDataRevision(db);
 
   return json({
     success: true,
@@ -3485,6 +3527,7 @@ export async function onRequest(context) {
       const auth = requireAuth(request, ['admin']);
       if (auth.error) return json({ error: auth.error }, auth.status);
       await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(id).run();
+      await bumpSelectionDataRevision(db);
       return json({ success: true });
     }
   }
@@ -3602,6 +3645,11 @@ export async function onRequest(context) {
   const classroomDetailMatch = path.match(/^\/api\/teacher-classroom\/(.+)$/);
   if (classroomDetailMatch && method === 'GET') {
     return handleTeacherClassroomDetail(db, request, classroomDetailMatch[1]);
+  }
+
+  // /api/selection-data-sync — 选课数据版本号（供选课页/教师端检测后台变更）
+  if (path === '/api/selection-data-sync' && method === 'GET') {
+    return handleSelectionDataSyncGet(db);
   }
 
   // /api/selection-status

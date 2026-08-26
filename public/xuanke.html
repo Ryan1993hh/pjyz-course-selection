@@ -2573,13 +2573,15 @@ const PersistentStorage = (function () {
         return { id: c.id, students: c.students.slice() };
       }),
       lockedStudents: Array.from(lockedStudentNames),
-      studentListSource: studentListSource || ''
+      studentListSource: studentListSource || '',
+      dataRevision: (typeof window.__pjyzDataRevision === 'number' ? window.__pjyzDataRevision : 0)
     };
   }
 
-  function save() {
+  function save(revision) {
     if (!isAvailable()) return { ok: false, reason: 'storage-unavailable' };
     try {
+      if (typeof revision === 'number') window.__pjyzDataRevision = revision;
       const payload = _snapshot();
       localStorage.setItem(KEY, JSON.stringify(payload));
       return { ok: true };
@@ -2641,6 +2643,9 @@ const PersistentStorage = (function () {
       } else if (Array.isArray(data.students) && data.students.length) {
         studentListSource = 'local';
       }
+      if (typeof data.dataRevision === 'number') {
+        window.__pjyzDataRevision = data.dataRevision;
+      }
 
       // 恢复已选学生（只改 students 槽位；limit/结构从 COURSES 同步）
       if (Array.isArray(data.courses)) {
@@ -2696,14 +2701,97 @@ const PersistentStorage = (function () {
 })();
 
 // ---- 便捷包装：持久化 + 上报结果（给 UI 调用）----
-function saveState() {
-  var r = PersistentStorage.save();
+function saveState(revision) {
+  if (typeof revision === 'number') {
+    serverDataRevision = revision;
+    window.__pjyzDataRevision = revision;
+  }
+  var r = PersistentStorage.save(serverDataRevision);
   return r.ok;
 }
 function loadStateFromStorage() {
   var r = PersistentStorage.load();
   if (!r.ok) return false;
   return PersistentStorage.applyData(r.data);
+}
+
+function getLocalDataRevision() {
+  try {
+    return typeof window.__pjyzDataRevision === 'number' ? window.__pjyzDataRevision : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function clearLocalSelectionDraft() {
+  PersistentStorage.clear();
+  students = [];
+  studentGenders = {};
+  fileName = '';
+  studentListSource = '';
+  lockedStudentNames = new Set();
+  rosterReadyTip = false;
+  window.__pjyzDataRevision = 0;
+  resetCourseAssignmentsForClassSwitch();
+  var uploadTextCol = document.getElementById('uploadTextCol');
+  if (uploadTextCol) {
+    uploadTextCol.innerHTML =
+      '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
+      '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列（建议含「性别」列）</span>';
+  }
+}
+
+async function fetchSelectionDataSync() {
+  if (!getToken()) return { revision: 0, selections_count: 0, unselected_count: 0 };
+  var data = await apiRequest('GET', '/api/selection-data-sync');
+  serverDataRevision = data.revision || 0;
+  return data;
+}
+
+async function isServerClassSelectionEmpty() {
+  if (!gradeName || !classNumber || !getToken()) return true;
+  try {
+    var qs = new URLSearchParams();
+    qs.set('grade', gradeName);
+    qs.set('class_name', classNumber + '班');
+    var selData = await apiRequest('GET', '/api/selections?' + qs.toString());
+    var selRows = (Array.isArray(selData) ? selData : (selData.selections || [])).filter(function(row) {
+      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+    });
+    if (selRows.length) return false;
+
+    var uq = new URLSearchParams();
+    uq.set('grade', gradeName);
+    uq.set('class', classNumber + '班');
+    var udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
+    var unsel = ((udata && udata.unselected) || []).filter(function(row) {
+      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+    });
+    return unsel.length === 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function applyServerSelectionSync(opts) {
+  opts = opts || {};
+  var silent = !!opts.silent;
+  applyBanzhurenClassPreset();
+  var restored = await restoreSelectionsFromServer();
+  if (!restored && studentListSource !== 'upload') {
+    var loadedRoster = await loadSchoolRosterForClass({ force: false });
+    if (!loadedRoster && students.length > 0) {
+      students = [];
+      studentGenders = {};
+      fileName = '';
+      studentListSource = '';
+      rosterReadyTip = false;
+    }
+  }
+  await applyPreEnrollments({ skipReset: true, skipRender: true });
+  saveState(serverDataRevision);
+  if (!silent) renderAll();
+  return restored;
 }
 
 // ====================================================================
@@ -2956,6 +3044,7 @@ let fileName = '';           // 上传的文件名
 let lockedStudentNames = new Set(); // 提前录课锁定学生（不可退出/改选）
 let currentSelect = null;   // 当前正在选课的位置 { courseId, slotIndex }
 let selectionEnabled = true; // 全局选课开关（后台控制）
+let serverDataRevision = 0;  // 后台选课数据版本号（管理员删除/变更时递增）
 
 // ===== DOM 引用 =====
 const uploadArea = document.getElementById('uploadArea');
@@ -3263,6 +3352,23 @@ async function loadSchoolRosterForClass(opts) {
   if (studentListSource === 'upload' && !opts.force) {
     rosterReadyTip = false;
     return false;
+  }
+
+  // 后台已无本班未选课记录时，不再从全校花名册补数据（避免管理员清除后仍显示）
+  try {
+    const uq = new URLSearchParams();
+    uq.set('grade', gradeName);
+    uq.set('class', classNumber + '班');
+    const udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
+    const unselected = ((udata && udata.unselected) || []).filter(function(row) {
+      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+    });
+    if (!unselected.length && !opts.force) {
+      rosterReadyTip = false;
+      return false;
+    }
+  } catch (e) {
+    if (!opts.force) return false;
   }
 
   try {
@@ -4122,7 +4228,10 @@ async function exportExcel() {
       
       const totalExported = selections.length + unselectedList.length;
       showToast(`保存成功！已导出 ${totalExported} 条记录（含${unselectedList.length}条未选课）`, 'success');
-      try { saveState(); } catch (_) {}
+      try {
+        var sync = await fetchSelectionDataSync();
+        saveState(sync.revision);
+      } catch (_) { saveState(); }
     } catch(e) {
       console.error('保存失败:', e);
       showToast('保存失败：' + e.message, 'error');
@@ -4797,18 +4906,31 @@ document.addEventListener('keydown', e => {
 // ===== 初始化：加载课程数据 → 加载持久化状态 → 首次渲染 =====
 (async function initBootstrap() {
   try {
-    // 1. 先从服务器加载课程数据
     await loadCoursesFromServer();
-
-    // 2. 加载全局选课开关状态
     await loadSelectionStatus();
-
-    // 2.5 同步用户资料（班主任班级等）
     await syncUserProfile();
-    
-    // 3. 加载本地持久化；若已重置/无本地草稿，则从后台恢复本班选课
+
+    var sync = { revision: 0 };
+    try { sync = await fetchSelectionDataSync(); } catch (e) { console.warn('fetchSelectionDataSync:', e.message); }
+
     var loaded = loadStateFromStorage();
     applyBanzhurenClassPreset();
+    var localRev = getLocalDataRevision();
+
+    // 管理员已在后台变更选课数据 → 丢弃过期的本地草稿（班主任自行上传除外）
+    if (loaded && sync.revision > localRev && studentListSource !== 'upload') {
+      clearLocalSelectionDraft();
+      loaded = false;
+    }
+
+    if (loaded && students.length > 0 && studentListSource !== 'upload') {
+      var serverEmpty = await isServerClassSelectionEmpty();
+      if (serverEmpty) {
+        clearLocalSelectionDraft();
+        loaded = false;
+      }
+    }
+
     if (loaded && students.length > 0) {
       if (!studentListSource) studentListSource = 'local';
       var uploadTextCol = document.getElementById('uploadTextCol');
@@ -4817,38 +4939,43 @@ document.addEventListener('keydown', e => {
           '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
           '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
       }
-      // 本地草稿也强制以内定课程为准，避免一人两课（保留其他学生已选）
       await applyPreEnrollments({ skipReset: true });
     } else {
-      const restored = await restoreSelectionsFromServer();
-      if (restored) {
-        showToast('已从后台恢复本班选课数据', 'success');
-      }
+      await applyServerSelectionSync({ silent: true });
     }
-    // 班主任班级已确定时：若未自行上传名单，则读取管理员导入的全校名单并显示提示
-    if (studentListSource !== 'upload') {
-      await loadSchoolRosterForClass();
-      if (rosterReadyTip && students.length > 0) {
-        await applyPreEnrollments({ skipReset: true });
-      }
-    } else {
-      rosterReadyTip = false;
-      await applyPreEnrollments({ skipReset: true });
-    }
+
+    saveState(sync.revision);
   } catch (e) {
     console.error('[initBootstrap] init failed:', e);
   }
-  
-  // 3. 无论加载成功与否，都渲染页面
+
   renderAll();
-  
-  // 如果没有课程数据，显示提示
+
   if (COURSES.length === 0) {
     showToast('暂无课程数据，请联系管理员上传课程', 'warning');
   }
 
-  // 定时刷新选课开关状态（管理员可能在后台切换）
   setInterval(loadSelectionStatus, 30000);
+
+  // 定时检测后台选课数据变更（管理员删除/修改后自动同步）
+  setInterval(async function() {
+    try {
+      var prev = serverDataRevision;
+      var sync = await fetchSelectionDataSync();
+      if (sync.revision > prev && studentListSource !== 'upload') {
+        clearLocalSelectionDraft();
+        await applyServerSelectionSync({ silent: true });
+        renderAll();
+        if ((sync.selections_count || 0) === 0 && (sync.unselected_count || 0) === 0) {
+          showToast('管理员已清除选课数据，页面已同步', 'info');
+        } else {
+          showToast('选课数据已从后台同步', 'info');
+        }
+      }
+    } catch (e) {
+      console.warn('selection data sync poll:', e.message);
+    }
+  }, 30000);
 })();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
