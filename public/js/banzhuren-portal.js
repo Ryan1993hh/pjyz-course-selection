@@ -204,11 +204,25 @@
     try {
       var data = await apiRequest('GET', '/api/banzhuren/class-roster');
       if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
-      return (data && data.students) || [];
+      var list = (data && data.students) || [];
+      if (list.length) return list;
     } catch (e) {
       console.warn('loadClassStudents:', e.message);
-      return [];
     }
+
+    // 回退：使用本页当前班级名单（刚保存尚未同步时）
+    try {
+      if (typeof students !== 'undefined' && Array.isArray(students) && students.length) {
+        return students.map(function (name) {
+          var g = '';
+          try {
+            if (typeof getStudentGender === 'function') g = getStudentGender(name) || '';
+          } catch (_) {}
+          return { student_name: name, gender: g };
+        });
+      }
+    } catch (_) {}
+    return [];
   }
 
   function parseClassFromUser(user) {
@@ -551,7 +565,7 @@
       TeacherQuotes.init();
     }
 
-    var topNav = document.querySelector('.bz-top-nav');
+    var topNav = document.querySelector('.bz-subnav') || document.querySelector('.bz-top-nav');
     if (topNav) {
       topNav.addEventListener('click', function (e) {
         var btn = e.target.closest('.bz-tab-btn');

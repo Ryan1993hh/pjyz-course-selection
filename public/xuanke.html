@@ -2237,30 +2237,55 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-panel.active { display: block; animation: fadeIn 0.25s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-.bz-top-nav {
+.bz-subnav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.bz-subnav .bz-tab-btn {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.bz-top-nav .bz-tab-btn {
-  border: 1px solid rgba(255,255,255,0.28);
-  background: rgba(255,255,255,0.12);
-  color: #fff;
-  font-size: 11px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  min-height: 56px;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 14px;
   cursor: pointer;
-  white-space: nowrap;
-  font-weight: 500;
-  transition: background 0.2s;
-}
-.bz-top-nav .bz-tab-btn:hover { background: rgba(255,255,255,0.2); }
-.bz-top-nav .bz-tab-btn.active {
-  background: rgba(255,255,255,0.32);
-  border-color: rgba(255,255,255,0.45);
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.bz-subnav .bz-tab-btn .bz-tab-ico { font-size: 20px; line-height: 1; }
+.bz-subnav .bz-tab-btn .bz-tab-txt { line-height: 1.2; }
+.bz-subnav .bz-tab-btn[data-bz-tab="selection"] {
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+}
+.bz-subnav .bz-tab-btn[data-bz-tab="leave"] {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+}
+.bz-subnav .bz-tab-btn[data-bz-tab="dashboard"] {
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+}
+.bz-subnav .bz-tab-btn[data-bz-tab="profile"] {
+  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+}
+.bz-subnav .bz-tab-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+.bz-subnav .bz-tab-btn.active {
+  outline: 3px solid rgba(255,255,255,0.95);
+  outline-offset: 2px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  transform: translateY(-1px);
 }
 
 .stat-reset-btn {
@@ -2338,12 +2363,27 @@ tr.no-quota:hover td { opacity: 0.7; }
 
 @media (max-width: 768px) {
   .header-title-btn h1 { font-size: clamp(13px, 3.5vw, 18px); letter-spacing: 1px; }
-  .bz-top-nav .bz-tab-btn { font-size: 10px; padding: 5px 6px; }
   .header-logo .logo-text .en { display: none; }
+  .bz-subnav {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .bz-subnav .bz-tab-btn {
+    min-height: 64px;
+    padding: 12px 4px;
+    font-size: 12px;
+    border-radius: 12px;
+  }
+  .bz-subnav .bz-tab-btn .bz-tab-ico { font-size: 22px; }
 }
 @media (max-width: 480px) {
   .header-title-btn small { display: none; }
-  .bz-top-nav { gap: 3px; }
+  .bz-subnav { gap: 5px; }
+  .bz-subnav .bz-tab-btn {
+    min-height: 60px;
+    font-size: 11px;
+    padding: 10px 2px;
+  }
   .skin-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -2438,15 +2478,24 @@ tr.no-quota:hover td { opacity: 0.7; }
     <small id="dateLine">班级选课</small>
   </button>
   <div class="header-actions">
-    <nav class="bz-top-nav" aria-label="班主任导航">
-      <button type="button" class="bz-tab-btn active" data-bz-tab="selection">班级选课</button>
-      <button type="button" class="bz-tab-btn" data-bz-tab="leave">请假报备</button>
-      <button type="button" class="bz-tab-btn" data-bz-tab="dashboard">数据看板</button>
-      <button type="button" class="bz-tab-btn" data-bz-tab="profile">用户信息</button>
-    </nav>
     <div id="roleSwitcher"></div>
   </div>
 </div>
+
+<nav class="bz-subnav" aria-label="班主任导航">
+  <button type="button" class="bz-tab-btn active" data-bz-tab="selection">
+    <span class="bz-tab-ico">📚</span><span class="bz-tab-txt">班级选课</span>
+  </button>
+  <button type="button" class="bz-tab-btn" data-bz-tab="leave">
+    <span class="bz-tab-ico">🤒</span><span class="bz-tab-txt">请假报备</span>
+  </button>
+  <button type="button" class="bz-tab-btn" data-bz-tab="dashboard">
+    <span class="bz-tab-ico">📊</span><span class="bz-tab-txt">数据看板</span>
+  </button>
+  <button type="button" class="bz-tab-btn" data-bz-tab="profile">
+    <span class="bz-tab-ico">👤</span><span class="bz-tab-txt">用户信息</span>
+  </button>
+</nav>
 
 <div class="clock-overlay" id="clockOverlay">
   <button type="button" class="clock-close" id="clockClose" aria-label="关闭">✕</button>
@@ -4511,6 +4560,11 @@ async function exportExcel() {
     showToast('请先上传学生名单', 'error');
     return;
   }
+  if (!gradeName || !classNumber) {
+    showToast('请先选择年级和班级', 'error');
+    return;
+  }
+  updateClassName();
   
   const cls = className.trim() || '未填写班级';
   const grade = gradeName || '';
@@ -4547,50 +4601,61 @@ async function exportExcel() {
     
     try {
       showToast('正在保存选课数据到服务器...', 'info');
-      
+
+      // 1) 清除本班旧选课（跳过请假清理，避免先删后写期间名单为空）
       try {
         const delParams = new URLSearchParams();
         if (grade) delParams.set('grade', grade);
         if (cls) delParams.set('class_name', cls);
-        const delQuery = delParams.toString();
-        // 仅清除本班未锁定选课；内定(is_locked=1)保留
-        await apiRequest('DELETE', '/api/selections' + (delQuery ? '?' + delQuery : ''));
+        delParams.set('skip_leave_purge', '1');
+        await apiRequest('DELETE', '/api/selections?' + delParams.toString());
       } catch(e) {
         console.warn('清除本班旧选课数据（可能为空）:', e.message);
       }
-      
-      // 按班级覆盖未选课名单（班主任最近一次保存为准）
-      try {
-        const uq = new URLSearchParams();
-        if (grade) uq.set('grade', grade);
-        if (cls) uq.set('class_name', cls);
-        await apiRequest('DELETE', '/api/unselected-students?' + uq.toString());
-      } catch(e) {
-        console.warn('清除本班旧未选课数据:', e.message);
-      }
-      
+
+      // 2) 保存已选课
       if (selections.length > 0) {
         const result = await apiRequest('POST', '/api/selections', selections);
         const count = result.count || 0;
         showToast(`已保存 ${count} 条选课数据`, 'success');
       }
-      
-      if (unselectedRecords.length > 0) {
-        await apiRequest('POST', '/api/unselected-students', unselectedRecords);
-        showToast(`已保存 ${unselectedRecords.length} 条未选课名单`, 'info');
-      }
 
-      // 用班主任当前名单覆盖后台该班学生花名册（含性别）
+      // 3) 同步本班花名册并重建未选课名单（最可靠）
+      let unselectedSaved = false;
       try {
-        await apiRequest('POST', '/api/school-students/sync-class', {
+        const syncRes = await apiRequest('POST', '/api/school-students/sync-class', {
           grade: grade,
           class_name: cls,
           students: students.map(function(name) {
             return { student_name: name, gender: getStudentGender(name) || '' };
           })
         });
+        unselectedSaved = true;
+        const uCount = (syncRes && syncRes.unselected_count) || 0;
+        if (uCount > 0) {
+          showToast(`已同步未选课名单 ${uCount} 人`, 'info');
+        } else if (unselectedRecords.length === 0) {
+          showToast('本班学生均已选课', 'info');
+        }
       } catch (e) {
         console.warn('同步班级学生名单:', e.message);
+      }
+
+      // 4) 若花名册同步失败，回退为直接写入未选课记录
+      if (!unselectedSaved) {
+        try {
+          const uq = new URLSearchParams();
+          if (grade) uq.set('grade', grade);
+          if (cls) uq.set('class_name', cls);
+          uq.set('skip_leave_purge', '1');
+          await apiRequest('DELETE', '/api/unselected-students?' + uq.toString());
+        } catch(e) {
+          console.warn('清除本班旧未选课数据:', e.message);
+        }
+        if (unselectedRecords.length > 0) {
+          const ures = await apiRequest('POST', '/api/unselected-students', unselectedRecords);
+          showToast(`已保存 ${(ures && ures.count) || unselectedRecords.length} 条未选课名单`, 'info');
+        }
       }
       
       const excelData = selections.map(s => ({
@@ -4633,6 +4698,13 @@ async function exportExcel() {
         var sync = await fetchSelectionDataSync();
         saveState(sync.revision);
       } catch (_) { saveState(); }
+      // 刷新请假报备等页的班级名单缓存
+      try {
+        if (window.BzPortal && typeof window.BzPortal.loadLeavePage === 'function') {
+          /* 不强制切页，仅预热名单 */
+        }
+        if (window.BzPortal) window.BzPortal._rosterDirty = true;
+      } catch (_) {}
     } catch(e) {
       console.error('保存失败:', e);
       showToast('保存失败：' + e.message, 'error');
@@ -5537,6 +5609,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260827e"></script>
+<script src="js/banzhuren-portal.js?v=20260827f"></script>
 </body>
 </html>
