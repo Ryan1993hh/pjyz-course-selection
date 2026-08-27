@@ -104,6 +104,19 @@
     } catch (_) {}
   }
 
+  function prefetchRolePages(user) {
+    getUserRoles(user).forEach(function (r) {
+      prefetchPage(ROLE_PAGES[r]);
+    });
+  }
+
+  function navigateToPage(page) {
+    var p = normalizePagePath(page);
+    if (!p) return;
+    if (normalizePagePath(location.pathname.split('/').pop() || '') === p) return;
+    location.replace(p);
+  }
+
   function getLastPage() {
     try { return normalizePagePath(localStorage.getItem(LAST_PAGE_KEY) || ''); } catch (_) { return ''; }
   }
@@ -141,7 +154,7 @@
       rememberLastPage();
       return;
     }
-    location.href = getLoginRedirectUrl();
+    navigateToPage(getLoginRedirectUrl());
   }
 
   function positionRoleMenu(btn, menu) {
@@ -175,6 +188,7 @@
     if (!el) return;
 
     var roles = getUserRoles();
+    prefetchRolePages();
     if (roles.length <= 1) {
       el.innerHTML = '';
       return;
@@ -240,7 +254,7 @@
         var role = item.getAttribute('data-role');
         setActiveRole(role);
         rememberLastPage(ROLE_PAGES[role]);
-        location.href = ROLE_PAGES[role];
+        navigateToPage(ROLE_PAGES[role]);
       });
     });
 
@@ -289,6 +303,8 @@
     initRoleSwitcher: initRoleSwitcher,
     parseRoleValue: parseRoleValue,
     normalizeRolesInput: normalizeRolesInput,
-    prefetchPage: prefetchPage
+    prefetchPage: prefetchPage,
+    prefetchRolePages: prefetchRolePages,
+    navigateToPage: navigateToPage
   };
 })(window);

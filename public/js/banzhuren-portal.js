@@ -612,9 +612,15 @@
 
     var body = students.map(function (stu) {
       var cells = stu.cells || [];
-      var rowCells = displaySessions.map(function (sess, idx) {
-        if (!sess) return '<td class="cell-empty">—</td>';
-        var cell = cells[idx] || { status: '' };
+      var cellByDate = {};
+      cells.forEach(function (cell, idx) {
+        if (sessions[idx] && sessions[idx].date) {
+          cellByDate[sessions[idx].date] = cell;
+        }
+      });
+      var rowCells = displaySessions.map(function (sess) {
+        if (!sess || !sess.date) return '<td class="cell-empty">—</td>';
+        var cell = cellByDate[sess.date] || { status: '' };
         var inner = renderAttendanceCell(cell);
         if (!inner) return '<td class="cell-empty">—</td>';
         return '<td>' + inner + '</td>';

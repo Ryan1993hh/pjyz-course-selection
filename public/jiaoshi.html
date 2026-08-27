@@ -5,10 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课 教师端</title>
 <link rel="stylesheet" href="css/muyu.css?v=20260827n">
-<script src="js/role-utils.js?v=20260826c"></script>
+<script src="js/role-utils.js?v=20260827t"></script>
 <script src="js/teacher-quotes.js?v=20260826b"></script>
 <script src="js/muyu.js?v=20260827n"></script>
+<script>
+(function () {
+  try {
+    if (localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token')) {
+      document.documentElement.classList.add('pjyz-has-token');
+    }
+  } catch (_) {}
+})();
+</script>
 <style>
+html.pjyz-has-token #loginOverlay { display: none !important; }
 :root {
   --primary: #0d9488;
   --primary-soft: rgba(13, 148, 136, 0.12);
@@ -4406,10 +4416,11 @@ async function initApp() {
   if (window.PjyzRole) {
     var roles = PjyzRole.getUserRoles();
     if (roles.length && roles.indexOf('teacher') === -1) {
-      location.href = PjyzRole.getLoginRedirectUrl();
+      PjyzRole.navigateToPage(PjyzRole.getLoginRedirectUrl());
       return;
     }
     PjyzRole.enforcePageAccess();
+    PjyzRole.prefetchRolePages();
     PjyzRole.initRoleSwitcher('roleSwitcher');
   }
   initSkin();

@@ -3596,7 +3596,7 @@ function buildStudentIdToNameMap(payloadStudents) {
   return map;
 }
 
-function buildCheckinStudentIdToNameMap(payloadStudents, grade, className, rosterMap) {
+function buildCheckinStudentIdToNameMap(payloadStudents, grade, className, rosterMap, extraMap) {
   const map = buildStudentIdToNameMap(payloadStudents);
   if (rosterMap) {
     rosterMap.forEach((_, name) => {
@@ -3605,6 +3605,11 @@ function buildCheckinStudentIdToNameMap(payloadStudents, grade, className, roste
         if (k) map.set(String(k), name);
       });
       map.set(name, name);
+    });
+  }
+  if (extraMap && typeof extraMap.forEach === 'function') {
+    extraMap.forEach((name, k) => {
+      if (k != null && k !== '' && name) map.set(String(k), String(name).trim());
     });
   }
   return map;
@@ -3618,16 +3623,49 @@ function resolveCheckinKeyToStudentName(key, idToName) {
   return String(row.student_name || '').trim();
 }
 
-function checkinMapHasRosterActivity(checkin, rosterMap, payloadStudents, grade, className) {
+function checkinMapHasRosterActivity(checkin, rosterMap, payloadStudents, grade, className, extraMap) {
   if (!checkin || typeof checkin !== 'object' || !rosterMap || !rosterMap.size) return false;
-  const idToName = buildCheckinStudentIdToNameMap(payloadStudents, grade, className, rosterMap);
+  const idToName = buildCheckinStudentIdToNameMap(payloadStudents, grade, className, rosterMap, extraMap);
   for (const key of Object.keys(checkin)) {
     const v = checkin[key];
     if (v == null || v === '' || v === 'none') continue;
     const name = resolveCheckinKeyToStudentName(key, idToName);
     if (name && rosterMap.has(name)) return true;
+    for (const rosterName of rosterMap.keys()) {
+      if (key === rosterName || key.startsWith(rosterName + '|') || key.startsWith(rosterName + '｜')) {
+        return true;
+      }
+    }
   }
   return false;
+}
+
+function buildSelectionIdToNameMapForCourse(selRows, courseName, grade, className, rosterMap) {
+  const map = new Map();
+  const wantCourse = String(courseName || '').trim();
+  (selRows || []).forEach((row) => {
+    const name = String(row.student_name || '').trim();
+    const course = String(row.course_name || '').trim();
+    if (!name || !course || course !== wantCourse) return;
+    const inScope = selectionMatchesClassScope(row, grade, className);
+    const inRoster = rosterMap && rosterMap.has(name);
+    if (!inScope && !inRoster) return;
+    if (!inScope && inRoster) {
+      const want = parseGradeClassFields(grade, className);
+      const got = parseGradeClassFields(row.grade, row.class_name);
+      if (want.grade && got.grade && want.grade !== got.grade) return;
+      if (want.classNum && got.classNum && got.classNum !== want.classNum) return;
+    }
+    if (row.id != null) map.set(String(row.id), name);
+    const normalized = normalizeClassroomStudents(studentsFromSelectionRows([row]))[0];
+    if (normalized) {
+      classroomStudentKeyList(normalized).forEach((k) => {
+        if (k) map.set(String(k), name);
+      });
+    }
+    map.set(name, name);
+  });
+  return map;
 }
 
 function payloadCheckinScore(payload) {
@@ -3658,12 +3696,17 @@ function pickHigherCheckinStatus(a, b) {
   return pa >= pb ? a : b;
 }
 
-function getStudentCheckinStatusOnDate(payload, student, studentName, date) {
+function getStudentCheckinStatusOnDate(payload, student, studentName, date, extraIdToName) {
   if (!payload || !date) return 'none';
   const wantDate = normalizeDateKey(date);
   const name = String(studentName || (student && student.student_name) || '').trim();
   const normalizedStudents = normalizeClassroomStudents(payload.students || []);
   const idToName = buildStudentIdToNameMap(normalizedStudents);
+  if (extraIdToName && typeof extraIdToName.forEach === 'function') {
+    extraIdToName.forEach((n, k) => {
+      if (k != null && k !== '' && n) idToName.set(String(k), String(n).trim());
+    });
+  }
   if (student) {
     classroomStudentKeyList(student).forEach((k) => idToName.set(String(k), name));
   }
@@ -3695,9 +3738,9 @@ function getStudentCheckinStatusOnDate(payload, student, studentName, date) {
   return 'none';
 }
 
-function checkinHasClassRecord(checkin, grade, className, rosterMap, payloadStudents) {
+function checkinHasClassRecord(checkin, grade, className, rosterMap, payloadStudents, extraMap) {
   if (!checkin || typeof checkin !== 'object') return false;
-  if (checkinMapHasRosterActivity(checkin, rosterMap, payloadStudents, grade, className)) return true;
+  if (checkinMapHasRosterActivity(checkin, rosterMap, payloadStudents, grade, className, extraMap)) return true;
   for (const key of Object.keys(checkin)) {
     const v = checkin[key];
     if (v == null || v === '' || v === 'none') continue;
@@ -3723,14 +3766,14 @@ function checkinHasClassRecord(checkin, grade, className, rosterMap, payloadStud
   return false;
 }
 
-function collectSessionDatesFromClassCheckin(payload, grade, className, rosterMap) {
+function collectSessionDatesFromClassCheckin(payload, grade, className, rosterMap, extraMap) {
   const dates = new Map();
   const history = Array.isArray(payload && payload.history) ? payload.history : [];
   const payloadStudents = payload && payload.students;
 
   history.forEach((h) => {
     const date = normalizeDateKey((h && h.date) || '');
-    if (!date || !checkinHasClassRecord(h.checkin, grade, className, rosterMap, payloadStudents)) return;
+    if (!date || !checkinHasClassRecord(h.checkin, grade, className, rosterMap, payloadStudents, extraMap)) return;
     const label = String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date);
     const updatedAt = (h && h.updatedAt) || 0;
     const prev = dates.get(date);
@@ -3740,7 +3783,7 @@ function collectSessionDatesFromClassCheckin(payload, grade, className, rosterMa
   });
 
   const checkinDay = normalizeDateKey((payload && payload.checkinDay) || '');
-  if (checkinDay && checkinHasClassRecord(payload.checkin, grade, className, rosterMap, payloadStudents)) {
+  if (checkinDay && checkinHasClassRecord(payload.checkin, grade, className, rosterMap, payloadStudents, extraMap)) {
     const updatedAt = Date.now();
     if (!dates.has(checkinDay)) {
       dates.set(checkinDay, {
@@ -3825,10 +3868,11 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
   }
 
   const selRes = await db.prepare(
-    'SELECT student_name, course_name, grade, class_name, gender FROM selections WHERE grade = ? OR class_name LIKE ?'
+    'SELECT id, student_name, course_name, grade, class_name, gender FROM selections WHERE grade = ? OR class_name LIKE ?'
   ).bind(grade, '%' + grade + '%').all();
   const selByNameCourse = new Map();
-  for (const row of (selRes.results || [])) {
+  const selRows = selRes.results || [];
+  for (const row of selRows) {
     const name = String(row.student_name || '').trim();
     const course = String(row.course_name || '').trim();
     if (name && course) selByNameCourse.set(name + '\0' + course, row);
@@ -3839,9 +3883,9 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     const courseName = String(row.course_name || '').trim();
     if (!courseName) continue;
     const payload = mergeTeacherClassroomPayloadRow(row);
-    if (!payloadHasCheckinActivity(payload)) continue;
-
     await ensureCourseData(courseName, row, payload);
+
+    if (!payloadHasCheckinActivity(payload)) continue;
 
     const fromCheckin = collectClassStudentsFromPayload(payload, grade, className, rosterMap);
     fromCheckin.forEach((name) => linkStudentCourse(name, courseName, ''));
@@ -3857,7 +3901,7 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     }
   }
 
-  for (const row of (selRes.results || [])) {
+  for (const row of selRows) {
     const name = String(row.student_name || '').trim();
     const course = String(row.course_name || '').trim();
     if (!name || !course) continue;
@@ -3885,7 +3929,14 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     String(a.student_name).localeCompare(String(b.student_name), 'zh')
   );
 
-  return { finalRoster, studentCourses, allCourses, courseData, checkinCourses: Object.keys(courseData) };
+  return {
+    finalRoster,
+    studentCourses,
+    allCourses,
+    courseData,
+    checkinCourses: Object.keys(courseData),
+    selRows
+  };
 }
 
 async function handleBanzhurenClassDashboard(db, request) {
@@ -3932,7 +3983,8 @@ async function handleBanzhurenClassDashboard(db, request) {
     studentCourses,
     allCourses,
     courseData,
-    checkinCourses
+    checkinCourses,
+    selRows
   } = await buildBanzhurenDashboardContext(db, grade, className, baseOrSchool);
 
   const ATTENDANCE_COLS = 18;
@@ -3976,13 +4028,58 @@ async function handleBanzhurenClassDashboard(db, request) {
     const cd = courseData[courseName];
     if (!cd) continue;
     const payload = cd.payload || {};
-    const dates = collectSessionDatesFromClassCheckin(payload, grade, className, rosterMapForSessions);
+    const extraMap = buildSelectionIdToNameMapForCourse(selRows, courseName, grade, className, rosterMapForSessions);
+    const dates = collectSessionDatesFromClassCheckin(payload, grade, className, rosterMapForSessions, extraMap);
     dates.forEach((entry, date) => {
       const prev = sessionMap.get(date);
       if (!prev || (entry.updatedAt && (!prev.updatedAt || entry.updatedAt > prev.updatedAt))) {
         sessionMap.set(date, entry);
       }
     });
+  }
+
+  if (sessionMap.size === 0) {
+    for (const courseName of coursesToScan) {
+      const cd = courseData[courseName];
+      if (!cd) continue;
+      const hasClassStudent = finalRoster.some((r) => {
+        const n = String(r.student_name || '').trim();
+        return n && studentCourses[n] && studentCourses[n].has(courseName);
+      });
+      if (!hasClassStudent) continue;
+      const payload = cd.payload || {};
+      (Array.isArray(payload.history) ? payload.history : []).forEach((h) => {
+        const date = normalizeDateKey((h && h.date) || '');
+        if (!date) return;
+        const checkin = (h && h.checkin) || {};
+        const hasData = Object.keys(checkin).some((k) => {
+          const v = checkin[k];
+          return v != null && v !== '' && v !== 'none';
+        });
+        if (!hasData) return;
+        const label = String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date);
+        const updatedAt = (h && h.updatedAt) || 0;
+        const prev = sessionMap.get(date);
+        if (!prev || updatedAt > (prev.updatedAt || 0)) {
+          sessionMap.set(date, { date: date, dateLabel: label, updatedAt: updatedAt });
+        }
+      });
+      const checkinDay = normalizeDateKey((payload.checkinDay) || '');
+      if (checkinDay) {
+        const checkin = payload.checkin || {};
+        const hasToday = Object.keys(checkin).some((k) => {
+          const v = checkin[k];
+          return v != null && v !== '' && v !== 'none';
+        });
+        if (hasToday && !sessionMap.has(checkinDay)) {
+          sessionMap.set(checkinDay, {
+            date: checkinDay,
+            dateLabel: formatAttendanceDateLabel(checkinDay),
+            updatedAt: Date.now()
+          });
+        }
+      }
+    }
   }
 
   const sessions = Array.from(sessionMap.values())
@@ -4002,11 +4099,12 @@ async function handleBanzhurenClassDashboard(db, request) {
         const cd = courseData[courseName];
         if (!cd) continue;
         const payload = cd.payload || {};
+        const extraMap = buildSelectionIdToNameMapForCourse(selRows, courseName, grade, className, rosterMapForSessions);
         let student = normalizeClassroomStudents(payload.students || []).find(
           (s) => String(s.student_name || '').trim() === name
         );
         if (!student) student = stub;
-        const st = getStudentCheckinStatusOnDate(payload, student, name, sess.date);
+        const st = getStudentCheckinStatusOnDate(payload, student, name, sess.date, extraMap);
         if (st && st !== 'none') {
           status = status ? pickHigherCheckinStatus(status, st) : st;
           courseUsed = courseName;
