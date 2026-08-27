@@ -441,8 +441,10 @@
     if (!data) return '';
     try {
       return JSON.stringify({
-        students: data.students,
-        sessions: data.sessions,
+        students: (data.students || []).map(function (s) {
+          return { n: s.student_name, c: s.cells };
+        }),
+        sessions: (data.sessions || []).map(function (s) { return s && s.date; }),
         class_display: data.class_display || data.class_name || ''
       });
     } catch (_) {

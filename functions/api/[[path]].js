@@ -2787,11 +2787,12 @@ async function syncTeacherClassroomStudentsFromSelections(db, courseName) {
 
   payload.students = normalizedStudents;
   const remapOpts = { dropOrphans: true };
+  const historyRemapOpts = { dropOrphans: false };
   payload.checkin = remapClassroomKeyedMap(payload.checkin, normalizedStudents, remapOpts);
   payload.rewards = remapClassroomKeyedMap(payload.rewards, normalizedStudents, remapOpts);
   payload.exams = remapClassroomKeyedMap(payload.exams, normalizedStudents, remapOpts);
   payload.history = (Array.isArray(payload.history) ? payload.history : []).map((h) =>
-    Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents, remapOpts) })
+    Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents, historyRemapOpts) })
   );
   if (payload.teacher && typeof payload.teacher === 'object') {
     payload.teacher.course = name;
@@ -3338,7 +3339,63 @@ function lookupStudentCheckinStatus(checkinMap, student, studentName) {
   }
   const name = String(studentName || (student && student.student_name) || '').trim();
   if (name && checkinMap[name] != null && checkinMap[name] !== '') return String(checkinMap[name]);
+  // 教师端 stableId 多为「姓名|班级」，按姓名前缀兜底匹配
+  for (const k of Object.keys(checkinMap)) {
+    if (k === name || k.startsWith(name + '|') || k.startsWith(name + '｜')) {
+      const v = checkinMap[k];
+      if (v != null && v !== '') return String(v);
+    }
+  }
   return 'none';
+}
+
+function makeCheckinStudentStub(name, grade, className) {
+  const parsed = parseGradeClassFields(grade, className);
+  const cls = parsed.class_name || className || '';
+  const compactCls = String(cls).replace(/[()（）\s]/g, '');
+  const stableId = name + '|' + compactCls;
+  return {
+    student_name: name,
+    class_name: cls,
+    grade: parsed.grade || grade,
+    stableId: stableId,
+    id: stableId
+  };
+}
+
+function rosterNamesWithAttendanceInPayload(payload, rosterMap, grade, className) {
+  const found = new Set();
+  const names = Array.from(rosterMap.keys());
+  const history = Array.isArray(payload && payload.history) ? payload.history : [];
+  for (const h of history) {
+    if (!h || !h.checkin) continue;
+    names.forEach((name) => {
+      const stub = makeCheckinStudentStub(name, grade, className);
+      if (lookupStudentCheckinStatus(h.checkin, stub, name) !== 'none') found.add(name);
+    });
+  }
+  const checkinDay = String((payload && payload.checkinDay) || '').trim();
+  const checkin = (payload && payload.checkin) || {};
+  if (checkinDay && checkin && typeof checkin === 'object') {
+    names.forEach((name) => {
+      const stub = makeCheckinStudentStub(name, grade, className);
+      if (lookupStudentCheckinStatus(checkin, stub, name) !== 'none') found.add(name);
+    });
+  }
+  return found;
+}
+
+function payloadHasCheckinActivity(payload) {
+  const history = Array.isArray(payload && payload.history) ? payload.history : [];
+  if (history.length) return true;
+  const checkinDay = String((payload && payload.checkinDay) || '').trim();
+  const checkin = (payload && payload.checkin) || {};
+  if (!checkinDay || !checkin || typeof checkin !== 'object') return false;
+  if (payload.checkinDone) return true;
+  return Object.keys(checkin).some((k) => {
+    const v = checkin[k];
+    return v != null && v !== '' && v !== 'none';
+  });
 }
 
 function studentBelongsToBanzhurenClass(studentRow, grade, className, rosterMap) {
@@ -3379,27 +3436,37 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
   }
 
   async function ensureCourseData(courseName, row, payload) {
-    if (courseData[courseName]) return;
+    const incoming = payload || { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
+    if (courseData[courseName]) {
+      const existing = courseData[courseName].payload || {};
+      const existHist = Array.isArray(existing.history) ? existing.history.length : 0;
+      const newHist = Array.isArray(incoming.history) ? incoming.history.length : 0;
+      if (newHist > existHist) courseData[courseName].payload = incoming;
+      return;
+    }
     const course = await db.prepare('SELECT teacher FROM courses WHERE name = ?').bind(courseName).first();
     courseData[courseName] = {
       course_name: courseName,
       teacher_name: (row && row.teacher_name) || (course && course.teacher) || '',
-      payload: payload || { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false }
+      payload: incoming
     };
   }
 
-  // 选课表补全课程关联（班级字段缺失时，花名册同名学生仍可匹配）
   const selRes = await db.prepare(
     'SELECT student_name, course_name, grade, class_name, gender FROM selections WHERE grade = ? OR class_name LIKE ?'
   ).bind(grade, '%' + grade + '%').all();
   const selByNameCourse = new Map();
+  const coursesFromClassSelections = new Set();
   for (const row of (selRes.results || [])) {
     const name = String(row.student_name || '').trim();
     const course = String(row.course_name || '').trim();
     if (name && course) selByNameCourse.set(name + '\0' + course, row);
+    if (!course) continue;
+    if (selectionMatchesClassScope(row, grade, className) || rosterMap.has(name)) {
+      coursesFromClassSelections.add(course);
+    }
   }
 
-  // 教师端 classroom 是签到数据源：按实际授课名单关联本班学生
   const classroomRes = await db.prepare('SELECT * FROM teacher_classroom').all();
   for (const row of (classroomRes.results || [])) {
     const courseName = String(row.course_name || '').trim();
@@ -3408,22 +3475,25 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     if (row.payload) {
       try { payload = JSON.parse(row.payload); } catch (_) {}
     }
+    if (row.checkin_day && !payload.checkinDay) payload.checkinDay = String(row.checkin_day);
+    if (row.checkin_done != null && payload.checkinDone == null) payload.checkinDone = !!row.checkin_done;
+
     const students = normalizeClassroomStudents(payload.students || []);
-    let linked = false;
     for (const s of students) {
       const name = String(s.student_name || '').trim();
       if (!name) continue;
       let belongs = studentBelongsToBanzhurenClass(s, grade, className, rosterMap);
-      if (!belongs) {
-        const sel = selByNameCourse.get(name + '\0' + courseName);
-        // 已在该年级选课且出现在教师签到名单，视为本班拓展课学生
-        if (sel) belongs = true;
-      }
+      if (!belongs && selByNameCourse.has(name + '\0' + courseName)) belongs = true;
       if (!belongs) continue;
       linkStudentCourse(name, courseName, s.gender);
-      linked = true;
     }
-    if (linked) await ensureCourseData(courseName, row, payload);
+
+    const attendanceNames = rosterNamesWithAttendanceInPayload(payload, rosterMap, grade, className);
+    attendanceNames.forEach((name) => linkStudentCourse(name, courseName, ''));
+
+    const shouldInclude = coursesFromClassSelections.has(courseName)
+      || attendanceNames.size > 0;
+    if (shouldInclude) await ensureCourseData(courseName, row, payload);
   }
 
   for (const row of (selRes.results || [])) {
@@ -3484,9 +3554,17 @@ async function handleBanzhurenClassDashboard(db, request) {
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
   const baseRoster = await getBanzhurenClassRoster(db, grade, className);
-  const baseOrSchool = baseRoster.length
-    ? baseRoster
-    : await getClassSchoolStudentsRoster(db, grade, className);
+  const schoolRoster = await getClassSchoolStudentsRoster(db, grade, className);
+  const rosterUnion = new Map();
+  (baseRoster.length ? baseRoster : schoolRoster).concat(baseRoster, schoolRoster).forEach((r) => {
+    const name = String(r.student_name || '').trim();
+    if (!name) return;
+    if (!rosterUnion.has(name)) rosterUnion.set(name, { student_name: name, gender: r.gender || '' });
+    else if (r.gender && !rosterUnion.get(name).gender) rosterUnion.get(name).gender = r.gender;
+  });
+  const baseOrSchool = Array.from(rosterUnion.values()).sort((a, b) =>
+    String(a.student_name).localeCompare(String(b.student_name), 'zh')
+  );
 
   const {
     finalRoster,
@@ -3563,7 +3641,8 @@ async function handleBanzhurenClassDashboard(db, request) {
 
   const studentsOut = finalRoster.map((r) => {
     const name = String(r.student_name || '').trim();
-    const courses = Array.from(studentCourses[name] || []);
+    const linkedCourses = Array.from(studentCourses[name] || []);
+    const courses = linkedCourses.length ? linkedCourses : Array.from(allCourses);
     const courseStats = [];
     let totalPresent = 0, totalAbsent = 0, totalSick = 0, totalPersonal = 0, totalLate = 0;
 
@@ -3577,9 +3656,7 @@ async function handleBanzhurenClassDashboard(db, request) {
         const payload = cd.payload || {};
         const classroomStudents = normalizeClassroomStudents(payload.students || []);
         let student = classroomStudents.find((s) => String(s.student_name || '').trim() === name);
-        if (!student) {
-          student = { student_name: name, stableId: name, id: name };
-        }
+        if (!student) student = makeCheckinStudentStub(name, grade, className);
 
         const history = Array.isArray(payload.history) ? payload.history : [];
         const hist = history.find((h) => String(h && h.date) === sess.date);
@@ -3612,9 +3689,7 @@ async function handleBanzhurenClassDashboard(db, request) {
       const payload = cd.payload || {};
       const classroomStudents = normalizeClassroomStudents(payload.students || []);
       let student = classroomStudents.find((s) => String(s.student_name || '').trim() === name);
-      if (!student) {
-        student = { student_name: name, stableId: name, id: name };
-      }
+      if (!student) student = makeCheckinStudentStub(name, grade, className);
       const history = payload.history || [];
       const present = countCheckinStatusInHistory(history, student, 'present');
       const absent = countCheckinStatusInHistory(history, student, 'absent');
@@ -3747,6 +3822,7 @@ async function handleTeacherClassroomPut(db, request) {
   // 学生名单以选课表为准，防止教师端本地缓存把已删除学生写回后台
   const normalizedStudents = await getAuthoritativeClassroomStudentsFromSelections(db, courseName);
   const remapOpts = { dropOrphans: true };
+  const historyRemapOpts = { dropOrphans: false };
 
   const normalizedBody = Object.assign({}, body, {
     students: normalizedStudents,
@@ -3754,7 +3830,7 @@ async function handleTeacherClassroomPut(db, request) {
     rewards: remapClassroomKeyedMap(body.rewards, normalizedStudents, remapOpts),
     exams: remapClassroomKeyedMap(body.exams, normalizedStudents, remapOpts),
     history: (Array.isArray(body.history) ? body.history : []).map((h) =>
-      Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents, remapOpts) })
+      Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents, historyRemapOpts) })
     )
   });
   const summary = summarizeClassroomPayload(normalizedBody);
