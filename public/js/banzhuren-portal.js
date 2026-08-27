@@ -36,15 +36,19 @@
   function attrEsc(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
+
+  function leaveTypeLabel(t) {
     if (t === 'sick') return '病假';
     if (t === 'personal') return '事假';
     return t || '';
   }
 
   function switchTab(tab) {
+    if (!tab) return;
     bzState.tab = tab;
     document.querySelectorAll('.bz-tab-btn').forEach(function (btn) {
-      btn.classList.toggle('active', btn.dataset.bzTab === tab);
+      var id = btn.getAttribute('data-bz-tab');
+      btn.classList.toggle('active', id === tab);
     });
     document.querySelectorAll('.bz-panel').forEach(function (p) {
       p.classList.toggle('active', p.id === 'bz-panel-' + tab);
@@ -344,9 +348,22 @@
   }
 
   function init() {
+    var tabbar = document.querySelector('.bz-tabbar');
+    if (tabbar) {
+      tabbar.addEventListener('click', function (e) {
+        var btn = e.target.closest('.bz-tab-btn');
+        if (!btn) return;
+        e.preventDefault();
+        var tab = btn.getAttribute('data-bz-tab');
+        if (tab) switchTab(tab);
+      });
+    }
+
     document.querySelectorAll('.bz-tab-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        switchTab(btn.dataset.bzTab);
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var tab = btn.getAttribute('data-bz-tab');
+        if (tab) switchTab(tab);
       });
     });
 
