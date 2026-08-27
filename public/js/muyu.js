@@ -11,6 +11,8 @@
   var tapAnimTimer = null;
   var dayWatchTimer = null;
   var initialized = false;
+  var boundStage = null;
+  var lastTapAt = 0;
 
   function todayKey() {
     var d = new Date();
@@ -73,9 +75,12 @@
 
   function playMuyuSound() {
     try {
-      var audio = tapAudio ? tapAudio.cloneNode() : new Audio(AUDIO_SRC);
-      audio.volume = 1;
-      var p = audio.play();
+      if (!tapAudio) {
+        tapAudio = new Audio(AUDIO_SRC);
+        tapAudio.preload = "auto";
+      }
+      tapAudio.currentTime = 0;
+      var p = tapAudio.play();
       if (p && typeof p.catch === "function") {
         p.catch(function () {});
       }
@@ -126,6 +131,9 @@
   }
 
   function tap() {
+    var now = Date.now();
+    if (now - lastTapAt < 280) return;
+    lastTapAt = now;
     ensureTodayMerit();
     playTapAnim();
     playMuyuSound();
@@ -156,28 +164,25 @@
 
   function bind() {
     var stage = document.getElementById("fishStage");
-    if (stage) {
-      stage.addEventListener("pointerdown", function (e) {
-        if (e.pointerType === "mouse" && e.button !== 0) return;
-        e.preventDefault();
-        e.stopPropagation();
-        tap();
-      });
-    }
+    if (!stage || stage === boundStage) return;
+    boundStage = stage;
+    stage.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      tap();
+    });
     document.addEventListener("keydown", onKeyDown);
   }
 
   function init() {
-    if (initialized) {
-      bind();
-      return;
+    if (!initialized) {
+      initialized = true;
+      loadMerit();
+      updateMeritDisplay();
+      preloadTapAudio();
+      startDayWatch();
     }
-    initialized = true;
-    loadMerit();
-    updateMeritDisplay();
-    preloadTapAudio();
     bind();
-    startDayWatch();
   }
 
   global.MuyuFish = {

@@ -276,15 +276,50 @@ async function bumpSelectionDataRevision(db) {
   return rev;
 }
 
-async function handleSelectionDataSyncGet(db) {
+async function handleSelectionDataSyncGet(db, request) {
   const revision = await getSelectionDataRevision(db);
   const selRow = await db.prepare('SELECT COUNT(*) as c FROM selections').first();
   const unselRow = await db.prepare('SELECT COUNT(*) as c FROM unselected_students').first();
-  return json({
+  const out = {
     revision: revision,
     selections_count: (selRow && selRow.c) || 0,
-    unselected_count: (unselRow && unselRow.c) || 0
-  });
+    unselected_count: (unselRow && unselRow.c) || 0,
+    classroom_sync: ''
+  };
+  const user = getAuthUser(request);
+  if (user && user.roles && user.roles.includes('banzhuren')) {
+    const ctx = await getBanzhurenClassContext(db, user.userId);
+    if (ctx && ctx.grade) {
+      out.classroom_sync = await getBanzhurenClassroomSyncToken(db, ctx.grade, ctx.class_name);
+    }
+  }
+  return json(out);
+}
+
+async function getBanzhurenClassroomSyncToken(db, grade, className) {
+  const classroomRes = await db.prepare('SELECT course_name, synced_at, session_count, payload FROM teacher_classroom').all();
+  const parts = [];
+  for (const row of (classroomRes.results || [])) {
+    const courseName = String(row.course_name || '').trim();
+    if (!courseName) continue;
+    const sel = await db.prepare(
+      'SELECT student_name, grade, class_name FROM selections WHERE course_name = ? AND (grade = ? OR class_name LIKE ?)'
+    ).bind(courseName, grade, '%' + grade + '%').all();
+    let related = false;
+    for (const s of (sel.results || [])) {
+      if (selectionMatchesClassScope(s, grade, className)) { related = true; break; }
+    }
+    if (!related) {
+      let payload = {};
+      try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) {}
+      const names = collectClassStudentsFromPayload(payload, grade, className, new Map());
+      related = names.size > 0;
+    }
+    if (!related) continue;
+    parts.push(String(row.synced_at || '') + ':' + String(row.session_count || 0));
+  }
+  parts.sort();
+  return parts.join('|');
 }
 
 function selectionStatusPayload(enabled) {
@@ -3363,26 +3398,79 @@ function makeCheckinStudentStub(name, grade, className) {
   };
 }
 
-function rosterNamesWithAttendanceInPayload(payload, rosterMap, grade, className) {
-  const found = new Set();
-  const names = Array.from(rosterMap.keys());
+function parseCheckinKeyStudent(key) {
+  const s = String(key || '').trim();
+  const idx = s.search(/[|｜]/);
+  if (idx <= 0) return { student_name: s, grade: '', class_name: '' };
+  const name = s.slice(0, idx).trim();
+  const clsRaw = s.slice(idx + 1).trim();
+  const parsed = parseGradeClassFields('', clsRaw);
+  return {
+    student_name: name,
+    grade: parsed.grade,
+    class_name: parsed.class_name || clsRaw
+  };
+}
+
+function checkinKeyBelongsToBanzhurenClass(key, grade, className, rosterMap) {
+  const row = parseCheckinKeyStudent(key);
+  if (!row.student_name) return false;
+  return studentBelongsToBanzhurenClass(row, grade, className, rosterMap);
+}
+
+function collectClassStudentsFromCheckinMap(checkinMap, grade, className, rosterMap, outNames) {
+  if (!checkinMap || typeof checkinMap !== 'object') return;
+  Object.keys(checkinMap).forEach((key) => {
+    const v = checkinMap[key];
+    if (v == null || v === '' || v === 'none') return;
+    if (!checkinKeyBelongsToBanzhurenClass(key, grade, className, rosterMap)) return;
+    const row = parseCheckinKeyStudent(key);
+    if (row.student_name) outNames.add(row.student_name);
+  });
+}
+
+function collectClassStudentsFromPayload(payload, grade, className, rosterMap) {
+  const names = new Set();
   const history = Array.isArray(payload && payload.history) ? payload.history : [];
-  for (const h of history) {
-    if (!h || !h.checkin) continue;
-    names.forEach((name) => {
-      const stub = makeCheckinStudentStub(name, grade, className);
-      if (lookupStudentCheckinStatus(h.checkin, stub, name) !== 'none') found.add(name);
-    });
+  history.forEach((h) => collectClassStudentsFromCheckinMap(h && h.checkin, grade, className, rosterMap, names));
+  collectClassStudentsFromCheckinMap(payload && payload.checkin, grade, className, rosterMap, names);
+  return names;
+}
+
+function mergeClassroomHistory(clientHist, serverHist) {
+  const map = new Map();
+  (serverHist || []).forEach((h) => {
+    const date = String((h && h.date) || '').trim();
+    if (date) map.set(date, h);
+  });
+  (clientHist || []).forEach((h) => {
+    const date = String((h && h.date) || '').trim();
+    if (date) map.set(date, h);
+  });
+  return Array.from(map.values()).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+}
+
+function mergeTeacherClassroomPayloadRow(row) {
+  let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
+  if (row && row.payload) {
+    try { payload = JSON.parse(row.payload); } catch (_) {}
   }
+  if (row && row.checkin_day && !payload.checkinDay) payload.checkinDay = String(row.checkin_day);
+  if (row && row.checkin_done != null && payload.checkinDone == null) payload.checkinDone = !!row.checkin_done;
+  return payload;
+}
+
+function payloadHasCheckinActivity(payload) {
+  const history = Array.isArray(payload && payload.history) ? payload.history : [];
+  if (history.length) return true;
   const checkinDay = String((payload && payload.checkinDay) || '').trim();
   const checkin = (payload && payload.checkin) || {};
-  if (checkinDay && checkin && typeof checkin === 'object') {
-    names.forEach((name) => {
-      const stub = makeCheckinStudentStub(name, grade, className);
-      if (lookupStudentCheckinStatus(checkin, stub, name) !== 'none') found.add(name);
-    });
-  }
-  return found;
+  if (!checkinDay || !checkin || typeof checkin !== 'object') return false;
+  if (payload.checkinDone) return true;
+  return Object.keys(checkin).some((k) => {
+    const v = checkin[k];
+    return v != null && v !== '' && v !== 'none';
+  });
 }
 
 function studentBelongsToBanzhurenClass(studentRow, grade, className, rosterMap) {
@@ -3451,7 +3539,6 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     if (!course) continue;
     if (selectionMatchesClassScope(row, grade, className) || rosterMap.has(name)) {
       coursesFromClassSelections.add(course);
-      linkStudentCourse(name, course, row.gender);
     }
   }
 
@@ -3459,14 +3546,10 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
   for (const row of (classroomRes.results || [])) {
     const courseName = String(row.course_name || '').trim();
     if (!courseName) continue;
-    let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
-    if (row.payload) {
-      try { payload = JSON.parse(row.payload); } catch (_) {}
-    }
-    if (row.checkin_day && !payload.checkinDay) payload.checkinDay = String(row.checkin_day);
-    if (row.checkin_done != null && payload.checkinDone == null) payload.checkinDone = !!row.checkin_done;
+    const payload = mergeTeacherClassroomPayloadRow(row);
 
     const students = normalizeClassroomStudents(payload.students || []);
+    let linkedFromRoster = false;
     for (const s of students) {
       const name = String(s.student_name || '').trim();
       if (!name) continue;
@@ -3474,26 +3557,17 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
       if (!belongs && selByNameCourse.has(name + '\0' + courseName)) belongs = true;
       if (!belongs) continue;
       linkStudentCourse(name, courseName, s.gender);
+      linkedFromRoster = true;
     }
 
-    const attendanceNames = rosterNamesWithAttendanceInPayload(payload, rosterMap, grade, className);
-    attendanceNames.forEach((name) => linkStudentCourse(name, courseName, ''));
+    const fromCheckin = collectClassStudentsFromPayload(payload, grade, className, rosterMap);
+    fromCheckin.forEach((name) => linkStudentCourse(name, courseName, ''));
 
     const shouldInclude = coursesFromClassSelections.has(courseName)
-      || attendanceNames.size > 0;
+      || fromCheckin.size > 0
+      || linkedFromRoster
+      || payloadHasCheckinActivity(payload);
     if (shouldInclude) await ensureCourseData(courseName, row, payload);
-  }
-
-  for (const courseName of coursesFromClassSelections) {
-    if (courseData[courseName]) continue;
-    const tcRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
-    let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
-    if (tcRow && tcRow.payload) {
-      try { payload = JSON.parse(tcRow.payload); } catch (_) {}
-    }
-    if (tcRow && tcRow.checkin_day && !payload.checkinDay) payload.checkinDay = String(tcRow.checkin_day);
-    await ensureCourseData(courseName, tcRow, payload);
-    allCourses.add(courseName);
   }
 
   for (const row of (selRes.results || [])) {
@@ -3524,7 +3598,7 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     String(a.student_name).localeCompare(String(b.student_name), 'zh')
   );
 
-  return { finalRoster, studentCourses, allCourses, courseData, coursesFromClassSelections };
+  return { finalRoster, studentCourses, allCourses, courseData };
 }
 
 async function handleBanzhurenClassDashboard(db, request) {
@@ -3570,8 +3644,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     finalRoster,
     studentCourses,
     allCourses,
-    courseData,
-    coursesFromClassSelections
+    courseData
   } = await buildBanzhurenDashboardContext(db, grade, className, baseOrSchool);
 
   const ATTENDANCE_COLS = 18;
@@ -3604,65 +3677,41 @@ async function handleBanzhurenClassDashboard(db, request) {
     const cd = courseData[courseName];
     if (!cd) continue;
     const payload = cd.payload || {};
+    const teacherName = cd.teacher_name || '';
     const history = Array.isArray(payload.history) ? payload.history : [];
     history.forEach((h) => {
       const date = String((h && h.date) || '').trim();
       if (!date) return;
       const label = String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date);
       const prev = sessionMap.get(date);
-      const teacherName = String(cd.teacher_name || '').trim();
-      const courseLabel = String(courseName || '').trim();
-      if (!prev || (h.updatedAt && (!prev.updatedAt || h.updatedAt > prev.updatedAt))) {
-        sessionMap.set(date, {
-          date: date,
-          dateLabel: label,
-          updatedAt: h.updatedAt || 0,
-          teacher_name: teacherName,
-          course_name: courseLabel
-        });
-      } else if (prev && !prev.teacher_name && teacherName) {
-        prev.teacher_name = teacherName;
-        prev.course_name = courseLabel;
+      const entry = {
+        date: date,
+        dateLabel: label,
+        updatedAt: h.updatedAt || 0,
+        teacher_name: teacherName,
+        course_name: courseName
+      };
+      if (!prev || (entry.updatedAt && (!prev.updatedAt || entry.updatedAt > prev.updatedAt))) {
+        sessionMap.set(date, entry);
       }
     });
-    // 当天已开始签到（含进行中）但尚未写入 history 时，也占一列
     const checkinDay = String(payload.checkinDay || '').trim();
-    if (checkinDay && !sessionMap.has(checkinDay)) {
+    if (checkinDay) {
       const checkin = payload.checkin || {};
       const hasCheckin = !!payload.checkinDone || Object.keys(checkin).some((k) => {
         const v = checkin[k];
         return v != null && v !== '' && v !== 'none';
       });
-      if (hasCheckin) {
+      if (hasCheckin && !sessionMap.has(checkinDay)) {
         sessionMap.set(checkinDay, {
           date: checkinDay,
           dateLabel: formatAttendanceDateLabel(checkinDay),
           updatedAt: Date.now(),
-          teacher_name: String(cd.teacher_name || '').trim(),
-          course_name: String(courseName || '').trim()
+          teacher_name: teacherName,
+          course_name: courseName
         });
       }
     }
-  }
-
-  // 本班选课课程若 teacher_classroom 有签到数据但上面未纳入，再补扫一遍
-  for (const courseName of coursesFromClassSelections) {
-    if (sessionMap.size >= ATTENDANCE_COLS) break;
-    const cd = courseData[courseName];
-    if (!cd) continue;
-    const payload = cd.payload || {};
-    const history = Array.isArray(payload.history) ? payload.history : [];
-    history.forEach((h) => {
-      const date = String((h && h.date) || '').trim();
-      if (!date || sessionMap.has(date)) return;
-      sessionMap.set(date, {
-        date: date,
-        dateLabel: String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date),
-        updatedAt: h.updatedAt || 0,
-        teacher_name: String(cd.teacher_name || '').trim(),
-        course_name: String(courseName || '').trim()
-      });
-    });
   }
 
   const sessions = Array.from(sessionMap.values())
@@ -3768,6 +3817,7 @@ async function handleBanzhurenClassDashboard(db, request) {
   });
 
   const revision = await getSelectionDataRevision(db);
+  const classroom_sync = await getBanzhurenClassroomSyncToken(db, grade, className);
 
   return json({
     grade: grade,
@@ -3784,6 +3834,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     sessions: sessions,
     students: studentsOut,
     revision: revision,
+    classroom_sync: classroom_sync,
     courses: Array.from(allCourses).map((c) => ({
       course_name: c,
       teacher_name: (courseData[c] && courseData[c].teacher_name) || ''
@@ -3847,6 +3898,10 @@ async function handleTeacherClassroomPut(db, request) {
 
   const courseName = String(body.course_name || body.courseName || '').trim();
   if (!courseName) return json({ error: '缺少课程名称' }, 400);
+
+  const existingRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
+  const existingPayload = mergeTeacherClassroomPayloadRow(existingRow || {});
+  body.history = mergeClassroomHistory(body.history, existingPayload.history);
 
   const courseId = String(body.course_id || body.courseId || '');
   const teacherName = String(
@@ -4691,7 +4746,7 @@ export async function onRequest(context) {
 
   // /api/selection-data-sync — 选课数据版本号（供选课页/教师端检测后台变更）
   if (path === '/api/selection-data-sync' && method === 'GET') {
-    return handleSelectionDataSyncGet(db);
+    return handleSelectionDataSyncGet(db, request);
   }
 
   // /api/student-leaves — 班主任请假报备
