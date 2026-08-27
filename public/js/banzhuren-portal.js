@@ -429,14 +429,10 @@
         return String(a.student_name).localeCompare(String(b.student_name), 'zh');
       });
     }
-    var sessions = (data && data.sessions) || [];
-    if (sessions.length < 18) {
-      sessions = sessions.slice();
-      while (sessions.length < 18) sessions.push({ date: '', dateLabel: '', placeholder: true });
-    } else if (sessions.length > 18) {
-      sessions = sessions.slice(0, 18);
-    }
-    if (!sessions.length) sessions = emptySessions(18);
+    var sessions = ((data && data.sessions) || []).filter(function (s) {
+      return s && s.date;
+    });
+    if (sessions.length > 18) sessions = sessions.slice(-18);
 
     return Object.assign({}, data || {}, {
       students: students,
@@ -486,15 +482,15 @@
     if (silent && sig && sig === bzState.dashboardSig) return;
     bzState.dashboardSig = sig;
 
-    var sessions = (data && data.sessions) || emptySessions(18);
+    var sessions = (data && data.sessions) || [];
     var students = (data && data.students) || [];
-    var filledSessions = sessions.filter(function (s) { return s && s.date; }).length;
+    var filledSessions = sessions.length;
 
     var summary = document.getElementById('bzDashboardSummary');
     if (summary) {
       summary.innerHTML =
         '<div class="bz-dash-stat"><span class="n">' + (students.length || 0) + '</span><span class="l">班级人数</span></div>' +
-        '<div class="bz-dash-stat"><span class="n">' + filledSessions + '/18</span><span class="l">已签到次数</span></div>' +
+        '<div class="bz-dash-stat"><span class="n">' + filledSessions + '</span><span class="l">签到日期列</span></div>' +
         '<div class="bz-dash-stat"><span class="n">' + escHtml((data && (data.class_display || data.class_name)) || '—') + '</span><span class="l">负责班级</span></div>';
     }
 
@@ -508,25 +504,23 @@
 
     var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead><tr>' +
       '<th class="bz-att-name">姓名</th>';
-    for (var i = 0; i < 18; i++) {
-      var s = sessions[i];
-      if (s && s.date) {
+    if (!sessions.length) {
+      html += '<th class="bz-att-date bz-att-empty-h">暂无签到记录</th>';
+    } else {
+      sessions.forEach(function (s) {
         html += '<th class="bz-att-date" title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
-      } else {
-        html += '<th class="bz-att-ph bz-att-date">' + (i + 1) + '</th>';
-      }
+      });
     }
     html += '</tr></thead><tbody>';
 
     students.forEach(function (stu) {
       var cells = stu.cells || [];
       html += '<tr><td class="bz-att-name">' + escHtml(stu.student_name) + '</td>';
-      for (var c = 0; c < 18; c++) {
-        var cell = cells[c] || { status: '' };
-        var sess = sessions[c];
-        if (!sess || !sess.date) {
-          html += '<td></td>';
-        } else {
+      if (!sessions.length) {
+        html += '<td class="bz-att-empty">—</td>';
+      } else {
+        for (var c = 0; c < sessions.length; c++) {
+          var cell = cells[c] || { status: '' };
           html += '<td>' + renderAttendanceCell(cell) + '</td>';
         }
       }
@@ -556,7 +550,7 @@
       console.warn('loadDashboard:', e.message);
       bzState.dashboard = normalizeDashboardData({
         students: [],
-        sessions: emptySessions(18),
+        sessions: [],
         class_display: (parseClassFromUser(getUser() || {}).display || '')
       }, fallback);
       renderDashboard(bzState.dashboard, { silent: silent });
