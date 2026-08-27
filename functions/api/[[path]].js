@@ -3341,6 +3341,122 @@ function lookupStudentCheckinStatus(checkinMap, student, studentName) {
   return 'none';
 }
 
+function studentBelongsToBanzhurenClass(studentRow, grade, className, rosterMap) {
+  const name = String((studentRow && studentRow.student_name) || '').trim();
+  if (!name) return false;
+  if (schoolStudentMatchesClassScope(studentRow, grade, className)) return true;
+  if (rosterMap && rosterMap.has(name)) {
+    const want = parseGradeClassFields(grade, className);
+    const got = parseGradeClassFields(studentRow.grade, studentRow.class_name);
+    if (want.grade && got.grade && want.grade !== got.grade) return false;
+    if (want.classNum && got.classNum && got.classNum !== want.classNum) return false;
+    return true;
+  }
+  return false;
+}
+
+async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) {
+  const rosterMap = new Map();
+  (baseRoster || []).forEach((r) => {
+    const name = String(r.student_name || '').trim();
+    if (name) rosterMap.set(name, { student_name: name, gender: r.gender || '' });
+  });
+
+  const studentCourses = {};
+  const allCourses = new Set();
+  const courseData = {};
+
+  function linkStudentCourse(name, courseName, gender) {
+    if (!name || !courseName) return;
+    if (!studentCourses[name]) studentCourses[name] = new Set();
+    studentCourses[name].add(courseName);
+    allCourses.add(courseName);
+    if (!rosterMap.has(name)) {
+      rosterMap.set(name, { student_name: name, gender: gender || '' });
+    } else if (gender && !rosterMap.get(name).gender) {
+      rosterMap.get(name).gender = gender;
+    }
+  }
+
+  async function ensureCourseData(courseName, row, payload) {
+    if (courseData[courseName]) return;
+    const course = await db.prepare('SELECT teacher FROM courses WHERE name = ?').bind(courseName).first();
+    courseData[courseName] = {
+      course_name: courseName,
+      teacher_name: (row && row.teacher_name) || (course && course.teacher) || '',
+      payload: payload || { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false }
+    };
+  }
+
+  // 选课表补全课程关联（班级字段缺失时，花名册同名学生仍可匹配）
+  const selRes = await db.prepare(
+    'SELECT student_name, course_name, grade, class_name, gender FROM selections WHERE grade = ? OR class_name LIKE ?'
+  ).bind(grade, '%' + grade + '%').all();
+  const selByNameCourse = new Map();
+  for (const row of (selRes.results || [])) {
+    const name = String(row.student_name || '').trim();
+    const course = String(row.course_name || '').trim();
+    if (name && course) selByNameCourse.set(name + '\0' + course, row);
+  }
+
+  // 教师端 classroom 是签到数据源：按实际授课名单关联本班学生
+  const classroomRes = await db.prepare('SELECT * FROM teacher_classroom').all();
+  for (const row of (classroomRes.results || [])) {
+    const courseName = String(row.course_name || '').trim();
+    if (!courseName) continue;
+    let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
+    if (row.payload) {
+      try { payload = JSON.parse(row.payload); } catch (_) {}
+    }
+    const students = normalizeClassroomStudents(payload.students || []);
+    let linked = false;
+    for (const s of students) {
+      const name = String(s.student_name || '').trim();
+      if (!name) continue;
+      let belongs = studentBelongsToBanzhurenClass(s, grade, className, rosterMap);
+      if (!belongs) {
+        const sel = selByNameCourse.get(name + '\0' + courseName);
+        // 已在该年级选课且出现在教师签到名单，视为本班拓展课学生
+        if (sel) belongs = true;
+      }
+      if (!belongs) continue;
+      linkStudentCourse(name, courseName, s.gender);
+      linked = true;
+    }
+    if (linked) await ensureCourseData(courseName, row, payload);
+  }
+
+  for (const row of (selRes.results || [])) {
+    const name = String(row.student_name || '').trim();
+    const course = String(row.course_name || '').trim();
+    if (!name || !course) continue;
+    const inScope = selectionMatchesClassScope(row, grade, className);
+    const inRoster = rosterMap.has(name);
+    if (!inScope && !inRoster) continue;
+    if (!inScope && inRoster) {
+      const want = parseGradeClassFields(grade, className);
+      const got = parseGradeClassFields(row.grade, row.class_name);
+      if (want.grade && got.grade && want.grade !== got.grade) continue;
+      if (want.classNum && got.classNum && got.classNum !== want.classNum) continue;
+    }
+    linkStudentCourse(name, course, row.gender);
+    if (!courseData[course]) {
+      const tcRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(course).first();
+      let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
+      if (tcRow && tcRow.payload) {
+        try { payload = JSON.parse(tcRow.payload); } catch (_) {}
+      }
+      await ensureCourseData(course, tcRow, payload);
+    }
+  }
+
+  const finalRoster = Array.from(rosterMap.values()).sort((a, b) =>
+    String(a.student_name).localeCompare(String(b.student_name), 'zh')
+  );
+
+  return { finalRoster, studentCourses, allCourses, courseData };
+}
+
 async function handleBanzhurenClassDashboard(db, request) {
   const auth = requireAuth(request, ['banzhuren', 'admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -3367,42 +3483,19 @@ async function handleBanzhurenClassDashboard(db, request) {
 
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
-  const roster = await getBanzhurenClassRoster(db, grade, className);
-  const finalRoster = roster.length
-    ? roster
+  const baseRoster = await getBanzhurenClassRoster(db, grade, className);
+  const baseOrSchool = baseRoster.length
+    ? baseRoster
     : await getClassSchoolStudentsRoster(db, grade, className);
+
+  const {
+    finalRoster,
+    studentCourses,
+    allCourses,
+    courseData
+  } = await buildBanzhurenDashboardContext(db, grade, className, baseOrSchool);
+
   const ATTENDANCE_COLS = 18;
-
-  const selRes = await db.prepare(
-    'SELECT student_name, course_name, grade, class_name FROM selections WHERE grade = ? OR class_name LIKE ?'
-  ).bind(grade, '%' + grade + '%').all();
-  const studentCourses = {};
-  (selRes.results || []).forEach((row) => {
-    if (!selectionMatchesClassScope(row, grade, className)) return;
-    const name = String(row.student_name || '').trim();
-    const course = String(row.course_name || '').trim();
-    if (!name || !course) return;
-    if (!studentCourses[name]) studentCourses[name] = new Set();
-    studentCourses[name].add(course);
-  });
-
-  const allCourses = new Set();
-  Object.values(studentCourses).forEach((set) => set.forEach((c) => allCourses.add(c)));
-
-  const courseData = {};
-  for (const courseName of allCourses) {
-    const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
-    const course = await db.prepare('SELECT teacher FROM courses WHERE name = ?').bind(courseName).first();
-    let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
-    if (row && row.payload) {
-      try { payload = JSON.parse(row.payload); } catch (_) {}
-    }
-    courseData[courseName] = {
-      course_name: courseName,
-      teacher_name: (row && row.teacher_name) || (course && course.teacher) || '',
-      payload: payload
-    };
-  }
 
   const today = getTodayDateKey();
   const ABNORMAL_STATUSES = new Set(['absent', 'late', 'sick', 'personal']);
@@ -3498,9 +3591,11 @@ async function handleBanzhurenClassDashboard(db, request) {
         } else {
           continue;
         }
-        status = st;
-        courseUsed = courseName;
-        break;
+        if (st && st !== 'none') {
+          status = st;
+          courseUsed = courseName;
+          break;
+        }
       }
       if (!status || status === 'none') {
         return { status: '', note: '', course_name: courseUsed };
