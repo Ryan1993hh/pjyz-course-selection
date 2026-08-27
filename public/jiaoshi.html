@@ -539,6 +539,7 @@ body {
 .student-item.is-present { border-color: rgba(52,199,89,0.35); background: #f0fdf4; }
 .student-item.is-absent { border-color: rgba(255,59,48,0.35); background: #fff5f5; }
 .student-item.is-sick { border-color: rgba(14,165,233,0.4); background: #f0f9ff; }
+.student-item.is-personal { border-color: rgba(245,158,11,0.4); background: #fffbeb; }
 .student-item.is-late { border-color: rgba(255,149,0,0.4); background: #fffbeb; }
 .student-name { font-size: 14px; font-weight: 600; }
 .student-class { font-size: 11px; color: var(--muted); }
@@ -2277,8 +2278,8 @@ const TOKEN_KEY = "admin_token";
 const USER_KEY = "pjyz_user";
 const STORE_PREFIX = "pjyz_teacher_attendance_";
 
-const STATUS_LABEL = { none: "未签到", present: "已签到", absent: "旷课", late: "迟到", sick: "病假" };
-const ABNORMAL = new Set(["absent", "late", "sick"]);
+const STATUS_LABEL = { none: "未签到", present: "已签到", absent: "旷课", late: "迟到", sick: "病假", personal: "事假" };
+const ABNORMAL = new Set(["absent", "late", "sick", "personal"]);
 
 let state = {
   students: [],
@@ -2616,6 +2617,7 @@ async function pullClassroomFromServer() {
     const localTime = localAt ? Date.parse(localAt.replace(" ", "T")) : 0;
     if (!hasLocal || serverTime > localTime) {
       mergeClassroomFromServer(data.payload, data.summary);
+      await applyServerLeaveReports();
       saveLocal({ skipSync: true });
       if (serverAt) saveClassroomMeta({ syncedAt: serverAt });
     } else if (hasLocal && (localTime > serverTime || !serverAt)) {
@@ -2800,6 +2802,36 @@ function closeClockOverlay() {
   clearInterval(clockTimer);
 }
 
+async function applyServerLeaveReports() {
+  const today = todayKey();
+  const courseName = (state.courseName || state.teacher.course || "").trim();
+  if (!courseName || !getToken()) return;
+  try {
+    const data = await api("GET", "/api/student-leaves?date=" + today + "&course_name=" + encodeURIComponent(courseName));
+    const leaves = data.leaves || [];
+    if (!leaves.length) return;
+    if (state.checkinDay !== today) {
+      state.checkinDay = today;
+      state.checkinDone = false;
+      state.students.forEach(s => { state.checkin[studentId(s)] = "none"; });
+    }
+    leaves.forEach(leave => {
+      const student = state.students.find(s =>
+        String(s.student_name || "").trim() === String(leave.student_name || "").trim()
+      );
+      if (!student) return;
+      const id = studentId(student);
+      const st = getStatus(id);
+      if (st === "none" || st === "sick" || st === "personal") {
+        state.checkin[id] = leave.leave_type;
+      }
+    });
+    saveLocal({ skipSync: true });
+  } catch (e) {
+    console.warn("applyServerLeaveReports:", e);
+  }
+}
+
 function getStatus(id) { return state.checkin[id] || "none"; }
 
 function setStatus(id, status, opts) {
@@ -2825,7 +2857,7 @@ function buildFsCardActions(id, st) {
     return '<button type="button" class="fs-act cancel-btn" data-fs-act="cancel" data-id="' + id + '">取消</button>' +
       '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">改未到</button>';
   }
-  if (st === "sick" || st === "absent" || st === "late") {
+  if (st === "sick" || st === "personal" || st === "absent" || st === "late") {
     return '<button type="button" class="fs-act present-change-btn" data-fs-act="present" data-id="' + id + '">改签到</button>' +
       '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">改未到</button>';
   }
@@ -2836,6 +2868,7 @@ function buildFsCardActions(id, st) {
 function buildFsCardBadge(st) {
   if (st === "present") return '<span class="fs-badge present">已签到</span>';
   if (st === "sick") return '<span class="fs-badge sick">病假</span>';
+  if (st === "personal") return '<span class="fs-badge sick">事假</span>';
   if (st === "absent") return '<span class="fs-badge absent">旷课</span>';
   if (st === "late") return '<span class="fs-badge absent">迟到</span>';
   return "";
@@ -3032,7 +3065,7 @@ function renderCheckin() {
     let actions = "";
     if (st === "present") {
       actions = '<button type="button" class="btn-sm danger" data-act="cancel" data-id="' + id + '">取消签到</button>';
-    } else if (st === "sick" || st === "absent" || st === "late") {
+    } else if (st === "sick" || st === "personal" || st === "absent" || st === "late") {
       actions = '<button type="button" class="btn-sm outline" data-act="present" data-id="' + id + '">改签到</button>';
       actions += '<button type="button" class="btn-sm ghost" data-act="absent-pick" data-id="' + id + '">改未到</button>';
     } else {
@@ -3110,10 +3143,12 @@ function openFsCheckin() {
     toast("暂无学生，请先同步选课数据", "error");
     return;
   }
-  document.getElementById("fsCheckin").classList.add("show");
-  document.body.classList.add("fs-checkin-open");
-  document.body.style.overflow = "hidden";
-  renderFsCheckin();
+  applyServerLeaveReports().then(function () {
+    document.getElementById("fsCheckin").classList.add("show");
+    document.body.classList.add("fs-checkin-open");
+    document.body.style.overflow = "hidden";
+    renderFsCheckin();
+  });
 }
 
 function closeFsCheckin() {
@@ -3345,6 +3380,7 @@ function renderAttendanceCell(status) {
   if (status === "absent") return '<span class="cell-bad">旷课</span>';
   if (status === "late") return '<span class="cell-warn">迟到</span>';
   if (status === "sick") return '<span class="cell-warn">病假</span>';
+  if (status === "personal") return '<span class="cell-warn">事假</span>';
   return "";
 }
 

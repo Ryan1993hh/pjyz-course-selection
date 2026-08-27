@@ -138,7 +138,21 @@ const INIT_STATEMENTS = [
     cell_value TEXT NOT NULL DEFAULT '1',
     updated_at TEXT DEFAULT (datetime('now')),
     PRIMARY KEY (course_name, session_date)
-  )`
+  )`,
+  `CREATE TABLE IF NOT EXISTS student_leave_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grade TEXT NOT NULL DEFAULT '',
+    class_name TEXT NOT NULL DEFAULT '',
+    student_name TEXT NOT NULL,
+    leave_type TEXT NOT NULL DEFAULT 'sick',
+    leave_date TEXT NOT NULL,
+    reported_by INTEGER,
+    note TEXT DEFAULT '',
+    reported_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_leave_date ON student_leave_reports(leave_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_leave_class ON student_leave_reports(grade, class_name)`,
+  `CREATE INDEX IF NOT EXISTS idx_leave_student ON student_leave_reports(student_name)`
 ];
 
 const SELECTION_STATUS_KEY = 'selection_enabled';
@@ -1814,7 +1828,7 @@ async function handleClearUnselectedStudents(db, request) {
     await bumpSelectionDataRevision(db);
     return json({ success: true, deleted: deleted });
   }
-
+  
   if (userIdStr) {
     const userId = parseInt(userIdStr);
     await db.prepare('DELETE FROM unselected_students WHERE user_id = ?').bind(userId).run();
@@ -2805,6 +2819,492 @@ async function syncAllTeacherClassroomsFromSelections(db) {
   );
 }
 
+// ---- 班主任请假报备（同步至各课程教师端签到） ----
+function selectionMatchesClassScope(row, grade, className) {
+  return schoolStudentMatchesClassScope({
+    grade: row.grade,
+    class_name: row.class_name
+  }, grade, className);
+}
+
+async function upsertTeacherClassroomPayload(db, courseName, payload, meta) {
+  meta = meta || {};
+  const normalizedStudents = normalizeClassroomStudents(payload.students || []);
+  const normalizedBody = Object.assign({}, payload, {
+    students: normalizedStudents,
+    checkin: remapClassroomKeyedMap(payload.checkin || {}, normalizedStudents),
+    rewards: remapClassroomKeyedMap(payload.rewards || {}, normalizedStudents),
+    exams: remapClassroomKeyedMap(payload.exams || {}, normalizedStudents),
+    history: (Array.isArray(payload.history) ? payload.history : []).map((h) =>
+      Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents) })
+    )
+  });
+  const summary = summarizeClassroomPayload(normalizedBody);
+  const courseId = meta.course_id || '';
+  const teacherName = meta.teacher_name || (payload.teacher && payload.teacher.name) || '';
+  const teacherUserId = meta.teacher_user_id || null;
+
+  await db.prepare(
+    `INSERT INTO teacher_classroom (
+      course_id, course_name, teacher_name, teacher_user_id,
+      total_classes, checkin_day, checkin_done,
+      student_count, present_count, absent_count, abnormal_count, pending_count,
+      flower_total, exam_done_count, session_count, payload, synced_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(course_name) DO UPDATE SET
+      course_id = excluded.course_id,
+      teacher_name = excluded.teacher_name,
+      teacher_user_id = excluded.teacher_user_id,
+      total_classes = excluded.total_classes,
+      checkin_day = excluded.checkin_day,
+      checkin_done = excluded.checkin_done,
+      student_count = excluded.student_count,
+      present_count = excluded.present_count,
+      absent_count = excluded.absent_count,
+      abnormal_count = excluded.abnormal_count,
+      pending_count = excluded.pending_count,
+      flower_total = excluded.flower_total,
+      exam_done_count = excluded.exam_done_count,
+      session_count = excluded.session_count,
+      payload = excluded.payload,
+      synced_at = datetime('now')`
+  ).bind(
+    courseId,
+    courseName,
+    teacherName,
+    teacherUserId,
+    summary.total_classes,
+    summary.checkin_day,
+    summary.checkin_done,
+    summary.student_count,
+    summary.present_count,
+    summary.absent_count,
+    summary.abnormal_count,
+    summary.pending_count,
+    summary.flower_total,
+    summary.exam_done_count,
+    summary.session_count,
+    JSON.stringify(normalizedBody)
+  ).run();
+}
+
+function applyLeavesToPayloadCheckin(payload, leaves, leaveDate) {
+  if (!payload || !leaves || !leaves.length) return payload;
+  const students = normalizeClassroomStudents(payload.students || []);
+  if (!students.length) return payload;
+  const checkin = Object.assign({}, payload.checkin || {});
+  const day = String(leaveDate || payload.checkinDay || getTodayDateKey());
+  if (String(payload.checkinDay || '') !== day) {
+    payload.checkinDay = day;
+    payload.checkinDone = false;
+    students.forEach((s) => {
+      if (!checkin[s.stableId]) checkin[s.stableId] = 'none';
+    });
+  }
+  leaves.forEach((leave) => {
+    const name = String(leave.student_name || '').trim();
+    const leaveType = String(leave.leave_type || 'sick').trim();
+    const student = students.find((s) => String(s.student_name || '').trim() === name);
+    if (!student) return;
+    const cur = checkin[student.stableId];
+    if (!cur || cur === 'none' || cur === 'sick' || cur === 'personal') {
+      checkin[student.stableId] = leaveType;
+    }
+  });
+  payload.students = students;
+  payload.checkin = remapClassroomKeyedMap(checkin, students);
+  return payload;
+}
+
+async function syncLeaveReportToClassrooms(db, report) {
+  const studentName = String(report.student_name || '').trim();
+  const grade = String(report.grade || '').trim();
+  const className = String(report.class_name || '').trim();
+  const leaveDate = String(report.leave_date || getTodayDateKey());
+  const leaveType = String(report.leave_type || 'sick').trim();
+
+  const selRes = await db.prepare(
+    'SELECT course_name, grade, class_name, course_id FROM selections WHERE student_name = ?'
+  ).bind(studentName).all();
+
+  const courseNames = new Set();
+  for (const row of (selRes.results || [])) {
+    if (!selectionMatchesClassScope(row, grade, className)) continue;
+    if (row.course_name) courseNames.add(String(row.course_name).trim());
+  }
+
+  for (const courseName of courseNames) {
+    const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
+    let payload = {
+      students: [],
+      checkin: {},
+      checkinDay: '',
+      checkinDone: false,
+      rewards: {},
+      exams: {},
+      history: [],
+      activities: [],
+      teacher: { name: '', course: courseName, location: '', totalClasses: 0 }
+    };
+    if (row && row.payload) {
+      try { payload = JSON.parse(row.payload); } catch (_) {}
+    }
+    if (!Array.isArray(payload.students) || !payload.students.length) {
+      const fillRes = await db.prepare(
+        'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ?'
+      ).bind(courseName).all();
+      const seen = new Set();
+      payload.students = [];
+      (fillRes.results || []).forEach((s, i) => {
+        const key = String(s.student_name || '') + '|' + String(s.class_name || '');
+        if (seen.has(key)) return;
+        seen.add(key);
+        const stableId = key.replace(/[()（）\s]/g, '');
+        payload.students.push({
+          id: s.id || (i + 1),
+          stableId: stableId,
+          student_name: s.student_name,
+          class_name: s.class_name,
+          grade: s.grade,
+          gender: s.gender || '',
+          course_name: s.course_name,
+          course_id: s.course_id
+        });
+      });
+    }
+    applyLeavesToPayloadCheckin(payload, [{ student_name: studentName, leave_type: leaveType }], leaveDate);
+    const course = await db.prepare('SELECT id, teacher FROM courses WHERE name = ?').bind(courseName).first();
+    await upsertTeacherClassroomPayload(db, courseName, payload, {
+      course_id: (course && course.id) || '',
+      teacher_name: (course && course.teacher) || (row && row.teacher_name) || '',
+      teacher_user_id: row && row.teacher_user_id
+    });
+  }
+  await bumpSelectionDataRevision(db);
+}
+
+async function removeLeaveFromClassrooms(db, report) {
+  const studentName = String(report.student_name || '').trim();
+  const grade = String(report.grade || '').trim();
+  const className = String(report.class_name || '').trim();
+  const leaveDate = String(report.leave_date || getTodayDateKey());
+  const leaveType = String(report.leave_type || '').trim();
+
+  const selRes = await db.prepare(
+    'SELECT course_name FROM selections WHERE student_name = ?'
+  ).bind(studentName).all();
+
+  for (const row of (selRes.results || [])) {
+    if (!selectionMatchesClassScope(row, grade, className)) continue;
+    const courseName = String(row.course_name || '').trim();
+    if (!courseName) continue;
+    const tcRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
+    if (!tcRow || !tcRow.payload) continue;
+    let payload;
+    try { payload = JSON.parse(tcRow.payload); } catch (_) { continue; }
+    if (String(payload.checkinDay || '') !== leaveDate) continue;
+    const students = normalizeClassroomStudents(payload.students || []);
+    const student = students.find((s) => String(s.student_name || '').trim() === studentName);
+    if (!student) continue;
+    const checkin = Object.assign({}, payload.checkin || {});
+    const cur = checkin[student.stableId];
+    if (cur === leaveType || cur === 'sick' || cur === 'personal') {
+      checkin[student.stableId] = 'none';
+    }
+    payload.checkin = remapClassroomKeyedMap(checkin, students);
+    await upsertTeacherClassroomPayload(db, courseName, payload, {
+      course_id: tcRow.course_id,
+      teacher_name: tcRow.teacher_name,
+      teacher_user_id: tcRow.teacher_user_id
+    });
+  }
+  await bumpSelectionDataRevision(db);
+}
+
+async function getBanzhurenClassContext(db, userId) {
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+  if (!user) return null;
+  const classRaw = String(user.class_name || '').trim();
+  const parsed = parseGradeClassFields('', classRaw);
+  return {
+    user: user,
+    grade: parsed.grade,
+    class_name: parsed.class_name || classRaw,
+    class_display: classRaw
+  };
+}
+
+async function handleStudentLeavesGet(db, request) {
+  const auth = requireAuth(request, ['banzhuren', 'admin', 'teacher']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  const url = new URL(request.url);
+  const date = url.searchParams.get('date') || getTodayDateKey();
+  const courseName = String(url.searchParams.get('course_name') || url.searchParams.get('course') || '').trim();
+
+  let grade = String(url.searchParams.get('grade') || '').trim();
+  let className = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+
+  if (auth.user.roles.indexOf('banzhuren') !== -1 && auth.user.roles.indexOf('admin') === -1) {
+    const ctx = await getBanzhurenClassContext(db, auth.user.userId);
+    if (!ctx || !ctx.grade) return json({ error: '账号未绑定班级' }, 400);
+    grade = ctx.grade;
+    className = ctx.class_name;
+  }
+
+  let sql = 'SELECT * FROM student_leave_reports WHERE leave_date = ?';
+  const params = [date];
+  if (grade) {
+    sql += ' AND grade = ?';
+    params.push(grade);
+  }
+
+  const rows = await db.prepare(sql).bind(...params).all();
+  let leaves = rows.results || [];
+  if (className) {
+    leaves = leaves.filter((row) => schoolStudentMatchesClassScope(row, grade, className));
+  }
+
+  if (courseName && auth.user.roles.indexOf('teacher') !== -1) {
+    const selRes = await db.prepare(
+      'SELECT student_name FROM selections WHERE course_name = ?'
+    ).bind(courseName).all();
+    const names = new Set((selRes.results || []).map((r) => String(r.student_name || '').trim()));
+    leaves = leaves.filter((l) => names.has(String(l.student_name || '').trim()));
+  }
+
+  return json({ leaves: leaves, date: date });
+}
+
+async function handleStudentLeavesPost(db, request) {
+  const auth = requireAuth(request, ['banzhuren', 'admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+
+  const ctx = await getBanzhurenClassContext(db, auth.user.userId);
+  let grade = String(body.grade || '').trim();
+  let className = String(body.class_name || body.class || '').trim();
+  if (auth.user.roles.indexOf('admin') === -1) {
+    if (!ctx || !ctx.grade) return json({ error: '账号未绑定班级' }, 400);
+    grade = ctx.grade;
+    className = ctx.class_name;
+  } else {
+    const parsed = parseGradeClassFields(grade, className);
+    grade = parsed.grade || grade;
+    className = parsed.class_name || className;
+  }
+
+  const studentName = String(body.student_name || '').trim();
+  const leaveType = String(body.leave_type || 'sick').trim();
+  const leaveDate = String(body.leave_date || getTodayDateKey()).trim();
+  if (!studentName) return json({ error: '缺少学生姓名' }, 400);
+  if (!['sick', 'personal'].includes(leaveType)) {
+    return json({ error: '请假类型无效（sick=病假, personal=事假）' }, 400);
+  }
+
+  const existing = await db.prepare(
+    'SELECT id FROM student_leave_reports WHERE grade = ? AND class_name = ? AND student_name = ? AND leave_date = ?'
+  ).bind(grade, className, studentName, leaveDate).first();
+
+  let id;
+  if (existing) {
+    await db.prepare(
+      'UPDATE student_leave_reports SET leave_type = ?, reported_by = ?, reported_at = datetime(\'now\'), note = ? WHERE id = ?'
+    ).bind(leaveType, auth.user.userId, String(body.note || ''), existing.id).run();
+    id = existing.id;
+  } else {
+    const res = await db.prepare(
+      'INSERT INTO student_leave_reports (grade, class_name, student_name, leave_type, leave_date, reported_by, note) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(grade, className, studentName, leaveType, leaveDate, auth.user.userId, String(body.note || '')).run();
+    id = res.meta.last_row_id;
+  }
+
+  const report = {
+    grade: grade,
+    class_name: className,
+    student_name: studentName,
+    leave_type: leaveType,
+    leave_date: leaveDate
+  };
+  await syncLeaveReportToClassrooms(db, report);
+
+  const row = await db.prepare('SELECT * FROM student_leave_reports WHERE id = ?').bind(id).first();
+  return json({ success: true, leave: row });
+}
+
+async function handleStudentLeavesDelete(db, request, id) {
+  const auth = requireAuth(request, ['banzhuren', 'admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  const row = await db.prepare('SELECT * FROM student_leave_reports WHERE id = ?').bind(id).first();
+  if (!row) return json({ error: '请假记录不存在' }, 404);
+
+  if (auth.user.roles.indexOf('admin') === -1) {
+    const ctx = await getBanzhurenClassContext(db, auth.user.userId);
+    if (!ctx || !schoolStudentMatchesClassScope(row, ctx.grade, ctx.class_name)) {
+      return json({ error: '无权删除该请假记录' }, 403);
+    }
+  }
+
+  await removeLeaveFromClassrooms(db, row);
+  await db.prepare('DELETE FROM student_leave_reports WHERE id = ?').bind(id).run();
+  return json({ success: true });
+}
+
+function countCheckinStatusInHistory(history, studentKey, status) {
+  let n = 0;
+  (history || []).forEach((h) => {
+    if (h && h.checkin && h.checkin[studentKey] === status) n++;
+  });
+  return n;
+}
+
+async function handleBanzhurenClassDashboard(db, request) {
+  const auth = requireAuth(request, ['banzhuren', 'admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  const ctx = await getBanzhurenClassContext(db, auth.user.userId);
+  const url = new URL(request.url);
+  let grade = '';
+  let className = '';
+  let classDisplay = '';
+
+  if (auth.user.roles.indexOf('admin') !== -1) {
+    grade = String(url.searchParams.get('grade') || '').trim();
+    className = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+    const parsed = parseGradeClassFields(grade, className);
+    grade = parsed.grade || grade;
+    className = parsed.class_name || className;
+    classDisplay = className;
+  } else {
+    if (!ctx || !ctx.grade) return json({ error: '账号未绑定班级' }, 400);
+    grade = ctx.grade;
+    className = ctx.class_name;
+    classDisplay = ctx.class_display;
+  }
+
+  if (!grade) return json({ error: '缺少年级信息' }, 400);
+
+  const rosterRes = await db.prepare(
+    'SELECT student_name, gender FROM school_students WHERE grade = ? ORDER BY student_name'
+  ).bind(grade).all();
+  let roster = (rosterRes.results || []).filter((r) =>
+    schoolStudentMatchesClassScope(r, grade, className)
+  );
+
+  if (!roster.length) {
+    const selAll = await db.prepare('SELECT student_name, gender, grade, class_name, course_name FROM selections').all();
+    const seen = new Set();
+    roster = [];
+    (selAll.results || []).forEach((r) => {
+      if (!selectionMatchesClassScope(r, grade, className)) return;
+      const name = String(r.student_name || '').trim();
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      roster.push({ student_name: name, gender: r.gender || '' });
+    });
+  }
+
+  const selRes = await db.prepare(
+    'SELECT student_name, course_name, grade, class_name FROM selections WHERE grade = ? OR class_name LIKE ?'
+  ).bind(grade, '%' + grade + '%').all();
+  const studentCourses = {};
+  (selRes.results || []).forEach((row) => {
+    if (!selectionMatchesClassScope(row, grade, className)) return;
+    const name = String(row.student_name || '').trim();
+    const course = String(row.course_name || '').trim();
+    if (!name || !course) return;
+    if (!studentCourses[name]) studentCourses[name] = new Set();
+    studentCourses[name].add(course);
+  });
+
+  const allCourses = new Set();
+  Object.values(studentCourses).forEach((set) => set.forEach((c) => allCourses.add(c)));
+
+  const courseData = {};
+  for (const courseName of allCourses) {
+    const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
+    const course = await db.prepare('SELECT teacher FROM courses WHERE name = ?').bind(courseName).first();
+    let payload = { students: [], history: [] };
+    if (row && row.payload) {
+      try { payload = JSON.parse(row.payload); } catch (_) {}
+    }
+    courseData[courseName] = {
+      course_name: courseName,
+      teacher_name: (row && row.teacher_name) || (course && course.teacher) || '',
+      payload: payload
+    };
+  }
+
+  const studentsOut = roster.map((r) => {
+    const name = String(r.student_name || '').trim();
+    const courses = Array.from(studentCourses[name] || []);
+    const courseStats = [];
+    let totalPresent = 0, totalAbsent = 0, totalSick = 0, totalPersonal = 0, totalLate = 0;
+
+    courses.forEach((courseName) => {
+      const cd = courseData[courseName];
+      if (!cd) return;
+      const payload = cd.payload || {};
+      const students = normalizeClassroomStudents(payload.students || []);
+      const student = students.find((s) => String(s.student_name || '').trim() === name);
+      if (!student) return;
+      const key = student.stableId;
+      const history = payload.history || [];
+      const present = countCheckinStatusInHistory(history, key, 'present');
+      const absent = countCheckinStatusInHistory(history, key, 'absent');
+      const sick = countCheckinStatusInHistory(history, key, 'sick');
+      const personal = countCheckinStatusInHistory(history, key, 'personal');
+      const late = countCheckinStatusInHistory(history, key, 'late');
+      totalPresent += present;
+      totalAbsent += absent;
+      totalSick += sick;
+      totalPersonal += personal;
+      totalLate += late;
+      courseStats.push({
+        course_name: courseName,
+        teacher_name: cd.teacher_name,
+        present: present,
+        absent: absent,
+        sick: sick,
+        personal: personal,
+        late: late,
+        sessions: history.length
+      });
+    });
+
+    return {
+      student_name: name,
+      gender: r.gender || '',
+      courses: courseStats,
+      totals: {
+        present: totalPresent,
+        absent: totalAbsent,
+        sick: totalSick,
+        personal: totalPersonal,
+        late: totalLate
+      }
+    };
+  });
+
+  return json({
+    grade: grade,
+    class_name: className,
+    class_display: classDisplay,
+    student_count: roster.length,
+    course_count: allCourses.size,
+    students: studentsOut,
+    courses: Array.from(allCourses).map((c) => ({
+      course_name: c,
+      teacher_name: (courseData[c] && courseData[c].teacher_name) || ''
+    }))
+  });
+}
+
 async function handleTeacherClassroomPut(db, request) {
   const auth = requireAuth(request, ['teacher', 'admin', 'banzhuren']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -3070,6 +3570,20 @@ async function handleTeacherClassroomDetail(db, request, courseName) {
   }
 
   const numericHoursTotal = await getNumericHoursTotalForCourse(db, name);
+
+  if (payload) {
+    const leaveRows = await db.prepare(
+      'SELECT * FROM student_leave_reports WHERE leave_date = ?'
+    ).bind(getTodayDateKey()).all();
+    const selNames = await db.prepare(
+      'SELECT student_name FROM selections WHERE course_name = ?'
+    ).bind(name).all();
+    const names = new Set((selNames.results || []).map((r) => String(r.student_name || '').trim()));
+    const courseLeaves = (leaveRows.results || []).filter((l) =>
+      names.has(String(l.student_name || '').trim())
+    );
+    applyLeavesToPayloadCheckin(payload, courseLeaves, getTodayDateKey());
+  }
 
   return json({
     course: course || { name, teacher: (row && row.teacher_name) || '', location: '', selected_count: 0 },
@@ -3650,6 +4164,21 @@ export async function onRequest(context) {
   // /api/selection-data-sync — 选课数据版本号（供选课页/教师端检测后台变更）
   if (path === '/api/selection-data-sync' && method === 'GET') {
     return handleSelectionDataSyncGet(db);
+  }
+
+  // /api/student-leaves — 班主任请假报备
+  if (path === '/api/student-leaves') {
+    if (method === 'GET') return handleStudentLeavesGet(db, request);
+    if (method === 'POST') return handleStudentLeavesPost(db, request);
+  }
+  const leaveMatch = path.match(/^\/api\/student-leaves\/(\d+)$/);
+  if (leaveMatch && method === 'DELETE') {
+    return handleStudentLeavesDelete(db, request, parseInt(leaveMatch[1], 10));
+  }
+
+  // /api/banzhuren/class-dashboard — 班主任班级考勤看板
+  if (path === '/api/banzhuren/class-dashboard' && method === 'GET') {
+    return handleBanzhurenClassDashboard(db, request);
   }
 
   // /api/selection-status
