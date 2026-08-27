@@ -240,7 +240,17 @@ function payloadHasCheckinActivity(body, today) {
   if (!body || typeof body !== 'object') return false;
   if (body.checkinDone) return true;
   const history = Array.isArray(body.history) ? body.history : [];
-  return history.some((h) => h && String(h.date) === today);
+  if (today) {
+    return history.some((h) => h && String(h.date) === today);
+  }
+  if (history.length) return true;
+  const checkinDay = String((body.checkinDay) || '').trim();
+  const checkin = body.checkin || {};
+  if (!checkinDay || !checkin || typeof checkin !== 'object') return false;
+  return Object.keys(checkin).some((k) => {
+    const v = checkin[k];
+    return v != null && v !== '' && v !== 'none';
+  });
 }
 
 async function getSelectionEnabled(db) {
@@ -3516,19 +3526,6 @@ function collectSessionDatesFromClassCheckin(payload, grade, className, rosterMa
     }
   }
   return dates;
-}
-
-function payloadHasCheckinActivity(payload) {
-  const history = Array.isArray(payload && payload.history) ? payload.history : [];
-  if (history.length) return true;
-  const checkinDay = String((payload && payload.checkinDay) || '').trim();
-  const checkin = (payload && payload.checkin) || {};
-  if (!checkinDay || !checkin || typeof checkin !== 'object') return false;
-  if (payload.checkinDone) return true;
-  return Object.keys(checkin).some((k) => {
-    const v = checkin[k];
-    return v != null && v !== '' && v !== 'none';
-  });
 }
 
 function studentBelongsToBanzhurenClass(studentRow, grade, className, rosterMap) {
