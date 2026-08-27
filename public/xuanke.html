@@ -4698,13 +4698,9 @@ async function exportExcel() {
         var sync = await fetchSelectionDataSync();
         saveState(sync.revision);
       } catch (_) { saveState(); }
-      // 刷新请假报备等页的班级名单缓存
-      try {
-        if (window.BzPortal && typeof window.BzPortal.loadLeavePage === 'function') {
-          /* 不强制切页，仅预热名单 */
-        }
-        if (window.BzPortal) window.BzPortal._rosterDirty = true;
-      } catch (_) {}
+      if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
+        await window.BzPortal.notifyRosterUpdated();
+      }
     } catch(e) {
       console.error('保存失败:', e);
       showToast('保存失败：' + e.message, 'error');
@@ -5609,6 +5605,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260827f"></script>
+<script src="js/banzhuren-portal.js?v=20260827g"></script>
 </body>
 </html>

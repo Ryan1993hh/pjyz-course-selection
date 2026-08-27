@@ -538,6 +538,17 @@
     }
   }
 
+  async function notifyRosterUpdated() {
+    try {
+      var sync = await apiRequest('GET', '/api/selection-data-sync');
+      lastSyncRevision = (sync && sync.revision) || lastSyncRevision;
+    } catch (_) {}
+    bzState.classStudents = [];
+    if (bzState.tab === 'leave') await loadLeavePage();
+    else if (bzState.tab === 'dashboard') await loadDashboard();
+    else if (bzState.tab === 'profile') await loadProfile();
+  }
+
   async function pollSelectionSync() {
     if (!getToken()) return;
     try {
@@ -652,5 +663,9 @@
     init();
   }
 
-  window.BzPortal = { switchTab: switchTab, loadLeavePage: loadLeavePage };
+  window.BzPortal = {
+    switchTab: switchTab,
+    loadLeavePage: loadLeavePage,
+    notifyRosterUpdated: notifyRosterUpdated
+  };
 })();
