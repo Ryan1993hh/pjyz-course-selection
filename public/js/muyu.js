@@ -5,14 +5,16 @@
 (function (global) {
   var MERIT_KEY = "pjyz_merit_daily";
   var AUDIO_SRC = "audio/muyu-tap.mp3?v=20260826b";
+  var AUDIO_POOL_SIZE = 8;
   var meritCount = 0;
   var meritDate = "";
-  var tapAudio = null;
+  var audioPool = [];
+  var audioPoolIdx = 0;
   var tapAnimTimer = null;
   var dayWatchTimer = null;
   var initialized = false;
   var boundStage = null;
-  var lastTapAt = 0;
+  var suppressClickUntil = 0;
 
   function todayKey() {
     var d = new Date();
@@ -65,25 +67,26 @@
   }
 
   function preloadTapAudio() {
-    if (tapAudio) return;
-    try {
-      tapAudio = new Audio(AUDIO_SRC);
-      tapAudio.preload = "auto";
-      tapAudio.load();
-    } catch (_) {}
+    if (audioPool.length) return;
+    for (var i = 0; i < AUDIO_POOL_SIZE; i++) {
+      try {
+        var audio = new Audio(AUDIO_SRC);
+        audio.preload = "auto";
+        audio.load();
+        audioPool.push(audio);
+      } catch (_) {}
+    }
   }
 
   function playMuyuSound() {
+    if (!audioPool.length) preloadTapAudio();
+    if (!audioPool.length) return;
+    var audio = audioPool[audioPoolIdx % audioPool.length];
+    audioPoolIdx += 1;
     try {
-      if (!tapAudio) {
-        tapAudio = new Audio(AUDIO_SRC);
-        tapAudio.preload = "auto";
-      }
-      tapAudio.currentTime = 0;
-      var p = tapAudio.play();
-      if (p && typeof p.catch === "function") {
-        p.catch(function () {});
-      }
+      audio.currentTime = 0;
+      var p = audio.play();
+      if (p && typeof p.catch === "function") p.catch(function () {});
     } catch (_) {}
   }
 
@@ -93,7 +96,7 @@
     el.classList.remove("bump");
     void el.offsetWidth;
     el.classList.add("bump");
-    setTimeout(function () { el.classList.remove("bump"); }, 220);
+    setTimeout(function () { el.classList.remove("bump"); }, 200);
   }
 
   function spawnMeritParticle() {
@@ -109,20 +112,26 @@
     node.style.left = x + "px";
     node.style.top = y + "px";
     container.appendChild(node);
-    setTimeout(function () { node.remove(); }, 1100);
+    setTimeout(function () { node.remove(); }, 1000);
   }
 
   function playTapAnim() {
     var stage = document.getElementById("fishStage");
     if (!stage) return;
-    stage.classList.remove("tapping");
-    void stage.offsetWidth;
-    stage.classList.add("tapping");
+    var hammer = stage.querySelector(".wooden-hammer");
+    var fish = stage.querySelector(".wooden-fish");
+    [hammer, fish].forEach(function (el) {
+      if (!el) return;
+      el.classList.remove("strike");
+      void el.offsetWidth;
+      el.classList.add("strike");
+    });
     if (tapAnimTimer) clearTimeout(tapAnimTimer);
     tapAnimTimer = setTimeout(function () {
-      stage.classList.remove("tapping");
+      if (hammer) hammer.classList.remove("strike");
+      if (fish) fish.classList.remove("strike");
       tapAnimTimer = null;
-    }, 260);
+    }, 220);
   }
 
   function isClockOpen() {
@@ -131,9 +140,7 @@
   }
 
   function tap() {
-    var now = Date.now();
-    if (now - lastTapAt < 280) return;
-    lastTapAt = now;
+    if (!isClockOpen()) return;
     ensureTodayMerit();
     playTapAnim();
     playMuyuSound();
@@ -142,6 +149,26 @@
     updateMeritDisplay();
     bumpMeritCount();
     spawnMeritParticle();
+  }
+
+  function onPointerDown(e) {
+    if (!isClockOpen()) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClickUntil = Date.now() + 400;
+    tap();
+  }
+
+  function onClick(e) {
+    if (Date.now() < suppressClickUntil) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    tap();
   }
 
   function onKeyDown(e) {
@@ -166,11 +193,8 @@
     var stage = document.getElementById("fishStage");
     if (!stage || stage === boundStage) return;
     boundStage = stage;
-    stage.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      tap();
-    });
+    stage.addEventListener("pointerdown", onPointerDown);
+    stage.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
   }
 

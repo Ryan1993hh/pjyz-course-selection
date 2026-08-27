@@ -65,6 +65,8 @@
   z-index: 2;
   background: transparent;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 .clock-muyu-zone .stage-halo {
   position: absolute;
@@ -110,11 +112,11 @@
   z-index: 3;
   pointer-events: none;
 }
-.clock-muyu-zone .fish-stage.tapping .wooden-hammer {
-  animation: muyuHammerStrike 0.24s ease-out;
+.clock-muyu-zone .wooden-hammer.strike {
+  animation: muyuHammerStrike 0.2s ease-out;
 }
-.clock-muyu-zone .fish-stage.tapping .wooden-fish {
-  animation: muyuFishHit 0.24s ease-out;
+.clock-muyu-zone .wooden-fish.strike {
+  animation: muyuFishHit 0.2s ease-out;
 }
 @keyframes muyuHammerStrike {
   0% { transform: rotate(16deg); }
