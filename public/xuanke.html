@@ -2237,13 +2237,6 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-panel.active { display: block; animation: fadeIn 0.25s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-.bz-subnav {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0 0 12px;
-  padding: 0;
-}
 .bz-subnav .bz-tab-btn {
   display: flex;
   flex-direction: column;
@@ -2286,6 +2279,51 @@ tr.no-quota:hover td { opacity: 0.7; }
   outline-offset: 2px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.18);
   transform: translateY(-1px);
+}
+
+/* 移动端：标题栏下方四宫格导航 */
+.bz-subnav--mobile {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+/* 桌面端：隐藏下方导航，改在 header-actions 内显示 */
+.bz-subnav--desktop {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .bz-subnav--mobile {
+    display: none;
+  }
+  .bz-subnav--desktop {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .bz-subnav--desktop .bz-tab-btn {
+    flex-direction: row;
+    min-height: 34px;
+    padding: 6px 11px;
+    font-size: 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .bz-subnav--desktop .bz-tab-btn .bz-tab-ico {
+    font-size: 14px;
+  }
+  .bz-subnav--desktop .bz-tab-btn.active {
+    outline: 2px solid rgba(255,255,255,0.95);
+    outline-offset: 1px;
+  }
 }
 
 .stat-reset-btn {
@@ -2364,22 +2402,22 @@ tr.no-quota:hover td { opacity: 0.7; }
 @media (max-width: 768px) {
   .header-title-btn h1 { font-size: clamp(13px, 3.5vw, 18px); letter-spacing: 1px; }
   .header-logo .logo-text .en { display: none; }
-  .bz-subnav {
+  .bz-subnav--mobile {
     gap: 6px;
     margin-bottom: 10px;
   }
-  .bz-subnav .bz-tab-btn {
+  .bz-subnav--mobile .bz-tab-btn {
     min-height: 64px;
     padding: 12px 4px;
     font-size: 12px;
     border-radius: 12px;
   }
-  .bz-subnav .bz-tab-btn .bz-tab-ico { font-size: 22px; }
+  .bz-subnav--mobile .bz-tab-btn .bz-tab-ico { font-size: 22px; }
 }
 @media (max-width: 480px) {
   .header-title-btn small { display: none; }
-  .bz-subnav { gap: 5px; }
-  .bz-subnav .bz-tab-btn {
+  .bz-subnav--mobile { gap: 5px; }
+  .bz-subnav--mobile .bz-tab-btn {
     min-height: 60px;
     font-size: 11px;
     padding: 10px 2px;
@@ -2478,11 +2516,25 @@ tr.no-quota:hover td { opacity: 0.7; }
     <small id="dateLine">班级选课</small>
   </button>
   <div class="header-actions">
+    <nav class="bz-subnav bz-subnav--desktop" aria-label="班主任导航">
+      <button type="button" class="bz-tab-btn active" data-bz-tab="selection">
+        <span class="bz-tab-ico">📚</span><span class="bz-tab-txt">班级选课</span>
+      </button>
+      <button type="button" class="bz-tab-btn" data-bz-tab="leave">
+        <span class="bz-tab-ico">🤒</span><span class="bz-tab-txt">请假报备</span>
+      </button>
+      <button type="button" class="bz-tab-btn" data-bz-tab="dashboard">
+        <span class="bz-tab-ico">📊</span><span class="bz-tab-txt">数据看板</span>
+      </button>
+      <button type="button" class="bz-tab-btn" data-bz-tab="profile">
+        <span class="bz-tab-ico">👤</span><span class="bz-tab-txt">用户信息</span>
+      </button>
+    </nav>
     <div id="roleSwitcher"></div>
   </div>
 </div>
 
-<nav class="bz-subnav" aria-label="班主任导航">
+<nav class="bz-subnav bz-subnav--mobile" aria-label="班主任导航">
   <button type="button" class="bz-tab-btn active" data-bz-tab="selection">
     <span class="bz-tab-ico">📚</span><span class="bz-tab-txt">班级选课</span>
   </button>
