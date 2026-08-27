@@ -3385,19 +3385,6 @@ function rosterNamesWithAttendanceInPayload(payload, rosterMap, grade, className
   return found;
 }
 
-function payloadHasCheckinActivity(payload) {
-  const history = Array.isArray(payload && payload.history) ? payload.history : [];
-  if (history.length) return true;
-  const checkinDay = String((payload && payload.checkinDay) || '').trim();
-  const checkin = (payload && payload.checkin) || {};
-  if (!checkinDay || !checkin || typeof checkin !== 'object') return false;
-  if (payload.checkinDone) return true;
-  return Object.keys(checkin).some((k) => {
-    const v = checkin[k];
-    return v != null && v !== '' && v !== 'none';
-  });
-}
-
 function studentBelongsToBanzhurenClass(studentRow, grade, className, rosterMap) {
   const name = String((studentRow && studentRow.student_name) || '').trim();
   if (!name) return false;
