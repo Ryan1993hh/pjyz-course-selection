@@ -3085,7 +3085,7 @@ async function getBanzhurenClassRoster(db, grade, className) {
     }
   }
 
-  // 本班已有选课/未选课数据时，用花名册补全遗漏学生（避免仅保存已选、未选未入库时请假页缺人）
+  // 本班已有选课/未选课数据时，用花名册补全遗漏学生
   const hasActiveSelectionData = map.size > 0;
   if (hasActiveSelectionData) {
     const rosterRes = await db.prepare(
@@ -3109,6 +3109,22 @@ async function getBanzhurenClassRoster(db, grade, className) {
   })).sort((a, b) =>
     String(a.student_name).localeCompare(String(b.student_name), 'zh')
   );
+}
+
+async function getClassSchoolStudentsRoster(db, grade, className) {
+  const rosterRes = await db.prepare(
+    'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
+  ).bind(grade).all();
+  const list = [];
+  const seen = new Set();
+  for (const row of (rosterRes.results || [])) {
+    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    list.push({ student_name: name, gender: String(row.gender || '').trim() });
+  }
+  return list.sort((a, b) => String(a.student_name).localeCompare(String(b.student_name), 'zh'));
 }
 
 async function purgeLeaveReportsNotInClassRoster(db, grade, className, opts) {
@@ -3349,6 +3365,10 @@ async function handleBanzhurenClassDashboard(db, request) {
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
   const roster = await getBanzhurenClassRoster(db, grade, className);
+  // 看板优先用选课/未选课名单；若为空则回退本班花名册，保证能画出姓名列
+  const finalRoster = roster.length
+    ? roster
+    : await getClassSchoolStudentsRoster(db, grade, className);
   const ATTENDANCE_COLS = 18;
 
   const selRes = await db.prepare(
@@ -3439,7 +3459,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     sessions.push({ date: '', dateLabel: '', placeholder: true });
   }
 
-  const studentsOut = roster.map((r) => {
+  const studentsOut = finalRoster.map((r) => {
     const name = String(r.student_name || '').trim();
     const courses = Array.from(studentCourses[name] || []);
     const courseStats = [];
@@ -3538,7 +3558,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     grade: grade,
     class_name: className,
     class_display: classDisplay,
-    student_count: roster.length,
+    student_count: finalRoster.length,
     course_count: allCourses.size,
     today_date: today,
     today_abnormal_count: todayAbnormalNames.size,

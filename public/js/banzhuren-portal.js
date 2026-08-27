@@ -378,9 +378,43 @@
     if (dateEl) dateEl.textContent = todayKey();
   }
 
+  function emptySessions(n) {
+    var cols = [];
+    for (var i = 0; i < (n || 18); i++) cols.push({ date: '', dateLabel: '', placeholder: true });
+    return cols;
+  }
+
+  function normalizeDashboardData(data, fallbackStudents) {
+    var students = (data && data.students) || [];
+    if (!students.length && fallbackStudents && fallbackStudents.length) {
+      students = fallbackStudents.map(function (s) {
+        return {
+          student_name: s.student_name || s,
+          gender: s.gender || '',
+          cells: []
+        };
+      });
+    }
+    var sessions = (data && data.sessions) || [];
+    if (sessions.length < 18) {
+      sessions = sessions.slice();
+      while (sessions.length < 18) sessions.push({ date: '', dateLabel: '', placeholder: true });
+    } else if (sessions.length > 18) {
+      sessions = sessions.slice(0, 18);
+    }
+    if (!sessions.length) sessions = emptySessions(18);
+
+    return Object.assign({}, data || {}, {
+      students: students,
+      sessions: sessions,
+      student_count: students.length,
+      class_display: (data && (data.class_display || data.class_name)) || ''
+    });
+  }
+
   function renderAttendanceCell(cell) {
     var st = cell && cell.status;
-    if (!st || st === 'none') return '<span class="bz-att-empty">·</span>';
+    if (!st || st === 'none') return '';
     if (st === 'present') return '<span class="bz-att-ok">✓</span>';
     if (st === 'absent') return '<span class="bz-att-bad">旷课</span>';
     if (st === 'late') return '<span class="bz-att-warn">迟到</span>';
@@ -396,44 +430,46 @@
   function renderDashboard(data) {
     var wrap = document.getElementById('bzDashboardBody');
     if (!wrap) return;
-    if (!data || !data.students || !data.students.length) {
-      wrap.innerHTML = '<div class="bz-empty">暂无班级学生名单，请先完成选课保存</div>';
-      return;
-    }
 
-    if (data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
-
-    var sessions = data.sessions || [];
+    var sessions = (data && data.sessions) || emptySessions(18);
+    var students = (data && data.students) || [];
     var filledSessions = sessions.filter(function (s) { return s && s.date; }).length;
 
     var summary = document.getElementById('bzDashboardSummary');
     if (summary) {
       summary.innerHTML =
-        '<div class="bz-dash-stat"><span class="n">' + (data.student_count || 0) + '</span><span class="l">班级人数</span></div>' +
+        '<div class="bz-dash-stat"><span class="n">' + (students.length || 0) + '</span><span class="l">班级人数</span></div>' +
         '<div class="bz-dash-stat"><span class="n">' + filledSessions + '/18</span><span class="l">已签到次数</span></div>' +
-        '<div class="bz-dash-stat"><span class="n">' + escHtml(data.class_display || data.class_name || '') + '</span><span class="l">负责班级</span></div>';
+        '<div class="bz-dash-stat"><span class="n">' + escHtml((data && (data.class_display || data.class_name)) || '—') + '</span><span class="l">负责班级</span></div>';
     }
 
+    if (!students.length) {
+      wrap.innerHTML = '<div class="bz-empty">暂无本班学生名单。请先在「班级选课」上传/同步名单并保存，或由管理员导入花名册。</div>';
+      return;
+    }
+
+    if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
+
     var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead><tr>' +
-      '<th class="bz-att-idx">序</th><th class="bz-att-name">姓名</th>';
-    sessions.forEach(function (s, i) {
+      '<th class="bz-att-name">姓名</th>';
+    for (var i = 0; i < 18; i++) {
+      var s = sessions[i];
       if (s && s.date) {
         html += '<th title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
       } else {
         html += '<th class="bz-att-ph">' + (i + 1) + '</th>';
       }
-    });
+    }
     html += '</tr></thead><tbody>';
 
-    data.students.forEach(function (stu, idx) {
+    students.forEach(function (stu) {
       var cells = stu.cells || [];
-      html += '<tr><td class="bz-att-idx">' + (idx + 1) + '</td>' +
-        '<td class="bz-att-name">' + escHtml(stu.student_name) + '</td>';
+      html += '<tr><td class="bz-att-name">' + escHtml(stu.student_name) + '</td>';
       for (var c = 0; c < 18; c++) {
         var cell = cells[c] || { status: '' };
         var sess = sessions[c];
         if (!sess || !sess.date) {
-          html += '<td class="bz-att-ph"></td>';
+          html += '<td></td>';
         } else {
           html += '<td>' + renderAttendanceCell(cell) + '</td>';
         }
@@ -447,12 +483,26 @@
   async function loadDashboard() {
     var wrap = document.getElementById('bzDashboardBody');
     if (wrap) wrap.innerHTML = '<div class="bz-empty">加载中…</div>';
+    var fallback = [];
+    try {
+      fallback = await loadClassStudents();
+    } catch (_) {}
+
     try {
       var data = await apiRequest('GET', '/api/banzhuren/class-dashboard');
-      bzState.dashboard = data;
-      renderDashboard(data);
+      bzState.dashboard = normalizeDashboardData(data, fallback);
+      renderDashboard(bzState.dashboard);
     } catch (e) {
-      if (wrap) wrap.innerHTML = '<div class="bz-empty">加载失败：' + escHtml(e.message) + '</div>';
+      console.warn('loadDashboard:', e.message);
+      bzState.dashboard = normalizeDashboardData({
+        students: [],
+        sessions: emptySessions(18),
+        class_display: (parseClassFromUser(getUser() || {}).display || '')
+      }, fallback);
+      renderDashboard(bzState.dashboard);
+      if (!fallback.length && wrap) {
+        wrap.innerHTML = '<div class="bz-empty">加载失败：' + escHtml(e.message) + '</div>';
+      }
     }
   }
 
