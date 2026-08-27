@@ -2763,6 +2763,15 @@ function studentsFromSelectionRows(selRows) {
   return students;
 }
 
+async function getAuthoritativeClassroomStudentsFromSelections(db, courseName) {
+  const name = String(courseName || '').trim();
+  if (!name) return [];
+  const selRes = await db.prepare(
+    'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ? ORDER BY id ASC'
+  ).bind(name).all();
+  return normalizeClassroomStudents(studentsFromSelectionRows(selRes.results || []));
+}
+
 async function syncTeacherClassroomStudentsFromSelections(db, courseName) {
   const name = String(courseName || '').trim();
   if (!name) return;
@@ -2770,10 +2779,7 @@ async function syncTeacherClassroomStudentsFromSelections(db, courseName) {
   const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(name).first();
   if (!row) return;
 
-  const selRes = await db.prepare(
-    'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ? ORDER BY id ASC'
-  ).bind(name).all();
-  const normalizedStudents = normalizeClassroomStudents(studentsFromSelectionRows(selRes.results || []));
+  const normalizedStudents = await getAuthoritativeClassroomStudentsFromSelections(db, name);
 
   let payload = {};
   try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) { payload = {}; }
@@ -3638,15 +3644,17 @@ async function handleTeacherClassroomPut(db, request) {
     (body.teacher && body.teacher.name) || body.teacher_name || body.teacherName || ''
   ).trim();
 
-  const normalizedStudents = normalizeClassroomStudents(body.students);
+  // 学生名单以选课表为准，防止教师端本地缓存把已删除学生写回后台
+  const normalizedStudents = await getAuthoritativeClassroomStudentsFromSelections(db, courseName);
+  const remapOpts = { dropOrphans: true };
 
   const normalizedBody = Object.assign({}, body, {
     students: normalizedStudents,
-    checkin: remapClassroomKeyedMap(body.checkin, normalizedStudents),
-    rewards: remapClassroomKeyedMap(body.rewards, normalizedStudents),
-    exams: remapClassroomKeyedMap(body.exams, normalizedStudents),
+    checkin: remapClassroomKeyedMap(body.checkin, normalizedStudents, remapOpts),
+    rewards: remapClassroomKeyedMap(body.rewards, normalizedStudents, remapOpts),
+    exams: remapClassroomKeyedMap(body.exams, normalizedStudents, remapOpts),
     history: (Array.isArray(body.history) ? body.history : []).map((h) =>
-      Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents) })
+      Object.assign({}, h, { checkin: remapClassroomKeyedMap(h && h.checkin, normalizedStudents, remapOpts) })
     )
   });
   const summary = summarizeClassroomPayload(normalizedBody);

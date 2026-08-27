@@ -2529,9 +2529,24 @@ function saveLocal(opts) {
 }
 
 let classroomSyncTimer = null;
-function scheduleClassroomSync() {
+function cancelClassroomSync() {
   clearTimeout(classroomSyncTimer);
+  classroomSyncTimer = null;
+}
+function scheduleClassroomSync() {
+  cancelClassroomSync();
   classroomSyncTimer = setTimeout(() => { syncClassroomToServer().catch(() => {}); }, 800);
+}
+
+async function applySelectionDataRevisionChange() {
+  cancelClassroomSync();
+  await syncStudentsFromServer({ silent: true });
+  await pullClassroomFromServer();
+  if (ensureDailyCheckinState()) {
+    renderCheckin();
+    updateDateLine();
+  }
+  renderAll();
 }
 
 async function syncClassroomToServer(opts) {
@@ -3853,6 +3868,7 @@ async function loadAssignedCourse() {
   state.teacher.location = course.location || "";
 
   loadLocal();
+  await syncStudentsFromServer({ silent: true });
   await pullClassroomFromServer();
   await refreshNumericHoursTotal();
   ensureDailyCheckinState();
@@ -3863,7 +3879,6 @@ async function loadAssignedCourse() {
   updateHeaderMeta();
   await loadClassScheduleStatus();
   renderAll();
-  await syncStudentsFromServer();
 }
 
 async function syncStudentsFromServer(opts) {
@@ -3873,6 +3888,7 @@ async function syncStudentsFromServer(opts) {
     if (!silent) toast("账号未绑定课程", "error");
     return;
   }
+  cancelClassroomSync();
   const btn = document.getElementById("syncBtn");
   if (btn && !silent) btn.disabled = true;
   try {
@@ -4415,23 +4431,17 @@ async function initApp() {
     if (document.visibilityState === "visible") {
       loadClassScheduleStatus().catch(() => {});
       fetchSelectionDataRevision().then(function(rev) {
-        if (rev !== serverSelectionRevision) serverSelectionRevision = rev;
+        if (rev !== serverSelectionRevision) {
+          serverSelectionRevision = rev;
+          return applySelectionDataRevisionChange();
+        }
       }).catch(() => {});
       refreshUserProfile().then(function(user) {
         var bound = user && user.course_name ? String(user.course_name).trim() : "";
         if (bound !== (state.courseName || "")) {
           return loadAssignedCourse();
         }
-        return Promise.all([
-          pullClassroomFromServer(),
-          refreshNumericHoursTotal()
-        ]).then(() => syncStudentsFromServer({ silent: true })).then(() => {
-          if (ensureDailyCheckinState()) {
-            renderCheckin();
-            updateDateLine();
-          }
-          renderAll();
-        });
+        return applySelectionDataRevisionChange();
       }).catch(() => {});
     }
   });
@@ -4440,7 +4450,7 @@ async function initApp() {
     fetchSelectionDataRevision().then(function(rev) {
       if (rev !== serverSelectionRevision) {
         serverSelectionRevision = rev;
-        return syncStudentsFromServer({ silent: true }).then(function() { renderAll(); });
+        return applySelectionDataRevisionChange();
       }
     }).catch(() => {});
     refreshUserProfile().then(function(user) {
@@ -4449,7 +4459,6 @@ async function initApp() {
         return loadAssignedCourse();
       }
       return refreshNumericHoursTotal()
-        .then(() => syncStudentsFromServer({ silent: true }))
         .then(() => { renderProfile(); });
     }).catch(() => {});
     if (ensureDailyCheckinState()) {
