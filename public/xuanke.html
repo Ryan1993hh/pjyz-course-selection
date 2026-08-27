@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课·班主任</title>
+<link rel="stylesheet" href="css/muyu.css?v=20260827d">
 <script src="js/role-utils.js?v=20260826c"></script>
+<script src="js/teacher-quotes.js?v=20260827d"></script>
+<script src="js/muyu.js?v=20260827d"></script>
 <!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
 <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -95,6 +98,39 @@ setTimeout(function () {
   --page-pad-x: clamp(8px, 3.2vw, 14px);
   --touch-min: 44px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --header-grad: linear-gradient(110deg, var(--primary-dark) 0%, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, var(--primary-dark) 100%);
+  --profile-grad: linear-gradient(160deg, #0d9488 0%, #0f766e 55%, #115e59 100%);
+}
+
+html[data-skin="violet"] {
+  --primary: #7c3aed; --primary-light: #8b5cf6; --primary-dark: #6d28d9; --accent: #a78bfa;
+  --bg: #f5f3ff; --bg-soft: #ede9fe;
+  --header-grad: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+  --profile-grad: linear-gradient(160deg, #8b5cf6 0%, #7c3aed 50%, #5b21b6 100%);
+}
+html[data-skin="ocean"] {
+  --primary: #0284c7; --primary-light: #0ea5e9; --primary-dark: #0369a1; --accent: #38bdf8;
+  --bg: #f0f9ff; --bg-soft: #e0f2fe;
+  --header-grad: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+  --profile-grad: linear-gradient(160deg, #0ea5e9 0%, #0284c7 50%, #075985 100%);
+}
+html[data-skin="sunset"] {
+  --primary: #ea580c; --primary-light: #fb923c; --primary-dark: #c2410c; --accent: #fb923c;
+  --bg: #fff7ed; --bg-soft: #ffedd5;
+  --header-grad: linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #c2410c 100%);
+  --profile-grad: linear-gradient(160deg, #fb923c 0%, #ea580c 50%, #9a3412 100%);
+}
+html[data-skin="forest"] {
+  --primary: #16a34a; --primary-light: #22c55e; --primary-dark: #15803d; --accent: #4ade80;
+  --bg: #f0fdf4; --bg-soft: #dcfce7;
+  --header-grad: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+  --profile-grad: linear-gradient(160deg, #22c55e 0%, #16a34a 50%, #14532d 100%);
+}
+html[data-skin="ink"] {
+  --primary: #38bdf8; --primary-light: #7dd3fc; --primary-dark: #0ea5e9; --accent: #818cf8;
+  --bg: #0f172a; --bg-soft: #1e293b; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --border: rgba(148,163,184,0.18);
+  --header-grad: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #020617 100%);
+  --profile-grad: linear-gradient(160deg, #334155 0%, #1e293b 50%, #0f172a 100%);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -127,9 +163,41 @@ body {
   align-items: center;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(110deg, var(--primary-dark) 0%, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, var(--primary-dark) 100%);
+  background: var(--header-grad);
   background-size: 300% 300%;
   animation: headerGradientShift 12s ease-in-out infinite;
+}
+.header-title-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: center;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+.header-title-btn:hover { background: rgba(255,255,255,0.12); }
+.header-title-btn h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  margin: 0;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.header-title-btn small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.85;
+  letter-spacing: 1px;
+  margin-top: 2px;
+  font-weight: 500;
 }
 @keyframes headerGradientShift {
   0%   { background-position:   0% 50%; }
@@ -511,7 +579,7 @@ body {
 .control-bar {
   display: grid;
   /* 上传宽度 = 年级(1fr) + 班级(1fr)，之后箭头→年级→班级→提示→3统计卡 */
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr)) minmax(0, max-content) auto auto auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr)) minmax(0, max-content) auto auto auto auto;
   gap: 12px;
   align-items: stretch;
 }
@@ -2081,6 +2149,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   .control-bar .stat-total { grid-column: 1; grid-row: 3; }
   .control-bar .stat-selected { grid-column: 2; grid-row: 3; }
   .control-bar .stat-unselected { grid-column: 3; grid-row: 3; }
+  .control-bar .stat-reset-btn { grid-column: 4; grid-row: 3; }
   .stat-input { min-width: 0; padding: 6px 8px; }
   .stat-input label { font-size: 11px; margin-bottom: 2px; }
   .stat-input select { font-size: 14px; padding-right: 18px; }
@@ -2163,39 +2232,120 @@ tr.no-quota:hover td { opacity: 0.7; }
   .lottery-content .name-list { grid-template-columns: 1fr; }
 }
 
-/* ===== 班主任用户端：底部导航与多页面 ===== */
-:root {
-  --bz-tabbar-h: 58px;
-}
-body {
-  padding-bottom: calc(var(--page-pad-x) + var(--bz-tabbar-h) + var(--safe-bottom));
-}
+/* ===== 班主任用户端：顶部导航与多页面 ===== */
 .bz-panel { display: none; }
 .bz-panel.active { display: block; animation: fadeIn 0.25s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-.bz-tabbar {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 900;
+.bz-top-nav {
   display: flex;
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  padding: 4px 4px calc(4px + var(--safe-bottom));
-  box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
-.bz-tab-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: var(--muted);
+.bz-top-nav .bz-tab-btn {
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
   font-size: 11px;
-  padding: 6px 4px;
-  border-radius: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
   cursor: pointer;
+  white-space: nowrap;
+  font-weight: 500;
+  transition: background 0.2s;
 }
-.bz-tab-btn .ico { display: block; font-size: 20px; margin-bottom: 2px; }
-.bz-tab-btn.active { color: var(--primary); background: rgba(13,148,136,0.1); font-weight: 600; }
+.bz-top-nav .bz-tab-btn:hover { background: rgba(255,255,255,0.2); }
+.bz-top-nav .bz-tab-btn.active {
+  background: rgba(255,255,255,0.32);
+  border-color: rgba(255,255,255,0.45);
+  font-weight: 700;
+}
+
+.stat-reset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 56px;
+}
+.stat-reset-btn:hover { background: rgba(239, 68, 68, 0.18); }
+.stat-reset-btn .stat-reset-icon { font-size: 16px; line-height: 1; }
+
+/* 全屏时钟弹窗 */
+.clock-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: linear-gradient(160deg, #042f2e 0%, #0f766e 45%, #0d9488 100%);
+  color: #fff; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+}
+.clock-overlay.show { display: flex; }
+.clock-close {
+  position: absolute; top: 20px; right: 20px; width: 40px; height: 40px;
+  border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff;
+  border-radius: 50%; font-size: 18px; cursor: pointer;
+}
+.clock-greeting { font-size: clamp(20px, 4vw, 28px); font-weight: 600; margin-bottom: 12px; letter-spacing: 1px; }
+.clock-time { font-size: clamp(56px, 14vw, 96px); font-weight: 200; letter-spacing: 4px; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+.clock-date { font-size: 18px; opacity: 0.9; margin-bottom: 24px; }
+.clock-quote-wrap {
+  max-width: min(560px, 92vw); margin-bottom: 16px; padding: 18px 24px 20px; position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 100%);
+  border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; backdrop-filter: blur(10px);
+}
+.clock-quote-label { font-size: 11px; letter-spacing: 0.35em; color: rgba(255,255,255,0.55); margin-bottom: 10px; text-align: center; }
+.clock-quote {
+  text-align: center; font-family: "KaiTi", "STKaiti", "FangSong", serif;
+  font-size: clamp(18px, 4vw, 26px); line-height: 1.85; letter-spacing: 0.1em; font-weight: 600; color: #fef9c3; margin: 0;
+}
+.clock-info-grid { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 12px; width: min(420px, 100%); margin-top: 16px; }
+.clock-info-item { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 16px; text-align: center; }
+.clock-info-item .lbl { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+.clock-info-item .val { font-size: 16px; font-weight: 700; }
+
+.skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 14px; }
+.skin-swatch {
+  border: 2px solid var(--border); border-radius: 12px; padding: 8px; background: var(--card); cursor: pointer; text-align: center;
+}
+.skin-swatch.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(13,148,136,0.2); }
+.skin-swatch .swatch-bar { height: 28px; border-radius: 8px; margin-bottom: 6px; }
+.skin-swatch .swatch-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.bz-profile-group { background: var(--card); border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.bz-profile-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px solid var(--border); cursor: default;
+}
+.bz-profile-item:last-child { border-bottom: none; }
+.bz-profile-item.clickable { cursor: pointer; }
+.bz-profile-item .pi-ico { font-size: 20px; width: 28px; text-align: center; }
+.bz-profile-item .pi-body { flex: 1; min-width: 0; }
+.bz-profile-item .pi-label { font-size: 12px; color: var(--muted); }
+.bz-profile-item .pi-value { font-size: 14px; font-weight: 600; }
+.bz-profile-item .pi-chevron { color: #c7c7cc; font-size: 18px; }
+.bz-leave-note { font-size: 11px; color: var(--muted); flex: 1 1 100%; margin-top: 2px; }
+.bz-leave-reason-input {
+  width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 14px; resize: vertical; min-height: 72px; font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .header-title-btn h1 { font-size: clamp(13px, 3.5vw, 18px); letter-spacing: 1px; }
+  .bz-top-nav .bz-tab-btn { font-size: 10px; padding: 5px 6px; }
+  .header-logo .logo-text .en { display: none; }
+}
+@media (max-width: 480px) {
+  .header-title-btn small { display: none; }
+  .bz-top-nav { gap: 3px; }
+  .skin-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 .bz-card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
 .bz-card-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--primary-dark); }
@@ -2224,7 +2374,7 @@ body {
 .bz-leave-badge { display: block; font-size: 10px; margin-top: 4px; color: var(--primary-dark); }
 
 .bz-leave-list { margin-top: 8px; }
-.bz-leave-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.bz-leave-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; flex-wrap: wrap; }
 .bz-leave-name { font-weight: 600; flex: 1; }
 .bz-leave-type { color: var(--muted); font-size: 12px; }
 .bz-leave-cancel { border: none; background: transparent; color: var(--danger); font-size: 12px; cursor: pointer; }
@@ -2240,7 +2390,7 @@ body {
 .bz-empty { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 13px; }
 
 .bz-profile-banner {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--profile-grad);
   color: #fff;
   border-radius: var(--radius);
   padding: 20px 16px;
@@ -2282,22 +2432,51 @@ body {
         <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
       </div>
     </div>
-    <div class="header-title"><h1><span class="desktop-only">浦江一中拓展课·班主任</span><span class="mob-only">拓展课·班主任</span></h1></div>
   </div>
+  <button type="button" class="header-title-btn" id="headerTitleBtn" title="点击查看全屏时钟">
+    <h1><span class="desktop-only">浦江一中拓展课·班主任</span><span class="mob-only">拓展课·班主任</span></h1>
+    <small id="dateLine">班级选课</small>
+  </button>
   <div class="header-actions">
+    <nav class="bz-top-nav" aria-label="班主任导航">
+      <button type="button" class="bz-tab-btn active" data-bz-tab="selection">班级选课</button>
+      <button type="button" class="bz-tab-btn" data-bz-tab="leave">请假报备</button>
+      <button type="button" class="bz-tab-btn" data-bz-tab="dashboard">数据看板</button>
+      <button type="button" class="bz-tab-btn" data-bz-tab="profile">用户信息</button>
+    </nav>
     <div id="roleSwitcher"></div>
-    <div class="user-info user-info-clickable" id="userInfo" role="button" tabindex="0" title="点击修改密码" aria-label="用户信息，点击修改密码">
-      <span class="user-avatar" id="userAvatar">U</span>
-      <span class="user-name" id="userName">用户</span>
+  </div>
+</div>
+
+<div class="clock-overlay" id="clockOverlay">
+  <button type="button" class="clock-close" id="clockClose" aria-label="关闭">✕</button>
+  <div class="clock-greeting" id="clockGreeting">老师，您好</div>
+  <div class="clock-time" id="clockTime">00:00:00</div>
+  <div class="clock-date" id="clockDate"></div>
+  <div class="clock-quote-wrap" id="clockQuoteWrap">
+    <div class="clock-quote-label">今日寄语</div>
+    <p class="clock-quote" id="clockQuote">愿每一堂课都值得回味。</p>
+  </div>
+  <div class="clock-muyu-zone" id="clockMuyuZone">
+    <div class="merit-display" role="status" aria-live="polite">
+      <div class="merit-count" id="meritCount">0</div>
+      <div class="merit-label">功德</div>
     </div>
-    <button type="button" class="btn-reset" id="resetBtn" aria-label="重置所有数据，恢复初始状态" title="重置所有数据，恢复初始状态" accesskey="r">
-      <span class="btn-reset-icon" aria-hidden="true">↻</span>
-      <span>重置</span>
-    </button>
-    <button type="button" class="btn-logout" id="logoutBtn" aria-label="退出登录" title="退出登录">
-      <span class="btn-logout-icon" aria-hidden="true">⎋</span>
-      <span>退出</span>
-    </button>
+    <div class="fish-stage" id="fishStage" role="button" aria-label="点击敲木鱼">
+      <div class="stage-halo" aria-hidden="true"></div>
+      <div class="fish-assembly">
+        <div class="wooden-fish spr spr-muyu" id="woodenFish" aria-hidden="true"></div>
+        <div class="wooden-hammer spr spr-hammer" id="woodenHammer" aria-hidden="true"></div>
+      </div>
+      <div class="particles-container" id="meritParticles" aria-hidden="true"></div>
+    </div>
+    <div class="tap-hint"><kbd>空格</kbd> 或 👆 点击敲击木鱼</div>
+  </div>
+  <div class="clock-info-grid">
+    <div class="clock-info-item"><div class="lbl">负责班级</div><div class="val" id="clockClass">—</div></div>
+    <div class="clock-info-item"><div class="lbl">班主任</div><div class="val" id="clockTeacher">—</div></div>
+    <div class="clock-info-item"><div class="lbl">班级人数</div><div class="val" id="clockStudents">0</div></div>
+    <div class="clock-info-item"><div class="lbl">未选人数</div><div class="val" id="clockUnselected">0</div></div>
   </div>
 </div>
 
@@ -2397,6 +2576,28 @@ body {
     <div class="bz-profile-stat"><div class="n" id="bzProfileClass">—</div><div class="l">负责班级</div></div>
     <div class="bz-profile-stat"><div class="n" id="bzProfileAccount">—</div><div class="l">登录账号</div></div>
   </div>
+  <div class="bz-profile-section">数据管理</div>
+  <div class="bz-profile-group">
+    <div class="bz-profile-item clickable" id="bzExportRosterRow">
+      <div class="pi-ico">📋</div>
+      <div class="pi-body">
+        <div class="pi-label">班级名单</div>
+        <div class="pi-value">导出 Excel 表格</div>
+      </div>
+      <span class="pi-chevron">›</span>
+    </div>
+  </div>
+  <div class="bz-profile-section">更换皮肤</div>
+  <div class="bz-profile-group">
+    <div class="skin-grid" id="skinGrid">
+      <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
+      <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
+      <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
+      <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
+      <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
+      <button type="button" class="skin-swatch" data-skin="ink"><div class="swatch-bar" style="background:linear-gradient(135deg,#334155,#0f172a)"></div><div class="swatch-name">墨夜</div></button>
+    </div>
+  </div>
   <div class="bz-profile-section">账号密码</div>
   <button type="button" class="bz-pass-toggle" id="bzTogglePassBtn">🔐 查看 / 修改登录密码</button>
   <div class="bz-pass-panel" id="bzPassPanel">
@@ -2410,16 +2611,34 @@ body {
     <button type="button" class="btn-export" id="bzUpdatePassBtn" style="width:100%;margin:0;">更新密码</button>
   </div>
   <div class="bz-profile-section">账号</div>
-  <button type="button" class="btn-logout" id="bzProfileLogout" style="width:100%;margin-top:4px;">退出登录</button>
+  <div class="bz-profile-group">
+    <div class="bz-profile-item">
+      <div class="pi-ico">👤</div>
+      <div class="pi-body">
+        <div class="pi-label">当前登录</div>
+        <div class="pi-value" id="bzProfileAccountHint">—</div>
+      </div>
+    </div>
+    <div class="bz-profile-item">
+      <button type="button" class="btn-logout" id="bzProfileLogout" style="width:100%;">退出登录</button>
+    </div>
+  </div>
 </section>
 </main>
 
-<nav class="bz-tabbar" aria-label="班主任导航">
-  <button type="button" class="bz-tab-btn active" data-bz-tab="selection"><span class="ico">📚</span>选课</button>
-  <button type="button" class="bz-tab-btn" data-bz-tab="leave"><span class="ico">🤒</span>请假报备</button>
-  <button type="button" class="bz-tab-btn" data-bz-tab="dashboard"><span class="ico">📊</span>数据看板</button>
-  <button type="button" class="bz-tab-btn" data-bz-tab="profile"><span class="ico">👤</span>用户信息</button>
-</nav>
+<!-- 事假原因弹窗 -->
+<div class="modal-overlay" id="bzPersonalLeaveModal" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div><h3>事假原因</h3><div class="count" id="bzPersonalLeaveStudent">学生：—</div></div>
+      <button type="button" class="modal-close" id="bzPersonalLeaveClose" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body">
+      <textarea class="bz-leave-reason-input" id="bzPersonalLeaveNote" placeholder="请填写事假原因（必填）" rows="3"></textarea>
+      <button type="button" class="btn-export" id="bzPersonalLeaveSubmit" style="width:100%;margin-top:12px;">确认报备事假</button>
+    </div>
+  </div>
+</div>
 
 <!-- 选课弹窗 -->
 <div class="modal-overlay" id="modal">
@@ -3426,7 +3645,11 @@ function renderStats() {
       <div class="stat-card stat-unselected unselected">
         <div class="label">未选人数</div>
         <div class="value">${unselected}</div>
-      </div>`;
+      </div>
+      <button type="button" class="stat-reset-btn" id="resetBtn" aria-label="重置所有数据" title="重置所有数据，恢复初始状态" accesskey="r">
+        <span class="stat-reset-icon" aria-hidden="true">↻</span>
+        <span>重置</span>
+      </button>`;
   // 绑定年级、班级下拉联动
   const gradeSelect = document.getElementById('gradeSelect');
   const classSelect = document.getElementById('classSelect');
@@ -5052,7 +5275,9 @@ document.addEventListener('keydown', e => {
     } catch (_) { /* 忽略 */ }
   }
 
-  if (resetBtn) resetBtn.addEventListener('click', openConfirm);
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#resetBtn')) openConfirm();
+  });
   if (cancelBtn) cancelBtn.addEventListener('click', closeConfirm);
   if (confirmBtn) confirmBtn.addEventListener('click', doReset);
   if (mask) {
@@ -5291,192 +5516,27 @@ document.addEventListener('keydown', e => {
   });
 })();
 
-// ===== 用户信息显示 + 退出登录 + 修改密码 =====
+// ===== 角色切换 + 退出登录 =====
 (function userInfoFeature() {
-  var userNameEl = document.getElementById('userName');
-  var userAvatarEl = document.getElementById('userAvatar');
-  var userInfoEl = document.getElementById('userInfo');
-  var logoutBtn = document.getElementById('logoutBtn');
-  var passModalOverlay = document.getElementById('passModalOverlay');
-  var passModalClose = document.getElementById('passModalClose');
-  var passModalCancelBtn = document.getElementById('passModalCancelBtn');
-  var passAccountUsername = document.getElementById('passAccountUsername');
-  var passCurrentView = document.getElementById('passCurrentView');
-  var passToggleCurrentBtn = document.getElementById('passToggleCurrentBtn');
-  var passNewInput = document.getElementById('passNewInput');
-  var passConfirmInput = document.getElementById('passConfirmInput');
-  var updatePassBtn = document.getElementById('updatePassBtn');
-  var accountPasswordCache = '';
-
-  // 优先获取真实姓名（teacher_name），其次回退到账号名
-  var displayName = '';
-  try {
-    var userStr = localStorage.getItem('pjyz_user');
-    if (userStr) {
-      var userObj = JSON.parse(userStr);
-      displayName = (userObj.teacher_name && String(userObj.teacher_name).trim() !== '') ? String(userObj.teacher_name) : '';
-    }
-    if (!displayName) {
-      displayName = localStorage.getItem('pjyz_current_username') || '';
-    }
-  } catch (_) {
-    displayName = localStorage.getItem('pjyz_current_username') || '';
-  }
-
-  if (displayName) {
-    if (userNameEl) userNameEl.textContent = displayName;
-    if (userAvatarEl) userAvatarEl.textContent = displayName.charAt(0).toUpperCase();
-  }
-
   if (window.PjyzRole) {
     PjyzRole.enforcePageAccess();
     PjyzRole.initRoleSwitcher('roleSwitcher');
   }
 
-  function setCurrentPassVisible(visible) {
-    if (!passCurrentView || !passToggleCurrentBtn) return;
-    passCurrentView.type = visible ? 'text' : 'password';
-    passToggleCurrentBtn.textContent = visible ? '隐藏' : '显示';
-    passToggleCurrentBtn.dataset.visible = visible ? '1' : '0';
-  }
-
-  function closePassModal() {
-    if (!passModalOverlay) return;
-    passModalOverlay.classList.remove('active');
-    setCurrentPassVisible(false);
-    if (passNewInput) passNewInput.value = '';
-    if (passConfirmInput) passConfirmInput.value = '';
-  }
-
-  async function loadAccountPassword() {
-    if (!getToken()) {
-      showToast('请先登录', 'error');
-      return false;
-    }
+  window.pjyzLogout = function () {
     try {
-      if (passCurrentView) passCurrentView.placeholder = '加载中…';
-      var data = await apiRequest('GET', '/api/account');
-      var account = (data && data.account) || {};
-      if (passAccountUsername) {
-        passAccountUsername.value = account.username || displayName || '';
-      }
-      var pwd = account.password || '';
-      accountPasswordCache = pwd;
-      try {
-        var savedPass = localStorage.getItem('pjyz_login_pass');
-        if (!pwd && savedPass) accountPasswordCache = savedPass;
-      } catch (_) {}
-      if (passCurrentView) {
-        passCurrentView.value = accountPasswordCache || '';
-        passCurrentView.placeholder = accountPasswordCache ? '' : '暂无明文密码（请联系管理员重置）';
-      }
-      return true;
+      localStorage.removeItem('pjyz_current_username');
+      localStorage.removeItem('pjyz_login_role');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('pjyz_token');
+      localStorage.removeItem('pjyz_user');
+      window.location.href = 'denglu';
     } catch (e) {
-      accountPasswordCache = '';
-      try { accountPasswordCache = localStorage.getItem('pjyz_login_pass') || ''; } catch (_) {}
-      if (passCurrentView) {
-        passCurrentView.value = accountPasswordCache;
-        passCurrentView.placeholder = '无法从服务器加载密码';
-      }
-      showToast('加载账号信息失败：' + (e.message || '未知错误'), 'error');
-      return !!accountPasswordCache;
+      window.location.href = 'denglu';
     }
-  }
-
-  async function openPassModal() {
-    if (!passModalOverlay) return;
-    setCurrentPassVisible(false);
-    if (passNewInput) passNewInput.value = '';
-    if (passConfirmInput) passConfirmInput.value = '';
-    passModalOverlay.classList.add('active');
-    await loadAccountPassword();
-    if (passNewInput) passNewInput.focus();
-  }
-
-  if (userInfoEl) {
-    userInfoEl.addEventListener('click', function () { openPassModal(); });
-    userInfoEl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        openPassModal();
-      }
-    });
-  }
-
-  if (passModalClose) passModalClose.addEventListener('click', closePassModal);
-  if (passModalCancelBtn) passModalCancelBtn.addEventListener('click', closePassModal);
-  if (passModalOverlay) {
-    passModalOverlay.addEventListener('click', function (e) {
-      if (e.target === passModalOverlay) closePassModal();
-    });
-  }
-
-  if (passToggleCurrentBtn) {
-    passToggleCurrentBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var visible = passToggleCurrentBtn.dataset.visible === '1';
-      setCurrentPassVisible(!visible);
-    });
-  }
-
-  if (updatePassBtn) {
-    updatePassBtn.addEventListener('click', async function () {
-      var currentPassword = accountPasswordCache || (passCurrentView && passCurrentView.value) || '';
-      var p1 = passNewInput ? passNewInput.value.trim() : '';
-      var p2 = passConfirmInput ? passConfirmInput.value.trim() : '';
-      if (!currentPassword) {
-        showToast('无法验证当前密码，请稍后重试或联系管理员', 'error');
-        return;
-      }
-      if (p1.length < 4) { showToast('新密码至少 4 位', 'error'); return; }
-      if (p1 !== p2) { showToast('两次密码不一致', 'error'); return; }
-      if (p1 === currentPassword) { showToast('新密码不能与当前密码相同', 'error'); return; }
-
-      updatePassBtn.disabled = true;
-      updatePassBtn.textContent = '更新中…';
-      try {
-        var result = await apiRequest('PUT', '/api/account/password', {
-          current_password: currentPassword,
-          new_password: p1
-        });
-        accountPasswordCache = p1;
-        if (passCurrentView) passCurrentView.value = p1;
-        try {
-          if (localStorage.getItem('pjyz_login_pass') != null) {
-            localStorage.setItem('pjyz_login_pass', p1);
-          }
-        } catch (_) {}
-        showToast((result && result.message) || '密码已更新并同步到后台', 'success');
-        closePassModal();
-      } catch (e) {
-        showToast(e.message || '更新密码失败', 'error');
-      } finally {
-        updatePassBtn.disabled = false;
-        updatePassBtn.textContent = '更新密码';
-      }
-    });
-  }
-
-  // 退出登录
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', function () {
-      try {
-        localStorage.removeItem('pjyz_current_username');
-        localStorage.removeItem('pjyz_login_role');
-        // 保留 pjyz_active_role / pjyz_last_page，下次登录回到最近页面
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('pjyz_token');
-        localStorage.removeItem('pjyz_user');
-        // 跳转到登录页
-        window.location.href = 'denglu';
-      } catch (e) {
-        window.location.href = 'denglu';
-      }
-    });
-  }
+  };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260827c"></script>
+<script src="js/banzhuren-portal.js?v=20260827d"></script>
 </body>
 </html>

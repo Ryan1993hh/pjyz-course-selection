@@ -555,6 +555,21 @@ body {
 .student-status-badge.absent { background: #fee2e2; color: #b91c1c; }
 .student-status-badge.sick { background: #e0f2fe; color: #0369a1; }
 .student-status-badge.late { background: #ffedd5; color: #c2410c; }
+.student-leave-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.fs-leave-note {
+  display: block;
+  font-size: 10px;
+  color: #92400e;
+  margin-top: 4px;
+  line-height: 1.3;
+  word-break: break-word;
+}
 .student-actions { display: flex; gap: 6px; }
 
 /* ===== 未到选择弹窗 ===== */
@@ -2284,6 +2299,7 @@ const ABNORMAL = new Set(["absent", "late", "sick", "personal"]);
 let state = {
   students: [],
   checkin: {},
+  leaveNotes: {},
   checkinDay: "",
   checkinDone: false,
   rewards: {},
@@ -2825,6 +2841,11 @@ async function applyServerLeaveReports() {
       if (st === "none" || st === "sick" || st === "personal") {
         state.checkin[id] = leave.leave_type;
       }
+      if (leave.leave_type === "personal" && leave.note) {
+        state.leaveNotes[id] = String(leave.note).trim();
+      } else if (leave.leave_type !== "personal") {
+        delete state.leaveNotes[id];
+      }
     });
     saveLocal({ skipSync: true });
   } catch (e) {
@@ -2843,6 +2864,7 @@ function setStatus(id, status, opts) {
   const fsOpen = document.getElementById("fsCheckin").classList.contains("show");
   const prevFsStats = fsOpen ? calcFsStats() : null;
   state.checkin[id] = status;
+  if (status !== "personal") delete state.leaveNotes[id];
   saveLocal();
   renderCheckin();
   if (fsOpen) {
@@ -2865,10 +2887,21 @@ function buildFsCardActions(id, st) {
     '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">未到</button>';
 }
 
-function buildFsCardBadge(st) {
+function buildLeaveNoteHtml(id, st) {
+  if (st !== "personal") return "";
+  const note = state.leaveNotes && state.leaveNotes[id];
+  if (!note) return "";
+  return '<div class="student-leave-note" title="' + esc(note) + '">原因：' + esc(note) + '</div>';
+}
+
+function buildFsCardBadge(st, id) {
   if (st === "present") return '<span class="fs-badge present">已签到</span>';
   if (st === "sick") return '<span class="fs-badge sick">病假</span>';
-  if (st === "personal") return '<span class="fs-badge sick">事假</span>';
+  if (st === "personal") {
+    const note = state.leaveNotes && state.leaveNotes[id];
+    const noteHtml = note ? '<span class="fs-leave-note">' + esc(note) + '</span>' : '';
+    return '<span class="fs-badge sick">事假</span>' + noteHtml;
+  }
   if (st === "absent") return '<span class="fs-badge absent">旷课</span>';
   if (st === "late") return '<span class="fs-badge absent">迟到</span>';
   return "";
@@ -2932,20 +2965,14 @@ function updateFsCard(id, opts) {
   card.classList.remove("is-present", "is-absent", "is-sick", "is-late", "fs-card-enter-present", "fs-actions-changing");
   if (st !== "none") card.classList.add("is-" + st);
 
-  const oldBadge = card.querySelector(".fs-badge");
-  const newBadgeHtml = buildFsCardBadge(st);
+  card.querySelectorAll(".fs-badge, .fs-leave-note").forEach(el => el.remove());
+  const newBadgeHtml = buildFsCardBadge(st, id);
   if (newBadgeHtml) {
-    if (oldBadge) {
-      oldBadge.outerHTML = newBadgeHtml;
-    } else {
-      card.insertAdjacentHTML("afterbegin", newBadgeHtml);
-    }
+    card.insertAdjacentHTML("afterbegin", newBadgeHtml);
     if (opts.animatePresent && st === "present") {
       const badgeEl = card.querySelector(".fs-badge");
       if (badgeEl) badgeEl.classList.add("fs-badge-enter");
     }
-  } else if (oldBadge) {
-    oldBadge.remove();
   }
 
   const actionsEl = card.querySelector(".fs-actions");
@@ -3035,10 +3062,19 @@ function renderCheckin() {
   const abTags = document.getElementById("abnormalTags");
   if (abnormalList.length) {
     abCard.style.display = "";
-    abTags.innerHTML = abnormalList.map(x =>
-      '<span class="tag ' + (x.st === "absent" ? "bad" : (x.st === "sick" ? "sick" : "warn")) + '">' +
-      esc(x.name) + " · " + STATUS_LABEL[x.st] + "</span>"
-    ).join("");
+    abTags.innerHTML = abnormalList.map(x => {
+      let note = "";
+      if (x.st === "personal") {
+        const student = state.students.find(s => String(s.student_name) === String(x.name));
+        if (student) {
+          const nid = studentId(student);
+          const n = state.leaveNotes && state.leaveNotes[nid];
+          if (n) note = "（" + n + "）";
+        }
+      }
+      return '<span class="tag ' + (x.st === "absent" ? "bad" : (x.st === "sick" ? "sick" : "warn")) + '">' +
+      esc(x.name) + " · " + STATUS_LABEL[x.st] + esc(note) + "</span>";
+    }).join("");
   } else {
     abCard.style.display = "";
     abTags.innerHTML = '<span class="tag" style="background:#f3f4f6;color:#9ca3af;">暂无异常学生</span>';
@@ -3061,6 +3097,7 @@ function renderCheckin() {
     let badge = "";
     if (st !== "none") {
       badge = '<div class="student-status-badge ' + st + '">' + STATUS_LABEL[st] + '</div>';
+      badge += buildLeaveNoteHtml(id, st);
     }
     let actions = "";
     if (st === "present") {
@@ -3112,7 +3149,7 @@ function renderFsCheckin(animateId) {
     const st = getStatus(id);
     const cls = formatClass(s);
     const cardCls = "fs-student-card" + (st !== "none" ? " is-" + st : "");
-    const badge = buildFsCardBadge(st);
+    const badge = buildFsCardBadge(st, id);
     const actions = buildFsCardActions(id, st);
     return '<div class="' + cardCls + '" data-card-id="' + id + '">' + badge +
       '<div class="fs-name">' + esc(s.student_name) + '</div>' +

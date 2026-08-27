@@ -3202,6 +3202,11 @@ async function handleStudentLeavesPost(db, request) {
     return json({ error: '该学生不在当前班级选课名单中' }, 400);
   }
 
+  const note = String(body.note || '').trim();
+  if (leaveType === 'personal' && !note) {
+    return json({ error: '事假需填写原因说明' }, 400);
+  }
+
   const existing = await db.prepare(
     'SELECT id FROM student_leave_reports WHERE grade = ? AND class_name = ? AND student_name = ? AND leave_date = ?'
   ).bind(grade, className, studentName, leaveDate).first();
@@ -3210,12 +3215,12 @@ async function handleStudentLeavesPost(db, request) {
   if (existing) {
     await db.prepare(
       'UPDATE student_leave_reports SET leave_type = ?, reported_by = ?, reported_at = datetime(\'now\'), note = ? WHERE id = ?'
-    ).bind(leaveType, auth.user.userId, String(body.note || ''), existing.id).run();
+    ).bind(leaveType, auth.user.userId, note, existing.id).run();
     id = existing.id;
   } else {
     const res = await db.prepare(
       'INSERT INTO student_leave_reports (grade, class_name, student_name, leave_type, leave_date, reported_by, note) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).bind(grade, className, studentName, leaveType, leaveDate, auth.user.userId, String(body.note || '')).run();
+    ).bind(grade, className, studentName, leaveType, leaveDate, auth.user.userId, note).run();
     id = res.meta.last_row_id;
   }
 
