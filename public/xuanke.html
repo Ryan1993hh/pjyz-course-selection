@@ -2464,56 +2464,74 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .bz-dash-table th, .bz-dash-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
 .bz-dash-table th { background: rgba(13,148,136,0.08); font-weight: 600; }
-.bz-att-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 10px; }
-.bz-att-table {
-  width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px;
-  background: var(--card);
+/* 班级考勤看板 — 与后台「课程看板」hours-table 同款样式 */
+#bz-panel-dashboard .hours-table-wrap {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(70vh, 640px);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
 }
-.bz-att-table th, .bz-att-table td {
-  border: 1px solid var(--border);
-  padding: 6px 4px;
+#bz-panel-dashboard .hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+#bz-panel-dashboard .hours-table th,
+#bz-panel-dashboard .hours-table td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 6px;
   text-align: center;
-  white-space: nowrap;
-  min-width: 52px;
+  vertical-align: middle;
+  word-break: break-all;
+  line-height: 1.35;
 }
-.bz-att-table th { background: rgba(13,148,136,0.1); font-weight: 600; color: var(--primary-dark); }
-.bz-att-table th.bz-att-name,
-.bz-att-table td.bz-att-name {
-  position: sticky; left: 0; z-index: 2;
-  background: var(--card); text-align: left; min-width: 72px; max-width: 110px;
-  font-weight: 600; padding-left: 10px; padding-right: 10px;
-}
-.bz-att-table thead th.bz-att-name { z-index: 3; background: rgba(13,148,136,0.14); }
-.bz-att-table th.bz-att-group {
-  text-align: center;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  background: rgba(13,148,136,0.16);
-}
-.bz-att-table tr.bz-att-date-row th.bz-att-date {
-  font-size: 11px;
-  min-width: 56px;
-  background: rgba(13,148,136,0.12);
-}
-.bz-att-table tr.bz-att-teacher-row th {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--muted);
-  background: rgba(13,148,136,0.06);
-  padding: 4px 3px;
-}
-.bz-att-table th.bz-att-sub {
-  font-size: 11px;
+#bz-panel-dashboard .hours-table th {
+  background: #f1f5f9;
+  color: #475569;
   font-weight: 600;
-  color: var(--primary-dark);
-  background: rgba(13,148,136,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
 }
-.bz-att-table th.bz-att-teacher { font-size: 10px; }
+#bz-panel-dashboard .hours-table th.col-course,
+#bz-panel-dashboard .hours-table td.col-course {
+  width: 100px;
+  min-width: 100px;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #fff;
+  box-shadow: 2px 0 4px rgba(15, 23, 42, 0.04);
+  text-align: center;
+}
+#bz-panel-dashboard .hours-table thead th.col-course {
+  background: #f1f5f9;
+  z-index: 4;
+}
+#bz-panel-dashboard .hours-table tbody tr:nth-child(even) td {
+  background: #fafbfc;
+}
+#bz-panel-dashboard .hours-table tbody tr:nth-child(even) td.col-course {
+  background: #fafbfc;
+}
+#bz-panel-dashboard .hours-table td.cell-empty {
+  color: #cbd5e1;
+}
+#bz-panel-dashboard .hours-table.readonly td {
+  user-select: text;
+}
+#bz-panel-dashboard .hours-table .att-ok { color: #15803d; font-weight: 700; }
+#bz-panel-dashboard .hours-table .att-bad { color: #b91c1c; font-weight: 600; font-size: 12px; }
+#bz-panel-dashboard .hours-table .att-warn { color: #b45309; font-weight: 600; font-size: 12px; cursor: help; }
+#bz-panel-dashboard .hours-table .att-sick { color: #0369a1; font-weight: 600; font-size: 12px; }
 .bz-att-ok { color: #15803d; font-weight: 700; font-size: 13px; }
 .bz-att-bad { color: #b91c1c; font-weight: 600; font-size: 10px; }
 .bz-att-warn { color: #b45309; font-weight: 600; font-size: 10px; cursor: help; }
 .bz-att-sick { color: #0369a1; font-weight: 600; font-size: 10px; }
-.bz-att-ph { color: var(--muted); font-weight: 400; opacity: 0.45; }
 .bz-detail { font-size: 11px; color: var(--muted); max-width: 200px; }
 .bz-empty { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 13px; }
 
@@ -2706,10 +2724,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 <!-- 数据看板 -->
 <section class="bz-panel" id="bz-panel-dashboard">
   <div class="bz-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div class="bz-card-title" style="margin:0">班级考勤看板</div>
-      <button type="button" class="btn-reset" id="bzRefreshDashboard" style="font-size:12px;padding:6px 12px;">刷新</button>
-    </div>
+    <div class="bz-card-title">班级考勤看板</div>
     <p class="bz-subtitle">汇总全校拓展课签到记录，自动匹配本班学生并显示 ✓、旷课、病假、事假等状态（事假可悬停查看原因）</p>
     <div class="bz-dash-stats" id="bzDashboardSummary"></div>
     <div id="bzDashboardBody"></div>
@@ -5678,6 +5693,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260827m"></script>
+<script src="js/banzhuren-portal.js?v=20260827p"></script>
 </body>
 </html>

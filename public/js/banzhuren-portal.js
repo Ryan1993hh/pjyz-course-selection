@@ -407,6 +407,16 @@
     return cols;
   }
 
+  var BZ_ATT_DATE_COLS = 18;
+
+  function getDashboardDisplaySessions(sessions) {
+    var list = (sessions || []).filter(function (s) { return s && s.date; }).slice();
+    if (list.length > BZ_ATT_DATE_COLS) list = list.slice(-BZ_ATT_DATE_COLS);
+    var display = list.slice();
+    while (display.length < BZ_ATT_DATE_COLS) display.push(null);
+    return display;
+  }
+
   function normalizeDashboardData(data, fallbackStudents) {
     var students = (data && data.students) || [];
     if (fallbackStudents && fallbackStudents.length) {
@@ -445,14 +455,14 @@
   function renderAttendanceCell(cell) {
     var st = cell && cell.status;
     if (!st || st === 'none') return '';
-    if (st === 'present') return '<span class="bz-att-ok">✓</span>';
-    if (st === 'absent') return '<span class="bz-att-bad">旷课</span>';
-    if (st === 'late') return '<span class="bz-att-warn">迟到</span>';
-    if (st === 'sick') return '<span class="bz-att-sick">病假</span>';
+    if (st === 'present') return '<span class="att-ok">✓</span>';
+    if (st === 'absent') return '<span class="att-bad">旷课</span>';
+    if (st === 'late') return '<span class="att-warn">迟到</span>';
+    if (st === 'sick') return '<span class="att-sick">病假</span>';
     if (st === 'personal') {
       var note = (cell && cell.note) || '';
       var tip = note ? ' title="' + attrEsc(note) + '"' : '';
-      return '<span class="bz-att-warn"' + tip + '>事假</span>';
+      return '<span class="att-warn"' + tip + '>事假</span>';
     }
     return escHtml(st);
   }
@@ -482,15 +492,16 @@
     if (silent && sig && sig === bzState.dashboardSig) return;
     bzState.dashboardSig = sig;
 
-    var sessions = (data && data.sessions) || [];
     var students = (data && data.students) || [];
-    var filledSessions = sessions.length;
+    var sessions = (data && data.sessions) || [];
+    var displaySessions = getDashboardDisplaySessions(sessions);
+    var filledSessions = sessions.filter(function (s) { return s && s.date; }).length;
 
     var summary = document.getElementById('bzDashboardSummary');
     if (summary) {
       summary.innerHTML =
         '<div class="bz-dash-stat"><span class="n">' + (students.length || 0) + '</span><span class="l">班级人数</span></div>' +
-        '<div class="bz-dash-stat"><span class="n">' + filledSessions + '</span><span class="l">签到日期列</span></div>' +
+        '<div class="bz-dash-stat"><span class="n">' + filledSessions + '/' + BZ_ATT_DATE_COLS + '</span><span class="l">已签到次数</span></div>' +
         '<div class="bz-dash-stat"><span class="n">' + escHtml((data && (data.class_display || data.class_name)) || '—') + '</span><span class="l">负责班级</span></div>';
     }
 
@@ -502,39 +513,33 @@
     if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
     if (data && data.classroom_sync) lastClassroomSync = data.classroom_sync;
 
-    var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead><tr>' +
-      '<th class="bz-att-name">姓名</th>';
-    if (!sessions.length) {
-      html += '<th class="bz-att-date bz-att-empty-h">暂无签到记录</th>';
-    } else {
-      sessions.forEach(function (s) {
-        html += '<th class="bz-att-date" title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
-      });
-    }
-    html += '</tr></thead><tbody>';
+    var head = '<th class="col-course">姓名</th>' +
+      displaySessions.map(function (s) {
+        if (!s) return '<th class="col-date">—</th>';
+        return '<th class="col-date" title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
+      }).join('');
 
-    students.forEach(function (stu) {
+    var body = students.map(function (stu) {
       var cells = stu.cells || [];
-      html += '<tr><td class="bz-att-name">' + escHtml(stu.student_name) + '</td>';
-      if (!sessions.length) {
-        html += '<td class="bz-att-empty">—</td>';
-      } else {
-        for (var c = 0; c < sessions.length; c++) {
-          var cell = cells[c] || { status: '' };
-          html += '<td>' + renderAttendanceCell(cell) + '</td>';
-        }
-      }
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-    wrap.innerHTML = html;
+      var rowCells = displaySessions.map(function (sess, idx) {
+        if (!sess) return '<td class="cell-empty">—</td>';
+        var cell = cells[idx] || { status: '' };
+        var inner = renderAttendanceCell(cell);
+        if (!inner) return '<td class="cell-empty">—</td>';
+        return '<td>' + inner + '</td>';
+      }).join('');
+      return '<tr><td class="col-course">' + escHtml(stu.student_name) + '</td>' + rowCells + '</tr>';
+    }).join('');
+
+    wrap.innerHTML = '<div class="hours-table-wrap"><table class="hours-table cols-19 readonly"><thead><tr>' +
+      head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
 
   async function loadDashboard(opts) {
     opts = opts || {};
     var silent = !!opts.silent;
     var wrap = document.getElementById('bzDashboardBody');
-    if (wrap && !silent && !wrap.querySelector('.bz-att-table')) {
+    if (wrap && !silent && !wrap.querySelector('.hours-table')) {
       wrap.innerHTML = '<div class="bz-empty">加载中…</div>';
     }
     var fallback = [];
@@ -759,9 +764,6 @@
         if (e.target === plModal) closePersonalLeaveModal();
       });
     }
-
-    var refreshDash = document.getElementById('bzRefreshDashboard');
-    if (refreshDash) refreshDash.addEventListener('click', loadDashboard);
 
     var exportRow = document.getElementById('bzExportRosterRow');
     if (exportRow) exportRow.addEventListener('click', exportClassRoster);
