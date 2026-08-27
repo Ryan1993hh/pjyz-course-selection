@@ -16,6 +16,8 @@
 
   var lastSyncRevision = 0;
   var clockTimer = null;
+  var leavePageDate = '';
+  var leaveDayTimer = null;
   var SKIN_KEY = 'pjyz_teacher_skin';
   var SKIN_LIST = ['teal', 'violet', 'ocean', 'sunset', 'forest', 'ink'];
 
@@ -164,6 +166,12 @@
   function openClockOverlay() {
     var overlay = document.getElementById('clockOverlay');
     if (!overlay) return;
+    if (window.MuyuFish && typeof window.MuyuFish.init === 'function') {
+      window.MuyuFish.init();
+    }
+    if (window.TeacherQuotes && typeof window.TeacherQuotes.init === 'function') {
+      window.TeacherQuotes.init().catch(function () {});
+    }
     overlay.classList.add('show');
     updateClockQuote();
     refreshClockAbnormalCount();
@@ -232,6 +240,25 @@
     m = s.match(/^(六年级|七年级)\s*(\d+)\s*班$/);
     if (m) return { grade: m[1], classNum: m[2], display: s };
     return { grade: '', classNum: '', display: s };
+  }
+
+  function resetLeavePageForNewDay() {
+    bzState.selectedStudent = null;
+    bzState.todayLeaves = [];
+    var selEl = document.getElementById('bzLeaveSelected');
+    if (selEl) selEl.textContent = '已选：—';
+    closePersonalLeaveModal();
+  }
+
+  function ensureLeavePageDate(forceReload) {
+    var today = todayKey();
+    if (leavePageDate && leavePageDate !== today) {
+      leavePageDate = today;
+      resetLeavePageForNewDay();
+      return true;
+    }
+    if (!leavePageDate) leavePageDate = today;
+    return !!forceReload;
   }
 
   async function loadTodayLeaves() {
@@ -370,12 +397,13 @@
   }
 
   async function loadLeavePage() {
+    ensureLeavePageDate(false);
     bzState.classStudents = await loadClassStudents();
     await loadTodayLeaves();
-    renderLeaveGrid();
-    renderLeaveList();
     var dateEl = document.getElementById('bzLeaveDate');
     if (dateEl) dateEl.textContent = todayKey();
+    renderLeaveGrid();
+    renderLeaveList();
   }
 
   function emptySessions(n) {
@@ -395,10 +423,11 @@
       fallbackStudents.forEach(function (s) {
         var n = String((s && s.student_name) || s || '').trim();
         if (!n || map.has(n)) return;
-        map.set(n, {
+        var existing = students.find(function (x) { return String(x.student_name || '').trim() === n; });
+        map.set(n, existing || {
           student_name: n,
           gender: (s && s.gender) || '',
-          cells: []
+          cells: existing && existing.cells ? existing.cells : []
         });
       });
       students = Array.from(map.values()).sort(function (a, b) {
@@ -422,9 +451,11 @@
     });
   }
 
-  function renderAttendanceCell(cell) {
+  function renderAttendanceCell(cell, hasSession) {
     var st = cell && cell.status;
-    if (!st || st === 'none') return '';
+    if (!st || st === 'none') {
+      return hasSession ? '<span class="bz-att-empty">—</span>' : '';
+    }
     if (st === 'present') return '<span class="bz-att-ok">✓</span>';
     if (st === 'absent') return '<span class="bz-att-bad">旷课</span>';
     if (st === 'late') return '<span class="bz-att-warn">迟到</span>';
@@ -481,14 +512,23 @@
 
     if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
 
-    var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead><tr>' +
-      '<th class="bz-att-name">姓名</th>';
+    var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead>' +
+      '<tr><th class="bz-att-name">姓名</th>';
     for (var i = 0; i < 18; i++) {
       var s = sessions[i];
       if (s && s.date) {
         html += '<th title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
       } else {
-        html += '<th class="bz-att-ph">' + (i + 1) + '</th>';
+        html += '<th class="bz-att-ph">—</th>';
+      }
+    }
+    html += '</tr><tr class="bz-att-teacher-row"><th class="bz-att-name">授课教师</th>';
+    for (var ti = 0; ti < 18; ti++) {
+      var ts = sessions[ti];
+      if (ts && ts.date) {
+        html += '<th title="' + attrEsc(ts.course_name || '') + '">' + escHtml(ts.teacher_name || '—') + '</th>';
+      } else {
+        html += '<th class="bz-att-ph">—</th>';
       }
     }
     html += '</tr></thead><tbody>';
@@ -499,11 +539,8 @@
       for (var c = 0; c < 18; c++) {
         var cell = cells[c] || { status: '' };
         var sess = sessions[c];
-        if (!sess || !sess.date) {
-          html += '<td></td>';
-        } else {
-          html += '<td>' + renderAttendanceCell(cell) + '</td>';
-        }
+        var hasSession = !!(sess && sess.date);
+        html += '<td>' + renderAttendanceCell(cell, hasSession) + '</td>';
       }
       html += '</tr>';
     });
@@ -675,8 +712,28 @@
         if (bzState.tab === 'leave') loadLeavePage();
         else if (bzState.tab === 'dashboard') loadDashboard({ silent: true });
         else if (bzState.tab === 'profile') loadProfile();
+      } else if (bzState.tab === 'dashboard') {
+        loadDashboard({ silent: true });
       }
     } catch (e) { /* ignore */ }
+  }
+
+  function startLeaveDayWatch() {
+    if (leaveDayTimer) return;
+    leaveDayTimer = setInterval(function () {
+      if (!getToken()) return;
+      if (ensureLeavePageDate(false)) {
+        if (bzState.tab === 'leave') loadLeavePage();
+        else refreshClockAbnormalCount();
+      }
+    }, 30000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'visible') return;
+      if (ensureLeavePageDate(false)) {
+        if (bzState.tab === 'leave') loadLeavePage();
+        else refreshClockAbnormalCount();
+      }
+    });
   }
 
   function initSyncRevision() {
@@ -688,8 +745,11 @@
 
   function init() {
     initSkin();
-    if (window.TeacherQuotes && typeof TeacherQuotes.init === 'function') {
-      TeacherQuotes.init();
+    if (window.MuyuFish && typeof window.MuyuFish.init === 'function') {
+      window.MuyuFish.init();
+    }
+    if (window.TeacherQuotes && typeof window.TeacherQuotes.init === 'function') {
+      window.TeacherQuotes.init().catch(function () {});
     }
 
     var topNav = document.querySelector('.bz-subnav') || document.querySelector('.bz-top-nav');
@@ -762,11 +822,12 @@
     bindProfilePassword();
 
     initSyncRevision();
-    setInterval(pollSelectionSync, 15000);
+    startLeaveDayWatch();
+    setInterval(pollSelectionSync, 10000);
     // 停留在数据看板时更频繁刷新签到表格（静默，不闪烁）
     setInterval(function () {
       if (bzState.tab === 'dashboard' && getToken()) loadDashboard({ silent: true });
-    }, 20000);
+    }, 10000);
 
     var logoutBtn = document.getElementById('bzProfileLogout');
     if (logoutBtn) {

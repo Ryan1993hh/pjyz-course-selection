@@ -168,7 +168,10 @@
   }
 
   function init() {
-    if (initialized) return;
+    if (initialized) {
+      bind();
+      return;
+    }
     initialized = true;
     loadMerit();
     updateMeritDisplay();

@@ -3464,6 +3464,7 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     if (!course) continue;
     if (selectionMatchesClassScope(row, grade, className) || rosterMap.has(name)) {
       coursesFromClassSelections.add(course);
+      linkStudentCourse(name, course, row.gender);
     }
   }
 
@@ -3496,6 +3497,18 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     if (shouldInclude) await ensureCourseData(courseName, row, payload);
   }
 
+  for (const courseName of coursesFromClassSelections) {
+    if (courseData[courseName]) continue;
+    const tcRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
+    let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
+    if (tcRow && tcRow.payload) {
+      try { payload = JSON.parse(tcRow.payload); } catch (_) {}
+    }
+    if (tcRow && tcRow.checkin_day && !payload.checkinDay) payload.checkinDay = String(tcRow.checkin_day);
+    await ensureCourseData(courseName, tcRow, payload);
+    allCourses.add(courseName);
+  }
+
   for (const row of (selRes.results || [])) {
     const name = String(row.student_name || '').trim();
     const course = String(row.course_name || '').trim();
@@ -3524,7 +3537,7 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     String(a.student_name).localeCompare(String(b.student_name), 'zh')
   );
 
-  return { finalRoster, studentCourses, allCourses, courseData };
+  return { finalRoster, studentCourses, allCourses, courseData, coursesFromClassSelections };
 }
 
 async function handleBanzhurenClassDashboard(db, request) {
@@ -3570,7 +3583,8 @@ async function handleBanzhurenClassDashboard(db, request) {
     finalRoster,
     studentCourses,
     allCourses,
-    courseData
+    courseData,
+    coursesFromClassSelections
   } = await buildBanzhurenDashboardContext(db, grade, className, baseOrSchool);
 
   const ATTENDANCE_COLS = 18;
@@ -3609,8 +3623,19 @@ async function handleBanzhurenClassDashboard(db, request) {
       if (!date) return;
       const label = String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date);
       const prev = sessionMap.get(date);
+      const teacherName = String(cd.teacher_name || '').trim();
+      const courseLabel = String(courseName || '').trim();
       if (!prev || (h.updatedAt && (!prev.updatedAt || h.updatedAt > prev.updatedAt))) {
-        sessionMap.set(date, { date: date, dateLabel: label, updatedAt: h.updatedAt || 0 });
+        sessionMap.set(date, {
+          date: date,
+          dateLabel: label,
+          updatedAt: h.updatedAt || 0,
+          teacher_name: teacherName,
+          course_name: courseLabel
+        });
+      } else if (prev && !prev.teacher_name && teacherName) {
+        prev.teacher_name = teacherName;
+        prev.course_name = courseLabel;
       }
     });
     // 当天已开始签到（含进行中）但尚未写入 history 时，也占一列
@@ -3625,10 +3650,32 @@ async function handleBanzhurenClassDashboard(db, request) {
         sessionMap.set(checkinDay, {
           date: checkinDay,
           dateLabel: formatAttendanceDateLabel(checkinDay),
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
+          teacher_name: String(cd.teacher_name || '').trim(),
+          course_name: String(courseName || '').trim()
         });
       }
     }
+  }
+
+  // 本班选课课程若 teacher_classroom 有签到数据但上面未纳入，再补扫一遍
+  for (const courseName of coursesFromClassSelections) {
+    if (sessionMap.size >= ATTENDANCE_COLS) break;
+    const cd = courseData[courseName];
+    if (!cd) continue;
+    const payload = cd.payload || {};
+    const history = Array.isArray(payload.history) ? payload.history : [];
+    history.forEach((h) => {
+      const date = String((h && h.date) || '').trim();
+      if (!date || sessionMap.has(date)) return;
+      sessionMap.set(date, {
+        date: date,
+        dateLabel: String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date),
+        updatedAt: h.updatedAt || 0,
+        teacher_name: String(cd.teacher_name || '').trim(),
+        course_name: String(courseName || '').trim()
+      });
+    });
   }
 
   const sessions = Array.from(sessionMap.values())
