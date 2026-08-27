@@ -3323,6 +3323,10 @@ async function handleBanzhurenClassDashboard(db, request) {
     };
   }
 
+  const today = getTodayDateKey();
+  const ABNORMAL_STATUSES = new Set(['absent', 'late', 'sick', 'personal']);
+  const todayAbnormalNames = new Set();
+
   const studentsOut = roster.map((r) => {
     const name = String(r.student_name || '').trim();
     const courses = Array.from(studentCourses[name] || []);
@@ -3358,6 +3362,13 @@ async function handleBanzhurenClassDashboard(db, request) {
         late: late,
         sessions: history.length
       });
+
+      // 当天签到异常（旷课/迟到/病假/事假）
+      if (String(payload.checkinDay || '') === today) {
+        const checkin = payload.checkin || {};
+        const st = checkin[key] || checkin[name] || 'none';
+        if (ABNORMAL_STATUSES.has(st)) todayAbnormalNames.add(name);
+      }
     });
 
     return {
@@ -3374,12 +3385,29 @@ async function handleBanzhurenClassDashboard(db, request) {
     };
   });
 
+  // 班主任当日请假报备也计入异常（教师端尚未同步时仍可见）
+  try {
+    const leaveRows = await db.prepare(
+      'SELECT student_name, class_name, grade FROM student_leave_reports WHERE leave_date = ?'
+    ).bind(today).all();
+    (leaveRows.results || []).forEach((row) => {
+      if (!schoolStudentMatchesClassScope(row, grade, className)) return;
+      const name = String(row.student_name || '').trim();
+      if (name) todayAbnormalNames.add(name);
+    });
+  } catch (_) { /* ignore */ }
+
   return json({
     grade: grade,
     class_name: className,
     class_display: classDisplay,
     student_count: roster.length,
     course_count: allCourses.size,
+    today_date: today,
+    today_abnormal_count: todayAbnormalNames.size,
+    today_abnormal_students: Array.from(todayAbnormalNames).sort((a, b) =>
+      String(a).localeCompare(String(b), 'zh')
+    ),
     students: studentsOut,
     courses: Array.from(allCourses).map((c) => ({
       course_name: c,

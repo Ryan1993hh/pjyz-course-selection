@@ -119,20 +119,14 @@
     }
   }
 
+  var clockAbnormalCount = 0;
+
   function getSelectionStats() {
     var total = 0;
-    var unselected = 0;
     try {
       if (typeof students !== 'undefined' && Array.isArray(students)) total = students.length;
-      if (typeof COURSES !== 'undefined' && Array.isArray(COURSES)) {
-        var selectedSet = new Set();
-        COURSES.forEach(function (c) {
-          (c.students || []).forEach(function (n) { selectedSet.add(String(n).trim()); });
-        });
-        unselected = Math.max(0, total - selectedSet.size);
-      }
     } catch (_) {}
-    return { total: total, unselected: unselected };
+    return { total: total };
   }
 
   function updateClockInfo() {
@@ -145,11 +139,26 @@
     var classEl = document.getElementById('clockClass');
     var teacherEl = document.getElementById('clockTeacher');
     var studentsEl = document.getElementById('clockStudents');
-    var unselEl = document.getElementById('clockUnselected');
+    var abnormalEl = document.getElementById('clockAbnormal');
     if (classEl) classEl.textContent = parsed.display || '—';
     if (teacherEl) teacherEl.textContent = displayName;
     if (studentsEl) studentsEl.textContent = String(count);
-    if (unselEl) unselEl.textContent = String(stats.unselected);
+    if (abnormalEl) abnormalEl.textContent = String(clockAbnormalCount);
+  }
+
+  async function refreshClockAbnormalCount() {
+    try {
+      var data = await apiRequest('GET', '/api/banzhuren/class-dashboard');
+      clockAbnormalCount = Number(data && data.today_abnormal_count) || 0;
+      if (data && Array.isArray(data.students) && !bzState.classStudents.length) {
+        bzState.classStudents = data.students.map(function (s) {
+          return { student_name: s.student_name, gender: s.gender || '' };
+        });
+      }
+    } catch (_) {
+      clockAbnormalCount = 0;
+    }
+    updateClockInfo();
   }
 
   function openClockOverlay() {
@@ -157,6 +166,7 @@
     if (!overlay) return;
     overlay.classList.add('show');
     updateClockQuote();
+    refreshClockAbnormalCount();
     function tick() {
       var now = new Date();
       var hour = now.getHours();
