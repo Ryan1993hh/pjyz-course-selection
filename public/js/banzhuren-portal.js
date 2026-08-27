@@ -14,6 +14,8 @@
     profile: null
   };
 
+  var lastSyncRevision = 0;
+
   function todayKey() {
     var d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -64,41 +66,13 @@
   async function loadClassStudents() {
     var user = getUser();
     if (!user || !getToken()) return [];
-    var parsed = parseClassFromUser(user);
-    if (!parsed.grade) return [];
 
     try {
-      var qs = new URLSearchParams();
-      qs.set('grade', parsed.grade);
-      qs.set('class_num', parsed.classNum || '');
-      qs.set('class', parsed.grade + '(' + (parsed.classNum || '') + ')班');
-      var data = await apiRequest('GET', '/api/school-students?' + qs.toString());
-      var list = (data && data.students) || [];
-      if (list.length) {
-        return list.map(function (r) {
-          return { student_name: r.student_name, gender: r.gender || '' };
-        });
-      }
+      var data = await apiRequest('GET', '/api/banzhuren/class-roster');
+      if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
+      return (data && data.students) || [];
     } catch (e) {
-      console.warn('loadClassStudents roster:', e.message);
-    }
-
-    try {
-      var sq = new URLSearchParams();
-      sq.set('grade', parsed.grade);
-      sq.set('class_name', (parsed.classNum || '') + '班');
-      var sel = await apiRequest('GET', '/api/selections?' + sq.toString());
-      var rows = Array.isArray(sel) ? sel : (sel.selections || []);
-      var seen = new Set();
-      var out = [];
-      rows.forEach(function (r) {
-        var name = String(r.student_name || '').trim();
-        if (!name || seen.has(name)) return;
-        seen.add(name);
-        out.push({ student_name: name, gender: r.gender || '' });
-      });
-      return out;
-    } catch (e) {
+      console.warn('loadClassStudents:', e.message);
       return [];
     }
   }
@@ -134,7 +108,7 @@
 
     if (!bzState.classStudents.length) {
       grid.innerHTML = '';
-      if (hint) hint.textContent = '暂无班级学生名单，请先在选课页上传或同步名单';
+      if (hint) hint.textContent = '暂无班级学生名单，请先在后台导入选课数据或完成选课';
       return;
     }
     if (hint) hint.textContent = '共 ' + bzState.classStudents.length + ' 名学生 · 点击选择学生后报备请假';
@@ -347,6 +321,27 @@
     }
   }
 
+  async function pollSelectionSync() {
+    if (!getToken()) return;
+    try {
+      var data = await apiRequest('GET', '/api/selection-data-sync');
+      var rev = data.revision || 0;
+      if (rev > lastSyncRevision) {
+        lastSyncRevision = rev;
+        if (bzState.tab === 'leave') loadLeavePage();
+        else if (bzState.tab === 'dashboard') loadDashboard();
+        else if (bzState.tab === 'profile') loadProfile();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function initSyncRevision() {
+    if (!getToken()) return;
+    apiRequest('GET', '/api/selection-data-sync').then(function (data) {
+      lastSyncRevision = (data && data.revision) || 0;
+    }).catch(function () {});
+  }
+
   function init() {
     var tabbar = document.querySelector('.bz-tabbar');
     if (tabbar) {
@@ -376,6 +371,9 @@
     if (refreshDash) refreshDash.addEventListener('click', loadDashboard);
 
     bindProfilePassword();
+
+    initSyncRevision();
+    setInterval(pollSelectionSync, 30000);
 
     var logoutBtn = document.getElementById('bzProfileLogout');
     if (logoutBtn) {

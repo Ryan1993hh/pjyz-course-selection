@@ -1691,6 +1691,9 @@ async function handleClearSelections(db, request) {
       deleted++;
     }
     await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+    if (want.grade) {
+      await purgeLeaveReportsNotInClassRoster(db, want.grade, want.class_name || cls || '', { skipRevisionBump: true });
+    }
     await bumpSelectionDataRevision(db);
 
     return json({
@@ -1705,7 +1708,7 @@ async function handleClearSelections(db, request) {
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
   await syncAllTeacherClassroomsFromSelections(db);
-  await bumpSelectionDataRevision(db);
+  await purgeAllOrphanLeaveReports();
   return json({ success: true });
 }
 
@@ -1825,6 +1828,9 @@ async function handleClearUnselectedStudents(db, request) {
       await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
       deleted++;
     }
+    if (parsed.grade) {
+      await purgeLeaveReportsNotInClassRoster(db, parsed.grade, parsed.class_name || cls || '', { skipRevisionBump: true });
+    }
     await bumpSelectionDataRevision(db);
     return json({ success: true, deleted: deleted });
   }
@@ -1832,12 +1838,13 @@ async function handleClearUnselectedStudents(db, request) {
   if (userIdStr) {
     const userId = parseInt(userIdStr);
     await db.prepare('DELETE FROM unselected_students WHERE user_id = ?').bind(userId).run();
+    await purgeAllOrphanLeaveReports();
   } else {
     const auth = requireAuth(request, ['admin']);
     if (auth.error) return json({ error: auth.error }, auth.status);
     await db.prepare('DELETE FROM unselected_students').run();
+    await purgeAllOrphanLeaveReports();
   }
-  await bumpSelectionDataRevision(db);
   return json({ success: true });
 }
 
@@ -2983,7 +2990,8 @@ async function syncLeaveReportToClassrooms(db, report) {
   await bumpSelectionDataRevision(db);
 }
 
-async function removeLeaveFromClassrooms(db, report) {
+async function removeLeaveFromClassrooms(db, report, opts) {
+  opts = opts || {};
   const studentName = String(report.student_name || '').trim();
   const grade = String(report.grade || '').trim();
   const className = String(report.class_name || '').trim();
@@ -3017,6 +3025,83 @@ async function removeLeaveFromClassrooms(db, report) {
       teacher_name: tcRow.teacher_name,
       teacher_user_id: tcRow.teacher_user_id
     });
+  }
+  if (!opts.skipRevisionBump) {
+    await bumpSelectionDataRevision(db);
+  }
+}
+
+/** 班主任端班级名单：选课记录 + 未选课记录（与后台选课数据同步，不单独使用 school_students） */
+async function getBanzhurenClassRoster(db, grade, className) {
+  const map = new Map();
+
+  const selRes = await db.prepare(
+    'SELECT student_name, gender, grade, class_name FROM selections'
+  ).all();
+  for (const row of (selRes.results || [])) {
+    if (!selectionMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!name) continue;
+    const existing = map.get(name);
+    const gender = String(row.gender || '').trim();
+    map.set(name, {
+      student_name: name,
+      gender: gender || (existing && existing.gender) || ''
+    });
+  }
+
+  const unRes = await db.prepare(`
+    SELECT u.student_name, u.grade, u.class_name,
+           COALESCE(s.gender, '') AS gender
+    FROM unselected_students u
+    LEFT JOIN school_students s
+      ON u.grade = s.grade AND u.class_name = s.class_name AND u.student_name = s.student_name
+  `).all();
+  for (const row of (unRes.results || [])) {
+    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!name) continue;
+    if (!map.has(name)) {
+      map.set(name, { student_name: name, gender: String(row.gender || '').trim() });
+    } else if (!map.get(name).gender && row.gender) {
+      map.get(name).gender = String(row.gender || '').trim();
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) =>
+    String(a.student_name).localeCompare(String(b.student_name), 'zh')
+  );
+}
+
+async function purgeLeaveReportsNotInClassRoster(db, grade, className, opts) {
+  opts = opts || {};
+  const roster = await getBanzhurenClassRoster(db, grade, className);
+  const names = new Set(roster.map((s) => s.student_name));
+  const rows = await db.prepare(
+    'SELECT * FROM student_leave_reports WHERE grade = ?'
+  ).bind(grade).all();
+  for (const row of (rows.results || [])) {
+    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!names.has(name)) {
+      await removeLeaveFromClassrooms(db, row, { skipRevisionBump: true });
+      await db.prepare('DELETE FROM student_leave_reports WHERE id = ?').bind(row.id).run();
+    }
+  }
+  if (!opts.skipRevisionBump) {
+    await bumpSelectionDataRevision(db);
+  }
+}
+
+async function purgeAllOrphanLeaveReports(db) {
+  const rows = await db.prepare('SELECT * FROM student_leave_reports').all();
+  for (const row of (rows.results || [])) {
+    const roster = await getBanzhurenClassRoster(db, row.grade, row.class_name);
+    const names = new Set(roster.map((s) => s.student_name));
+    if (!names.has(String(row.student_name || '').trim())) {
+      await removeLeaveFromClassrooms(db, row, { skipRevisionBump: true });
+      await db.prepare('DELETE FROM student_leave_reports WHERE id = ?').bind(row.id).run();
+    }
   }
   await bumpSelectionDataRevision(db);
 }
@@ -3065,6 +3150,12 @@ async function handleStudentLeavesGet(db, request) {
     leaves = leaves.filter((row) => schoolStudentMatchesClassScope(row, grade, className));
   }
 
+  if (grade && className && auth.user.roles.indexOf('teacher') === -1) {
+    const roster = await getBanzhurenClassRoster(db, grade, className);
+    const names = new Set(roster.map((s) => s.student_name));
+    leaves = leaves.filter((l) => names.has(String(l.student_name || '').trim()));
+  }
+
   if (courseName && auth.user.roles.indexOf('teacher') !== -1) {
     const selRes = await db.prepare(
       'SELECT student_name FROM selections WHERE course_name = ?'
@@ -3104,6 +3195,11 @@ async function handleStudentLeavesPost(db, request) {
   if (!studentName) return json({ error: '缺少学生姓名' }, 400);
   if (!['sick', 'personal'].includes(leaveType)) {
     return json({ error: '请假类型无效（sick=病假, personal=事假）' }, 400);
+  }
+
+  const roster = await getBanzhurenClassRoster(db, grade, className);
+  if (!roster.some((s) => s.student_name === studentName)) {
+    return json({ error: '该学生不在当前班级选课名单中' }, 400);
   }
 
   const existing = await db.prepare(
@@ -3189,25 +3285,7 @@ async function handleBanzhurenClassDashboard(db, request) {
 
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
-  const rosterRes = await db.prepare(
-    'SELECT student_name, gender FROM school_students WHERE grade = ? ORDER BY student_name'
-  ).bind(grade).all();
-  let roster = (rosterRes.results || []).filter((r) =>
-    schoolStudentMatchesClassScope(r, grade, className)
-  );
-
-  if (!roster.length) {
-    const selAll = await db.prepare('SELECT student_name, gender, grade, class_name, course_name FROM selections').all();
-    const seen = new Set();
-    roster = [];
-    (selAll.results || []).forEach((r) => {
-      if (!selectionMatchesClassScope(r, grade, className)) return;
-      const name = String(r.student_name || '').trim();
-      if (!name || seen.has(name)) return;
-      seen.add(name);
-      roster.push({ student_name: name, gender: r.gender || '' });
-    });
-  }
+  const roster = await getBanzhurenClassRoster(db, grade, className);
 
   const selRes = await db.prepare(
     'SELECT student_name, course_name, grade, class_name FROM selections WHERE grade = ? OR class_name LIKE ?'
@@ -3302,6 +3380,44 @@ async function handleBanzhurenClassDashboard(db, request) {
       course_name: c,
       teacher_name: (courseData[c] && courseData[c].teacher_name) || ''
     }))
+  });
+}
+
+async function handleBanzhurenClassRosterGet(db, request) {
+  const auth = requireAuth(request, ['banzhuren', 'admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  const ctx = await getBanzhurenClassContext(db, auth.user.userId);
+  const url = new URL(request.url);
+  let grade = '';
+  let className = '';
+  let classDisplay = '';
+
+  if (auth.user.roles.indexOf('admin') !== -1) {
+    grade = String(url.searchParams.get('grade') || '').trim();
+    className = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+    const parsed = parseGradeClassFields(grade, className);
+    grade = parsed.grade || grade;
+    className = parsed.class_name || className;
+    classDisplay = className;
+  } else {
+    if (!ctx || !ctx.grade) return json({ error: '账号未绑定班级' }, 400);
+    grade = ctx.grade;
+    className = ctx.class_name;
+    classDisplay = ctx.class_display;
+  }
+
+  if (!grade) return json({ error: '缺少年级信息' }, 400);
+
+  const students = await getBanzhurenClassRoster(db, grade, className);
+  const revision = await getSelectionDataRevision(db);
+  return json({
+    students: students,
+    count: students.length,
+    grade: grade,
+    class_name: className,
+    class_display: classDisplay,
+    revision: revision
   });
 }
 
@@ -4179,6 +4295,11 @@ export async function onRequest(context) {
   // /api/banzhuren/class-dashboard — 班主任班级考勤看板
   if (path === '/api/banzhuren/class-dashboard' && method === 'GET') {
     return handleBanzhurenClassDashboard(db, request);
+  }
+
+  // /api/banzhuren/class-roster — 班主任班级名单（选课+未选课，与后台同步）
+  if (path === '/api/banzhuren/class-roster' && method === 'GET') {
+    return handleBanzhurenClassRosterGet(db, request);
   }
 
   // /api/selection-status
