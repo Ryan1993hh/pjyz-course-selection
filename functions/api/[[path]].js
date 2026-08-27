@@ -1155,7 +1155,16 @@ function parseGradeClassFields(grade, className) {
       if (gm) g = gm[1];
     }
   }
-  if (!g && gIn) g = gIn;
+  // 短写班级：七4班 / 六1班 / 七(4)班
+  if (!g || !n) {
+    m = cIn.match(/^([六七])(?:年级)?[\(（]?(\d+)[\)）]?\s*班?$/);
+    if (m) {
+      g = m[1] === '六' ? '六年级' : '七年级';
+      n = m[2];
+    }
+  }
+  if (!g && gIn) g = normalizeSchoolGrade(gIn) || gIn;
+  if (!g && cIn) g = normalizeSchoolGrade(cIn);
   const normalizedClass = g && n ? `${g}(${n})班` : cIn;
   return { grade: g, classNum: n, class_name: normalizedClass };
 }
@@ -3293,9 +3302,10 @@ async function getBanzhurenClassContext(db, userId) {
   if (!user) return null;
   const classRaw = String(user.class_name || '').trim();
   const parsed = parseGradeClassFields('', classRaw);
+  const grade = parsed.grade || normalizeSchoolGrade(classRaw);
   return {
     user: user,
-    grade: parsed.grade,
+    grade: grade,
     class_name: parsed.class_name || classRaw,
     class_display: classRaw
   };
@@ -3438,12 +3448,12 @@ async function handleStudentLeavesDelete(db, request, id) {
   return json({ success: true });
 }
 
-function countCheckinStatusInHistory(history, student, status) {
+function countCheckinStatusInHistory(history, student, status, idToName) {
   let n = 0;
   const studentName = String((student && student.student_name) || '').trim();
   (history || []).forEach((h) => {
     if (!h || !h.checkin) return;
-    if (lookupStudentCheckinStatus(h.checkin, student, studentName) === status) n++;
+    if (lookupStudentCheckinStatus(h.checkin, student, studentName, idToName) === status) n++;
   });
   return n;
 }
@@ -3668,6 +3678,95 @@ function buildSelectionIdToNameMapForCourse(selRows, courseName, grade, classNam
   return map;
 }
 
+function buildIdToNameMapForCourseDashboard(payload, grade, className, rosterMap, selRows, courseName) {
+  const map = buildCheckinStudentIdToNameMap(
+    payload && payload.students,
+    grade,
+    className,
+    rosterMap,
+    buildSelectionIdToNameMapForCourse(selRows, courseName, grade, className, rosterMap)
+  );
+  return map;
+}
+
+function historyEntryHasClassStudent(checkin, classNames, idToName) {
+  if (!checkin || typeof checkin !== 'object' || !classNames || !classNames.size) return false;
+  for (const key of Object.keys(checkin)) {
+    const v = checkin[key];
+    if (v == null || v === '' || v === 'none') continue;
+    const sn = resolveCheckinKeyToStudentName(key, idToName);
+    if (sn && classNames.has(sn)) return true;
+    for (const n of classNames) {
+      if (key === n || key.startsWith(n + '|') || key.startsWith(n + '｜')) return true;
+    }
+  }
+  return false;
+}
+
+function buildBanzhurenSessionMap(courseData, coursesToScan, classStudentNames, grade, className, rosterMap, selRows) {
+  const classNames = new Set(classStudentNames);
+  const sessionMap = new Map();
+
+  function addDate(date, label, updatedAt) {
+    if (!date) return;
+    const prev = sessionMap.get(date);
+    if (!prev || (updatedAt || 0) > (prev.updatedAt || 0)) {
+      sessionMap.set(date, {
+        date: date,
+        dateLabel: label || formatAttendanceDateLabel(date),
+        updatedAt: updatedAt || 0
+      });
+    }
+  }
+
+  for (const courseName of coursesToScan) {
+    const cd = courseData[courseName];
+    if (!cd) continue;
+    const payload = cd.payload || {};
+    const idToName = buildIdToNameMapForCourseDashboard(payload, grade, className, rosterMap, selRows, courseName);
+
+    (Array.isArray(payload.history) ? payload.history : []).forEach((h) => {
+      const date = normalizeDateKey((h && h.date) || '');
+      if (!date) return;
+      if (historyEntryHasClassStudent(h && h.checkin, classNames, idToName)) {
+        addDate(date, String((h && h.dateLabel) || '').trim(), (h && h.updatedAt) || 0);
+      }
+    });
+
+    const checkinDay = normalizeDateKey((payload.checkinDay) || '');
+    if (checkinDay && historyEntryHasClassStudent(payload.checkin, classNames, idToName)) {
+      addDate(checkinDay, formatAttendanceDateLabel(checkinDay), Date.now());
+    }
+  }
+
+  if (sessionMap.size === 0) {
+    for (const courseName of coursesToScan) {
+      const cd = courseData[courseName];
+      if (!cd) continue;
+      const payload = cd.payload || {};
+      const idToName = buildIdToNameMapForCourseDashboard(payload, grade, className, rosterMap, selRows, courseName);
+      (Array.isArray(payload.history) ? payload.history : []).forEach((h) => {
+        const date = normalizeDateKey((h && h.date) || '');
+        if (!date) return;
+        if (historyEntryHasClassStudent(h && h.checkin, classNames, idToName)) {
+          addDate(date, String((h && h.dateLabel) || '').trim(), (h && h.updatedAt) || 0);
+        }
+      });
+    }
+  }
+
+  return sessionMap;
+}
+
+function filterSelectionsForBanzhurenClass(allRows, grade, className, rosterMap) {
+  return (allRows || []).filter((row) => {
+    const name = String(row.student_name || '').trim();
+    if (!name) return false;
+    if (rosterMap && rosterMap.has(name)) return true;
+    return selectionMatchesClassScope(row, grade, className);
+  });
+}
+
 function payloadCheckinScore(payload) {
   if (!payload || typeof payload !== 'object') return 0;
   let score = 0;
@@ -3868,10 +3967,10 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
   }
 
   const selRes = await db.prepare(
-    'SELECT id, student_name, course_name, grade, class_name, gender FROM selections WHERE grade = ? OR class_name LIKE ?'
-  ).bind(grade, '%' + grade + '%').all();
+    'SELECT id, student_name, course_name, grade, class_name, gender FROM selections'
+  ).all();
+  const selRows = filterSelectionsForBanzhurenClass(selRes.results || [], grade, className, rosterMap);
   const selByNameCourse = new Map();
-  const selRows = selRes.results || [];
   for (const row of selRows) {
     const name = String(row.student_name || '').trim();
     const course = String(row.course_name || '').trim();
@@ -3957,12 +4056,15 @@ async function handleBanzhurenClassDashboard(db, request) {
     className = parsed.class_name || className;
     classDisplay = className;
   } else {
-    if (!ctx || !ctx.grade) return json({ error: '账号未绑定班级' }, 400);
+    if (!ctx) return json({ error: '账号未绑定班级' }, 400);
     grade = ctx.grade;
     className = ctx.class_name;
     classDisplay = ctx.class_display;
   }
 
+  const parsedClass = parseGradeClassFields(grade, className || classDisplay);
+  grade = parsedClass.grade || grade || normalizeSchoolGrade(classDisplay || className);
+  className = parsedClass.class_name || className;
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
   const baseRoster = await getBanzhurenClassRoster(db, grade, className);
@@ -4023,64 +4125,18 @@ async function handleBanzhurenClassDashboard(db, request) {
     if (name) rosterMapForSessions.set(name, r);
   });
 
-  const sessionMap = new Map();
-  for (const courseName of coursesToScan) {
-    const cd = courseData[courseName];
-    if (!cd) continue;
-    const payload = cd.payload || {};
-    const extraMap = buildSelectionIdToNameMapForCourse(selRows, courseName, grade, className, rosterMapForSessions);
-    const dates = collectSessionDatesFromClassCheckin(payload, grade, className, rosterMapForSessions, extraMap);
-    dates.forEach((entry, date) => {
-      const prev = sessionMap.get(date);
-      if (!prev || (entry.updatedAt && (!prev.updatedAt || entry.updatedAt > prev.updatedAt))) {
-        sessionMap.set(date, entry);
-      }
-    });
-  }
-
-  if (sessionMap.size === 0) {
-    for (const courseName of coursesToScan) {
-      const cd = courseData[courseName];
-      if (!cd) continue;
-      const hasClassStudent = finalRoster.some((r) => {
-        const n = String(r.student_name || '').trim();
-        return n && studentCourses[n] && studentCourses[n].has(courseName);
-      });
-      if (!hasClassStudent) continue;
-      const payload = cd.payload || {};
-      (Array.isArray(payload.history) ? payload.history : []).forEach((h) => {
-        const date = normalizeDateKey((h && h.date) || '');
-        if (!date) return;
-        const checkin = (h && h.checkin) || {};
-        const hasData = Object.keys(checkin).some((k) => {
-          const v = checkin[k];
-          return v != null && v !== '' && v !== 'none';
-        });
-        if (!hasData) return;
-        const label = String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date);
-        const updatedAt = (h && h.updatedAt) || 0;
-        const prev = sessionMap.get(date);
-        if (!prev || updatedAt > (prev.updatedAt || 0)) {
-          sessionMap.set(date, { date: date, dateLabel: label, updatedAt: updatedAt });
-        }
-      });
-      const checkinDay = normalizeDateKey((payload.checkinDay) || '');
-      if (checkinDay) {
-        const checkin = payload.checkin || {};
-        const hasToday = Object.keys(checkin).some((k) => {
-          const v = checkin[k];
-          return v != null && v !== '' && v !== 'none';
-        });
-        if (hasToday && !sessionMap.has(checkinDay)) {
-          sessionMap.set(checkinDay, {
-            date: checkinDay,
-            dateLabel: formatAttendanceDateLabel(checkinDay),
-            updatedAt: Date.now()
-          });
-        }
-      }
-    }
-  }
+  const classStudentNames = finalRoster
+    .map((r) => String(r.student_name || '').trim())
+    .filter(Boolean);
+  const sessionMap = buildBanzhurenSessionMap(
+    courseData,
+    coursesToScan,
+    classStudentNames,
+    grade,
+    className,
+    rosterMapForSessions,
+    selRows
+  );
 
   const sessions = Array.from(sessionMap.values())
     .sort((a, b) => String(a.date).localeCompare(String(b.date)))
@@ -4099,12 +4155,14 @@ async function handleBanzhurenClassDashboard(db, request) {
         const cd = courseData[courseName];
         if (!cd) continue;
         const payload = cd.payload || {};
-        const extraMap = buildSelectionIdToNameMapForCourse(selRows, courseName, grade, className, rosterMapForSessions);
+        const idToName = buildIdToNameMapForCourseDashboard(
+          payload, grade, className, rosterMapForSessions, selRows, courseName
+        );
         let student = normalizeClassroomStudents(payload.students || []).find(
           (s) => String(s.student_name || '').trim() === name
         );
         if (!student) student = stub;
-        const st = getStudentCheckinStatusOnDate(payload, student, name, sess.date, extraMap);
+        const st = getStudentCheckinStatusOnDate(payload, student, name, sess.date, idToName);
         if (st && st !== 'none') {
           status = status ? pickHigherCheckinStatus(status, st) : st;
           courseUsed = courseName;
@@ -4132,12 +4190,15 @@ async function handleBanzhurenClassDashboard(db, request) {
       const payload = cd.payload || {};
       let student = normalizeClassroomStudents(payload.students || []).find((s) => String(s.student_name || '').trim() === name);
       if (!student) student = stub;
+      const idToName = buildIdToNameMapForCourseDashboard(
+        payload, grade, className, rosterMapForSessions, selRows, courseName
+      );
       const history = payload.history || [];
-      const present = countCheckinStatusInHistory(history, student, 'present');
-      const absent = countCheckinStatusInHistory(history, student, 'absent');
-      const sick = countCheckinStatusInHistory(history, student, 'sick');
-      const personal = countCheckinStatusInHistory(history, student, 'personal');
-      const late = countCheckinStatusInHistory(history, student, 'late');
+      const present = countCheckinStatusInHistory(history, student, 'present', idToName);
+      const absent = countCheckinStatusInHistory(history, student, 'absent', idToName);
+      const sick = countCheckinStatusInHistory(history, student, 'sick', idToName);
+      const personal = countCheckinStatusInHistory(history, student, 'personal', idToName);
+      const late = countCheckinStatusInHistory(history, student, 'late', idToName);
       totalPresent += present;
       totalAbsent += absent;
       totalSick += sick;
@@ -4155,7 +4216,7 @@ async function handleBanzhurenClassDashboard(db, request) {
       });
 
       if (String(payload.checkinDay || '') === today) {
-        const st = lookupStudentCheckinStatus(payload.checkin || {}, student, name);
+        const st = lookupStudentCheckinStatus(payload.checkin || {}, student, name, idToName);
         if (ABNORMAL_STATUSES.has(st)) todayAbnormalNames.add(name);
       }
     });

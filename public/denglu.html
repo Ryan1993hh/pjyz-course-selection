@@ -727,10 +727,14 @@
   </div>
 </div>
 
-<script src="js/role-utils.js"></script>
+<script src="js/role-utils.js?v=20260827t"></script>
 <script>
 (function () {
   'use strict';
+
+  if (window.PjyzRole && typeof PjyzRole.prefetchRolePages === 'function') {
+    PjyzRole.prefetchRolePages();
+  }
 
   var form        = document.getElementById('loginForm');
   var usernameEl  = document.getElementById('username');
@@ -766,6 +770,46 @@
   }
   function hideMsg() {
     formMsg.className = 'form-msg';
+  }
+
+  function persistLoginSession(username, password, data) {
+    localStorage.setItem('admin_token', data.token);
+    localStorage.setItem('pjyz_token', data.token);
+    if (data.user) localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+    localStorage.setItem('pjyz_login_user', username);
+    localStorage.setItem('pjyz_current_username', username);
+    if (rememberEl.checked) {
+      localStorage.setItem('pjyz_login_remember', '1');
+      localStorage.setItem('pjyz_login_pass', password);
+    } else {
+      localStorage.removeItem('pjyz_login_remember');
+      localStorage.removeItem('pjyz_login_pass');
+    }
+  }
+
+  function resolveRedirectUrl(user) {
+    var redirectUrl = 'xuanke';
+    var userRole = (user && user.role) || ((user && user.roles && user.roles[0]) || 'teacher');
+    if (window.PjyzRole) {
+      redirectUrl = PjyzRole.getLoginRedirectUrl(user);
+      var pageRoleMap = { admin: 'admin', xuanke: 'banzhuren', jiaoshi: 'teacher' };
+      userRole = pageRoleMap[redirectUrl] || userRole;
+      if (userRole) PjyzRole.setActiveRole(userRole);
+    } else if (userRole === 'admin') {
+      redirectUrl = 'admin';
+    } else if (userRole === 'teacher') {
+      redirectUrl = 'jiaoshi';
+    }
+    localStorage.setItem('pjyz_login_role', userRole);
+    return redirectUrl;
+  }
+
+  function redirectAfterLogin(user) {
+    var redirectUrl = resolveRedirectUrl(user);
+    if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') {
+      PjyzRole.prefetchPage(redirectUrl);
+    }
+    window.location.replace(redirectUrl);
   }
 
   /* ---------- 按钮波纹效果 ---------- */
@@ -836,49 +880,13 @@
       });
       var data = await res.json();
       if (data.success && data.token) {
-        // 各端统一读取 admin_token（教师端 / 管理端 / 选课端）
-        localStorage.setItem('admin_token', data.token);
-        localStorage.setItem('pjyz_token', data.token);
-        if (data.user) {
-          localStorage.setItem('pjyz_user', JSON.stringify(data.user));
-        }
-
-        // 记住密码：勾选则保存账号+密码；未勾选仅保留账号供下次显示
-        var userRole = (data.user && data.user.role) || ((data.user && data.user.roles && data.user.roles[0]) || 'teacher');
         try {
-          localStorage.setItem('pjyz_login_user', username);
-          if (rememberEl.checked) {
-            localStorage.setItem('pjyz_login_remember', '1');
-            localStorage.setItem('pjyz_login_pass', password);
-          } else {
-            localStorage.removeItem('pjyz_login_remember');
-            localStorage.removeItem('pjyz_login_pass');
-          }
-          localStorage.setItem('pjyz_current_username', username);
-
-          // 登录成功：优先进入最近打开过的页面，并写入活动角色，避免教师端再次要求登录
-          var redirectUrl = 'xuanke';
-          if (window.PjyzRole) {
-            redirectUrl = PjyzRole.getLoginRedirectUrl(data.user);
-            var pageRoleMap = { admin: 'admin', xuanke: 'banzhuren', jiaoshi: 'teacher' };
-            userRole = pageRoleMap[redirectUrl] || userRole;
-            if (userRole) PjyzRole.setActiveRole(userRole);
-          } else if (userRole === 'admin') {
-            redirectUrl = 'admin';
-          } else if (userRole === 'teacher') {
-            redirectUrl = 'jiaoshi';
-          }
-          localStorage.setItem('pjyz_login_role', userRole);
-          if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') {
-            PjyzRole.prefetchPage(redirectUrl);
-          }
-          window.location.replace(redirectUrl);
-          return;
+          persistLoginSession(username, password, data);
+          redirectAfterLogin(data.user);
         } catch (_) {
-          var fallback = (userRole === 'admin') ? 'admin' : (userRole === 'teacher' ? 'jiaoshi' : 'xuanke');
-          window.location.replace(fallback);
-          return;
+          redirectAfterLogin(data.user);
         }
+        return;
       } else {
         showMsg(data.error || '登录失败', 'error');
       }
@@ -894,7 +902,7 @@
     showMsg('请联系学校信息中心重置密码', 'error');
   });
   contactLink.addEventListener('click', function () {
-    showMsg('联系方式：info@pjyz.edu.cn', 'error');
+    showMsg('联系方式：钉钉联系教导处', 'success');
   });
 
   /* ---------- 输入时清除提示 ---------- */

@@ -343,6 +343,8 @@
     if (m) return { grade: m[1], classNum: m[2], display: s };
     m = s.match(/^(六年级|七年级)\s*(\d+)\s*班$/);
     if (m) return { grade: m[1], classNum: m[2], display: s };
+    m = s.match(/^([六七])(?:年级)?[\(（]?(\d+)[\)）]?\s*班?$/);
+    if (m) return { grade: m[1] === '六' ? '六年级' : '七年级', classNum: m[2], display: s };
     return { grade: '', classNum: '', display: s };
   }
 
