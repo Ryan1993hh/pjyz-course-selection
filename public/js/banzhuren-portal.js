@@ -506,25 +506,14 @@
     if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
     if (data && data.classroom_sync) lastClassroomSync = data.classroom_sync;
 
-    var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead>' +
-      '<tr><th class="bz-att-name" rowspan="2">姓名</th>' +
-      '<th class="bz-att-group" colspan="18">签到记录</th></tr>' +
-      '<tr class="bz-att-date-row">';
+    var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead><tr>' +
+      '<th class="bz-att-name">姓名</th>';
     for (var i = 0; i < 18; i++) {
       var s = sessions[i];
       if (s && s.date) {
         html += '<th class="bz-att-date" title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
       } else {
         html += '<th class="bz-att-ph bz-att-date">' + (i + 1) + '</th>';
-      }
-    }
-    html += '</tr><tr class="bz-att-teacher-row"><th class="bz-att-name bz-att-sub">授课教师</th>';
-    for (var t = 0; t < 18; t++) {
-      var sess = sessions[t];
-      if (sess && sess.date) {
-        html += '<th class="bz-att-teacher">' + escHtml(sess.teacher_name || '—') + '</th>';
-      } else {
-        html += '<th class="bz-att-ph">—</th>';
       }
     }
     html += '</tr></thead><tbody>';
