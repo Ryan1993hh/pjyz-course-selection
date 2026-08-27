@@ -1337,11 +1337,12 @@ async function handleSelectionsGet(db, request, url) {
   if (studentName) { sql += ' AND student_name = ?'; params.push(studentName); }
   
   sql += ' ORDER BY id ASC';
-  if (isAdmin && !lockedOnly) {
+  const syncClassroom = isAdmin && !lockedOnly && url.searchParams.get('sync') === '1';
+  if (syncClassroom) {
     await syncMissingSelectionsFromClassroom(db, course || '');
   }
   const results = await db.prepare(sql).bind(...params).all();
-  if (!lockedOnly) await cleanupDuplicateSelections(db);
+  if (!lockedOnly && syncClassroom) await cleanupDuplicateSelections(db);
   let list = lockedOnly ? sortSelectionsByClass(results.results || []) : dedupeSelectionRows(results.results);
   if (cls) {
     const want = parseGradeClassFields(grade, cls);
@@ -1561,7 +1562,7 @@ async function handlePreEnrollBatch(db, request) {
   });
 }
 
-async function handleSelectionUpdate(db, request, id) {
+async function handleSelectionUpdate(db, request, id, ctx) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
   const body = await request.json();
@@ -1584,12 +1585,17 @@ async function handleSelectionUpdate(db, request, id) {
   }
   
   const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
-  await syncTeacherClassroomForCourseNames(db, [existing.course_name, selection && selection.course_name]);
+  const courseNames = [existing.course_name, selection && selection.course_name].filter(Boolean);
   await bumpSelectionDataRevision(db);
+  if (ctx && typeof ctx.waitUntil === 'function' && courseNames.length) {
+    ctx.waitUntil(syncTeacherClassroomForCourseNames(db, courseNames));
+  } else if (courseNames.length) {
+    await syncTeacherClassroomForCourseNames(db, courseNames);
+  }
   return json({ selection });
 }
 
-async function handleSelectionDelete(db, request, id) {
+async function handleSelectionDelete(db, request, id, ctx) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
   const existing = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
@@ -1601,12 +1607,19 @@ async function handleSelectionDelete(db, request, id) {
   }
   
   await db.prepare('DELETE FROM selections WHERE id = ?').bind(id).run();
-  await syncTeacherClassroomStudentsFromSelections(db, existing.course_name);
   await bumpSelectionDataRevision(db);
-  return json({ success: true });
+  const courseName = String(existing.course_name || '').trim();
+  if (courseName) {
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(syncTeacherClassroomStudentsFromSelections(db, courseName));
+    } else {
+      await syncTeacherClassroomStudentsFromSelections(db, courseName);
+    }
+  }
+  return json({ success: true, id: id });
 }
 
-async function handleSelectionBatchDelete(db, request) {
+async function handleSelectionBatchDelete(db, request, ctx) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
   const body = await request.json();
@@ -1614,22 +1627,56 @@ async function handleSelectionBatchDelete(db, request) {
   if (!Array.isArray(ids) || !ids.length) {
     return json({ error: '请提供要删除的ID列表' }, 400);
   }
-  let deleted = 0;
+  const numIds = ids.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id) && id > 0);
+  if (!numIds.length) return json({ error: '请提供有效的ID列表' }, 400);
+
+  const placeholders = numIds.map(() => '?').join(',');
+  const existingRes = await db.prepare(
+    'SELECT id, course_id, course_name FROM selections WHERE id IN (' + placeholders + ')'
+  ).bind(...numIds).all();
+
   const affectedCourses = new Set();
-  for (const id of ids) {
-    const existing = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
-    if (existing) {
-      if (existing.course_name) affectedCourses.add(String(existing.course_name).trim());
-      if (existing.course_id) {
-        await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(existing.course_id).run();
-      }
-      await db.prepare('DELETE FROM selections WHERE id = ?').bind(id).run();
-      deleted++;
+  const courseDeltas = new Map();
+  const delStmts = [];
+  for (const row of (existingRes.results || [])) {
+    if (row.course_name) affectedCourses.add(String(row.course_name).trim());
+    if (row.course_id) {
+      courseDeltas.set(row.course_id, (courseDeltas.get(row.course_id) || 0) - 1);
     }
+    delStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
   }
-  await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+  await runD1Batch(db, delStmts);
+  await applyCourseCountDeltas(db, courseDeltas);
   await bumpSelectionDataRevision(db);
-  return json({ success: true, deleted });
+
+  const courseList = [...affectedCourses];
+  if (ctx && typeof ctx.waitUntil === 'function' && courseList.length) {
+    ctx.waitUntil(syncTeacherClassroomForCourseNames(db, courseList));
+  } else if (courseList.length) {
+    await syncTeacherClassroomForCourseNames(db, courseList);
+  }
+  return json({ success: true, deleted: delStmts.length });
+}
+
+async function handleUnselectedStudentsBatchDelete(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const ids = (body && body.ids) || [];
+  if (!Array.isArray(ids) || !ids.length) {
+    return json({ error: '请提供要删除的ID列表' }, 400);
+  }
+  const numIds = ids.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id) && id > 0);
+  if (!numIds.length) return json({ error: '请提供有效的ID列表' }, 400);
+
+  const placeholders = numIds.map(() => '?').join(',');
+  const delStmts = numIds.map((id) => db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(id));
+  await runD1Batch(db, delStmts);
+  await bumpSelectionDataRevision(db);
+  return json({ success: true, deleted: delStmts.length });
 }
 
 async function handleSelectionsExport(db, request, url) {
@@ -4875,7 +4922,7 @@ export async function onRequest(context) {
 
   // /api/selections/batch-delete
   if (path === '/api/selections/batch-delete' && method === 'POST') {
-    return handleSelectionBatchDelete(db, request);
+    return handleSelectionBatchDelete(db, request, context);
   }
 
   // /api/selections/export
@@ -4887,8 +4934,8 @@ export async function onRequest(context) {
   const selectionMatch = path.match(/^\/api\/selections\/(\d+)$/);
   if (selectionMatch) {
     const id = parseInt(selectionMatch[1]);
-    if (method === 'PUT') return handleSelectionUpdate(db, request, id);
-    if (method === 'DELETE') return handleSelectionDelete(db, request, id);
+    if (method === 'PUT') return handleSelectionUpdate(db, request, id, context);
+    if (method === 'DELETE') return handleSelectionDelete(db, request, id, context);
   }
 
   // /api/classes

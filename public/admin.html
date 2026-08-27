@@ -4799,7 +4799,9 @@ async function querySelections(opts){
       return;
     }
     
-    const data = await request('GET', '/api/selections?' + buildQuery());
+    var qs = buildQuery();
+    if (!silent) qs = qs ? (qs + '&sync=1') : 'sync=1';
+    const data = await request('GET', '/api/selections?' + qs);
     selectionsData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     renderSelections();
     if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
@@ -5039,10 +5041,12 @@ function getSelectionViewRenderer() {
   return renderSelections;
 }
 
-async function refreshCurrentSelectionView() {
-  if (currentViewMode === 'unselected') await queryUnselectedStudents();
-  else if (currentViewMode === 'pre_enroll') await queryPreEnrollStudents();
-  else await querySelections();
+async function refreshCurrentSelectionView(opts) {
+  opts = opts || {};
+  if (currentViewMode === 'unselected') await queryUnselectedStudents({ silent: true });
+  else if (currentViewMode === 'pre_enroll') await queryPreEnrollStudents({ silent: true });
+  else if (opts.forceReload) await querySelections({ silent: true });
+  else getSelectionViewRenderer()();
 }
 
 function updateSelectionSidebarButtons(active) {
@@ -5372,12 +5376,33 @@ function showUnselectedAfterImport(unselectedRows){
 
 async function deleteSelection(id){
   if (!confirm('确定要删除这条选课记录吗？')) return;
+  var idStr = String(id);
+  var prevData = selectionsData.slice();
+  var prevUnselected = unselectedData.slice();
+  if (currentViewMode === 'unselected') {
+    unselectedData = unselectedData.filter(function(s) { return String(s.id) !== idStr; });
+    selectionsCheckedIds.delete(idStr);
+    renderUnselectedStudents();
+  } else {
+    selectionsData = selectionsData.filter(function(s) { return String(s.id) !== idStr; });
+    selectionsCheckedIds.delete(idStr);
+    renderSelections();
+  }
   try {
-    await request('DELETE', '/api/selections/' + id);
+    if (currentViewMode === 'unselected') {
+      await request('DELETE', '/api/unselected-students/' + id);
+    } else {
+      await request('DELETE', '/api/selections/' + id);
+    }
     toast('删除成功', 'success');
-    selectionsCheckedIds.delete(String(id));
-    refreshCurrentSelectionView();
   } catch(e){
+    if (currentViewMode === 'unselected') {
+      unselectedData = prevUnselected;
+      renderUnselectedStudents();
+    } else {
+      selectionsData = prevData;
+      renderSelections();
+    }
     toast('删除失败：' + e.message, 'error');
   }
 }
@@ -5388,26 +5413,34 @@ async function batchDeleteSelections(){
   
   if (currentViewMode === 'unselected') {
     if (!confirm('确定要删除选中的 ' + ids.length + ' 条未选课记录吗？')) return;
+    var prevUnselected = unselectedData.slice();
+    var idSet = new Set(ids.map(String));
+    unselectedData = unselectedData.filter(function(s) { return !idSet.has(String(s.id)); });
+    selectionsCheckedIds.clear();
+    renderUnselectedStudents();
     try {
-      for (const id of ids) {
-        await request('DELETE', '/api/unselected-students/' + id);
-      }
+      await request('POST', '/api/unselected-students/batch-delete', { ids: ids });
       toast('批量删除成功', 'success');
-      selectionsCheckedIds.clear();
-      queryUnselectedStudents();
     } catch(e){
+      unselectedData = prevUnselected;
+      renderUnselectedStudents();
       toast('批量删除失败：' + e.message, 'error');
     }
     return;
   }
   
   if (!confirm('确定要删除选中的 ' + ids.length + ' 条选课记录吗？')) return;
+  var prevData = selectionsData.slice();
+  var removeSet = new Set(ids.map(String));
+  selectionsData = selectionsData.filter(function(s) { return !removeSet.has(String(s.id)); });
+  selectionsCheckedIds.clear();
+  renderSelections();
   try {
     await request('POST', '/api/selections/batch-delete', { ids: ids });
     toast('批量删除成功', 'success');
-    selectionsCheckedIds.clear();
-    refreshCurrentSelectionView();
   } catch(e){
+    selectionsData = prevData;
+    renderSelections();
     toast('批量删除失败：' + e.message, 'error');
   }
 }
@@ -5444,12 +5477,33 @@ function openEditSelection(s){
     const course_id = opt ? opt.getAttribute('data-id') : '';
     if (!course_id){ toast('请选择课程', 'error'); return; }
     saveBtn.disabled = true;
+    var prevRow = selectionsData.find(function(row) { return String(row.id) === String(s.id); });
+    var prevSnapshot = prevRow ? Object.assign({}, prevRow) : null;
+    selectionsData = selectionsData.map(function(row) {
+      if (String(row.id) !== String(s.id)) return row;
+      return Object.assign({}, row, {
+        course_id: parseInt(course_id, 10) || course_id,
+        course_name: course_name
+      });
+    });
+    renderSelections();
     try {
-      await request('PUT', '/api/selections/' + s.id, { course_id: course_id, course_name: course_name });
+      var res = await request('PUT', '/api/selections/' + s.id, { course_id: course_id, course_name: course_name });
+      if (res && res.selection) {
+        selectionsData = selectionsData.map(function(row) {
+          return String(row.id) === String(s.id) ? res.selection : row;
+        });
+        renderSelections();
+      }
       toast('换课成功', 'success');
       closeModal();
-      refreshCurrentSelectionView();
     } catch(e){
+      if (prevSnapshot) {
+        selectionsData = selectionsData.map(function(row) {
+          return String(row.id) === String(s.id) ? prevSnapshot : row;
+        });
+        renderSelections();
+      }
       toast('保存失败：' + e.message, 'error');
     } finally {
       saveBtn.disabled = false;
