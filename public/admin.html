@@ -1422,6 +1422,29 @@ table.courses-table td[data-field="description"] {
 .data-card .table-wrap {
   flex: 1;
   min-height: 0;
+  max-height: none;
+}
+#section-selections.active {
+  flex: 1;
+  min-height: calc(100vh - 120px);
+}
+#section-selections .selections-layout {
+  flex: 1;
+  min-height: calc(100vh - 220px);
+}
+#section-users > .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 180px);
+}
+#section-users .user-toolbar {
+  flex-shrink: 0;
+}
+#section-users .table-wrap {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 .data-card .pagination {
   margin-top: 12px;
@@ -3030,7 +3053,7 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-success" id="exportBtn">⬇ 导出 Excel</button>
               </div>
             </div>
-            <div class="table-wrap" style="max-height: 65vh; overflow-y: auto;">
+            <div class="table-wrap">
               <table class="sel-table" id="selectionsTable">
                 <thead>
                   <tr>
@@ -3161,7 +3184,7 @@ th.sortable.active .sort-icon { opacity: 1; }
           <input type="text" class="form-input search-input" id="userSearchInput" placeholder="🔍 搜索账号、姓名、班级、邮箱或手机号...">
           <span class="stat-info" id="userStatInfo"></span>
         </div>
-        <div class="table-wrap" style="max-height: none;">
+        <div class="table-wrap">
           <table class="usr-table" id="usersTable">
             <thead>
               <tr>

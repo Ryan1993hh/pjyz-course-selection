@@ -2465,10 +2465,33 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-dash-table th, .bz-dash-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
 .bz-dash-table th { background: rgba(13,148,136,0.08); font-weight: 600; }
 /* 班级考勤看板 — 与后台「课程看板」hours-table 同款样式 */
+#bz-panel-dashboard.active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 160px);
+}
+#bz-panel-dashboard > .bz-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 0;
+}
+#bz-panel-dashboard .bz-dash-stats {
+  flex-shrink: 0;
+}
+#bz-panel-dashboard #bzDashboardBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 #bz-panel-dashboard .hours-table-wrap {
+  flex: 1;
+  min-height: calc(100vh - 340px);
+  max-height: none;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  max-height: min(70vh, 640px);
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #fff;
@@ -5693,6 +5716,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260827p"></script>
+<script src="js/banzhuren-portal.js?v=20260827q"></script>
 </body>
 </html>
