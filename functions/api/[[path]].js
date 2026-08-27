@@ -1944,6 +1944,25 @@ function schoolStudentMatchesClassScope(row, grade, className) {
   return true;
 }
 
+async function runD1Batch(db, statements) {
+  if (!statements || !statements.length) return;
+  const CHUNK = 100;
+  for (let i = 0; i < statements.length; i += CHUNK) {
+    await db.batch(statements.slice(i, i + CHUNK));
+  }
+}
+
+async function applyCourseCountDeltas(db, deltas) {
+  const stmts = [];
+  deltas.forEach(function(delta, courseId) {
+    if (!courseId || !delta) return;
+    stmts.push(
+      db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count + ?) WHERE id = ?').bind(delta, courseId)
+    );
+  });
+  await runD1Batch(db, stmts);
+}
+
 /** 清除指定班级范围内的未选课记录 */
 async function clearUnselectedForClassScope(db, grade, className) {
   const parsed = parseGradeClassFields(grade, className);
@@ -1958,13 +1977,13 @@ async function clearUnselectedForClassScope(db, grade, className) {
     ? await db.prepare(sql).bind(...params).all()
     : await db.prepare(sql).all();
 
-  let deleted = 0;
+  const delStmts = [];
   for (const row of (rows.results || [])) {
     if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
-    await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
-    deleted++;
+    delStmts.push(db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id));
   }
-  return deleted;
+  await runD1Batch(db, delStmts);
+  return delStmts.length;
 }
 
 /**
@@ -1978,7 +1997,15 @@ async function rebuildUnselectedFromSchoolRoster(db, opts) {
   const className = String(opts.class_name || opts.className || '').trim();
   const savedAt = new Date().toISOString();
 
-  const selRes = await db.prepare('SELECT grade, class_name, student_name FROM selections').all();
+  let selRes;
+  if (mode === 'class' && grade) {
+    const g = parseGradeClassFields(grade, className).grade || grade;
+    selRes = await db.prepare(
+      'SELECT grade, class_name, student_name FROM selections WHERE grade = ? OR class_name LIKE ?'
+    ).bind(g, '%' + g + '%').all();
+  } else {
+    selRes = await db.prepare('SELECT grade, class_name, student_name FROM selections').all();
+  }
   const selectedKeys = new Set();
   for (const row of (selRes.results || [])) {
     selectedKeys.add(unselectedStudentKey(row.grade, row.class_name, row.student_name));
@@ -2019,23 +2046,23 @@ async function rebuildUnselectedFromSchoolRoster(db, opts) {
     }
   }
 
-  let inserted = 0;
+  const insertStmts = [];
   for (const row of roster) {
     const key = unselectedStudentKey(row.grade, row.class_name, row.student_name);
     if (selectedKeys.has(key)) continue;
     if (mode === 'merge' && existingKeys && existingKeys.has(key)) continue;
     const parsedRow = parseGradeClassFields(row.grade, row.class_name);
-    await db.prepare(
+    insertStmts.push(db.prepare(
       'INSERT INTO unselected_students (grade, class_name, student_name, saved_at) VALUES (?, ?, ?, ?)'
     ).bind(
       parsedRow.grade || row.grade || '',
       parsedRow.class_name || row.class_name || '',
       String(row.student_name || '').trim(),
       savedAt
-    ).run();
-    inserted++;
+    ));
   }
-  return inserted;
+  await runD1Batch(db, insertStmts);
+  return insertStmts.length;
 }
 
 /** 管理员导入全校学生名单；班主任/管理员可按班级查询 */
@@ -3852,6 +3879,187 @@ async function handleBanzhurenClassDashboard(db, request) {
   });
 }
 
+/** 班主任一键保存本班选课：合并删/写/花名册/未选课，减少往返与逐条 SQL */
+async function handleBanzhurenSaveClassSelections(db, request, ctx) {
+  const auth = requireAuth(request, ['admin', 'banzhuren']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  if (!await getSelectionEnabled(db)) {
+    return json({ error: '当前状态禁止选课，无法保存', code: 'SELECTION_DISABLED' }, 403);
+  }
+
+  let body;
+  try {
+    const text = await request.text();
+    body = JSON.parse(text);
+  } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+
+  let grade = String(body.grade || '').trim();
+  let className = String(body.class_name || body.class || '').trim();
+  const parsed = parseGradeClassFields(grade, className);
+  grade = parsed.grade || grade;
+  className = parsed.class_name || className;
+  if (!grade || !className) return json({ error: '缺少年级或班级' }, 400);
+
+  const roles = auth.user.roles || [];
+  if (roles.indexOf('admin') === -1) {
+    const me = await db.prepare('SELECT class_name FROM users WHERE id = ?').bind(auth.user.userId).first();
+    const myClass = String((me && me.class_name) || '').trim();
+    const myParsed = parseGradeClassFields('', myClass);
+    const sameClass = myParsed.grade && myParsed.classNum
+      && myParsed.grade === grade
+      && myParsed.classNum === parsed.classNum;
+    if (!myClass || !sameClass) {
+      return json({ error: '只能保存自己负责班级的选课数据' }, 403);
+    }
+  }
+
+  const selections = Array.isArray(body.selections) ? body.selections : [];
+  const rosterList = Array.isArray(body.students) ? body.students : [];
+  const affectedCourses = new Set();
+  const courseDeltas = new Map();
+  const savedAt = new Date().toISOString();
+
+  // 1) 清除本班非锁定旧选课
+  const existingRes = await db.prepare(
+    'SELECT id, course_id, course_name, grade, class_name, is_locked FROM selections WHERE grade = ? OR class_name LIKE ?'
+  ).bind(grade, '%' + grade + '%').all();
+  const classDeleteStmts = [];
+  for (const row of (existingRes.results || [])) {
+    if (Number(row.is_locked) === 1) continue;
+    if (!schoolStudentMatchesClassScope({ grade: row.grade, class_name: row.class_name }, grade, className)) continue;
+    classDeleteStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
+    if (row.course_id) courseDeltas.set(row.course_id, (courseDeltas.get(row.course_id) || 0) - 1);
+    if (row.course_name) affectedCourses.add(String(row.course_name).trim());
+  }
+  await runD1Batch(db, classDeleteStmts);
+
+  // 2) 预读锁定记录
+  const names = [...new Set(selections.map(function(s) { return String(s.student_name || '').trim(); }).filter(Boolean))];
+  const lockedByName = new Map();
+  if (names.length) {
+    const placeholders = names.map(function() { return '?'; }).join(',');
+    const lockedRes = await db.prepare(
+      'SELECT * FROM selections WHERE is_locked = 1 AND student_name IN (' + placeholders + ')'
+    ).bind(...names).all();
+    for (const row of (lockedRes.results || [])) {
+      const n = String(row.student_name || '').trim();
+      if (n && !lockedByName.has(n)) lockedByName.set(n, row);
+    }
+  }
+
+  // 3) 清除待写入学生的其他未锁定选课（一人一课）
+  const unlockedNames = names.filter(function(n) { return !lockedByName.has(n); });
+  if (unlockedNames.length) {
+    const ph = unlockedNames.map(function() { return '?'; }).join(',');
+    const priorRes = await db.prepare(
+      'SELECT id, course_id, course_name FROM selections WHERE is_locked = 0 AND student_name IN (' + ph + ')'
+    ).bind(...unlockedNames).all();
+    const priorDelStmts = [];
+    for (const row of (priorRes.results || [])) {
+      priorDelStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
+      if (row.course_id) courseDeltas.set(row.course_id, (courseDeltas.get(row.course_id) || 0) - 1);
+      if (row.course_name) affectedCourses.add(String(row.course_name).trim());
+    }
+    await runD1Batch(db, priorDelStmts);
+  }
+
+  // 4) 写入选课
+  const insertStmts = [];
+  let savedCount = 0;
+  for (const item of selections) {
+    if (!item || !item.student_name) continue;
+    const studentName = String(item.student_name).trim();
+    const gender = (item.gender != null && item.gender !== '') ? String(item.gender) : '';
+    const courseName = (item.course_name != null && item.course_name !== '') ? String(item.course_name) : '';
+    const courseId = (item.course_id != null && item.course_id !== '') ? (parseInt(item.course_id, 10) || 0) : 0;
+
+    const lockedRow = lockedByName.get(studentName);
+    if (lockedRow) {
+      insertStmts.push(db.prepare(
+        'UPDATE selections SET grade = ?, class_name = ?, gender = ? WHERE id = ?'
+      ).bind(grade, className, gender || lockedRow.gender || '', lockedRow.id));
+      if (lockedRow.course_name) affectedCourses.add(String(lockedRow.course_name).trim());
+      savedCount++;
+      continue;
+    }
+
+    insertStmts.push(db.prepare(
+      'INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
+    ).bind(
+      grade,
+      className,
+      studentName,
+      gender,
+      courseId > 0 ? courseId : null,
+      courseName,
+      savedAt
+    ));
+    if (courseId > 0) courseDeltas.set(courseId, (courseDeltas.get(courseId) || 0) + 1);
+    if (courseName) affectedCourses.add(String(courseName).trim());
+    savedCount++;
+  }
+  await runD1Batch(db, insertStmts);
+  await applyCourseCountDeltas(db, courseDeltas);
+
+  // 5) 同步本班花名册
+  const preparedRoster = [];
+  const seenRoster = new Set();
+  for (const item of rosterList) {
+    const name = String((item && (item.student_name || item.name || item)) || '').trim();
+    if (!name || seenRoster.has(name)) continue;
+    seenRoster.add(name);
+    preparedRoster.push({
+      student_name: name,
+      gender: normalizeSchoolGender(item && item.gender),
+      grade: grade,
+      class_name: className
+    });
+  }
+
+  const rosterRes = await db.prepare('SELECT id, grade, class_name FROM school_students WHERE grade = ?').bind(grade).all();
+  const rosterDelStmts = [];
+  for (const row of (rosterRes.results || [])) {
+    if (schoolStudentMatchesClassScope(row, grade, className)) {
+      rosterDelStmts.push(db.prepare('DELETE FROM school_students WHERE id = ?').bind(row.id));
+    }
+  }
+  const rosterInsertStmts = preparedRoster.map(function(s) {
+    return db.prepare(
+      `INSERT INTO school_students (grade, class_name, student_name, gender, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))`
+    ).bind(grade, className, s.student_name, s.gender);
+  });
+  await runD1Batch(db, rosterDelStmts.concat(rosterInsertStmts));
+
+  const unselectedCount = await rebuildUnselectedFromSchoolRoster(db, {
+    mode: 'class',
+    grade: grade,
+    class_name: className,
+    roster: preparedRoster
+  });
+  await purgeLeaveReportsNotInClassRoster(db, grade, className, { skipRevisionBump: true });
+  await bumpSelectionDataRevision(db);
+  const revision = await getSelectionDataRevision(db);
+
+  const courseList = [...affectedCourses];
+  if (ctx && typeof ctx.waitUntil === 'function' && courseList.length) {
+    ctx.waitUntil(syncTeacherClassroomForCourseNames(db, courseList));
+  } else if (courseList.length) {
+    await syncTeacherClassroomForCourseNames(db, courseList);
+  }
+
+  return json({
+    success: true,
+    count: savedCount,
+    roster_count: preparedRoster.length,
+    unselected_count: unselectedCount,
+    revision: revision
+  });
+}
+
 async function handleBanzhurenClassRosterGet(db, request) {
   const auth = requireAuth(request, ['banzhuren', 'admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -4777,6 +4985,11 @@ export async function onRequest(context) {
   // /api/banzhuren/class-roster — 班主任班级名单（选课+未选课，与后台同步）
   if (path === '/api/banzhuren/class-roster' && method === 'GET') {
     return handleBanzhurenClassRosterGet(db, request);
+  }
+
+  // /api/banzhuren/save-class-selections — 班主任一键保存本班选课（高性能）
+  if (path === '/api/banzhuren/save-class-selections' && method === 'POST') {
+    return handleBanzhurenSaveClassSelections(db, request, context);
   }
 
   // /api/selection-status

@@ -4657,6 +4657,45 @@ function buildSelectionsForSave(grade, cls) {
   return selections;
 }
 
+function buildExportWorkbook(selections, unselectedRecords) {
+  const excelData = selections.map(function(s) {
+    return {
+      '年级': s.grade,
+      '班级': s.class_name,
+      '姓名': s.student_name,
+      '性别': s.gender || '',
+      '选课名称': s.course_name
+    };
+  });
+  const wb = XLSX.utils.book_new();
+  if (excelData.length > 0) {
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 24 }];
+    XLSX.utils.book_append_sheet(wb, ws, '选课数据');
+  }
+  if (unselectedRecords.length > 0) {
+    const unselectedData = unselectedRecords.map(function(s) {
+      return {
+        '年级': s.grade,
+        '班级': s.class_name,
+        '姓名': s.student_name,
+        '选课名称': '未选课'
+      };
+    });
+    const ws2 = XLSX.utils.json_to_sheet(unselectedData);
+    ws2['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws2, '未选课名单');
+  }
+  return wb;
+}
+
+function buildExportFilename(cls) {
+  const date = new Date();
+  const dateStr = date.getFullYear() + String(date.getMonth() + 1).padStart(2, '0') + String(date.getDate()).padStart(2, '0');
+  const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
+  return '浦江一中拓展课选课数据_' + safeClass + '_' + dateStr + '.xlsx';
+}
+
 async function exportExcel() {
   if (!selectionEnabled) {
     showToast('当前状态禁止选课，无法保存', 'error');
@@ -4676,137 +4715,63 @@ async function exportExcel() {
   const cls = className.trim() || '未填写班级';
   const grade = gradeName || '';
 
-  // 保存前再次以内定为准校正占位，避免一人两课
-  try { await applyPreEnrollments({ skipReset: true, skipRender: true }); } catch (_) {}
+  if (!lockedStudentNames.size) {
+    try { await applyPreEnrollments({ skipReset: true, skipRender: true }); } catch (_) {}
+  }
   
   const selections = buildSelectionsForSave(grade, cls);
   const assignedNames = new Set(selections.map(function(s) { return s.student_name; }));
-  const unselectedList = students.filter(s => !assignedNames.has(s));
+  const unselectedList = students.filter(function(s) { return !assignedNames.has(s); });
   
-  const unselectedRecords = unselectedList.map(s => ({
-    grade: grade,
-    class_name: cls,
-    student_name: s
-  }));
+  const unselectedRecords = unselectedList.map(function(s) {
+    return { grade: grade, class_name: cls, student_name: s };
+  });
   
   if (selections.length === 0 && unselectedList.length === 0) {
     showToast('暂无学生数据，无法导出', 'warning');
     return;
   }
   
-  const invalidRecords = selections.filter(s => !s.student_name || !s.course_name);
+  const invalidRecords = selections.filter(function(s) { return !s.student_name || !s.course_name; });
   if (invalidRecords.length > 0) {
-    if (!confirm(`检测到 ${invalidRecords.length} 条数据可能不完整，是否继续？`)) {
+    if (!confirm('检测到 ' + invalidRecords.length + ' 条数据可能不完整，是否继续？')) {
       return;
     }
   }
+
+  const wb = buildExportWorkbook(selections, unselectedRecords);
+  const filename = buildExportFilename(cls);
+  const totalExported = selections.length + unselectedList.length;
   
   const btn = document.getElementById('exportBtn');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳</span> 正在保存数据...';
+    btn.innerHTML = '<span>⏳</span> 正在保存并导出...';
     
     try {
-      showToast('正在保存选课数据到服务器...', 'info');
-
-      // 1) 清除本班旧选课（跳过请假清理，避免先删后写期间名单为空）
-      try {
-        const delParams = new URLSearchParams();
-        if (grade) delParams.set('grade', grade);
-        if (cls) delParams.set('class_name', cls);
-        delParams.set('skip_leave_purge', '1');
-        await apiRequest('DELETE', '/api/selections?' + delParams.toString());
-      } catch(e) {
-        console.warn('清除本班旧选课数据（可能为空）:', e.message);
-      }
-
-      // 2) 保存已选课
-      if (selections.length > 0) {
-        const result = await apiRequest('POST', '/api/selections', selections);
-        const count = result.count || 0;
-        showToast(`已保存 ${count} 条选课数据`, 'success');
-      }
-
-      // 3) 同步本班花名册并重建未选课名单（最可靠）
-      let unselectedSaved = false;
-      try {
-        const syncRes = await apiRequest('POST', '/api/school-students/sync-class', {
-          grade: grade,
-          class_name: cls,
-          students: students.map(function(name) {
-            return { student_name: name, gender: getStudentGender(name) || '' };
-          })
-        });
-        unselectedSaved = true;
-        const uCount = (syncRes && syncRes.unselected_count) || 0;
-        if (uCount > 0) {
-          showToast(`已同步未选课名单 ${uCount} 人`, 'info');
-        } else if (unselectedRecords.length === 0) {
-          showToast('本班学生均已选课', 'info');
-        }
-      } catch (e) {
-        console.warn('同步班级学生名单:', e.message);
-      }
-
-      // 4) 若花名册同步失败，回退为直接写入未选课记录
-      if (!unselectedSaved) {
-        try {
-          const uq = new URLSearchParams();
-          if (grade) uq.set('grade', grade);
-          if (cls) uq.set('class_name', cls);
-          uq.set('skip_leave_purge', '1');
-          await apiRequest('DELETE', '/api/unselected-students?' + uq.toString());
-        } catch(e) {
-          console.warn('清除本班旧未选课数据:', e.message);
-        }
-        if (unselectedRecords.length > 0) {
-          const ures = await apiRequest('POST', '/api/unselected-students', unselectedRecords);
-          showToast(`已保存 ${(ures && ures.count) || unselectedRecords.length} 条未选课名单`, 'info');
-        }
-      }
-      
-      const excelData = selections.map(s => ({
-        '年级': s.grade,
-        '班级': s.class_name,
-        '姓名': s.student_name,
-        '性别': s.gender || '',
-        '选课名称': s.course_name
-      }));
-      
-      const wb = XLSX.utils.book_new();
-      
-      if (excelData.length > 0) {
-        const ws = XLSX.utils.json_to_sheet(excelData);
-        ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 24 }];
-        XLSX.utils.book_append_sheet(wb, ws, '选课数据');
-      }
-      
-      if (unselectedRecords.length > 0) {
-        const unselectedData = unselectedRecords.map(s => ({
-          '年级': s.grade,
-          '班级': s.class_name,
-          '姓名': s.student_name,
-          '选课名称': '未选课'
-        }));
-        const ws2 = XLSX.utils.json_to_sheet(unselectedData);
-        ws2['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 14 }];
-        XLSX.utils.book_append_sheet(wb, ws2, '未选课名单');
-      }
-      
-      const date = new Date();
-      const dateStr = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
-      const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `浦江一中拓展课选课数据_${safeClass}_${dateStr}.xlsx`;
       XLSX.writeFile(wb, filename);
-      
-      const totalExported = selections.length + unselectedList.length;
-      showToast(`保存成功！已导出 ${totalExported} 条记录（含${unselectedList.length}条未选课）`, 'success');
-      try {
-        var sync = await fetchSelectionDataSync();
-        saveState(sync.revision);
-      } catch (_) { saveState(); }
+
+      const result = await apiRequest('POST', '/api/banzhuren/save-class-selections', {
+        grade: grade,
+        class_name: cls,
+        selections: selections,
+        students: students.map(function(name) {
+          return { student_name: name, gender: getStudentGender(name) || '' };
+        })
+      });
+
+      const savedCount = (result && result.count) || selections.length;
+      const uCount = (result && result.unselected_count) || unselectedList.length;
+      showToast('保存成功！已导出 ' + totalExported + ' 条记录（含 ' + uCount + ' 条未选课）', 'success');
+
+      if (result && result.revision) {
+        serverDataRevision = result.revision;
+        saveState(result.revision);
+      } else {
+        fetchSelectionDataSync().then(function(sync) { saveState(sync.revision); }).catch(function() { saveState(); });
+      }
       if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
-        await window.BzPortal.notifyRosterUpdated();
+        window.BzPortal.notifyRosterUpdated({ silent: true });
       }
     } catch(e) {
       console.error('保存失败:', e);
