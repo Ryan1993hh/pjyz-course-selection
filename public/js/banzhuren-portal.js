@@ -18,6 +18,7 @@
   var lastClassroomSync = '';
   var leavePageDate = '';
   var clockTimer = null;
+  var ROSTER_CACHE_KEY = 'bz_class_roster_cache';
   var SKIN_KEY = 'pjyz_teacher_skin';
   var SKIN_LIST = ['teal', 'violet', 'ocean', 'sunset', 'forest', 'ink'];
 
@@ -152,13 +153,11 @@
     try {
       var data = await apiRequest('GET', '/api/banzhuren/class-dashboard');
       clockAbnormalCount = Number(data && data.today_abnormal_count) || 0;
-      if (data && Array.isArray(data.students) && !bzState.classStudents.length) {
-        bzState.classStudents = data.students.map(function (s) {
-          return { student_name: s.student_name, gender: s.gender || '' };
-        });
-      }
     } catch (_) {
       clockAbnormalCount = 0;
+    }
+    if (!bzState.classStudents.length) {
+      try { await loadClassStudents({ silent: true }); } catch (_) {}
     }
     updateClockInfo();
   }
@@ -220,29 +219,121 @@
     clearInterval(clockTimer);
   }
 
-  async function loadClassStudents() {
-    if (!getToken()) return [];
+  function normalizeStudentRow(s) {
+    if (typeof s === 'string') {
+      return { student_name: String(s || '').trim(), gender: '' };
+    }
+    return {
+      student_name: String((s && s.student_name) || '').trim(),
+      gender: String((s && s.gender) || '').trim()
+    };
+  }
+
+  function mergeStudentLists() {
+    var map = new Map();
+    for (var i = 0; i < arguments.length; i++) {
+      var arr = arguments[i] || [];
+      arr.forEach(function (item) {
+        var row = normalizeStudentRow(item);
+        if (!row.student_name) return;
+        var prev = map.get(row.student_name);
+        if (!prev) {
+          map.set(row.student_name, row);
+        } else if (!prev.gender && row.gender) {
+          prev.gender = row.gender;
+        }
+      });
+    }
+    return Array.from(map.values()).sort(function (a, b) {
+      return String(a.student_name).localeCompare(String(b.student_name), 'zh');
+    });
+  }
+
+  function readRosterCache() {
     try {
-      var data = await apiRequest('GET', '/api/banzhuren/class-roster');
-      if (data && data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
-      var list = (data && data.students) || [];
-      if (list.length) return list;
+      var raw = sessionStorage.getItem(ROSTER_CACHE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (data && Array.isArray(data.students) && data.students.length) return data;
+    } catch (_) {}
+    return null;
+  }
+
+  function writeRosterCache(students, revision) {
+    if (!students || !students.length) return;
+    try {
+      sessionStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify({
+        students: students,
+        revision: revision || 0,
+        at: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function getLocalSelectionStudents() {
+    try {
+      if (typeof students === 'undefined' || !Array.isArray(students) || !students.length) return [];
+      return students.map(function (name) {
+        var g = '';
+        try {
+          if (typeof getStudentGender === 'function') g = getStudentGender(name) || '';
+        } catch (_) {}
+        return { student_name: String(name || '').trim(), gender: g };
+      }).filter(function (s) { return s.student_name; });
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function fetchSchoolStudentsRoster() {
+    var user = getUser();
+    var parsed = parseClassFromUser(user || {});
+    if (!parsed.grade || !parsed.classNum) return [];
+    try {
+      var qs = new URLSearchParams();
+      qs.set('grade', parsed.grade);
+      qs.set('class_num', parsed.classNum);
+      qs.set('class', parsed.display || (parsed.grade + '(' + parsed.classNum + ')班'));
+      var data = await apiRequest('GET', '/api/school-students?' + qs.toString());
+      return (data && data.students) || [];
     } catch (e) {
-      console.warn('loadClassStudents:', e.message);
+      console.warn('fetchSchoolStudentsRoster:', e.message);
+      return [];
+    }
+  }
+
+  async function loadClassStudents(opts) {
+    opts = opts || {};
+    if (!getToken()) {
+      return bzState.classStudents.length ? bzState.classStudents.slice() : [];
     }
 
-    // 回退：使用本页当前班级名单（刚保存尚未同步时）
+    var roster = [];
+    var revision = 0;
+    var cached = readRosterCache();
+    var cachedList = (cached && cached.students) || [];
+
     try {
-      if (typeof students !== 'undefined' && Array.isArray(students) && students.length) {
-        return students.map(function (name) {
-          var g = '';
-          try {
-            if (typeof getStudentGender === 'function') g = getStudentGender(name) || '';
-          } catch (_) {}
-          return { student_name: name, gender: g };
-        });
-      }
-    } catch (_) {}
+      var data = await apiRequest('GET', '/api/banzhuren/class-roster');
+      roster = (data && data.students) || [];
+      revision = (data && data.revision) || 0;
+      if (revision) lastSyncRevision = Math.max(lastSyncRevision, revision);
+    } catch (e) {
+      console.warn('loadClassStudents class-roster:', e.message);
+    }
+
+    var school = await fetchSchoolStudentsRoster();
+    var local = getLocalSelectionStudents();
+
+    roster = mergeStudentLists(roster, school, local, cachedList);
+
+    if (roster.length) {
+      writeRosterCache(roster, revision || (cached && cached.revision) || 0);
+      bzState.classStudents = roster;
+      return roster.slice();
+    }
+
+    if (bzState.classStudents.length) return bzState.classStudents.slice();
     return [];
   }
 
@@ -684,8 +775,13 @@
       lastSyncRevision = (sync && sync.revision) || lastSyncRevision;
     } catch (_) {}
     bzState.classStudents = [];
-    if (bzState.tab === 'leave') await loadLeavePage();
-    else if (bzState.tab === 'dashboard') await loadDashboard({ silent: silent });
+    try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
+    try { await loadClassStudents({ silent: silent }); } catch (_) {}
+    if (bzState.tab === 'leave') {
+      await loadTodayLeaves();
+      renderLeaveGrid();
+      renderLeaveList();
+    } else if (bzState.tab === 'dashboard') await loadDashboard({ silent: silent });
     else if (bzState.tab === 'profile') await loadProfile();
   }
 
@@ -701,6 +797,8 @@
       if (revChanged) lastSyncRevision = rev;
       if (clsChanged) lastClassroomSync = clsSync;
       if (revChanged || clsChanged) {
+        bzState.classStudents = [];
+        try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
         if (bzState.tab === 'leave') loadLeavePage();
         else if (bzState.tab === 'dashboard') loadDashboard({ silent: true });
         else if (bzState.tab === 'profile') loadProfile();
@@ -792,12 +890,22 @@
     bindProfilePassword();
 
     initSyncRevision();
+    if (getToken()) {
+      loadClassStudents({ silent: true }).catch(function () {});
+    }
     setInterval(pollSelectionSync, 10000);
     setInterval(ensureLeaveDayFresh, 30000);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         ensureLeaveDayFresh();
-        if (bzState.tab === 'dashboard' && getToken()) loadDashboard({ silent: true });
+        if (getToken()) {
+          loadClassStudents({ silent: true }).then(function () {
+            if (bzState.tab === 'leave') {
+              renderLeaveGrid();
+              updateClockInfo();
+            } else if (bzState.tab === 'dashboard') loadDashboard({ silent: true });
+          }).catch(function () {});
+        }
       }
     });
     // 停留在数据看板时更频繁刷新签到表格（静默，不闪烁）
