@@ -2464,6 +2464,40 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .bz-dash-table th, .bz-dash-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
 .bz-dash-table th { background: rgba(13,148,136,0.08); font-weight: 600; }
+.bz-att-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 10px; }
+.bz-att-table {
+  width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px;
+  background: var(--card);
+}
+.bz-att-table th, .bz-att-table td {
+  border: 1px solid var(--border);
+  padding: 6px 4px;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 52px;
+}
+.bz-att-table th { background: rgba(13,148,136,0.1); font-weight: 600; color: var(--primary-dark); }
+.bz-att-table th.bz-att-name,
+.bz-att-table td.bz-att-name {
+  position: sticky; left: 0; z-index: 2;
+  background: var(--card); text-align: left; min-width: 72px; max-width: 96px;
+  font-weight: 600; padding-left: 8px;
+}
+.bz-att-table thead th.bz-att-name { z-index: 3; background: rgba(13,148,136,0.14); }
+.bz-att-table th.bz-att-idx,
+.bz-att-table td.bz-att-idx {
+  position: sticky; left: 0; z-index: 2;
+  background: var(--card); min-width: 36px; max-width: 40px; color: var(--muted);
+}
+.bz-att-table thead th.bz-att-idx { z-index: 3; background: rgba(13,148,136,0.14); }
+.bz-att-table td.bz-att-name { left: 36px; }
+.bz-att-table thead th.bz-att-name { left: 36px; }
+.bz-att-ok { color: #15803d; font-weight: 700; font-size: 13px; }
+.bz-att-bad { color: #b91c1c; font-weight: 600; font-size: 10px; }
+.bz-att-warn { color: #b45309; font-weight: 600; font-size: 10px; cursor: help; }
+.bz-att-sick { color: #0369a1; font-weight: 600; font-size: 10px; }
+.bz-att-empty { color: transparent; }
+.bz-att-ph { color: var(--muted); font-weight: 400; opacity: 0.45; }
 .bz-detail { font-size: 11px; color: var(--muted); max-width: 200px; }
 .bz-empty { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 13px; }
 
@@ -2660,7 +2694,7 @@ tr.no-quota:hover td { opacity: 0.7; }
       <div class="bz-card-title" style="margin:0">班级考勤看板</div>
       <button type="button" class="btn-reset" id="bzRefreshDashboard" style="font-size:12px;padding:6px 12px;">刷新</button>
     </div>
-    <p class="bz-subtitle">汇总本班学生在各拓展课程中的出勤、旷课、请假等数据（与教师端同步）</p>
+    <p class="bz-subtitle">教师端完成签到后自动填充日期列：已签到打 ✓，未签到留空，异常显示病假/事假/旷课等（事假可悬停查看原因）</p>
     <div class="bz-dash-stats" id="bzDashboardSummary"></div>
     <div id="bzDashboardBody"></div>
   </div>
@@ -5657,6 +5691,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260827g"></script>
+<script src="js/banzhuren-portal.js?v=20260827h"></script>
 </body>
 </html>

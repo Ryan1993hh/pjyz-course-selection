@@ -378,38 +378,67 @@
     if (dateEl) dateEl.textContent = todayKey();
   }
 
+  function renderAttendanceCell(cell) {
+    var st = cell && cell.status;
+    if (!st || st === 'none') return '<span class="bz-att-empty">·</span>';
+    if (st === 'present') return '<span class="bz-att-ok">✓</span>';
+    if (st === 'absent') return '<span class="bz-att-bad">旷课</span>';
+    if (st === 'late') return '<span class="bz-att-warn">迟到</span>';
+    if (st === 'sick') return '<span class="bz-att-sick">病假</span>';
+    if (st === 'personal') {
+      var note = (cell && cell.note) || '';
+      var tip = note ? ' title="' + attrEsc(note) + '"' : '';
+      return '<span class="bz-att-warn"' + tip + '>事假</span>';
+    }
+    return escHtml(st);
+  }
+
   function renderDashboard(data) {
     var wrap = document.getElementById('bzDashboardBody');
     if (!wrap) return;
     if (!data || !data.students || !data.students.length) {
-      wrap.innerHTML = '<div class="bz-empty">暂无考勤数据，请确保学生已选课且教师端已进行签到</div>';
+      wrap.innerHTML = '<div class="bz-empty">暂无班级学生名单，请先完成选课保存</div>';
       return;
     }
+
+    if (data.revision) lastSyncRevision = Math.max(lastSyncRevision, data.revision);
+
+    var sessions = data.sessions || [];
+    var filledSessions = sessions.filter(function (s) { return s && s.date; }).length;
 
     var summary = document.getElementById('bzDashboardSummary');
     if (summary) {
       summary.innerHTML =
         '<div class="bz-dash-stat"><span class="n">' + (data.student_count || 0) + '</span><span class="l">班级人数</span></div>' +
-        '<div class="bz-dash-stat"><span class="n">' + (data.course_count || 0) + '</span><span class="l">拓展课程</span></div>' +
+        '<div class="bz-dash-stat"><span class="n">' + filledSessions + '/18</span><span class="l">已签到次数</span></div>' +
         '<div class="bz-dash-stat"><span class="n">' + escHtml(data.class_display || data.class_name || '') + '</span><span class="l">负责班级</span></div>';
     }
 
-    var html = '<div class="table-wrap"><table class="bz-dash-table"><thead><tr>' +
-      '<th>姓名</th><th>出勤</th><th>旷课</th><th>病假</th><th>事假</th><th>迟到</th><th>课程明细</th></tr></thead><tbody>';
+    var html = '<div class="bz-att-wrap"><table class="bz-att-table"><thead><tr>' +
+      '<th class="bz-att-idx">序</th><th class="bz-att-name">姓名</th>';
+    sessions.forEach(function (s, i) {
+      if (s && s.date) {
+        html += '<th title="' + attrEsc(s.date) + '">' + escHtml(s.dateLabel || s.date) + '</th>';
+      } else {
+        html += '<th class="bz-att-ph">' + (i + 1) + '</th>';
+      }
+    });
+    html += '</tr></thead><tbody>';
 
-    data.students.forEach(function (s) {
-      var t = s.totals || {};
-      var detail = (s.courses || []).map(function (c) {
-        return escHtml(c.course_name) + '（' + escHtml(c.teacher_name || '—') + '）出' + c.present + '/旷' + c.absent + '/病' + c.sick + '/事' + c.personal;
-      }).join('；') || '—';
-      html += '<tr>' +
-        '<td>' + escHtml(s.student_name) + '</td>' +
-        '<td>' + (t.present || 0) + '</td>' +
-        '<td>' + (t.absent || 0) + '</td>' +
-        '<td>' + (t.sick || 0) + '</td>' +
-        '<td>' + (t.personal || 0) + '</td>' +
-        '<td>' + (t.late || 0) + '</td>' +
-        '<td class="bz-detail">' + detail + '</td></tr>';
+    data.students.forEach(function (stu, idx) {
+      var cells = stu.cells || [];
+      html += '<tr><td class="bz-att-idx">' + (idx + 1) + '</td>' +
+        '<td class="bz-att-name">' + escHtml(stu.student_name) + '</td>';
+      for (var c = 0; c < 18; c++) {
+        var cell = cells[c] || { status: '' };
+        var sess = sessions[c];
+        if (!sess || !sess.date) {
+          html += '<td class="bz-att-ph"></td>';
+        } else {
+          html += '<td>' + renderAttendanceCell(cell) + '</td>';
+        }
+      }
+      html += '</tr>';
     });
     html += '</tbody></table></div>';
     wrap.innerHTML = html;
@@ -646,7 +675,11 @@
     bindProfilePassword();
 
     initSyncRevision();
-    setInterval(pollSelectionSync, 30000);
+    setInterval(pollSelectionSync, 15000);
+    // 停留在数据看板时更频繁刷新签到表格
+    setInterval(function () {
+      if (bzState.tab === 'dashboard' && getToken()) loadDashboard();
+    }, 20000);
 
     var logoutBtn = document.getElementById('bzProfileLogout');
     if (logoutBtn) {

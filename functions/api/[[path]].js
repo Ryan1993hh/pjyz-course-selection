@@ -3302,6 +3302,26 @@ function countCheckinStatusInHistory(history, studentKey, status) {
   return n;
 }
 
+function formatAttendanceDateLabel(dateKey) {
+  const s = String(dateKey || '').trim();
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return s;
+  return Number(m[2]) + '月' + Number(m[3]) + '日';
+}
+
+function lookupStudentCheckinStatus(checkinMap, student, studentName) {
+  if (!checkinMap) return 'none';
+  const keys = [
+    student && student.stableId,
+    studentName,
+    student && student.id != null ? String(student.id) : ''
+  ].filter(Boolean).map(String);
+  for (const k of keys) {
+    if (checkinMap[k] != null && checkinMap[k] !== '') return String(checkinMap[k]);
+  }
+  return 'none';
+}
+
 async function handleBanzhurenClassDashboard(db, request) {
   const auth = requireAuth(request, ['banzhuren', 'admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -3329,6 +3349,7 @@ async function handleBanzhurenClassDashboard(db, request) {
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
   const roster = await getBanzhurenClassRoster(db, grade, className);
+  const ATTENDANCE_COLS = 18;
 
   const selRes = await db.prepare(
     'SELECT student_name, course_name, grade, class_name FROM selections WHERE grade = ? OR class_name LIKE ?'
@@ -3350,7 +3371,7 @@ async function handleBanzhurenClassDashboard(db, request) {
   for (const courseName of allCourses) {
     const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
     const course = await db.prepare('SELECT teacher FROM courses WHERE name = ?').bind(courseName).first();
-    let payload = { students: [], history: [] };
+    let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
     if (row && row.payload) {
       try { payload = JSON.parse(row.payload); } catch (_) {}
     }
@@ -3365,11 +3386,99 @@ async function handleBanzhurenClassDashboard(db, request) {
   const ABNORMAL_STATUSES = new Set(['absent', 'late', 'sick', 'personal']);
   const todayAbnormalNames = new Set();
 
+  // 事假原因：date|student_name -> note
+  const leaveNoteMap = {};
+  try {
+    const leaveRows = await db.prepare(
+      'SELECT student_name, class_name, grade, leave_type, leave_date, note FROM student_leave_reports WHERE grade = ? OR leave_date = ?'
+    ).bind(grade, today).all();
+    (leaveRows.results || []).forEach((row) => {
+      if (!schoolStudentMatchesClassScope(row, grade, className)) return;
+      const name = String(row.student_name || '').trim();
+      const d = String(row.leave_date || '').trim();
+      if (!name || !d) return;
+      if (row.leave_type === 'personal' && row.note) {
+        leaveNoteMap[d + '|' + name] = String(row.note).trim();
+      }
+      if (d === today) todayAbnormalNames.add(name);
+    });
+  } catch (_) { /* ignore */ }
+
+  // 汇总本班相关课程的签到日期（最多 18 次）
+  const sessionMap = new Map();
+  for (const courseName of allCourses) {
+    const cd = courseData[courseName];
+    if (!cd) continue;
+    const payload = cd.payload || {};
+    const history = Array.isArray(payload.history) ? payload.history : [];
+    history.forEach((h) => {
+      const date = String((h && h.date) || '').trim();
+      if (!date) return;
+      const label = String((h && h.dateLabel) || '').trim() || formatAttendanceDateLabel(date);
+      const prev = sessionMap.get(date);
+      if (!prev || (h.updatedAt && (!prev.updatedAt || h.updatedAt > prev.updatedAt))) {
+        sessionMap.set(date, { date: date, dateLabel: label, updatedAt: h.updatedAt || 0 });
+      }
+    });
+    // 当天已开始签到但尚未写入 history 时，也占一列
+    const checkinDay = String(payload.checkinDay || '').trim();
+    if (checkinDay && !sessionMap.has(checkinDay) && payload.checkinDone) {
+      sessionMap.set(checkinDay, {
+        date: checkinDay,
+        dateLabel: formatAttendanceDateLabel(checkinDay),
+        updatedAt: Date.now()
+      });
+    }
+  }
+
+  const sessions = Array.from(sessionMap.values())
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .slice(0, ATTENDANCE_COLS);
+
+  while (sessions.length < ATTENDANCE_COLS) {
+    sessions.push({ date: '', dateLabel: '', placeholder: true });
+  }
+
   const studentsOut = roster.map((r) => {
     const name = String(r.student_name || '').trim();
     const courses = Array.from(studentCourses[name] || []);
     const courseStats = [];
     let totalPresent = 0, totalAbsent = 0, totalSick = 0, totalPersonal = 0, totalLate = 0;
+
+    const cells = sessions.map((sess) => {
+      if (!sess.date) return { status: '', note: '', course_name: '' };
+      let status = '';
+      let courseUsed = '';
+      for (const courseName of courses) {
+        const cd = courseData[courseName];
+        if (!cd) continue;
+        const payload = cd.payload || {};
+        const students = normalizeClassroomStudents(payload.students || []);
+        const student = students.find((s) => String(s.student_name || '').trim() === name);
+        if (!student) continue;
+
+        const history = Array.isArray(payload.history) ? payload.history : [];
+        const hist = history.find((h) => String(h && h.date) === sess.date);
+        let st = 'none';
+        if (hist && hist.checkin) {
+          st = lookupStudentCheckinStatus(hist.checkin, student, name);
+        } else if (String(payload.checkinDay || '') === sess.date) {
+          st = lookupStudentCheckinStatus(payload.checkin || {}, student, name);
+        } else {
+          continue;
+        }
+        status = st;
+        courseUsed = courseName;
+        break;
+      }
+      if (!status || status === 'none') {
+        return { status: '', note: '', course_name: courseUsed };
+      }
+      const note = (status === 'personal')
+        ? (leaveNoteMap[sess.date + '|' + name] || '')
+        : '';
+      return { status: status, note: note, course_name: courseUsed };
+    });
 
     courses.forEach((courseName) => {
       const cd = courseData[courseName];
@@ -3401,7 +3510,6 @@ async function handleBanzhurenClassDashboard(db, request) {
         sessions: history.length
       });
 
-      // 当天签到异常（旷课/迟到/病假/事假）
       if (String(payload.checkinDay || '') === today) {
         const checkin = payload.checkin || {};
         const st = checkin[key] || checkin[name] || 'none';
@@ -3412,6 +3520,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     return {
       student_name: name,
       gender: r.gender || '',
+      cells: cells,
       courses: courseStats,
       totals: {
         present: totalPresent,
@@ -3423,17 +3532,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     };
   });
 
-  // 班主任当日请假报备也计入异常（教师端尚未同步时仍可见）
-  try {
-    const leaveRows = await db.prepare(
-      'SELECT student_name, class_name, grade FROM student_leave_reports WHERE leave_date = ?'
-    ).bind(today).all();
-    (leaveRows.results || []).forEach((row) => {
-      if (!schoolStudentMatchesClassScope(row, grade, className)) return;
-      const name = String(row.student_name || '').trim();
-      if (name) todayAbnormalNames.add(name);
-    });
-  } catch (_) { /* ignore */ }
+  const revision = await getSelectionDataRevision(db);
 
   return json({
     grade: grade,
@@ -3446,7 +3545,10 @@ async function handleBanzhurenClassDashboard(db, request) {
     today_abnormal_students: Array.from(todayAbnormalNames).sort((a, b) =>
       String(a).localeCompare(String(b), 'zh')
     ),
+    attendance_cols: ATTENDANCE_COLS,
+    sessions: sessions,
     students: studentsOut,
+    revision: revision,
     courses: Array.from(allCourses).map((c) => ({
       course_name: c,
       teacher_name: (courseData[c] && courseData[c].teacher_name) || ''
@@ -3596,6 +3698,7 @@ async function handleTeacherClassroomPut(db, request) {
     JSON.stringify(payload)
   ).run();
 
+  await bumpSelectionDataRevision(db);
   return json({ success: true, course_name: courseName, synced_at: new Date().toISOString() });
 }
 
