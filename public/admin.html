@@ -75,6 +75,8 @@ body {
   padding-bottom: calc(var(--page-pad-x) + var(--safe-bottom));
   line-height: 1.5;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ===== 顶部标题栏 — 左中右三栏布局 ===== */
@@ -237,8 +239,9 @@ body {
 .layout {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  min-height: calc(100vh - 14px - 72px);
+  gap: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ===== 顶部导航栏（集成在header右侧）===== */
@@ -278,30 +281,75 @@ body {
 .top-nav-items {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .top-nav-items .nav-item {
-  padding: 7px 14px;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 11px;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.88);
   cursor: pointer;
-  transition: all 0.2s ease;
-  letter-spacing: 0.5px;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  user-select: none;
 }
 .top-nav-items .nav-item:hover {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.16);
   color: white;
+  border-color: rgba(255,255,255,0.28);
+  transform: translateY(-1px);
 }
 .top-nav-items .nav-item.active {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.24);
   color: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  border-color: rgba(255,255,255,0.45);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
 }
 .top-nav-items .nav-item .nav-icon {
-  margin-right: 4px;
-  font-size: 13px;
+  width: 30px;
+  height: 30px;
+  margin-right: 0;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.top-nav-items .nav-item .nav-label {
+  white-space: nowrap;
+}
+.top-nav-items .nav-item .nav-icon-courses {
+  background: linear-gradient(145deg, rgba(16,185,129,0.95), rgba(5,150,105,0.88));
+}
+.top-nav-items .nav-item .nav-icon-selections {
+  background: linear-gradient(145deg, rgba(59,130,246,0.95), rgba(37,99,235,0.88));
+}
+.top-nav-items .nav-item .nav-icon-board {
+  background: linear-gradient(145deg, rgba(139,92,246,0.95), rgba(109,40,217,0.88));
+}
+.top-nav-items .nav-item .nav-icon-users {
+  background: linear-gradient(145deg, rgba(249,115,22,0.95), rgba(234,88,12,0.88));
+}
+.top-nav-items .nav-item.active .nav-icon-courses {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 2px 8px rgba(16,185,129,0.45);
+}
+.top-nav-items .nav-item.active .nav-icon-selections {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 2px 8px rgba(59,130,246,0.45);
+}
+.top-nav-items .nav-item.active .nav-icon-board {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 2px 8px rgba(139,92,246,0.45);
+}
+.top-nav-items .nav-item.active .nav-icon-users {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 2px 8px rgba(249,115,22,0.45);
 }
 
 /* ===== 侧边栏样式保留但不使用 ===== */
@@ -386,6 +434,7 @@ body {
 .main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -449,7 +498,14 @@ table.courses-table td[data-field="description"] {
 }
 
 .section { display: none; animation: fadeIn 0.25s ease; }
-.section.active { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.section.active {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
 .section.active > .card { width: 100%; align-self: stretch; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -1426,25 +1482,70 @@ table.courses-table td[data-field="description"] {
 }
 #section-selections.active {
   flex: 1;
-  min-height: calc(100vh - 120px);
+  min-height: 0;
+}
+#section-selections .selections-section-header {
+  flex-shrink: 0;
+  padding-bottom: 0;
 }
 #section-selections .selections-layout {
   flex: 1;
-  min-height: calc(100vh - 220px);
+  min-height: 0;
+}
+#section-selections .selections-main {
+  flex: 1;
+  min-height: 0;
+}
+#section-selections .data-card {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 12px;
+}
+#section-selections .data-card .table-wrap {
+  flex: 1;
+  min-height: calc(100vh - 232px);
+  max-height: none;
+}
+#section-selections .data-card .pagination {
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+#section-selections table.sel-table th,
+#section-selections table.sel-table td {
+  padding: 7px 6px;
+  font-size: 12px;
+}
+#section-users.active {
+  flex: 1;
+  min-height: 0;
+}
+#section-users > .section-header {
+  flex-shrink: 0;
+  padding-bottom: 0;
 }
 #section-users > .card {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 180px);
+  min-height: 0;
+  padding-bottom: 12px;
 }
 #section-users .user-toolbar {
   flex-shrink: 0;
 }
 #section-users .table-wrap {
   flex: 1;
-  min-height: 0;
+  min-height: calc(100vh - 195px);
   max-height: none;
+}
+#section-users table.usr-table th,
+#section-users table.usr-table td {
+  padding: 7px 6px;
+  font-size: 12px;
+}
+#section-users .pagination {
+  flex-shrink: 0;
+  margin-top: 8px;
 }
 .data-card .pagination {
   margin-top: 12px;
@@ -2857,10 +2958,10 @@ th.sortable.active .sort-icon { opacity: 1; }
 
   <div class="header-actions">
     <div class="top-nav-items">
-      <div class="nav-item" data-section="courses"><span class="nav-icon">▤</span>课程管理</div>
-      <div class="nav-item" data-section="selections"><span class="nav-icon">▦</span>选课数据</div>
-      <div class="nav-item active" data-section="board"><span class="nav-icon">◈</span>课程看板</div>
-      <div class="nav-item" data-section="users"><span class="nav-icon">◉</span>用户管理</div>
+      <div class="nav-item" data-section="courses"><span class="nav-icon nav-icon-courses" aria-hidden="true">📚</span><span class="nav-label">课程管理</span></div>
+      <div class="nav-item" data-section="selections"><span class="nav-icon nav-icon-selections" aria-hidden="true">📊</span><span class="nav-label">选课数据</span></div>
+      <div class="nav-item active" data-section="board"><span class="nav-icon nav-icon-board" aria-hidden="true">📈</span><span class="nav-label">课程看板</span></div>
+      <div class="nav-item" data-section="users"><span class="nav-icon nav-icon-users" aria-hidden="true">👤</span><span class="nav-label">用户管理</span></div>
     </div>
     <div class="header-tools">
       <div id="roleSwitcher"></div>
@@ -4688,7 +4789,7 @@ function getExcelCol(cols, idx, defaultVal) {
 /* ============ Module 2: Selections ============ */
 let selectionsData = [];
 let selectionsPage = 1;
-let selectionsPageSize = 10;
+let selectionsPageSize = 30;
 let selectionsCheckedIds = new Set();
 let coursesForFilter = [];
 let currentViewMode = 'selections'; // 'selections' | 'unselected' | 'pre_enroll'
@@ -5313,7 +5414,7 @@ function renderSelectionsPagination(){
   
   html += '<button class="page-btn" id="selNextPage"' + (selectionsPage >= totalPages ? ' disabled' : '') + '>下一页</button>';
   html += '<select class="page-size-select" id="selPageSize">';
-  [10, 20, 50].forEach(function(n){
+  [20, 30, 50, 100].forEach(function(n){
     html += '<option value="' + n + '"' + (n === selectionsPageSize ? ' selected' : '') + '>' + n + '条/页</option>';
   });
   html += '</select>';
@@ -6038,7 +6139,7 @@ let userSearchQuery = '';
 let userSortField = '';
 let userSortOrder = 'asc';
 let userCurrentPage = 1;
-let userPageSize = 10;
+let userPageSize = 30;
 
 async function loadUsers(){
   try {
@@ -6218,7 +6319,7 @@ function renderPagination(totalPages){
   html += '<div class="page-size">';
   html += '<label>每页</label>';
   html += '<select id="pageSizeSelect">';
-  [5, 10, 20, 50].forEach(function(s){
+  [20, 30, 50, 100].forEach(function(s){
     html += '<option value="' + s + '"' + (s === userPageSize ? ' selected' : '') + '>' + s + '</option>';
   });
   html += '</select>';
@@ -6453,7 +6554,7 @@ function openEditUser(u){
   document.getElementById('modalTitle').textContent = '编辑用户';
   bindUserClassSelects();
   const saveBtn = document.getElementById('saveEditUser');
-  saveBtn.onclick = async function(){
+  saveBtn.onclick = function(){
     const username = document.getElementById('uUsername').value.trim();
     const password = document.getElementById('uPassword').value;
     const teacherName = document.getElementById('uTeacherName').value.trim();
@@ -6467,21 +6568,55 @@ function openEditUser(u){
     if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
     if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
     if (!username){ toast('请填写账号', 'error'); return; }
-    saveBtn.disabled = true;
-    try {
-      const data = await request('PUT', '/api/users/' + u.id, { username: username, password: password, teacher_name: teacherName, course_name: courseName || '', class_name: className || '', roles: roles, email: email, phone: phone });
-      if (data.success){
-        toast('保存成功', 'success');
-        closeModal();
-        loadUsers();
+
+    const payload = {
+      username: username,
+      password: password,
+      teacher_name: teacherName,
+      course_name: courseName || '',
+      class_name: className || '',
+      roles: roles,
+      email: email,
+      phone: phone
+    };
+    const snapshot = Object.assign({}, u);
+    const userIdx = usersData.findIndex(function(x){ return x.id === u.id; });
+    const updated = Object.assign({}, u, {
+      username: username,
+      teacher_name: teacherName,
+      course_name: courseName || '',
+      class_name: className || '',
+      email: email,
+      phone: phone,
+      roles: roles.slice(),
+      role: roles[0] || u.role
+    });
+    if (password) updated.password = password;
+
+    if (userIdx > -1) usersData[userIdx] = updated;
+    closeModal();
+    renderUsers();
+
+    request('PUT', '/api/users/' + u.id, payload).then(function(data){
+      if (data.success) {
+        if (data.user && userIdx > -1) {
+          usersData[userIdx] = Object.assign(updated, data.user, {
+            phone: resolveUserPhone(data.user),
+            roles: data.user.roles || roles,
+            role: data.user.role || roles[0]
+          });
+          renderUsers();
+        }
       } else {
+        if (userIdx > -1) usersData[userIdx] = snapshot;
+        renderUsers();
         toast(data.error || '保存失败', 'error');
       }
-    } catch(e){
+    }).catch(function(e){
+      if (userIdx > -1) usersData[userIdx] = snapshot;
+      renderUsers();
       toast('保存失败：' + e.message, 'error');
-    } finally {
-      saveBtn.disabled = false;
-    }
+    });
   };
 }
 
