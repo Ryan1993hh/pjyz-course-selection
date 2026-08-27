@@ -3091,21 +3091,18 @@ async function getBanzhurenClassRoster(db, grade, className) {
     }
   }
 
-  // 本班已有选课/未选课数据时，用花名册补全遗漏学生
-  const hasActiveSelectionData = map.size > 0;
-  if (hasActiveSelectionData) {
-    const rosterRes = await db.prepare(
-      'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
-    ).bind(grade).all();
-    for (const row of (rosterRes.results || [])) {
-      if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
-      const name = String(row.student_name || '').trim();
-      if (!name) continue;
-      if (!map.has(name)) {
-        map.set(name, { student_name: name, gender: String(row.gender || '').trim(), source: 'roster' });
-      } else if (!map.get(name).gender && row.gender) {
-        map.get(name).gender = String(row.gender || '').trim();
-      }
+  // 始终用花名册补全本班完整名单（后台导入）
+  const rosterRes = await db.prepare(
+    'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
+  ).bind(grade).all();
+  for (const row of (rosterRes.results || [])) {
+    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!name) continue;
+    if (!map.has(name)) {
+      map.set(name, { student_name: name, gender: String(row.gender || '').trim(), source: 'roster' });
+    } else if (!map.get(name).gender && row.gender) {
+      map.get(name).gender = String(row.gender || '').trim();
     }
   }
 
@@ -3316,10 +3313,12 @@ async function handleStudentLeavesDelete(db, request, id) {
   return json({ success: true });
 }
 
-function countCheckinStatusInHistory(history, studentKey, status) {
+function countCheckinStatusInHistory(history, student, status) {
   let n = 0;
+  const studentName = String((student && student.student_name) || '').trim();
   (history || []).forEach((h) => {
-    if (h && h.checkin && h.checkin[studentKey] === status) n++;
+    if (!h || !h.checkin) return;
+    if (lookupStudentCheckinStatus(h.checkin, student, studentName) === status) n++;
   });
   return n;
 }
@@ -3333,14 +3332,12 @@ function formatAttendanceDateLabel(dateKey) {
 
 function lookupStudentCheckinStatus(checkinMap, student, studentName) {
   if (!checkinMap) return 'none';
-  const keys = [
-    student && student.stableId,
-    studentName,
-    student && student.id != null ? String(student.id) : ''
-  ].filter(Boolean).map(String);
+  const keys = classroomStudentKeyList(student || { student_name: studentName });
   for (const k of keys) {
     if (checkinMap[k] != null && checkinMap[k] !== '') return String(checkinMap[k]);
   }
+  const name = String(studentName || (student && student.student_name) || '').trim();
+  if (name && checkinMap[name] != null && checkinMap[name] !== '') return String(checkinMap[name]);
   return 'none';
 }
 
@@ -3371,7 +3368,6 @@ async function handleBanzhurenClassDashboard(db, request) {
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
   const roster = await getBanzhurenClassRoster(db, grade, className);
-  // 看板优先用选课/未选课名单；若为空则回退本班花名册，保证能画出姓名列
   const finalRoster = roster.length
     ? roster
     : await getClassSchoolStudentsRoster(db, grade, className);
@@ -3446,14 +3442,21 @@ async function handleBanzhurenClassDashboard(db, request) {
         sessionMap.set(date, { date: date, dateLabel: label, updatedAt: h.updatedAt || 0 });
       }
     });
-    // 当天已开始签到但尚未写入 history 时，也占一列
+    // 当天已开始签到（含进行中）但尚未写入 history 时，也占一列
     const checkinDay = String(payload.checkinDay || '').trim();
-    if (checkinDay && !sessionMap.has(checkinDay) && payload.checkinDone) {
-      sessionMap.set(checkinDay, {
-        date: checkinDay,
-        dateLabel: formatAttendanceDateLabel(checkinDay),
-        updatedAt: Date.now()
+    if (checkinDay && !sessionMap.has(checkinDay)) {
+      const checkin = payload.checkin || {};
+      const hasCheckin = !!payload.checkinDone || Object.keys(checkin).some((k) => {
+        const v = checkin[k];
+        return v != null && v !== '' && v !== 'none';
       });
+      if (hasCheckin) {
+        sessionMap.set(checkinDay, {
+          date: checkinDay,
+          dateLabel: formatAttendanceDateLabel(checkinDay),
+          updatedAt: Date.now()
+        });
+      }
     }
   }
 
@@ -3479,9 +3482,11 @@ async function handleBanzhurenClassDashboard(db, request) {
         const cd = courseData[courseName];
         if (!cd) continue;
         const payload = cd.payload || {};
-        const students = normalizeClassroomStudents(payload.students || []);
-        const student = students.find((s) => String(s.student_name || '').trim() === name);
-        if (!student) continue;
+        const classroomStudents = normalizeClassroomStudents(payload.students || []);
+        let student = classroomStudents.find((s) => String(s.student_name || '').trim() === name);
+        if (!student) {
+          student = { student_name: name, stableId: name, id: name };
+        }
 
         const history = Array.isArray(payload.history) ? payload.history : [];
         const hist = history.find((h) => String(h && h.date) === sess.date);
@@ -3510,16 +3515,17 @@ async function handleBanzhurenClassDashboard(db, request) {
       const cd = courseData[courseName];
       if (!cd) return;
       const payload = cd.payload || {};
-      const students = normalizeClassroomStudents(payload.students || []);
-      const student = students.find((s) => String(s.student_name || '').trim() === name);
-      if (!student) return;
-      const key = student.stableId;
+      const classroomStudents = normalizeClassroomStudents(payload.students || []);
+      let student = classroomStudents.find((s) => String(s.student_name || '').trim() === name);
+      if (!student) {
+        student = { student_name: name, stableId: name, id: name };
+      }
       const history = payload.history || [];
-      const present = countCheckinStatusInHistory(history, key, 'present');
-      const absent = countCheckinStatusInHistory(history, key, 'absent');
-      const sick = countCheckinStatusInHistory(history, key, 'sick');
-      const personal = countCheckinStatusInHistory(history, key, 'personal');
-      const late = countCheckinStatusInHistory(history, key, 'late');
+      const present = countCheckinStatusInHistory(history, student, 'present');
+      const absent = countCheckinStatusInHistory(history, student, 'absent');
+      const sick = countCheckinStatusInHistory(history, student, 'sick');
+      const personal = countCheckinStatusInHistory(history, student, 'personal');
+      const late = countCheckinStatusInHistory(history, student, 'late');
       totalPresent += present;
       totalAbsent += absent;
       totalSick += sick;
@@ -3537,8 +3543,7 @@ async function handleBanzhurenClassDashboard(db, request) {
       });
 
       if (String(payload.checkinDay || '') === today) {
-        const checkin = payload.checkin || {};
-        const st = checkin[key] || checkin[name] || 'none';
+        const st = lookupStudentCheckinStatus(payload.checkin || {}, student, name);
         if (ABNORMAL_STATUSES.has(st)) todayAbnormalNames.add(name);
       }
     });

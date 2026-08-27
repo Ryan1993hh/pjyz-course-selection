@@ -3264,6 +3264,11 @@ function clearLocalSelectionDraft() {
   }
 }
 
+function isBanzhurenDashboardActive() {
+  var panel = document.getElementById('bz-panel-dashboard');
+  return !!(panel && panel.classList.contains('active'));
+}
+
 async function fetchSelectionDataSync() {
   if (!getToken()) return { revision: 0, selections_count: 0, unselected_count: 0 };
   var data = await apiRequest('GET', '/api/selection-data-sync');
@@ -5511,14 +5516,15 @@ document.addEventListener('keydown', e => {
       var prev = serverDataRevision;
       var sync = await fetchSelectionDataSync();
       if (sync.revision > prev && studentListSource !== 'upload') {
+        if (isBanzhurenDashboardActive()) {
+          if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
+            await window.BzPortal.notifyRosterUpdated({ silent: true });
+          }
+          return;
+        }
         clearLocalSelectionDraft();
         await applyServerSelectionSync({ silent: true });
         renderAll();
-        if ((sync.selections_count || 0) === 0 && (sync.unselected_count || 0) === 0) {
-          showToast('管理员已清除选课数据，页面已同步', 'info');
-        } else {
-          showToast('选课数据已从后台同步', 'info');
-        }
       }
     } catch (e) {
       console.warn('selection data sync poll:', e.message);

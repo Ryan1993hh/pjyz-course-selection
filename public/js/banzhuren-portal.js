@@ -386,13 +386,23 @@
 
   function normalizeDashboardData(data, fallbackStudents) {
     var students = (data && data.students) || [];
-    if (!students.length && fallbackStudents && fallbackStudents.length) {
-      students = fallbackStudents.map(function (s) {
-        return {
-          student_name: s.student_name || s,
-          gender: s.gender || '',
+    if (fallbackStudents && fallbackStudents.length) {
+      var map = new Map();
+      students.forEach(function (s) {
+        var n = String(s.student_name || '').trim();
+        if (n) map.set(n, s);
+      });
+      fallbackStudents.forEach(function (s) {
+        var n = String((s && s.student_name) || s || '').trim();
+        if (!n || map.has(n)) return;
+        map.set(n, {
+          student_name: n,
+          gender: (s && s.gender) || '',
           cells: []
-        };
+        });
+      });
+      students = Array.from(map.values()).sort(function (a, b) {
+        return String(a.student_name).localeCompare(String(b.student_name), 'zh');
       });
     }
     var sessions = (data && data.sessions) || [];
@@ -427,9 +437,28 @@
     return escHtml(st);
   }
 
-  function renderDashboard(data) {
+  function dashboardSignature(data) {
+    if (!data) return '';
+    try {
+      return JSON.stringify({
+        students: data.students,
+        sessions: data.sessions,
+        class_display: data.class_display || data.class_name || ''
+      });
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function renderDashboard(data, opts) {
+    opts = opts || {};
+    var silent = !!opts.silent;
     var wrap = document.getElementById('bzDashboardBody');
     if (!wrap) return;
+
+    var sig = dashboardSignature(data);
+    if (silent && sig && sig === bzState.dashboardSig) return;
+    bzState.dashboardSig = sig;
 
     var sessions = (data && data.sessions) || emptySessions(18);
     var students = (data && data.students) || [];
@@ -480,9 +509,13 @@
     wrap.innerHTML = html;
   }
 
-  async function loadDashboard() {
+  async function loadDashboard(opts) {
+    opts = opts || {};
+    var silent = !!opts.silent;
     var wrap = document.getElementById('bzDashboardBody');
-    if (wrap) wrap.innerHTML = '<div class="bz-empty">加载中…</div>';
+    if (wrap && !silent && !wrap.querySelector('.bz-att-table')) {
+      wrap.innerHTML = '<div class="bz-empty">加载中…</div>';
+    }
     var fallback = [];
     try {
       fallback = await loadClassStudents();
@@ -491,7 +524,7 @@
     try {
       var data = await apiRequest('GET', '/api/banzhuren/class-dashboard');
       bzState.dashboard = normalizeDashboardData(data, fallback);
-      renderDashboard(bzState.dashboard);
+      renderDashboard(bzState.dashboard, { silent: silent });
     } catch (e) {
       console.warn('loadDashboard:', e.message);
       bzState.dashboard = normalizeDashboardData({
@@ -499,8 +532,8 @@
         sessions: emptySessions(18),
         class_display: (parseClassFromUser(getUser() || {}).display || '')
       }, fallback);
-      renderDashboard(bzState.dashboard);
-      if (!fallback.length && wrap) {
+      renderDashboard(bzState.dashboard, { silent: silent });
+      if (!fallback.length && wrap && !silent) {
         wrap.innerHTML = '<div class="bz-empty">加载失败：' + escHtml(e.message) + '</div>';
       }
     }
@@ -617,14 +650,16 @@
     }
   }
 
-  async function notifyRosterUpdated() {
+  async function notifyRosterUpdated(opts) {
+    opts = opts || {};
+    var silent = !!opts.silent;
     try {
       var sync = await apiRequest('GET', '/api/selection-data-sync');
       lastSyncRevision = (sync && sync.revision) || lastSyncRevision;
     } catch (_) {}
     bzState.classStudents = [];
     if (bzState.tab === 'leave') await loadLeavePage();
-    else if (bzState.tab === 'dashboard') await loadDashboard();
+    else if (bzState.tab === 'dashboard') await loadDashboard({ silent: silent });
     else if (bzState.tab === 'profile') await loadProfile();
   }
 
@@ -636,7 +671,7 @@
       if (rev > lastSyncRevision) {
         lastSyncRevision = rev;
         if (bzState.tab === 'leave') loadLeavePage();
-        else if (bzState.tab === 'dashboard') loadDashboard();
+        else if (bzState.tab === 'dashboard') loadDashboard({ silent: true });
         else if (bzState.tab === 'profile') loadProfile();
       }
     } catch (e) { /* ignore */ }
@@ -726,9 +761,9 @@
 
     initSyncRevision();
     setInterval(pollSelectionSync, 15000);
-    // 停留在数据看板时更频繁刷新签到表格
+    // 停留在数据看板时更频繁刷新签到表格（静默，不闪烁）
     setInterval(function () {
-      if (bzState.tab === 'dashboard' && getToken()) loadDashboard();
+      if (bzState.tab === 'dashboard' && getToken()) loadDashboard({ silent: true });
     }, 20000);
 
     var logoutBtn = document.getElementById('bzProfileLogout');
