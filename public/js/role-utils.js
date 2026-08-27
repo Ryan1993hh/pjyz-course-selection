@@ -93,6 +93,17 @@
     try { localStorage.setItem(LAST_PAGE_KEY, p); } catch (_) {}
   }
 
+  function prefetchPage(page) {
+    var p = normalizePagePath(page);
+    if (!p || p === 'denglu' || p === 'login') return;
+    try {
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = p;
+      document.head.appendChild(link);
+    } catch (_) {}
+  }
+
   function getLastPage() {
     try { return normalizePagePath(localStorage.getItem(LAST_PAGE_KEY) || ''); } catch (_) { return ''; }
   }
@@ -277,6 +288,7 @@
     enforcePageAccess: enforcePageAccess,
     initRoleSwitcher: initRoleSwitcher,
     parseRoleValue: parseRoleValue,
-    normalizeRolesInput: normalizeRolesInput
+    normalizeRolesInput: normalizeRolesInput,
+    prefetchPage: prefetchPage
   };
 })(window);

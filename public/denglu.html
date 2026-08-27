@@ -618,6 +618,9 @@
     .brand-hero p { font-size: 11px; letter-spacing: 0; }
   }
 </style>
+<link rel="prefetch" href="admin">
+<link rel="prefetch" href="xuanke">
+<link rel="prefetch" href="jiaoshi">
 </head>
 <body>
 
@@ -866,10 +869,14 @@
             redirectUrl = 'jiaoshi';
           }
           localStorage.setItem('pjyz_login_role', userRole);
-          window.location.href = redirectUrl;
+          if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') {
+            PjyzRole.prefetchPage(redirectUrl);
+          }
+          window.location.replace(redirectUrl);
           return;
         } catch (_) {
-          window.location.href = (userRole === 'admin') ? 'admin' : (userRole === 'teacher' ? 'jiaoshi' : 'xuanke');
+          var fallback = (userRole === 'admin') ? 'admin' : (userRole === 'teacher' ? 'jiaoshi' : 'xuanke');
+          window.location.replace(fallback);
           return;
         }
       } else {
@@ -899,7 +906,7 @@
     if (rememberEl.checked && passwordEl.value) loginBtn.focus();
     else if (usernameEl.value && !passwordEl.value) passwordEl.focus();
     else usernameEl.focus();
-  }, 600);
+  }, 120);
 })();
 </script>
 </body>

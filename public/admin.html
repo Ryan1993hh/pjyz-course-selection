@@ -1920,7 +1920,7 @@ table.sel-table tbody tr.pre-enroll-row td {
   box-shadow: inset 3px 0 0 0 #f97316;
 }
 
-/* 用户表 10 列 */
+/* 用户表 11 列 */
 table.usr-table td.seq         { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
 table.usr-table td:nth-child(2){ background-color: var(--col-2); text-align: left; }
 table.usr-table td.pwd-cell    { background-color: var(--col-3); cursor: pointer; text-align: left; letter-spacing: 2px; }
@@ -1928,8 +1928,9 @@ table.usr-table td:nth-child(4){ background-color: var(--col-4); text-align: lef
 table.usr-table td:nth-child(5){ background-color: var(--col-5); text-align: center; }
 table.usr-table td:nth-child(6){ background-color: var(--col-6); text-align: left; font-size: 12px; color: #6b7280; }
 table.usr-table td:nth-child(7){ background-color: var(--col-7); text-align: left; font-size: 12px; color: #6b7280; }
-table.usr-table td:nth-child(8){ background-color: var(--col-8); text-align: center; }
+table.usr-table td:nth-child(8){ background-color: var(--col-8); text-align: left; font-size: 12px; color: #6b7280; }
 table.usr-table td:nth-child(9){ background-color: var(--col-9); text-align: center; }
+table.usr-table td:nth-child(10){ background-color: var(--col-10); text-align: center; }
 table.usr-table td.row-actions { background-color: var(--col-10); text-align: center; white-space: nowrap; }
 table.usr-table td.row-actions .btn-sm { margin: 0 2px; }
 
@@ -1942,6 +1943,7 @@ table.usr-table tbody tr:hover td:nth-child(6){ background-color: var(--col-6-h)
 table.usr-table tbody tr:hover td:nth-child(7){ background-color: var(--col-7-h); }
 table.usr-table tbody tr:hover td:nth-child(8){ background-color: var(--col-8-h); }
 table.usr-table tbody tr:hover td:nth-child(9){ background-color: var(--col-9-h); }
+table.usr-table tbody tr:hover td:nth-child(10){ background-color: var(--col-10-h); }
 table.usr-table tbody tr:hover td.row-actions { background-color: var(--col-10-h); }
 
 td.editable { cursor: pointer; transition: all 0.15s ease; }
@@ -3370,8 +3372,9 @@ async function doLogin(){
         if (roles.indexOf('admin') > -1) PjyzRole.setActiveRole('admin');
       }
       document.getElementById('loginOverlay').classList.remove('show');
-      toast('登录成功', 'success');
-      initAll();
+      initShell();
+      ensureBoardSection();
+      return;
     } else {
       msgEl.textContent = data.error || data.message || '登录失败';
     }
@@ -3412,7 +3415,9 @@ document.querySelectorAll('.nav-item').forEach(function(item){
     item.classList.add('active');
     document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
     document.getElementById('section-' + item.dataset.section).classList.add('active');
-    if (item.dataset.section === 'board') loadCourseBoard();
+    if (item.dataset.section === 'board') ensureBoardSection();
+    else if (item.dataset.section === 'courses') ensureCoursesSection();
+    else if (item.dataset.section === 'users') ensureUsersSection();
   });
 });
 
@@ -4788,6 +4793,7 @@ function buildQuery(){
 
 function activateSelectionsSection(opts) {
   opts = opts || {};
+  ensureSelectionsMeta();
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
   var nav = document.querySelector('.nav-item[data-section="selections"]');
@@ -6021,6 +6027,13 @@ window.deleteClassItem = function(id){
 
 /* ============ Module 3: Users ============ */
 let usersData = [];
+function resolveUserPhone(u) {
+  var phone = String((u && u.phone) || '').trim();
+  if (phone) return phone;
+  var username = String((u && u.username) || '').trim();
+  if (/^1\d{10}$/.test(username)) return username;
+  return '';
+}
 let userSearchQuery = '';
 let userSortField = '';
 let userSortOrder = 'asc';
@@ -6072,7 +6085,7 @@ function getFilteredSortedUsers(){
              (u.course_name || '').toLowerCase().indexOf(q) > -1 ||
              (u.class_name || '').toLowerCase().indexOf(q) > -1 ||
              (u.email || '').toLowerCase().indexOf(q) > -1 ||
-             (u.phone || '').toLowerCase().indexOf(q) > -1;
+             (resolveUserPhone(u) || '').toLowerCase().indexOf(q) > -1;
     });
   }
   list.sort(function(a, b){
@@ -6144,7 +6157,7 @@ function renderUsers(){
       '<td>' + escapeHtml(u.course_name || '') + '</td>' +
       '<td>' + escapeHtml(u.class_name || '') + '</td>' +
       '<td style="font-size:12px;color:#6b7280;">' + escapeHtml(u.email || '') + '</td>' +
-      '<td style="font-size:12px;color:#6b7280;">' + escapeHtml(u.phone || '') + '</td>' +
+      '<td style="font-size:12px;color:#6b7280;">' + escapeHtml(resolveUserPhone(u)) + '</td>' +
       '<td>' + rolesDisplay + '</td>' +
       '<td>' + statusBadge + '</td>' +
       '<td class="row-actions"></td>';
@@ -6424,7 +6437,7 @@ function openEditUser(u){
     '<div class="form-group"><label>课程名称</label><select class="form-select" id="uCourseName">' + buildCourseNameSelectOptions(u.course_name || '') + '</select></div>' +
     buildUserClassFormHtml(parsed.grade, parsed.classNum) +
     '<div class="form-group"><label>邮箱</label><input type="text" class="form-input" id="uEmail" value="' + escapeAttr(u.email || '') + '"></div>' +
-    '<div class="form-group"><label>手机号</label><input type="text" class="form-input" id="uPhone" value="' + escapeAttr(u.phone || '') + '"></div>' +
+    '<div class="form-group"><label>手机号</label><input type="text" class="form-input" id="uPhone" value="' + escapeAttr(resolveUserPhone(u)) + '"></div>' +
     '<div class="form-group"><label>角色（可多选）</label>' +
       '<div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap;">' +
         '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"' + (isAdmin ? ' checked' : '') + '> 管理员</label>' +
@@ -7030,7 +7043,39 @@ async function toggleSelectionLock(){
 }
 
 /* ============ Init ============ */
-function initAll(){
+var _sectionLoaded = { courses: false, selectionsMeta: false, users: false, board: false };
+
+function ensureCoursesSection() {
+  if (_sectionLoaded.courses) return;
+  _sectionLoaded.courses = true;
+  loadCourses();
+  loadClasses();
+  loadTeachersList();
+  loadCourseNames();
+  _sectionLoaded.selectionsMeta = true;
+}
+
+function ensureSelectionsMeta() {
+  if (_sectionLoaded.selectionsMeta) return;
+  _sectionLoaded.selectionsMeta = true;
+  loadClasses();
+  loadCourseNames();
+}
+
+function ensureUsersSection() {
+  ensureSelectionsMeta();
+  if (_sectionLoaded.users) return;
+  _sectionLoaded.users = true;
+  loadUsers();
+}
+
+function ensureBoardSection() {
+  if (_sectionLoaded.board) return;
+  _sectionLoaded.board = true;
+  loadCourseBoard();
+}
+
+function initShell(){
   // 显示管理员信息
   try {
     const userStr = localStorage.getItem('pjyz_user');
@@ -7039,8 +7084,13 @@ function initAll(){
       if (user) {
         const nameEl = document.getElementById('adminName');
         const avatarEl = document.getElementById('adminAvatar');
-        if (nameEl && user.username) nameEl.textContent = user.username;
-        if (avatarEl && user.username) avatarEl.textContent = user.username.charAt(0).toUpperCase();
+        var displayName = user.teacher_name || user.username || '管理员';
+        if (nameEl) {
+          nameEl.textContent = displayName;
+          var phoneHint = resolveUserPhone(user);
+          if (phoneHint && phoneHint !== displayName) nameEl.title = '手机号：' + phoneHint;
+        }
+        if (avatarEl) avatarEl.textContent = String(displayName).charAt(0).toUpperCase();
       }
     }
   } catch(e) {}
@@ -7049,15 +7099,13 @@ function initAll(){
     PjyzRole.initRoleSwitcher('roleSwitcher');
   }
 
-  loadCourses();
-  loadClasses();
-  loadTeachersList();
-  loadCourseNames();
-  loadUsers();
   setupUpload();
   loadSelectionStatusUI();
-  // 默认打开课程看板
-  loadCourseBoard();
+}
+
+function initAll(){
+  initShell();
+  ensureBoardSection();
 }
 
 if (checkLogin()){

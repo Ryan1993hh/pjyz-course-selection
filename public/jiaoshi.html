@@ -4393,7 +4393,7 @@ async function doLogin() {
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     if (window.PjyzRole) PjyzRole.setActiveRole('teacher');
     document.getElementById("loginOverlay").classList.add("hidden");
-    await initApp();
+    initApp();
   } catch (e) {
     toast(e.message, "error");
   }
@@ -4421,9 +4421,12 @@ async function initApp() {
     MuyuFish.init();
   }
   try {
-    await loadClassTeachers();
-    await loadAssignedCourse();
-    serverSelectionRevision = await fetchSelectionDataRevision();
+    await Promise.all([
+      loadClassTeachers(),
+      loadAssignedCourse().then(function () { return fetchSelectionDataRevision(); }).then(function (rev) {
+        serverSelectionRevision = rev;
+      })
+    ]);
   } catch (e) {
     toast("加载课程失败：" + e.message, "error");
   }

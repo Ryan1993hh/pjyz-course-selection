@@ -5487,12 +5487,13 @@ document.addEventListener('keydown', e => {
 // ===== 初始化：加载课程数据 → 加载持久化状态 → 首次渲染 =====
 (async function initBootstrap() {
   try {
-    await loadCoursesFromServer();
-    await loadSelectionStatus();
-    await syncUserProfile();
-
     var sync = { revision: 0 };
-    try { sync = await fetchSelectionDataSync(); } catch (e) { console.warn('fetchSelectionDataSync:', e.message); }
+    await Promise.all([
+      loadCoursesFromServer(),
+      loadSelectionStatus(),
+      syncUserProfile(),
+      fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; })
+    ]);
 
     var loaded = loadStateFromStorage();
     applyBanzhurenClassPreset();

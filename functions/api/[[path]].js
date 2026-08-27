@@ -601,7 +601,7 @@ async function handleLogin(db, request) {
         class_name: user.class_name || '',
         course_name: user.course_name || '',
         email: user.email || '',
-        phone: user.phone || '',
+        phone: resolveUserPhone(user),
         status: user.status || 'active'
       }
     });
@@ -628,7 +628,7 @@ async function handleAuthMe(db, request) {
       class_name: user.class_name || '',
       course_name: user.course_name || '',
       email: user.email || '',
-      phone: user.phone || '',
+      phone: resolveUserPhone(user),
       status: user.status || 'active'
     }
   });
@@ -2486,6 +2486,14 @@ async function handleImportHistoryGet(db) {
 }
 
 // ---- Users ----
+function resolveUserPhone(user) {
+  const phone = String((user && user.phone) || '').trim();
+  if (phone) return phone;
+  const username = String((user && user.username) || '').trim();
+  if (/^1\d{10}$/.test(username)) return username;
+  return '';
+}
+
 async function handleUsersGet(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -2493,6 +2501,7 @@ async function handleUsersGet(db, request) {
   const results = await db.prepare("SELECT * FROM users ORDER BY CASE WHEN roles LIKE '%admin%' THEN 0 WHEN roles LIKE '%banzhuren%' THEN 1 WHEN roles LIKE '%teacher%' THEN 2 ELSE 3 END, username").all();
   const users = results.results.map(u => ({
     ...u,
+    phone: resolveUserPhone(u),
     roles: (u.roles || '').split(',').filter(Boolean),
     role: (u.roles || 'teacher').split(',')[0] || 'teacher',
     password_hash: undefined,
