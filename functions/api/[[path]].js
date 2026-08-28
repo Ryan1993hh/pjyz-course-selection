@@ -3187,9 +3187,10 @@ async function removeLeaveFromClassrooms(db, report, opts) {
   }
 }
 
-/** 班主任端班级名单：选课记录 + 未选课记录；若本班已有选课数据，再并入花名册补全 */
+/** 班主任端班级名单：有花名册时以花名册为准（删除后不再被选课/未选课残留补回）；无花名册时用选课+未选课 */
 async function getBanzhurenClassRoster(db, grade, className) {
   const map = new Map();
+  const genderByName = new Map();
 
   const selRes = await db.prepare(
     'SELECT student_name, gender, grade, class_name FROM selections'
@@ -3198,11 +3199,38 @@ async function getBanzhurenClassRoster(db, grade, className) {
     if (!selectionMatchesClassScope(row, grade, className)) continue;
     const name = String(row.student_name || '').trim();
     if (!name) continue;
-    const existing = map.get(name);
     const gender = String(row.gender || '').trim();
+    if (gender && !genderByName.get(name)) genderByName.set(name, gender);
+  }
+
+  const rosterRes = await db.prepare(
+    'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
+  ).bind(grade).all();
+  for (const row of (rosterRes.results || [])) {
+    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!name) continue;
+    const gender = String(row.gender || '').trim() || genderByName.get(name) || '';
+    map.set(name, { student_name: name, gender: gender, source: 'roster' });
+  }
+
+  // 本班已有花名册：只返回花名册，避免已从班级删除的学生仍因选课/未选课记录回显
+  if (map.size > 0) {
+    return Array.from(map.values()).map((s) => ({
+      student_name: s.student_name,
+      gender: s.gender || ''
+    })).sort((a, b) =>
+      String(a.student_name).localeCompare(String(b.student_name), 'zh')
+    );
+  }
+
+  for (const row of (selRes.results || [])) {
+    if (!selectionMatchesClassScope(row, grade, className)) continue;
+    const name = String(row.student_name || '').trim();
+    if (!name) continue;
     map.set(name, {
       student_name: name,
-      gender: gender || (existing && existing.gender) || '',
+      gender: String(row.gender || '').trim() || genderByName.get(name) || '',
       source: 'selection'
     });
   }
@@ -3220,21 +3248,6 @@ async function getBanzhurenClassRoster(db, grade, className) {
     if (!name) continue;
     if (!map.has(name)) {
       map.set(name, { student_name: name, gender: String(row.gender || '').trim(), source: 'unselected' });
-    } else if (!map.get(name).gender && row.gender) {
-      map.get(name).gender = String(row.gender || '').trim();
-    }
-  }
-
-  // 始终用花名册补全本班完整名单（后台导入）
-  const rosterRes = await db.prepare(
-    'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
-  ).bind(grade).all();
-  for (const row of (rosterRes.results || [])) {
-    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
-    const name = String(row.student_name || '').trim();
-    if (!name) continue;
-    if (!map.has(name)) {
-      map.set(name, { student_name: name, gender: String(row.gender || '').trim(), source: 'roster' });
     } else if (!map.get(name).gender && row.gender) {
       map.get(name).gender = String(row.gender || '').trim();
     }
@@ -3922,12 +3935,12 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
 
   function linkStudentCourse(name, courseName, gender) {
     if (!name || !courseName) return;
+    // 班级名单以传入的 baseRoster 为准，禁止因选课/签到残留把已删除学生加回看板
+    if (!rosterMap.has(name)) return;
     if (!studentCourses[name]) studentCourses[name] = new Set();
     studentCourses[name].add(courseName);
     allCourses.add(courseName);
-    if (!rosterMap.has(name)) {
-      rosterMap.set(name, { student_name: name, gender: gender || '' });
-    } else if (gender && !rosterMap.get(name).gender) {
+    if (gender && !rosterMap.get(name).gender) {
       rosterMap.get(name).gender = gender;
     }
   }
@@ -4069,14 +4082,8 @@ async function handleBanzhurenClassDashboard(db, request) {
 
   const baseRoster = await getBanzhurenClassRoster(db, grade, className);
   const schoolRoster = await getClassSchoolStudentsRoster(db, grade, className);
-  const rosterUnion = new Map();
-  (baseRoster.length ? baseRoster : schoolRoster).concat(baseRoster, schoolRoster).forEach((r) => {
-    const name = String(r.student_name || '').trim();
-    if (!name) return;
-    if (!rosterUnion.has(name)) rosterUnion.set(name, { student_name: name, gender: r.gender || '' });
-    else if (r.gender && !rosterUnion.get(name).gender) rosterUnion.get(name).gender = r.gender;
-  });
-  const baseOrSchool = Array.from(rosterUnion.values()).sort((a, b) =>
+  // 有花名册时以班级花名册为准；否则退回选课/未选课合并结果
+  const baseOrSchool = (baseRoster.length ? baseRoster : schoolRoster).slice().sort((a, b) =>
     String(a.student_name).localeCompare(String(b.student_name), 'zh')
   );
 

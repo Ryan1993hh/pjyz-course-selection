@@ -308,27 +308,38 @@
       return bzState.classStudents.length ? bzState.classStudents.slice() : [];
     }
 
-    var roster = [];
     var revision = 0;
-    var cached = readRosterCache();
-    var cachedList = (cached && cached.students) || [];
+    var apiOk = false;
+    var roster = [];
 
     try {
       var data = await apiRequest('GET', '/api/banzhuren/class-roster');
       roster = (data && data.students) || [];
       revision = (data && data.revision) || 0;
+      apiOk = true;
       if (revision) lastSyncRevision = Math.max(lastSyncRevision, revision);
     } catch (e) {
       console.warn('loadClassStudents class-roster:', e.message);
     }
 
+    // 服务端名单为权威来源：成功拉取后不再与本地缓存/选课草稿合并，避免已删除学生被加回
+    if (apiOk) {
+      if (roster.length) {
+        writeRosterCache(roster, revision);
+      } else {
+        try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
+      }
+      bzState.classStudents = roster.slice();
+      return roster.slice();
+    }
+
+    var cached = readRosterCache();
     var school = await fetchSchoolStudentsRoster();
     var local = getLocalSelectionStudents();
-
-    roster = mergeStudentLists(roster, school, local, cachedList);
+    roster = mergeStudentLists(school, local, (cached && cached.students) || []);
 
     if (roster.length) {
-      writeRosterCache(roster, revision || (cached && cached.revision) || 0);
+      writeRosterCache(roster, (cached && cached.revision) || 0);
       bzState.classStudents = roster;
       return roster.slice();
     }
@@ -512,23 +523,17 @@
 
   function normalizeDashboardData(data, fallbackStudents) {
     var students = (data && data.students) || [];
-    if (fallbackStudents && fallbackStudents.length) {
-      var map = new Map();
-      students.forEach(function (s) {
-        var n = String(s.student_name || '').trim();
-        if (n) map.set(n, s);
-      });
-      fallbackStudents.forEach(function (s) {
+    // 仅当看板接口未返回名单时，才用本地花名册兜底；有服务端名单时禁止再合并，避免已删学生回显
+    if ((!students || !students.length) && fallbackStudents && fallbackStudents.length) {
+      students = fallbackStudents.map(function (s) {
         var n = String((s && s.student_name) || s || '').trim();
-        if (!n || map.has(n)) return;
-        var existing = students.find(function (x) { return String(x.student_name || '').trim() === n; });
-        map.set(n, existing || {
+        return {
           student_name: n,
           gender: (s && s.gender) || '',
-          cells: existing && existing.cells ? existing.cells : []
-        });
-      });
-      students = Array.from(map.values()).sort(function (a, b) {
+          cells: (s && s.cells) || []
+        };
+      }).filter(function (s) { return s.student_name; });
+      students.sort(function (a, b) {
         return String(a.student_name).localeCompare(String(b.student_name), 'zh');
       });
     }
