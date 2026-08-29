@@ -4642,6 +4642,8 @@ async function loadCourses(){
 async function saveCourses(){
   const btn = document.getElementById('saveCoursesBtn');
   btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = '保存中…';
   try {
     const payload = coursesData.map(function(c){
       return {
@@ -4653,12 +4655,18 @@ async function saveCourses(){
         location: c.location || '',
         requirement: c.requirement || '',
         limit_grade6: parseInt(c.limit_grade6, 10) || 0,
-        limit_grade7: parseInt(c.limit_grade7, 10) || 0
+        limit_grade7: parseInt(c.limit_grade7, 10) || 0,
+        selected_count: c.selected_count || 0,
+        is_active: c.is_active !== false
       };
     });
     const data = await request('PUT', '/api/courses', payload);
     if (data.success){
-      if (data.courses) coursesData = data.courses;
+      if (data.courses && data.courses.length) {
+        coursesData = data.courses.map(function(c){
+          return Object.assign({}, c, { is_active: c.is_active !== 0 && c.is_active !== false });
+        });
+      }
       renderCourses();
       toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
     } else {
@@ -4668,6 +4676,7 @@ async function saveCourses(){
     toast('保存失败：' + e.message, 'error');
   } finally {
     btn.disabled = false;
+    btn.textContent = prevText || '✓ 确认保存全部课程';
   }
 }
 
@@ -7032,37 +7041,38 @@ async function doImportUsers(){
   btn.disabled = true;
   btn.textContent = '导入中...';
 
-  try {
-    const users = validUsers.map(function(d){
-      return {
-        username: d.username,
-        password: d.password,
-        teacher_name: d.teacher_name,
-        class_name: d.class_name,
-        course_name: d.course_name || '',
-        roles: d.roles,
-        email: d.email || '',
-        phone: d.phone || ''
-      };
-    });
+  const users = validUsers.map(function(d){
+    return {
+      username: d.username,
+      password: d.password,
+      teacher_name: d.teacher_name,
+      class_name: d.class_name,
+      course_name: d.course_name || '',
+      roles: d.roles,
+      email: d.email || '',
+      phone: d.phone || ''
+    };
+  });
 
+  try {
     const data = await request('POST', '/api/users/import', { users: users });
     if (data.success){
       let msg = '导入完成：成功 ' + data.imported + ' 个';
       if (data.failed > 0) msg += '，失败 ' + data.failed + ' 个';
+      toast(msg, data.failed > 0 ? 'warning' : 'success');
       if (data.errors && data.errors.length > 0){
-        msg += '\n\n错误详情：\n' + data.errors.slice(0, 10).join('\n');
-        if (data.errors.length > 10) msg += '\n...还有' + (data.errors.length - 10) + '个错误';
+        console.warn('用户导入错误详情:', data.errors);
       }
-      alert(msg);
       closeModal();
+      // 先乐观刷新列表，再后台拉最新数据
       loadUsers();
     } else {
       toast(data.error || '导入失败', 'error');
+      btn.disabled = false;
+      btn.textContent = '确认导入';
     }
   } catch(e){
     toast('导入失败：' + e.message, 'error');
-  } finally {
     btn.disabled = false;
     btn.textContent = '确认导入';
   }

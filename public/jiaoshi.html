@@ -2619,7 +2619,10 @@ function mergeClassroomFromServer(payload, summary) {
     }
   });
   if (payload.teacher) {
-    state.teacher.name = payload.teacher.name || state.teacher.name;
+    // 姓名以账号绑定为准，避免本地/旧课堂缓存覆盖为前任老师
+    const user = getUser();
+    const boundName = user && user.teacher_name ? String(user.teacher_name).trim() : "";
+    state.teacher.name = boundName || payload.teacher.name || state.teacher.name;
     state.teacher.course = payload.teacher.course || state.teacher.course;
     state.teacher.location = payload.teacher.location || state.teacher.location;
   }
@@ -2771,7 +2774,7 @@ function updateDateLine() {
 
 function updateHeaderMeta() {
   const user = getUser();
-  const name = state.teacher.name || (user && user.teacher_name) || (user && user.username) || "—";
+  const name = (user && user.teacher_name) || state.teacher.name || (user && user.username) || "—";
   const course = state.teacher.course || state.courseName || "—";
   const nameEl = document.getElementById("headerTeacherName");
   const courseEl = document.getElementById("headerCourseName");
@@ -2829,7 +2832,7 @@ function openClockOverlay() {
     document.getElementById("clockDate").textContent =
       now.getFullYear() + "年" + (now.getMonth()+1) + "月" + now.getDate() + "日 " + weekdays[now.getDay()];
     const user = getUser();
-    const name = state.teacher.name || (user && user.teacher_name) || (user && user.username) || "—";
+    const name = (user && user.teacher_name) || state.teacher.name || (user && user.username) || "—";
     const greetEl = document.getElementById("clockGreeting");
     if (greetEl) greetEl.textContent = formatClockGreeting(name, hour);
     updateHeaderMeta();
@@ -3668,7 +3671,7 @@ function renderAbsentAlerts() {
 
 function renderProfile() {
   const user = getUser();
-  const name = state.teacher.name || (user && user.teacher_name) || (user && user.username) || "";
+  const name = (user && user.teacher_name) || state.teacher.name || (user && user.username) || "";
   const course = state.teacher.course || state.courseName || "";
   const location = state.teacher.location || "";
   const classes = (state.numericHoursTotal != null)
@@ -3873,16 +3876,25 @@ async function loadAssignedCourse() {
   state.courseId = String(course.id);
   state.courseName = course.name;
 
-  state.teacher.name = (user && user.teacher_name) || course.teacher || (user && user.username) || "";
+  const authoritativeName = String((user && user.teacher_name) || "").trim()
+    || String(course.teacher || "").trim()
+    || String((user && user.username) || "").trim()
+    || "";
+  state.teacher.name = authoritativeName;
   state.teacher.course = course.name;
   state.teacher.location = course.location || "";
 
   loadLocal();
+  // 本地缓存可能带旧老师名，强制回写账号绑定姓名
+  state.teacher.name = authoritativeName || state.teacher.name;
+  state.teacher.course = course.name;
+  if (!state.teacher.location) state.teacher.location = course.location || "";
+
   await syncStudentsFromServer({ silent: true });
   await pullClassroomFromServer();
   await refreshNumericHoursTotal();
   ensureDailyCheckinState();
-  if (!state.teacher.name) state.teacher.name = (user && user.teacher_name) || course.teacher || "";
+  state.teacher.name = authoritativeName || state.teacher.name;
   if (!state.teacher.course) state.teacher.course = course.name;
   if (!state.teacher.location) state.teacher.location = course.location || "";
 

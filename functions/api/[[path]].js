@@ -724,16 +724,16 @@ async function handleCoursesBatchSave(db, request) {
   try {
     const body = await request.json();
     const arr = Array.isArray(body) ? body : (body.courses || []);
-    
-    // 删除所有旧课程
+
     await db.prepare('DELETE FROM courses').run();
-    
-    // 批量插入新课程
-    for (const c of arr) {
-      const id = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+    const insertStmts = (arr || []).map((c) => {
+      const id = (c.id !== undefined && c.id !== null && c.id !== '') ? c.id : null;
       if (id) {
-        await db.prepare(`INSERT INTO courses (id, category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
+        return db.prepare(
+          `INSERT INTO courses (id, category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
           id,
           c.category || '体育健康类',
           c.name || '',
@@ -745,26 +745,31 @@ async function handleCoursesBatchSave(db, request) {
           parseInt(c.limit_grade7, 10) || 0,
           c.selected_count || 0,
           c.is_active !== false ? 1 : 0
-        ).run();
-      } else {
-        await db.prepare(`INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
-          c.category || '体育健康类',
-          c.name || '',
-          c.description || '',
-          c.teacher || '',
-          c.location || '',
-          c.requirement || '',
-          parseInt(c.limit_grade6, 10) || 0,
-          parseInt(c.limit_grade7, 10) || 0,
-          c.selected_count || 0,
-          c.is_active !== false ? 1 : 0
-        ).run();
+        );
       }
-    }
-    
+      return db.prepare(
+        `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        c.category || '体育健康类',
+        c.name || '',
+        c.description || '',
+        c.teacher || '',
+        c.location || '',
+        c.requirement || '',
+        parseInt(c.limit_grade6, 10) || 0,
+        parseInt(c.limit_grade7, 10) || 0,
+        c.selected_count || 0,
+        c.is_active !== false ? 1 : 0
+      );
+    });
+    await runD1Batch(db, insertStmts);
+
+    // 用户绑定优先：保存课程后立刻用用户管理里的老师名覆盖
+    await applyAllBoundTeachersToCourses(db);
+
     const results = await db.prepare('SELECT * FROM courses').all();
-    return json({ success: true, count: results.results.length, courses: results.results });
+    return json({ success: true, count: (results.results || []).length, courses: results.results || [] });
   } catch (e) {
     return json({ error: '保存失败：' + e.message }, 400);
   }
@@ -2001,8 +2006,15 @@ function schoolStudentMatchesClassScope(row, grade, className) {
 async function runD1Batch(db, statements) {
   if (!statements || !statements.length) return;
   const CHUNK = 100;
-  for (let i = 0; i < statements.length; i += CHUNK) {
-    await db.batch(statements.slice(i, i + CHUNK));
+  if (typeof db.batch === 'function') {
+    for (let i = 0; i < statements.length; i += CHUNK) {
+      await db.batch(statements.slice(i, i + CHUNK));
+    }
+    return;
+  }
+  // 无 batch 能力时降级为逐条执行
+  for (const stmt of statements) {
+    await stmt.run();
   }
 }
 
@@ -2413,6 +2425,113 @@ async function handleTeachersGet(db) {
   return json(results.results);
 }
 
+/** 用户绑定课程后，同步 courses.teacher 与 teacher_classroom 显示名，避免看板/教师端仍显示旧老师 */
+async function syncUserCourseTeacherBinding(db, opts) {
+  opts = opts || {};
+  const userId = opts.userId != null ? opts.userId : null;
+  const teacherName = String(opts.teacher_name || '').trim();
+  const courseName = String(opts.course_name || '').trim();
+  const prevCourseName = String(opts.prev_course_name || '').trim();
+
+  if (prevCourseName && prevCourseName !== courseName) {
+    // 旧课程若仍绑定到本用户，解除 classroom 的 user 关联（老师名保留历史数据，但优先读用户表）
+    if (userId != null) {
+      try {
+        await db.prepare(
+          'UPDATE teacher_classroom SET teacher_user_id = NULL WHERE course_name = ? AND teacher_user_id = ?'
+        ).bind(prevCourseName, userId).run();
+      } catch (_) {}
+    }
+  }
+
+  if (!courseName || !teacherName) return;
+
+  try {
+    await db.prepare('UPDATE courses SET teacher = ? WHERE name = ?').bind(teacherName, courseName).run();
+  } catch (_) {}
+
+  const row = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
+  if (!row) {
+    // 尚无课堂同步记录时，至少保证课程表老师名已更新
+    return;
+  }
+
+  let payload = {};
+  try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) { payload = {}; }
+  if (!payload || typeof payload !== 'object') payload = {};
+  if (!payload.teacher || typeof payload.teacher !== 'object') payload.teacher = {};
+  payload.teacher.name = teacherName;
+  payload.teacher.course = courseName;
+
+  await db.prepare(
+    `UPDATE teacher_classroom SET
+      teacher_name = ?,
+      teacher_user_id = COALESCE(?, teacher_user_id),
+      payload = ?,
+      synced_at = datetime('now')
+     WHERE course_name = ?`
+  ).bind(teacherName, userId, JSON.stringify(payload), courseName).run();
+}
+
+/** 按用户表绑定，批量纠正课程与课堂老师名（用户管理优先） */
+async function applyAllBoundTeachersToCourses(db) {
+  const usersRes = await db.prepare(
+    "SELECT id, teacher_name, course_name FROM users WHERE course_name IS NOT NULL AND TRIM(course_name) != ''"
+  ).all();
+  const courseTeacher = new Map();
+  const courseUserId = new Map();
+  for (const u of (usersRes.results || [])) {
+    const course = String(u.course_name || '').trim();
+    const name = String(u.teacher_name || '').trim();
+    if (!course || !name) continue;
+    courseTeacher.set(course, name);
+    courseUserId.set(course, u.id);
+  }
+  if (!courseTeacher.size) return;
+
+  const stmts = [];
+  courseTeacher.forEach((name, course) => {
+    stmts.push(db.prepare('UPDATE courses SET teacher = ? WHERE name = ?').bind(name, course));
+  });
+  await runD1Batch(db, stmts);
+
+  const classRes = await db.prepare('SELECT course_name, payload, teacher_user_id FROM teacher_classroom').all();
+  const updateStmts = [];
+  for (const row of (classRes.results || [])) {
+    const course = String(row.course_name || '').trim();
+    const name = courseTeacher.get(course);
+    if (!name) continue;
+    let payload = {};
+    try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) { payload = {}; }
+    if (!payload || typeof payload !== 'object') payload = {};
+    if (!payload.teacher || typeof payload.teacher !== 'object') payload.teacher = {};
+    payload.teacher.name = name;
+    payload.teacher.course = course;
+    const uid = courseUserId.get(course);
+    updateStmts.push(
+      db.prepare(
+        `UPDATE teacher_classroom SET teacher_name = ?, teacher_user_id = COALESCE(?, teacher_user_id), payload = ?, synced_at = datetime('now') WHERE course_name = ?`
+      ).bind(name, uid != null ? uid : null, JSON.stringify(payload), course)
+    );
+  }
+  await runD1Batch(db, updateStmts);
+}
+
+async function getBoundTeacherNameMap(db) {
+  const map = new Map();
+  try {
+    const usersRes = await db.prepare(
+      "SELECT teacher_name, course_name FROM users WHERE course_name IS NOT NULL AND TRIM(course_name) != '' AND teacher_name IS NOT NULL AND TRIM(teacher_name) != ''"
+    ).all();
+    for (const u of (usersRes.results || [])) {
+      const course = String(u.course_name || '').trim();
+      const name = String(u.teacher_name || '').trim();
+      if (course && name) map.set(course, name);
+    }
+  } catch (_) {}
+  return map;
+}
+
 // ---- Users Import ----
 async function handleUsersImport(db, request) {
   const auth = requireAuth(request, ['admin']);
@@ -2420,47 +2539,110 @@ async function handleUsersImport(db, request) {
   try {
     const body = await request.json();
     const users = body.users || [];
-    let imported = 0, failed = 0;
+    let imported = 0;
+    let failed = 0;
     const errors = [];
-    
+
+    const existingRes = await db.prepare('SELECT username FROM users').all();
+    const existingSet = new Set((existingRes.results || []).map((r) => String(r.username || '').trim()));
+
+    const toInsert = [];
     for (const u of users) {
-      if (!u.username || !u.password) { failed++; errors.push(`用户 ${u.username} 缺少必填字段`); continue; }
-      
-      const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bind(u.username).first();
-      if (existing) { failed++; errors.push(`账号 ${u.username} 已存在`); continue; }
-      
-      const validRoles = normalizeUserRoles(u.roles || u.role || 'teacher');
-      const rolesStr = validRoles.join(',');
-      
-      const salt = await generateSalt();
-      const passwordHash = await hashPassword(u.password, salt);
-      
-      const result = await db.prepare(`INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, course_name, email, phone, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`).bind(
-        u.username,
-        u.password,
-        passwordHash,
-        salt,
-        rolesStr,
-        u.teacher_name || '',
-        u.class_name || '',
-        u.course_name || '',
-        u.email || '',
-        u.phone || ''
-      ).run();
-      
-      const userId = result.meta.last_row_id;
-      for (const r of validRoles) {
-        await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, r).run();
+      const username = String((u && u.username) || '').trim();
+      const password = String((u && u.password) || '');
+      if (!username || !password) {
+        failed++;
+        errors.push('用户 ' + (username || '(空)') + ' 缺少必填字段');
+        continue;
       }
-      imported++;
+      if (existingSet.has(username)) {
+        failed++;
+        errors.push('账号 ' + username + ' 已存在');
+        continue;
+      }
+      existingSet.add(username);
+      toInsert.push({
+        username: username,
+        password: password,
+        teacher_name: String((u && u.teacher_name) || '').trim(),
+        class_name: String((u && u.class_name) || '').trim(),
+        course_name: String((u && u.course_name) || '').trim(),
+        email: String((u && u.email) || '').trim(),
+        phone: String((u && u.phone) || '').trim(),
+        roles: normalizeUserRoles((u && (u.roles || u.role)) || 'teacher')
+      });
     }
 
-    // Record import history
+    // 并行哈希，再批量写入
+    const prepared = await Promise.all(toInsert.map(async (u) => {
+      const salt = await generateSalt();
+      const passwordHash = await hashPassword(u.password, salt);
+      return Object.assign({}, u, { salt: salt, password_hash: passwordHash, rolesStr: u.roles.join(',') });
+    }));
+
+    if (prepared.length) {
+      const insertStmts = prepared.map((u) =>
+        db.prepare(
+          `INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, course_name, email, phone, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
+        ).bind(
+          u.username,
+          u.password,
+          u.password_hash,
+          u.salt,
+          u.rolesStr,
+          u.teacher_name,
+          u.class_name,
+          u.course_name,
+          u.email,
+          u.phone
+        )
+      );
+      await runD1Batch(db, insertStmts);
+      imported = prepared.length;
+
+      const usernames = prepared.map((u) => u.username);
+      const idMap = new Map();
+      const CHUNK = 80;
+      for (let i = 0; i < usernames.length; i += CHUNK) {
+        const chunk = usernames.slice(i, i + CHUNK);
+        const ph = chunk.map(() => '?').join(',');
+        const idRes = await db.prepare(
+          'SELECT id, username FROM users WHERE username IN (' + ph + ')'
+        ).bind(...chunk).all();
+        (idRes.results || []).forEach((r) => idMap.set(String(r.username), r.id));
+      }
+
+      const roleStmts = [];
+      prepared.forEach((u) => {
+        const uid = idMap.get(u.username);
+        if (!uid) return;
+        u.roles.forEach((r) => {
+          roleStmts.push(
+            db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(uid, r)
+          );
+        });
+      });
+      await runD1Batch(db, roleStmts);
+
+      // 同步课程老师绑定（并行，数量通常不大）
+      await Promise.all(prepared.map(async (u) => {
+        if (!u.course_name || !u.teacher_name) return;
+        const uid = idMap.get(u.username);
+        await syncUserCourseTeacherBinding(db, {
+          userId: uid,
+          teacher_name: u.teacher_name,
+          course_name: u.course_name
+        });
+      }));
+    }
+
     try {
       const details = errors.slice(0, 20).join('; ');
-      await db.prepare(`INSERT INTO import_history (type, operator, imported_count, failed_count, total_count, details)
-        VALUES (?, ?, ?, ?, ?, ?)`).bind(
+      await db.prepare(
+        `INSERT INTO import_history (type, operator, imported_count, failed_count, total_count, details)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(
         'user_import',
         auth.user ? String(auth.user.userId || '') : 'admin',
         imported,
@@ -2468,11 +2650,11 @@ async function handleUsersImport(db, request) {
         users.length,
         details
       ).run();
-    } catch(histErr) {
+    } catch (histErr) {
       console.error('Failed to record import history:', histErr.message);
     }
-    
-    return json({ success: true, imported, failed, errors });
+
+    return json({ success: true, imported: imported, failed: failed, errors: errors });
   } catch (e) {
     return json({ error: '导入失败：' + e.message }, 400);
   }
@@ -2552,6 +2734,12 @@ async function handleUserCreate(db, request) {
   for (const r of validRoles) {
     await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, r).run();
   }
+
+  await syncUserCourseTeacherBinding(db, {
+    userId: userId,
+    teacher_name: body.teacher_name || '',
+    course_name: body.course_name || ''
+  });
   
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
   return json({ success: true, user: { ...user, roles: validRoles, role: validRoles[0] } });
@@ -2589,6 +2777,8 @@ async function handleUserUpdate(db, request, id) {
   }
   
   const newPlainPassword = (body.password && String(body.password).trim() !== '') ? String(body.password) : null;
+  const nextTeacherName = body.teacher_name !== undefined ? body.teacher_name : existing.teacher_name;
+  const nextCourseName = body.course_name !== undefined ? body.course_name : (existing.course_name || '');
   
   await db.prepare(`UPDATE users SET username=?, password=?, password_hash=?, salt=?, roles=?, teacher_name=?, class_name=?, course_name=?, email=?, phone=?, status=?, updated_at=datetime('now') WHERE id=?`).bind(
     body.username || existing.username,
@@ -2596,14 +2786,21 @@ async function handleUserUpdate(db, request, id) {
     passwordHash,
     salt,
     rolesStr,
-    body.teacher_name !== undefined ? body.teacher_name : existing.teacher_name,
+    nextTeacherName,
     body.class_name !== undefined ? body.class_name : existing.class_name,
-    body.course_name !== undefined ? body.course_name : (existing.course_name || ''),
+    nextCourseName,
     body.email !== undefined ? body.email : (existing.email || ''),
     body.phone !== undefined ? body.phone : (existing.phone || ''),
     body.status || existing.status || 'active',
     id
   ).run();
+
+  await syncUserCourseTeacherBinding(db, {
+    userId: id,
+    teacher_name: nextTeacherName,
+    course_name: nextCourseName,
+    prev_course_name: existing.course_name || ''
+  });
   
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   return json({ success: true, user: { ...user, roles: (rolesStr || '').split(',').filter(Boolean), role: (rolesStr || 'teacher').split(',')[0] } });
@@ -4512,9 +4709,27 @@ async function handleTeacherClassroomPut(db, request) {
   body.history = mergeClassroomHistory(body.history, existingPayload.history);
 
   const courseId = String(body.course_id || body.courseId || '');
-  const teacherName = String(
+  let teacherName = String(
     (body.teacher && body.teacher.name) || body.teacher_name || body.teacherName || ''
   ).trim();
+
+  // 用户管理绑定优先：防止教师端本地缓存把旧老师名写回后台
+  try {
+    const boundUser = await db.prepare(
+      'SELECT id, teacher_name, course_name FROM users WHERE id = ?'
+    ).bind(auth.user.userId).first();
+    if (boundUser && String(boundUser.course_name || '').trim() === courseName) {
+      const boundName = String(boundUser.teacher_name || '').trim();
+      if (boundName) teacherName = boundName;
+    } else {
+      const byCourse = await db.prepare(
+        "SELECT id, teacher_name FROM users WHERE course_name = ? AND teacher_name IS NOT NULL AND TRIM(teacher_name) != '' LIMIT 1"
+      ).bind(courseName).first();
+      if (byCourse && String(byCourse.teacher_name || '').trim()) {
+        teacherName = String(byCourse.teacher_name).trim();
+      }
+    }
+  } catch (_) {}
 
   // 学生名单以选课表为准，防止教师端本地缓存把已删除学生写回后台
   const normalizedStudents = await getAuthoritativeClassroomStudentsFromSelections(db, courseName);
@@ -4623,6 +4838,7 @@ async function handleTeacherClassroomList(db, request) {
   (hoursMatrix.rows || []).forEach((row) => {
     hoursByCourse[row.course_name] = Number(row.numeric_total) || 0;
   });
+  const boundTeachers = await getBoundTeacherNameMap(db);
 
   const today = new Date();
   const todayKey = today.getFullYear() + '-' +
@@ -4640,7 +4856,7 @@ async function handleTeacherClassroomList(db, request) {
     return {
       course_id: String(c.id),
       course_name: c.name,
-      teacher_name: (synced && synced.teacher_name) || c.teacher || '',
+      teacher_name: boundTeachers.get(c.name) || c.teacher || (synced && synced.teacher_name) || '',
       location: c.location || '',
       category: c.category || '',
       selected_count: c.selected_count || 0,
@@ -4672,7 +4888,7 @@ async function handleTeacherClassroomList(db, request) {
     items.push({
       course_id: synced.course_id || '',
       course_name: name,
-      teacher_name: synced.teacher_name || '',
+      teacher_name: boundTeachers.get(name) || synced.teacher_name || '',
       location: '',
       category: '',
       selected_count: synced.student_count || 0,
@@ -4926,6 +5142,7 @@ async function buildCourseHoursMatrix(db) {
     if (d && !hiddenDates.has(d)) dateSet.add(d);
   });
   const dates = Array.from(dateSet).filter((d) => !hiddenDates.has(d)).sort();
+  const boundTeachers = await getBoundTeacherNameMap(db);
 
   const rows = courses.map((c) => {
     const name = c.name;
@@ -4933,7 +5150,7 @@ async function buildCourseHoursMatrix(db) {
     const cells = buildCourseHourCellsForCourse(name, dates, signedDatesByCourse, overrideMap);
     return {
       course_name: name,
-      teacher_name: (synced && synced.teacher_name) || c.teacher || '',
+      teacher_name: boundTeachers.get(name) || c.teacher || (synced && synced.teacher_name) || '',
       cells,
       numeric_total: sumNumericCourseHourCells(cells)
     };
@@ -4945,7 +5162,7 @@ async function buildCourseHoursMatrix(db) {
     const cells = buildCourseHourCellsForCourse(name, dates, signedDatesByCourse, overrideMap);
     rows.push({
       course_name: name,
-      teacher_name: synced.teacher_name || '',
+      teacher_name: boundTeachers.get(name) || synced.teacher_name || '',
       cells,
       numeric_total: sumNumericCourseHourCells(cells)
     });
