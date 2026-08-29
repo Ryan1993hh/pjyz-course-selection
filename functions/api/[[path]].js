@@ -3916,9 +3916,11 @@ function historyEntryHasClassStudent(checkin, classNames, idToName) {
 function buildBanzhurenSessionMap(courseData, coursesToScan, classStudentNames, grade, className, rosterMap, selRows) {
   const classNames = new Set(classStudentNames);
   const sessionMap = new Map();
+  // 班主任看板重置：不展示这两天的历史签到列，从之后重新开始记录
+  const excludedDates = new Set(['2026-08-27', '2026-08-28']);
 
   function addDate(date, label, updatedAt) {
-    if (!date) return;
+    if (!date || excludedDates.has(date)) return;
     const prev = sessionMap.get(date);
     if (!prev || (updatedAt || 0) > (prev.updatedAt || 0)) {
       sessionMap.set(date, {

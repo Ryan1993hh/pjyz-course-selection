@@ -514,7 +514,10 @@
   var BZ_ATT_DATE_COLS = 18;
 
   function getDashboardDisplaySessions(sessions) {
-    var list = (sessions || []).filter(function (s) { return s && s.date; }).slice();
+    var excluded = { '2026-08-27': 1, '2026-08-28': 1 };
+    var list = (sessions || []).filter(function (s) {
+      return s && s.date && !excluded[s.date];
+    }).slice();
     if (list.length > BZ_ATT_DATE_COLS) list = list.slice(-BZ_ATT_DATE_COLS);
     var display = list.slice();
     while (display.length < BZ_ATT_DATE_COLS) display.push(null);
@@ -537,10 +540,27 @@
         return String(a.student_name).localeCompare(String(b.student_name), 'zh');
       });
     }
+    var excluded = { '2026-08-27': 1, '2026-08-28': 1 };
     var sessions = ((data && data.sessions) || []).filter(function (s) {
-      return s && s.date;
+      return s && s.date && !excluded[s.date];
     });
     if (sessions.length > 18) sessions = sessions.slice(-18);
+
+    // 按过滤后的 sessions 裁剪 cells，避免列错位
+    var keepDates = {};
+    sessions.forEach(function (s) { keepDates[s.date] = 1; });
+    var rawSessions = ((data && data.sessions) || []).filter(function (s) { return s && s.date; });
+    students = students.map(function (stu) {
+      var cells = stu.cells || [];
+      var byDate = {};
+      rawSessions.forEach(function (sess, idx) {
+        if (sess && sess.date && cells[idx]) byDate[sess.date] = cells[idx];
+      });
+      var nextCells = sessions.map(function (sess) {
+        return byDate[sess.date] || { status: '', note: '', course_name: '' };
+      });
+      return Object.assign({}, stu, { cells: nextCells });
+    });
 
     return Object.assign({}, data || {}, {
       students: students,
