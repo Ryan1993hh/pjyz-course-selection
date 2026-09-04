@@ -994,6 +994,29 @@ html[data-skin="ink"] .fs-act.cancel-btn { background: #334155; color: var(--tex
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-secondary { background: #e8e8ed; color: var(--text); }
 .btn-danger { background: #ffeceb; color: var(--danger); }
+.btn-logout {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 55%, #b91c1c 100%);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-logout:active { transform: scale(0.98); opacity: 0.95; }
+.profile-logout-wrap {
+  padding: 12px 14px 14px;
+  background: rgba(254, 226, 226, 0.35);
+}
 
 /* ===== 底部导航 ===== */
 .tabbar {
@@ -2206,8 +2229,8 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
             <div class="pi-value" id="profileAccountHint">—</div>
           </div>
         </div>
-        <div class="profile-item">
-          <button type="button" class="btn btn-danger" id="profileLogoutBtn" style="width:100%;margin:4px 0">退出登录</button>
+        <div class="profile-logout-wrap">
+          <button type="button" class="btn-logout" id="profileLogoutBtn">🚪 退出登录</button>
         </div>
       </div>
       <p class="profile-note">教师信息由账号绑定，如需修改请联系管理员</p>

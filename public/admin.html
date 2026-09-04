@@ -4939,11 +4939,21 @@ async function querySelections(opts){
     }
     
     var qs = buildQuery();
-    if (!silent) qs = qs ? (qs + '&sync=1') : 'sync=1';
+    // 查询默认不阻塞做 classroom 全量补全；需要补全时后台静默跑一次
     const data = await request('GET', '/api/selections?' + qs);
     selectionsData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     renderSelections();
     if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
+    // 后台静默补全，不拖慢本次表格显示
+    if (!silent) {
+      request('GET', '/api/selections?' + (qs ? (qs + '&') : '') + 'sync=1').then(function(syncData){
+        var next = sortSelectionsByClassClient(Array.isArray(syncData) ? syncData : (syncData.selections || []));
+        if (currentViewMode !== 'selections') return;
+        if (next.length === selectionsData.length) return;
+        selectionsData = next;
+        renderSelections();
+      }).catch(function(){});
+    }
   } catch(e){
     if (!silent) toast('查询失败：' + e.message, 'error');
   } finally {
@@ -4976,6 +4986,7 @@ async function queryUnselectedStudents(opts){
 }
 
 function renderUnselectedStudents(){
+  ensureSelectionsTableDelegation();
   const tbody = document.getElementById('selectionsBody');
   const dataCountEl = document.getElementById('dataCount');
   const statTotal = document.getElementById('statTotal');
@@ -4985,7 +4996,6 @@ function renderUnselectedStudents(){
   if (statTotal) statTotal.textContent = unselectedData.length;
   if (statCourseCount) statCourseCount.textContent = 0;
   
-  tbody.innerHTML = '';
   if (!unselectedData.length){
     tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无未选课学生数据</td></tr>';
     renderSelectionsPagination();
@@ -4999,47 +5009,22 @@ function renderUnselectedStudents(){
   const start = (selectionsPage - 1) * selectionsPageSize;
   const end = Math.min(start + selectionsPageSize, total);
   const pageData = unselectedData.slice(start, end);
-  
-  pageData.forEach(function(s, idx){
-    const globalIdx = start + idx;
-    const tr = document.createElement('tr');
-    tr.className = 'unselected-row';
-    
-    const checkboxHtml = '<input type="checkbox" class="sel-checkbox" data-id="' + s.id + '">';
-    
-    let classDisplayName = formatSelectionClassDisplay(s);
-    
-    tr.innerHTML =
-      '<td>' + checkboxHtml + '</td>' +
+
+  var html = '';
+  for (var idx = 0; idx < pageData.length; idx++) {
+    var s = pageData[idx];
+    var globalIdx = start + idx;
+    html += '<tr class="unselected-row">' +
+      '<td><input type="checkbox" class="sel-checkbox" data-id="' + escapeAttr(String(s.id)) + '"></td>' +
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
-      '<td>' + escapeHtml(classDisplayName) + '</td>' +
+      '<td>' + escapeHtml(formatSelectionClassDisplay(s)) + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td>' + escapeHtml(s.gender || '') + '</td>' +
       '<td><span class="course-link" style="background:rgba(59,130,246,0.15);color:#2563eb;">未选课</span></td>' +
-      '<td class="row-actions">' +
-        '<button class="btn-add-course btn-sm" title="添加课程">📚 添加课程</button>' +
-      '</td>';
-    
-    const checkbox = tr.querySelector('.sel-checkbox');
-    if (checkbox) {
-      checkbox.addEventListener('change', function(){
-        const id = String(this.dataset.id);
-        if (this.checked) selectionsCheckedIds.add(id);
-        else selectionsCheckedIds.delete(id);
-        updateBatchDeleteBtn();
-        updateSelectAllState();
-      });
-    }
-    
-    const addBtn = tr.querySelector('.btn-add-course');
-    if (addBtn) {
-      addBtn.addEventListener('click', function(){
-        openAddCourseToStudent(s);
-      });
-    }
-    
-    tbody.appendChild(tr);
-  });
+      '<td class="row-actions"><button type="button" class="btn-add-course btn-sm" data-id="' + escapeAttr(String(s.id)) + '" title="添加课程">📚 添加课程</button></td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = html;
   
   renderSelectionsPagination();
   updateBatchDeleteBtn();
@@ -5277,7 +5262,6 @@ function formatSelectionClassDisplay(s) {
 }
 
 function renderSelections(){
-  selectionsData = sortSelectionsByClassClient(selectionsData);
   renderSelectionsTable(selectionsData, {
     emptyText: '暂无选课数据',
     countText: '共 ' + selectionsData.length + ' 条数据',
@@ -5286,7 +5270,6 @@ function renderSelections(){
 }
 
 function renderPreEnrollStudents(){
-  preEnrollData = sortSelectionsByClassClient(preEnrollData);
   renderSelectionsTable(preEnrollData, {
     emptyText: '暂无内定学生数据',
     countText: '共 ' + preEnrollData.length + ' 名内定学生',
@@ -5294,9 +5277,52 @@ function renderPreEnrollStudents(){
   });
 }
 
+function ensureSelectionsTableDelegation(){
+  var tbody = document.getElementById('selectionsBody');
+  if (!tbody || tbody._selDelegated) return;
+  tbody._selDelegated = true;
+  tbody.addEventListener('change', function(e){
+    var cb = e.target.closest('.sel-checkbox');
+    if (!cb) return;
+    var id = String(cb.getAttribute('data-id') || '');
+    if (!id) return;
+    if (cb.checked) selectionsCheckedIds.add(id);
+    else selectionsCheckedIds.delete(id);
+    updateBatchDeleteBtn();
+    updateSelectAllState();
+  });
+  tbody.addEventListener('click', function(e){
+    var link = e.target.closest('.course-link');
+    if (link && link.getAttribute('data-course')) {
+      activateSelectionsSection({ courseName: link.getAttribute('data-course') || '', silent: true });
+      return;
+    }
+    var editBtn = e.target.closest('[data-act="edit"]');
+    if (editBtn) {
+      var eid = editBtn.getAttribute('data-id');
+      var erow = getSelectionViewData().find(function(x){ return String(x.id) === String(eid); });
+      if (erow) openEditSelection(erow);
+      return;
+    }
+    var delBtn = e.target.closest('[data-act="del"]');
+    if (delBtn) {
+      var did = delBtn.getAttribute('data-id');
+      if (did) deleteSelection(did);
+      return;
+    }
+    var addBtn = e.target.closest('.btn-add-course');
+    if (addBtn) {
+      var aid = addBtn.getAttribute('data-id');
+      var arow = unselectedData.find(function(x){ return String(x.id) === String(aid); });
+      if (arow) openAddCourseToStudent(arow);
+    }
+  });
+}
+
 function renderSelectionsTable(data, opts){
   opts = opts || {};
   data = data || [];
+  ensureSelectionsTableDelegation();
   const tbody = document.getElementById('selectionsBody');
   const dataCountEl = document.getElementById('dataCount');
   const statTotal = document.getElementById('statTotal');
@@ -5310,7 +5336,6 @@ function renderSelectionsTable(data, opts){
     if (statCourseCount) statCourseCount.textContent = courseNames.size;
   }
 
-  tbody.innerHTML = '';
   if (!data.length){
     tbody.innerHTML = '<tr><td colspan="7" class="empty">' + (opts.emptyText || '暂无数据') + '</td></tr>';
     renderSelectionsPagination();
@@ -5325,75 +5350,32 @@ function renderSelectionsTable(data, opts){
   const start = (selectionsPage - 1) * selectionsPageSize;
   const end = Math.min(start + selectionsPageSize, total);
   const pageData = data.slice(start, end);
+  const rowClass = opts.rowClass ? (' class="' + opts.rowClass + '"') : '';
 
-  pageData.forEach(function(s, idx){
-    const globalIdx = start + idx;
-    const tr = document.createElement('tr');
-    if (opts.rowClass) tr.className = opts.rowClass;
-
-    const checked = selectionsCheckedIds.has(String(s.id));
-    const checkboxHtml = '<input type="checkbox" class="sel-checkbox" data-id="' + s.id + '"' + (checked ? ' checked' : '') + '>';
-
-    let classDisplayName = formatSelectionClassDisplay(s);
-
-    tr.innerHTML =
-      '<td>' + checkboxHtml + '</td>' +
+  var html = '';
+  for (var idx = 0; idx < pageData.length; idx++) {
+    var s = pageData[idx];
+    var globalIdx = start + idx;
+    var checked = selectionsCheckedIds.has(String(s.id)) ? ' checked' : '';
+    var classDisplayName = formatSelectionClassDisplay(s);
+    var courseName = s.course_name || '';
+    var lockedTag = Number(s.is_locked) === 1
+      ? '<span class="internal-tag" title="提前录课，班主任端不可修改">内定</span>'
+      : '';
+    html += '<tr' + rowClass + '>' +
+      '<td><input type="checkbox" class="sel-checkbox" data-id="' + escapeAttr(String(s.id)) + '"' + checked + '></td>' +
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
       '<td>' + escapeHtml(classDisplayName) + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td>' + escapeHtml(s.gender || '') + '</td>' +
-      '<td></td>' +
-      '<td class="row-actions"></td>';
-
-    const checkbox = tr.querySelector('.sel-checkbox');
-    if (checkbox) {
-      checkbox.addEventListener('change', function(){
-        const id = String(this.dataset.id);
-        if (this.checked) selectionsCheckedIds.add(id);
-        else selectionsCheckedIds.delete(id);
-        updateBatchDeleteBtn();
-        updateSelectAllState();
-      });
-    }
-
-    const courseCell = tr.children[5];
-    const link = document.createElement('span');
-    link.className = 'course-link';
-    link.textContent = s.course_name || '';
-    link.title = s.course_name || '';
-    link.addEventListener('click', function(){
-      activateSelectionsSection({ courseName: s.course_name || '', silent: true });
-    });
-    courseCell.appendChild(link);
-
-    const actions = tr.querySelector('.row-actions');
-    const group = document.createElement('span');
-    group.className = 'actions-group';
-
-    const editBtn = document.createElement('button');
-    editBtn.className = 'btn btn-sm btn-outline';
-    editBtn.textContent = '换课';
-    editBtn.addEventListener('click', function(){ openEditSelection(s); });
-    group.appendChild(editBtn);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-sm btn-danger';
-    delBtn.textContent = '删除';
-    delBtn.addEventListener('click', function(){ deleteSelection(s.id); });
-    group.appendChild(delBtn);
-
-    if (Number(s.is_locked) === 1) {
-      const tag = document.createElement('span');
-      tag.className = 'internal-tag';
-      tag.textContent = '内定';
-      tag.title = '提前录课，班主任端不可修改';
-      group.appendChild(tag);
-    }
-
-    actions.appendChild(group);
-
-    tbody.appendChild(tr);
-  });
+      '<td><span class="course-link" data-course="' + escapeAttr(courseName) + '" title="' + escapeAttr(courseName) + '">' + escapeHtml(courseName) + '</span></td>' +
+      '<td class="row-actions"><span class="actions-group">' +
+        '<button type="button" class="btn btn-sm btn-outline" data-act="edit" data-id="' + escapeAttr(String(s.id)) + '">换课</button>' +
+        '<button type="button" class="btn btn-sm btn-danger" data-act="del" data-id="' + escapeAttr(String(s.id)) + '">删除</button>' +
+        lockedTag +
+      '</span></td></tr>';
+  }
+  tbody.innerHTML = html;
 
   renderSelectionsPagination();
   updateBatchDeleteBtn();
@@ -5968,9 +5950,23 @@ async function handlePreEnrollUpload(file) {
       );
     }
     if (data.count > 0) {
-      switchToPreEnrollView();
+      // 优先用接口返回的名单即时渲染，避免再等一次全量查询
+      currentViewMode = 'pre_enroll';
+      updateSelectionSidebarButtons('pre_enroll');
+      var queryBtn = document.getElementById('queryBtn');
+      if (queryBtn) queryBtn.textContent = '🔍 查询内定';
+      selectionsPage = 1;
+      selectionsCheckedIds.clear();
+      if (Array.isArray(data.selections) && data.selections.length) {
+        preEnrollData = sortSelectionsByClassClient(data.selections);
+        renderPreEnrollStudents();
+        // 后台再拉一次完整内定列表，保证与库一致
+        queryPreEnrollStudents({ silent: true }).catch(function(){});
+      } else {
+        await switchToPreEnrollView();
+      }
     } else {
-      await querySelections();
+      await querySelections({ silent: true });
     }
   } catch (e) {
     toast('提前录课失败：' + e.message, 'error');

@@ -1493,10 +1493,9 @@ async function handlePreEnrollBatch(db, request) {
     if (c && c.name) courseByName[String(c.name).trim()] = c;
   });
 
-  const results = [];
+  const prepared = [];
   const errors = [];
-  let success = 0;
-  const affectedCourses = new Set();
+  const nameSet = new Set();
 
   for (const item of arr) {
     if (!item || !item.student_name) {
@@ -1523,53 +1522,100 @@ async function handlePreEnrollBatch(db, request) {
       continue;
     }
     const finalCourseName = matched ? matched.name : courseName;
-
-    try {
-      // 内定优先、一人一课：清除该生全部旧记录（含未锁定的其他课程）
-      const existing = await db.prepare(
-        'SELECT * FROM selections WHERE student_name = ?'
-      ).bind(studentName).all();
-      for (const row of (existing.results || [])) {
-        if (row.course_name) affectedCourses.add(String(row.course_name).trim());
-        if (row.course_id) {
-          await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?')
-            .bind(row.course_id).run();
-        }
-        await db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id).run();
-      }
-
-      const result = await db.prepare(
-        `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
-      ).bind(
-        grade,
-        className,
-        studentName,
-        gender,
-        courseId > 0 ? courseId : null,
-        finalCourseName,
-        new Date().toISOString()
-      ).run();
-
-      if (courseId > 0) {
-        await db.prepare('UPDATE courses SET selected_count = selected_count + 1 WHERE id = ?').bind(courseId).run();
-      }
-      const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
-      results.push(selection);
-      affectedCourses.add(finalCourseName);
-      success++;
-    } catch (e) {
-      errors.push(studentName + '：' + e.message);
-    }
+    // 同一批内同名只保留最后一条
+    prepared.push({
+      studentName,
+      grade,
+      className,
+      gender,
+      courseId: courseId > 0 ? courseId : null,
+      finalCourseName
+    });
+    nameSet.add(studentName);
   }
 
-  await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
+  const names = Array.from(nameSet);
+  if (!names.length) {
+    return json({
+      success: true,
+      count: 0,
+      selections: [],
+      errors: errors.length ? errors : undefined
+    });
+  }
+
+  const affectedCourses = new Set();
+  const courseDeltas = new Map();
+  const nowIso = new Date().toISOString();
+
+  // 一次查出所有将要覆盖的旧记录，批量删除
+  const existingRows = [];
+  const NAME_CHUNK = 80;
+  for (let i = 0; i < names.length; i += NAME_CHUNK) {
+    const chunk = names.slice(i, i + NAME_CHUNK);
+    const ph = chunk.map(() => '?').join(',');
+    const res = await db.prepare(
+      'SELECT id, course_id, course_name, student_name FROM selections WHERE student_name IN (' + ph + ')'
+    ).bind(...chunk).all();
+    (res.results || []).forEach((row) => existingRows.push(row));
+  }
+
+  const delStmts = [];
+  for (const row of existingRows) {
+    if (row.course_name) affectedCourses.add(String(row.course_name).trim());
+    if (row.course_id) {
+      courseDeltas.set(row.course_id, (courseDeltas.get(row.course_id) || 0) - 1);
+    }
+    delStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
+  }
+  await runD1Batch(db, delStmts);
+
+  // 同名去重：保留 prepared 中最后一条
+  const byName = new Map();
+  prepared.forEach((p) => byName.set(p.studentName, p));
+  const uniquePrepared = Array.from(byName.values());
+
+  const insertStmts = uniquePrepared.map((p) => {
+    affectedCourses.add(p.finalCourseName);
+    if (p.courseId) {
+      courseDeltas.set(p.courseId, (courseDeltas.get(p.courseId) || 0) + 1);
+    }
+    return db.prepare(
+      `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
+    ).bind(
+      p.grade,
+      p.className,
+      p.studentName,
+      p.gender,
+      p.courseId,
+      p.finalCourseName,
+      nowIso
+    );
+  });
+  await runD1Batch(db, insertStmts);
+  await applyCourseCountDeltas(db, courseDeltas);
+
+  // 回读本批内定记录供前端即时展示（避免再查全表）
+  const selections = [];
+  for (let i = 0; i < uniquePrepared.length; i += NAME_CHUNK) {
+    const chunk = uniquePrepared.slice(i, i + NAME_CHUNK).map((p) => p.studentName);
+    const ph = chunk.map(() => '?').join(',');
+    const res = await db.prepare(
+      'SELECT * FROM selections WHERE is_locked = 1 AND student_name IN (' + ph + ')'
+    ).bind(...chunk).all();
+    (res.results || []).forEach((row) => selections.push(row));
+  }
+
   await bumpSelectionDataRevision(db);
+
+  // 选课已批量写入；再同步受影响课程的教师端名单
+  await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
 
   return json({
     success: true,
-    count: success,
-    selections: results,
+    count: uniquePrepared.length,
+    selections: sortSelectionsByClass(selections),
     errors: errors.length ? errors : undefined
   });
 }
