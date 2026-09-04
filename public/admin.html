@@ -4678,6 +4678,7 @@ function renderCourses(){
         } else {
           coursesData[idx].selection_locked = nextLocked;
         }
+        markCoursesSaved(coursesData);
         renderCourses();
         toast(nextLocked ? '已锁定：选课页不可再选该课' : '已解锁：可重新参与选课', 'success');
       } catch (e) {
@@ -4803,15 +4804,19 @@ async function saveCourses(){
     });
     const data = await request('PUT', '/api/courses', payload);
     if (data.success){
-      const needRefreshIds = (data.inserted || 0) > 0 || (data.courses || []).some(function(c){ return c && c.id != null; });
-      if (data.courses && data.courses.length && needRefreshIds) {
+      const inserted = data.inserted || 0;
+      const deleted = data.deleted || 0;
+      if (data.courses && data.courses.length) {
         coursesData = data.courses.map(function(c){
           return Object.assign({}, c, {
             is_active: c.is_active !== 0 && c.is_active !== false,
             selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
           });
         });
-        renderCourses();
+        // 仅行列结构变化时重绘表格，避免无谓全表 DOM 重建拖慢体感
+        if (inserted > 0 || deleted > 0) {
+          renderCourses();
+        }
       }
       markCoursesSaved(coursesData);
       const changed = data.changed != null ? data.changed : null;
@@ -4820,8 +4825,8 @@ async function saveCourses(){
       } else if (changed != null) {
         const parts = [];
         if (data.updated) parts.push('更新 ' + data.updated);
-        if (data.inserted) parts.push('新增 ' + data.inserted);
-        if (data.deleted) parts.push('删除 ' + data.deleted);
+        if (inserted) parts.push('新增 ' + inserted);
+        if (deleted) parts.push('删除 ' + deleted);
         toast('保存成功（' + (parts.join('，') || ('变更 ' + changed)) + '）', 'success');
       } else {
         toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
