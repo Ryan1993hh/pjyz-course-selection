@@ -65,7 +65,14 @@
       '.cqb-adj-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:80vh;overflow:auto;padding:16px;}' +
       '.cqb-adj-box h4{margin:0 0 10px;color:#0f766e;}' +
       '.cqb-adj-box ul{margin:0;padding-left:18px;font-size:13px;line-height:1.6;}' +
-      '.cqb-adj-box .ok{margin-top:12px;width:100%;}';
+      '.cqb-adj-box .ok{margin-top:12px;width:100%;}' +
+      '.cqb-pick-list{max-height:46vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin:10px 0;}' +
+      '.cqb-pick-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;}' +
+      '.cqb-pick-item:hover{background:#f0fdfa;}' +
+      '.cqb-pick-item input{width:16px;height:16px;}' +
+      '.cqb-pick-item .meta{font-size:12px;color:#64748b;}' +
+      '.cqb-pick-actions{display:flex;gap:8px;margin-top:12px;}' +
+      '.cqb-pick-actions .btn{flex:1;}';
     document.head.appendChild(style);
   }
 
