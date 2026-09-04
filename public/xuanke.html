@@ -3766,6 +3766,7 @@ let classNumber = '';       // 班级序号（如 "3"）
 let className = '';         // 组合后的班级名称（如 "六年级(3)班"）
 let banzhurenClassBound = false; // 管理员已为班主任绑定年级班级
 let classSelectUnlocked = false; // 点击「重选班级」后允许改选
+let classQuotaOverrides = {}; // courseId -> 有效名额（班级级调剂）
 let fileName = '';           // 上传的文件名
 let lockedStudentNames = new Set(); // 提前录课锁定学生（不可退出/改选）
 let currentSelect = null;   // 当前正在选课的位置 { courseId, slotIndex }
@@ -3847,14 +3848,44 @@ function shakeElement(el) {
 }
 
 // 根据当前年级获取课程限制人数
-// limit 为数字时所有年级一致；为对象时按年级取值
+// 优先使用班级名额看板的班级级调剂结果
 function getCourseLimit(course) {
+  if (course && course.id != null && classQuotaOverrides && Object.prototype.hasOwnProperty.call(classQuotaOverrides, String(course.id))) {
+    const n = parseInt(classQuotaOverrides[String(course.id)], 10);
+    if (!isNaN(n)) return Math.max(0, n);
+  }
   if (course.limit == null) return 0;
   if (typeof course.limit === 'number') return course.limit;
   if (gradeName && course.limit[gradeName] != null) return course.limit[gradeName];
-  // 未选年级或无对应配置时，取对象中第一个值作兜底
   const vals = Object.values(course.limit);
   return vals.length ? vals[0] : 0;
+}
+
+async function loadClassQuotaOverrides() {
+  classQuotaOverrides = {};
+  if (!getToken() || !gradeName || !classNumber) return false;
+  try {
+    const qs = new URLSearchParams();
+    qs.set('grade', gradeName);
+    qs.set('class_number', classNumber);
+    const data = await apiRequest('GET', '/api/class-quota-board/effective?' + qs.toString());
+    const map = (data && data.quotas) || {};
+    Object.keys(map).forEach(function (k) {
+      classQuotaOverrides[String(k)] = parseInt(map[k], 10) || 0;
+    });
+    // 同步锁死课程标记（有效名额为 0 且后台标记锁死时保持不可选）
+    if (Array.isArray(data.courses)) {
+      data.courses.forEach(function (c) {
+        const course = COURSES.find(function (x) { return String(x.id) === String(c.course_id); });
+        if (!course) return;
+        if (c.selection_locked) course.selection_locked = true;
+      });
+    }
+    return true;
+  } catch (e) {
+    console.warn('loadClassQuotaOverrides:', e.message || e);
+    return false;
+  }
 }
 
 // 根据当前年级同步各课程的 students 数组长度
@@ -4024,6 +4055,8 @@ function renderStats() {
       if (isClassSelectLocked()) return;
       classNumber = e.target.value;
       updateClassName();
+      await loadClassQuotaOverrides();
+      syncCourseSlots();
       await refreshPreEnrollments();
       // 仅在非上传来源时，尝试用后台名单补齐
       if (studentListSource !== 'upload') {
@@ -5728,6 +5761,9 @@ document.addEventListener('keydown', e => {
     setTimeout(function () { syncUserProfile().catch(function () {}); }, 0);
 
     await networkReady;
+    applyBanzhurenClassPreset();
+    await loadClassQuotaOverrides();
+    syncCourseSlots();
     if (!painted || COURSES.length) paintNow();
 
     var localRev = getLocalDataRevision();

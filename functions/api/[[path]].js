@@ -153,14 +153,29 @@ const INIT_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_leave_date ON student_leave_reports(leave_date)`,
   `CREATE INDEX IF NOT EXISTS idx_leave_class ON student_leave_reports(grade, class_name)`,
-  `CREATE INDEX IF NOT EXISTS idx_leave_student ON student_leave_reports(student_name)`
+  `CREATE INDEX IF NOT EXISTS idx_leave_student ON student_leave_reports(student_name)`,
+  `CREATE TABLE IF NOT EXISTS class_roster_sizes (
+    grade TEXT NOT NULL,
+    class_number TEXT NOT NULL,
+    total_students INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (grade, class_number)
+  )`,
+  `CREATE TABLE IF NOT EXISTS class_course_quotas (
+    grade TEXT NOT NULL,
+    class_number TEXT NOT NULL,
+    course_id INTEGER NOT NULL,
+    quota INTEGER NOT NULL,
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (grade, class_number, course_id)
+  )`
 ];
 
 const SELECTION_STATUS_KEY = 'selection_enabled';
 const SELECTION_DATA_REVISION_KEY = 'selection_data_revision';
 /** 变更建表/迁移逻辑时递增，用于跳过已完成的冷启动初始化 */
 const SCHEMA_VERSION_KEY = '_schema_version';
-const SCHEMA_VERSION = '20260904c';
+const SCHEMA_VERSION = '20260904d';
 
 /** Worker 隔离区内只跑一次建表/迁移，避免每个 API 请求都打大量 D1 */
 let dbInitPromise = null;
@@ -2516,6 +2531,425 @@ async function handleSchoolStudentsSyncClass(db, request) {
 async function handleClassesGet(db) {
   const results = await db.prepare('SELECT * FROM classes ORDER BY grade, class_name').all();
   return json(results.results);
+}
+
+// ---- 班级名额看板（按年级隔离；不改课程全年级基础名额） ----
+function quotaBoardClassNums() {
+  return ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+}
+
+function quotaBoardMatchClass(row, grade, classNum) {
+  const g = String((row && row.grade) || '').trim();
+  const c = String((row && row.class_name) || '').trim();
+  if (g && g !== grade) {
+    // 允许 class_name 自带年级
+    if (!(c.indexOf(grade) >= 0)) return false;
+  }
+  const keyWant = String(grade) + String(classNum) + '班';
+  const compact = (g + c).replace(/[()（）\s]/g, '');
+  if (compact === keyWant || compact === (String(grade) + String(classNum) + '班')) return true;
+  const m = c.match(/^(六年级|七年级)?\s*[\(（]?(\d+)[\)）]?\s*班$/);
+  if (m) {
+    const g2 = m[1] || g || grade;
+    return g2 === grade && String(m[2]) === String(classNum);
+  }
+  return false;
+}
+
+function quotaBoardBaseLimit(course, grade) {
+  if (grade === '六年级') return parseInt(course.limit_grade6, 10) || 0;
+  if (grade === '七年级') return parseInt(course.limit_grade7, 10) || 0;
+  return 0;
+}
+
+async function loadQuotaBoardContext(db, grade) {
+  const g = String(grade || '').trim();
+  if (g !== '六年级' && g !== '七年级') throw new Error('年级无效');
+
+  const coursesRes = await db.prepare('SELECT * FROM courses ORDER BY id ASC').all();
+  const courses = (coursesRes.results || []).filter((c) => (c.is_active == null || Number(c.is_active) !== 0));
+
+  const sizesRes = await db.prepare('SELECT * FROM class_roster_sizes WHERE grade = ?').bind(g).all();
+  const sizeMap = {};
+  (sizesRes.results || []).forEach((r) => {
+    sizeMap[String(r.class_number)] = parseInt(r.total_students, 10) || 0;
+  });
+
+  const quotaRes = await db.prepare('SELECT * FROM class_course_quotas WHERE grade = ?').bind(g).all();
+  const quotaMap = {}; // classNum -> courseId -> quota
+  (quotaRes.results || []).forEach((r) => {
+    const cn = String(r.class_number);
+    if (!quotaMap[cn]) quotaMap[cn] = {};
+    quotaMap[cn][String(r.course_id)] = parseInt(r.quota, 10) || 0;
+  });
+
+  const selRes = await db.prepare(
+    "SELECT id, grade, class_name, student_name, course_id, course_name, COALESCE(is_locked, 0) AS is_locked FROM selections WHERE grade = ? OR class_name LIKE ?"
+  ).bind(g, '%' + g + '%').all();
+  const selections = selRes.results || [];
+
+  // 默认班级人数：优先已配置；否则用全校名单人数；再否则用选课+未选课去重人数
+  const schoolRes = await db.prepare('SELECT class_name, student_name FROM school_students WHERE grade = ?').bind(g).all();
+  const schoolCount = {};
+  (schoolRes.results || []).forEach((r) => {
+    const parsed = parseGradeClassFields(g, r.class_name);
+    const n = parsed.classNum || '';
+    if (!n) return;
+    if (!schoolCount[n]) schoolCount[n] = new Set();
+    schoolCount[n].add(String(r.student_name || '').trim());
+  });
+
+  return { grade: g, courses, sizeMap, quotaMap, selections, schoolCount };
+}
+
+function buildQuotaBoardRows(ctx) {
+  const { grade, courses, sizeMap, quotaMap, selections, schoolCount } = ctx;
+  const classNums = quotaBoardClassNums();
+
+  return classNums.map((classNum) => {
+    const classSels = selections.filter((r) => quotaBoardMatchClass(r, grade, classNum));
+    const lockedRows = classSels.filter((r) => Number(r.is_locked) === 1);
+    const lockedNames = new Set(lockedRows.map((r) => String(r.student_name || '').trim()).filter(Boolean));
+    const lockedTotal = lockedNames.size;
+
+    let totalStudents = sizeMap[classNum];
+    if (totalStudents == null) {
+      totalStudents = schoolCount[classNum] ? schoolCount[classNum].size : 0;
+    }
+    totalStudents = Math.max(0, parseInt(totalStudents, 10) || 0);
+    const ordinaryStudents = Math.max(0, totalStudents - lockedTotal);
+
+    let baseQuotaSum = 0;
+    let ordinaryAvailTotal = 0;
+    const courseDetails = courses.map((c) => {
+      const base = quotaBoardBaseLimit(c, grade);
+      baseQuotaSum += base;
+      const cid = String(c.id);
+      const override = quotaMap[classNum] && quotaMap[classNum][cid];
+      const effective = override != null ? override : base;
+      const selectionLocked = Number(c.selection_locked) === 1;
+      let preenroll = 0;
+      lockedRows.forEach((r) => {
+        if (r.course_id != null && String(r.course_id) === cid) preenroll += 1;
+        else if (!r.course_id && r.course_name && r.course_name === c.name) preenroll += 1;
+      });
+      // 同一学生只算一次：上面按行计数可能重复；用名字集合更准
+      const preNames = new Set();
+      lockedRows.forEach((r) => {
+        const name = String(r.student_name || '').trim();
+        if (!name) return;
+        const match = (r.course_id != null && String(r.course_id) === cid) || (!r.course_id && r.course_name === c.name);
+        if (match) preNames.add(name);
+      });
+      preenroll = preNames.size;
+      const ordinaryAvail = selectionLocked ? 0 : Math.max(0, effective - preenroll);
+      ordinaryAvailTotal += ordinaryAvail;
+      return {
+        course_id: c.id,
+        course_name: c.name || '',
+        base_quota: base,
+        effective_quota: effective,
+        has_override: override != null,
+        preenroll_count: preenroll,
+        selection_locked: selectionLocked,
+        ordinary_available: ordinaryAvail
+      };
+    });
+
+    const gap = ordinaryStudents - ordinaryAvailTotal;
+    let status = 'balanced';
+    let status_text = '已配齐';
+    if (gap > 0) {
+      status = 'short';
+      status_text = '缺口' + gap + '个';
+    } else if (gap < 0) {
+      status = 'surplus';
+      status_text = '剩余' + Math.abs(gap) + '个';
+    }
+
+    return {
+      grade,
+      class_number: classNum,
+      class_name: grade + '(' + classNum + ')班',
+      total_students: totalStudents,
+      locked_total: lockedTotal,
+      ordinary_students: ordinaryStudents,
+      base_quota_sum: baseQuotaSum,
+      ordinary_available_total: ordinaryAvailTotal,
+      gap,
+      status,
+      status_text,
+      courses: courseDetails
+    };
+  });
+}
+
+async function handleClassQuotaBoardGet(db, request, url) {
+  const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const grade = String(url.searchParams.get('grade') || '六年级').trim();
+  try {
+    const ctx = await loadQuotaBoardContext(db, grade);
+    const rows = buildQuotaBoardRows(ctx);
+    return json({ success: true, grade, rows, courses: ctx.courses.map((c) => ({
+      id: c.id,
+      name: c.name,
+      limit_grade6: c.limit_grade6 || 0,
+      limit_grade7: c.limit_grade7 || 0,
+      selection_locked: Number(c.selection_locked) === 1
+    })) });
+  } catch (e) {
+    return json({ error: e.message || '加载失败' }, 400);
+  }
+}
+
+async function handleClassQuotaEffectiveGet(db, request, url) {
+  const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const grade = String(url.searchParams.get('grade') || '').trim();
+  const classNumber = String(url.searchParams.get('class_number') || url.searchParams.get('class') || '').trim().replace(/班$/, '');
+  if (!grade || !classNumber) return json({ error: '缺少年级或班级' }, 400);
+  try {
+    const ctx = await loadQuotaBoardContext(db, grade);
+    const rows = buildQuotaBoardRows(ctx);
+    const row = rows.find((r) => String(r.class_number) === String(classNumber));
+    const quotas = {};
+    (row ? row.courses : []).forEach((c) => {
+      quotas[String(c.course_id)] = c.selection_locked ? 0 : c.effective_quota;
+    });
+    return json({
+      success: true,
+      grade,
+      class_number: classNumber,
+      quotas,
+      courses: row ? row.courses : []
+    });
+  } catch (e) {
+    return json({ error: e.message || '加载失败' }, 400);
+  }
+}
+
+async function handleClassQuotaSizePut(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: '请求体无效' }, 400); }
+  const grade = String(body.grade || '').trim();
+  const classNumber = String(body.class_number || '').trim().replace(/班$/, '');
+  const total = parseInt(body.total_students, 10);
+  if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
+  if (!classNumber) return json({ error: '班级无效' }, 400);
+  if (isNaN(total) || total < 0) return json({ error: '班级总人数无效' }, 400);
+  await db.prepare(
+    `INSERT INTO class_roster_sizes (grade, class_number, total_students, updated_at)
+     VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT(grade, class_number) DO UPDATE SET total_students=excluded.total_students, updated_at=datetime('now')`
+  ).bind(grade, classNumber, total).run();
+  const ctx = await loadQuotaBoardContext(db, grade);
+  return json({ success: true, row: buildQuotaBoardRows(ctx).find((r) => r.class_number === classNumber) });
+}
+
+async function setClassCourseQuota(db, grade, classNumber, courseId, quota) {
+  const q = Math.max(0, parseInt(quota, 10) || 0);
+  await db.prepare(
+    `INSERT INTO class_course_quotas (grade, class_number, course_id, quota, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(grade, class_number, course_id) DO UPDATE SET quota=excluded.quota, updated_at=datetime('now')`
+  ).bind(grade, classNumber, courseId, q).run();
+}
+
+async function handleClassQuotaAdjustPut(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: '请求体无效' }, 400); }
+  const grade = String(body.grade || '').trim();
+  const classNumber = String(body.class_number || '').trim().replace(/班$/, '');
+  const courseId = parseInt(body.course_id, 10);
+  const delta = parseInt(body.delta, 10);
+  if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
+  if (!classNumber || isNaN(courseId)) return json({ error: '参数无效' }, 400);
+  if (delta !== 1 && delta !== -1) return json({ error: '仅支持 ±1' }, 400);
+
+  const ctx = await loadQuotaBoardContext(db, grade);
+  const course = ctx.courses.find((c) => Number(c.id) === courseId);
+  if (!course) return json({ error: '课程不存在' }, 404);
+  if (Number(course.selection_locked) === 1) return json({ error: '锁死课程不可调剂普通名额' }, 400);
+
+  const base = quotaBoardBaseLimit(course, grade);
+  const curOverride = ctx.quotaMap[classNumber] && ctx.quotaMap[classNumber][String(courseId)];
+  const current = curOverride != null ? curOverride : base;
+  const next = current + delta;
+  if (next < 0) return json({ error: '名额不能小于 0' }, 400);
+
+  // 减名额时：调整后普通可用 ≥ 本班该课内定人数
+  const rows = buildQuotaBoardRows(ctx);
+  const row = rows.find((r) => r.class_number === classNumber);
+  const detail = row && row.courses.find((c) => Number(c.course_id) === courseId);
+  const preenroll = detail ? detail.preenroll_count : 0;
+  if (delta < 0 && next < preenroll) {
+    return json({ error: '调整后普通可用名额不能小于本班该课内定人数（' + preenroll + '）' }, 400);
+  }
+
+  await setClassCourseQuota(db, grade, classNumber, courseId, next);
+  await bumpSelectionDataRevision(db);
+  const ctx2 = await loadQuotaBoardContext(db, grade);
+  return json({ success: true, row: buildQuotaBoardRows(ctx2).find((r) => r.class_number === classNumber) });
+}
+
+async function handleClassQuotaAutoFill(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: '请求体无效' }, 400); }
+  const grade = String(body.grade || '').trim();
+  if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
+
+  const ctx = await loadQuotaBoardContext(db, grade);
+  // working quotas: classNum -> courseId -> effective
+  const working = {};
+  quotaBoardClassNums().forEach((cn) => {
+    working[cn] = {};
+    ctx.courses.forEach((c) => {
+      const base = quotaBoardBaseLimit(c, grade);
+      const ov = ctx.quotaMap[cn] && ctx.quotaMap[cn][String(c.id)];
+      working[cn][String(c.id)] = ov != null ? ov : base;
+    });
+  });
+
+  function snapshotRows() {
+    const fakeCtx = Object.assign({}, ctx, { quotaMap: {} });
+    Object.keys(working).forEach((cn) => {
+      fakeCtx.quotaMap[cn] = {};
+      Object.keys(working[cn]).forEach((cid) => {
+        fakeCtx.quotaMap[cn][cid] = working[cn][cid];
+      });
+    });
+    return buildQuotaBoardRows(fakeCtx);
+  }
+
+  const adjustments = [];
+
+  function canDonate(cn, course) {
+    if (Number(course.selection_locked) === 1) return false;
+    const base = quotaBoardBaseLimit(course, grade);
+    if (base !== 2) return false;
+    const eff = working[cn][String(course.id)];
+    if (eff < 2) return false;
+    const rows = snapshotRows();
+    const row = rows.find((r) => r.class_number === cn);
+    const d = row && row.courses.find((x) => Number(x.course_id) === Number(course.id));
+    const pre = d ? d.preenroll_count : 0;
+    return (eff - 1) >= pre;
+  }
+
+  // 第一优先级：同课程定向补齐
+  ctx.courses.forEach((course) => {
+    if (Number(course.selection_locked) === 1) return;
+    let guard = 0;
+    while (guard++ < 200) {
+      const rows = snapshotRows();
+      const donors = quotaBoardClassNums().filter((cn) => canDonate(cn, course));
+      const receivers = rows
+        .filter((r) => r.gap > 0)
+        .sort((a, b) => b.gap - a.gap);
+      if (!donors.length || !receivers.length) break;
+      const donorCn = donors[0];
+      const recv = receivers[0];
+      const cid = String(course.id);
+      working[donorCn][cid] = working[donorCn][cid] - 1;
+      working[recv.class_number][cid] = working[recv.class_number][cid] + 1;
+      adjustments.push({
+        type: 'same_course',
+        course_id: course.id,
+        course_name: course.name,
+        from_class: donorCn,
+        to_class: recv.class_number,
+        amount: 1
+      });
+    }
+  });
+
+  // 第二优先级：跨课程兜底
+  let guard2 = 0;
+  while (guard2++ < 500) {
+    const rows = snapshotRows();
+    const receivers = rows.filter((r) => r.gap > 0).sort((a, b) => b.gap - a.gap);
+    if (!receivers.length) break;
+    let donated = false;
+    for (const course of ctx.courses) {
+      if (Number(course.selection_locked) === 1) continue;
+      const donors = quotaBoardClassNums().filter((cn) => canDonate(cn, course));
+      if (!donors.length) continue;
+      const donorCn = donors[0];
+      const recv = receivers[0];
+      // 接收方加到一门未锁死课程上（优先本课程）
+      let targetCourse = course;
+      if (Number(targetCourse.selection_locked) === 1) {
+        targetCourse = ctx.courses.find((c) => Number(c.selection_locked) !== 1) || course;
+      }
+      const cidFrom = String(course.id);
+      const cidTo = String(targetCourse.id);
+      working[donorCn][cidFrom] = working[donorCn][cidFrom] - 1;
+      working[recv.class_number][cidTo] = working[recv.class_number][cidTo] + 1;
+      adjustments.push({
+        type: 'cross_course',
+        course_id: course.id,
+        course_name: course.name,
+        to_course_id: targetCourse.id,
+        to_course_name: targetCourse.name,
+        from_class: donorCn,
+        to_class: recv.class_number,
+        amount: 1
+      });
+      donated = true;
+      break;
+    }
+    if (!donated) break;
+  }
+
+  // 持久化：只写与基础名额不同的覆盖
+  const stmts = [];
+  quotaBoardClassNums().forEach((cn) => {
+    ctx.courses.forEach((c) => {
+      const base = quotaBoardBaseLimit(c, grade);
+      const eff = working[cn][String(c.id)];
+      if (eff !== base) {
+        stmts.push(db.prepare(
+          `INSERT INTO class_course_quotas (grade, class_number, course_id, quota, updated_at)
+           VALUES (?, ?, ?, ?, datetime('now'))
+           ON CONFLICT(grade, class_number, course_id) DO UPDATE SET quota=excluded.quota, updated_at=datetime('now')`
+        ).bind(grade, cn, c.id, eff));
+      } else {
+        stmts.push(db.prepare(
+          'DELETE FROM class_course_quotas WHERE grade = ? AND class_number = ? AND course_id = ?'
+        ).bind(grade, cn, c.id));
+      }
+    });
+  });
+  await runD1Batch(db, stmts);
+  await bumpSelectionDataRevision(db);
+
+  const ctx2 = await loadQuotaBoardContext(db, grade);
+  return json({
+    success: true,
+    grade,
+    adjustments,
+    rows: buildQuotaBoardRows(ctx2)
+  });
+}
+
+async function handleClassQuotaRestore(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: '请求体无效' }, 400); }
+  const grade = String(body.grade || '').trim();
+  if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
+  await db.prepare('DELETE FROM class_course_quotas WHERE grade = ?').bind(grade).run();
+  await bumpSelectionDataRevision(db);
+  const ctx = await loadQuotaBoardContext(db, grade);
+  return json({ success: true, grade, rows: buildQuotaBoardRows(ctx) });
 }
 
 async function handleClassCreate(db, request) {
@@ -5681,6 +6115,26 @@ export async function onRequest(context) {
     const id = parseInt(classMatch[1]);
     if (method === 'PUT') return handleClassUpdate(db, request, id);
     if (method === 'DELETE') return handleClassDelete(db, request, id);
+  }
+
+  // /api/class-quota-board — 班级名额看板
+  if (path === '/api/class-quota-board' && method === 'GET') {
+    return handleClassQuotaBoardGet(db, request, url);
+  }
+  if (path === '/api/class-quota-board/effective' && method === 'GET') {
+    return handleClassQuotaEffectiveGet(db, request, url);
+  }
+  if (path === '/api/class-quota-board/class-size' && method === 'PUT') {
+    return handleClassQuotaSizePut(db, request);
+  }
+  if (path === '/api/class-quota-board/adjust' && method === 'PUT') {
+    return handleClassQuotaAdjustPut(db, request);
+  }
+  if (path === '/api/class-quota-board/auto-fill' && method === 'POST') {
+    return handleClassQuotaAutoFill(db, request);
+  }
+  if (path === '/api/class-quota-board/restore' && method === 'POST') {
+    return handleClassQuotaRestore(db, request);
   }
 
   // /api/school-students — 全校学生名单（管理员导入，班主任按班读取）
