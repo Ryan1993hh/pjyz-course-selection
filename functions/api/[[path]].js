@@ -3193,7 +3193,12 @@ async function handleUsersImport(db, request) {
         username: username,
         password: password,
         teacher_name: String((u && u.teacher_name) || '').trim(),
-        class_name: String((u && u.class_name) || '').trim(),
+        class_name: (function () {
+          const raw = String((u && u.class_name) || '').trim();
+          if (!raw) return '';
+          const parsed = parseGradeClassFields('', raw);
+          return parsed.class_name || raw;
+        })(),
         course_name: String((u && u.course_name) || '').trim(),
         email: String((u && u.email) || '').trim(),
         phone: String((u && u.phone) || '').trim(),

@@ -445,7 +445,7 @@ body {
 .course-manage-row {
   display: flex;
   gap: 16px;
-  align-items: stretch;
+  align-items: flex-start;
 }
 .course-manage-left {
   flex: 1 1 50%;
@@ -462,7 +462,34 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  align-self: flex-start;
+}
+.course-upload-right > .card {
+  padding: 12px 14px;
+}
+.course-upload-right .card-title {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+}
+.course-upload-right .upload-area {
+  padding: 10px 14px;
+  gap: 10px;
+}
+.course-upload-right .upload-area .icon {
+  font-size: 22px;
+}
+.course-upload-right .upload-area .hint {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+}
+.course-upload-right .upload-msg {
+  margin-top: 6px;
+  padding: 4px 8px;
+  min-height: 0;
 }
 .course-list-card {
   flex: 1 1 100%;
@@ -3036,7 +3063,7 @@ th.sortable.active .sort-icon { opacity: 1; }
               <span class="icon">↑</span>
               <div class="text-col">
                 <span class="title">点击或拖拽上传课程清单</span>
-                <span class="hint">支持 .csv / .xlsx / .xls / .docx 格式。表头需包含：类别、序号、课程、简介、地点、授课老师、报名要求、六年级人数限制、七年级人数限制</span>
+                <span class="hint">支持 csv / xlsx / xls / docx。表头：类别、课程、简介、地点、老师、要求、六/七年级名额</span>
               </div>
             </div>
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
@@ -6818,7 +6845,7 @@ function openImportUsers(){
       '<span class="icon">↑</span>' +
       '<div class="text-col">' +
         '<span class="title">点击或拖拽上传用户文件</span>' +
-        '<span class="hint">Excel 表头：账号、密码、姓名、角色（admin/banzhuren/teacher）、课程名称；多角色可用角色1、角色2、角色3</span>' +
+        '<span class="hint">表头：账号、密码、姓名、班级、课程名称、角色（admin/banzhuren/teacher）；多角色可用角色1、角色2、角色3。班级示例：六年级(1)班</span>' +
       '</div>' +
       '<input type="file" id="userFileInput" accept=".csv,.xlsx,.xls" style="display:none;">' +
     '</div>' +
@@ -6837,12 +6864,12 @@ function openImportUsers(){
 }
 
 function downloadUserTemplate(){
-  const headers = ['账号', '密码', '姓名', '课程名称', '角色1', '角色2', '角色3'];
+  const headers = ['账号', '密码', '姓名', '班级', '课程名称', '角色1', '角色2', '角色3'];
   const rows = [
-    ['teacher01', '123456', '张老师', '乒乓球', 'teacher', '', ''],
-    ['bzr01', '123456', '李班主任', '', 'banzhuren', '', ''],
-    ['admin01', 'admin123', '王管理', '', 'admin', 'teacher', ''],
-    ['multi01', '123456', '赵老师', '武术', 'admin', 'banzhuren', 'teacher']
+    ['teacher01', '123456', '张老师', '', '乒乓球', 'teacher', '', ''],
+    ['bzr01', '123456', '李班主任', '六年级(1)班', '', 'banzhuren', '', ''],
+    ['admin01', 'admin123', '王管理', '', '', 'admin', 'teacher', ''],
+    ['multi01', '123456', '赵老师', '七年级(2)班', '武术', 'admin', 'banzhuren', 'teacher']
   ];
   const csv = [headers, ...rows].map(function(row){
     return row.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
@@ -6965,11 +6992,13 @@ function parseUsersFromRows(rows){
 
     const roles = collectRolesFromRow(cols, headerMap);
 
+    const rawClass = getUserCol(cols, headerMap.class_name, '');
+    const rawGrade = getUserCol(cols, headerMap.grade, '');
     const item = {
       username: username,
       password: password,
       teacher_name: teacherName,
-      class_name: getUserCol(cols, headerMap.class_name, ''),
+      class_name: normalizeImportedUserClassName(rawGrade, rawClass),
       course_name: getUserCol(cols, headerMap.course_name, ''),
       roles: roles,
       email: getUserCol(cols, headerMap.email, ''),
@@ -7028,14 +7057,15 @@ function rolesLabelList(roles){
 }
 
 function mapUserHeaders(headers){
-  const map = { username: -1, password: -1, teacher_name: -1, class_name: -1, course_name: -1, role: -1, role1: -1, role2: -1, role3: -1, email: -1, phone: -1 };
+  const map = { username: -1, password: -1, teacher_name: -1, grade: -1, class_name: -1, course_name: -1, role: -1, role1: -1, role2: -1, role3: -1, email: -1, phone: -1 };
   headers.forEach(function(h, i){
     const trimmed = h.replace(/^\uFEFF/, '').trim();
     if (/账号|用户名|username|账户/.test(trimmed)) map.username = i;
     else if (/密码|password|passwd/.test(trimmed)) map.password = i;
     else if (/^姓名$|^教师姓名$|^名字$/.test(trimmed) || (/姓名|名字/.test(trimmed) && map.teacher_name < 0)) map.teacher_name = i;
     else if (/^课程名称$|^课程$|^course/i.test(trimmed) && map.course_name < 0) map.course_name = i;
-    else if (/班级|class|班/.test(trimmed)) map.class_name = i;
+    else if (/^年级$|^grade$/i.test(trimmed) && map.grade < 0) map.grade = i;
+    else if (/班级|所属班级|class_name|^class$/i.test(trimmed) && map.class_name < 0) map.class_name = i;
     else if (/^角色\s*1$|^角色1$/.test(trimmed)) map.role1 = i;
     else if (/^角色\s*2$|^角色2$/.test(trimmed)) map.role2 = i;
     else if (/^角色\s*3$|^角色3$/.test(trimmed)) map.role3 = i;
@@ -7044,6 +7074,28 @@ function mapUserHeaders(headers){
     else if (/手机|电话|phone|mobile/.test(trimmed)) map.phone = i;
   });
   return map;
+}
+
+/** 将导入的年级/班级统一为「六年级(1)班」格式，便于与手动添加一致 */
+function normalizeImportedUserClassName(gradeRaw, classRaw) {
+  var grade = String(gradeRaw || '').trim();
+  var cls = String(classRaw || '').trim();
+  if (!grade && !cls) return '';
+  var combined = (grade + cls).replace(/\s+/g, '');
+  var parsed = parseUserClassName(cls) || { grade: '', classNum: '' };
+  if (!parsed.grade && !parsed.classNum) {
+    parsed = parseUserClassName(combined);
+  }
+  if (!parsed.grade && grade) {
+    var gm = grade.match(/(六年级|七年级)/) || combined.match(/(六年级|七年级)/);
+    if (gm) parsed.grade = gm[1];
+  }
+  if (!parsed.classNum) {
+    var nm = cls.match(/(\d+)/) || combined.match(/(\d+)/);
+    if (nm) parsed.classNum = nm[1];
+  }
+  if (parsed.grade && parsed.classNum) return composeUserClassName(parsed.grade, parsed.classNum);
+  return cls || grade;
 }
 
 function getUserCol(cols, idx, defaultVal){
