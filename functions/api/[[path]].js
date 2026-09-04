@@ -2715,7 +2715,8 @@ async function handleClassQuotaEffectiveGet(db, request, url) {
     const row = rows.find((r) => String(r.class_number) === String(classNumber));
     const quotas = {};
     (row ? row.courses : []).forEach((c) => {
-      quotas[String(c.course_id)] = c.selection_locked ? 0 : c.effective_quota;
+      // 返回真实有效名额；锁死由前端用 selection_locked 控制「不可选择」
+      quotas[String(c.course_id)] = c.effective_quota;
     });
     return json({
       success: true,

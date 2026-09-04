@@ -4297,30 +4297,36 @@ function renderTable() {
       <tbody>`;
   COURSES.forEach((c, i) => {
     const limit = getCourseLimit(c);
-    const noQuota = limit === 0;
+    const baseLimit = getBaseCourseLimit(c);
+    const filledCount = (c.students || []).filter(Boolean).length;
+    // 仅「本年级基础名额为 0 且无内定/已选」才算不开放；锁定课即使覆盖名额为 0 也要展示内定席位
+    const closedForGrade = baseLimit === 0 && filledCount === 0;
+    const courseLocked = !!c.selection_locked;
     html += `
-      <tr${noQuota ? ' class="no-quota"' : ''}>
+      <tr${closedForGrade ? ' class="no-quota"' : ''}>
         <td>${i + 1}</td>
         <td><span class="course-name" data-course-id="${c.id}" style="cursor:help;" title="">${esc(c.name)}</span></td>
         <td><span class="cell-inner"><span class="ico">👨‍🏫</span><span class="teacher-cell">${esc(c.teacher || '')}</span></span></td>
         <td><span class="cell-inner"><span class="ico">📍</span><span class="location-cell">${esc(c.location || '')}</span></span></td>
         <td>${c.requirement ? `<span class="req-tag"><span class="ico">⚠</span>${esc(c.requirement)}</span>` : ''}</td>
-        <td>${noQuota
+        <td>${closedForGrade
           ? '<span class="limit-badge zero"><span class="ico">🚫</span>本年级无名额</span>'
-          : `<span class="limit-badge"><span class="ico">👥</span>${limit} 人</span>`}</td>
+          : `<span class="limit-badge"><span class="ico">👥</span>${Math.max(limit, filledCount)} 人</span>`}</td>
         <td>`;
-    if (noQuota) {
+    if (closedForGrade) {
       html += `<span class="slot disabled">本年级不开放</span>`;
     } else {
       const needClassSel = !gradeName || !classNumber;
-      c.students.forEach((name, idx) => {
+      const slots = Array.isArray(c.students) ? c.students.slice() : [];
+      const slotCount = Math.max(slots.length, limit, filledCount);
+      while (slots.length < slotCount) slots.push(null);
+      slots.forEach((name, idx) => {
         if (name) {
           const locked = lockedStudentNames.has(name);
           const lockedCls = locked ? ' locked-seat' : '';
           const tip = locked ? '该生已被确定，不可修改' : '点击取消';
           html += `<span class="slot filled${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-locked="${locked ? '1' : '0'}" title="${tip}">${esc(name)}</span>`;
         } else {
-          const courseLocked = !!c.selection_locked;
           const lockedCls = (needClassSel || courseLocked) ? ' locked' : '';
           const lockedTitle = courseLocked
             ? ' title="该课程已选定学生，不参与选课"'
