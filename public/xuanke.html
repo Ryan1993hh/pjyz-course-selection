@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课·班主任</title>
 <link rel="stylesheet" href="css/muyu.css?v=20260827n">
-<script src="js/role-utils.js?v=20260827t"></script>
+<script src="js/role-utils.js?v=20260904a"></script>
 <script src="js/teacher-quotes.js?v=20260827d"></script>
 <script src="js/muyu.js?v=20260827n"></script>
 <!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
@@ -18,7 +18,7 @@
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link rel="dns-prefetch" href="https://unpkg.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-<!-- SheetJS：竞赛式并行加载（所有 CDN 同时发起，首个成功即结束） -->
+<!-- SheetJS：按需懒加载（上传/导出时才拉取，避免首屏抢带宽） -->
 <script>
 var XLSX_CDN_LIST = [
   'https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
@@ -27,35 +27,46 @@ var XLSX_CDN_LIST = [
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://fastly.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
 ];
-// 并行竞赛：所有 CDN 同时加载，首个成功立即结束，其余忽略
 var __XLSX_DONE__ = false;
-XLSX_CDN_LIST.forEach(function (url) {
-  if (__XLSX_DONE__ || typeof XLSX !== 'undefined') return;
-  var s = document.createElement('script');
-  s.src = url;
-  s.async = true;
-  s.onload = function () {
-    if (__XLSX_DONE__) return;
-    if (typeof XLSX !== 'undefined') {
-      __XLSX_DONE__ = true;
-      var e = document.createEvent('Event');
-      e.initEvent('xlsx-loaded', true, true);
-      document.dispatchEvent(e);
-    }
-  };
-  // 单个 CDN 失败无需处理——其他 CDN 仍在并行竞争中
-  document.head.appendChild(s);
-});
-// 超时兜底：6 秒后全部未成功则判定失败
-setTimeout(function () {
-  if (!__XLSX_DONE__ && typeof XLSX === 'undefined') {
+var __XLSX_LOADING__ = null;
+function loadXlsxLibrary() {
+  if (typeof XLSX !== 'undefined') {
     __XLSX_DONE__ = true;
-    window.__XLSX_LOAD_FAILED__ = true;
-    var evt = document.createEvent('Event');
-    evt.initEvent('xlsx-failed', true, true);
-    document.dispatchEvent(evt);
+    return Promise.resolve(true);
   }
-}, 6000);
+  if (__XLSX_LOADING__) return __XLSX_LOADING__;
+  __XLSX_LOADING__ = new Promise(function (resolve) {
+    var settled = false;
+    function finish(ok) {
+      if (settled) return;
+      settled = true;
+      __XLSX_DONE__ = true;
+      if (!ok) window.__XLSX_LOAD_FAILED__ = true;
+      resolve(ok);
+      try {
+        var e = document.createEvent('Event');
+        e.initEvent(ok ? 'xlsx-loaded' : 'xlsx-failed', true, true);
+        document.dispatchEvent(e);
+      } catch (_) {}
+    }
+    var timer = setTimeout(function () {
+      if (typeof XLSX === 'undefined') finish(false);
+    }, 8000);
+    XLSX_CDN_LIST.forEach(function (url) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = function () {
+        if (typeof XLSX !== 'undefined') {
+          clearTimeout(timer);
+          finish(true);
+        }
+      };
+      document.head.appendChild(s);
+    });
+  });
+  return __XLSX_LOADING__;
+}
 </script>
 <style>
 :root {
@@ -2711,7 +2722,9 @@ tr.no-quota:hover td { opacity: 0.7; }
 
 <!-- 课程选课表格 -->
 <div class="card">
-  <div class="table-wrap" id="tableWrap"></div>
+  <div class="table-wrap" id="tableWrap">
+    <div style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">课程加载中…</div>
+  </div>
 </div>
 
 <!-- 课程简介 Tooltip（全局复用，按需定位显示） -->
@@ -3049,6 +3062,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 
 // ===== 课程数据（从后台管理系统数据库加载）=====
 let COURSES = [];
+var COURSES_CACHE_KEY = 'pjyz_courses_cache_v1';
 
 // 将 API 返回的课程数据转换为选课页面的格式
 function convertCourseFromAPI(apiCourse) {
@@ -3069,6 +3083,62 @@ function convertCourseFromAPI(apiCourse) {
   };
 }
 
+function applyCoursesFromApiList(courses) {
+  if (!Array.isArray(courses)) return false;
+  const allCourses = courses.map(convertCourseFromAPI);
+  const activeCourses = allCourses.filter(function(c) {
+    const original = courses.find(function(oc) { return oc.id === c.id; });
+    return !original || original.is_active !== 0;
+  });
+  COURSES = (activeCourses.length === 0 && allCourses.length > 0) ? allCourses : activeCourses;
+  return COURSES.length > 0;
+}
+
+function saveCoursesCache(rawCourses) {
+  try {
+    localStorage.setItem(COURSES_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      courses: rawCourses
+    }));
+  } catch (_) {}
+}
+
+/** 用本地课程缓存立即灌入 COURSES，首屏无需等待网络 */
+function hydrateCoursesFromCache() {
+  try {
+    const raw = localStorage.getItem(COURSES_CACHE_KEY);
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    const courses = snap && snap.courses;
+    if (!Array.isArray(courses) || !courses.length) return false;
+    return applyCoursesFromApiList(courses);
+  } catch (_) {
+    return false;
+  }
+}
+
+function reapplyLocalCourseSelections() {
+  try {
+    const saved = localStorage.getItem('pjyz_course_selection_state_v1');
+    if (!saved) return;
+    const snap = JSON.parse(saved);
+    if (!snap || !Array.isArray(snap.courses)) return;
+    snap.courses.forEach(function(sc) {
+      const course = COURSES.find(function(c) { return c.id === sc.id; });
+      if (course && sc.students) {
+        const preserved = sc.students.slice(0, Math.max(course.students.length, sc.students.length));
+        const limit = getCourseLimit(course);
+        const slotCount = Math.max(limit, preserved.filter(Boolean).length);
+        course.students = preserved.slice(0, slotCount).concat(
+          Array(Math.max(0, slotCount - preserved.length)).fill(null)
+        );
+      }
+    });
+  } catch (e) {
+    console.warn('reapplyLocalCourseSelections:', e);
+  }
+}
+
 // 从服务器加载课程数据
 async function loadCoursesFromServer() {
   try {
@@ -3077,56 +3147,17 @@ async function loadCoursesFromServer() {
     if (!Array.isArray(courses)) {
       throw new Error('返回数据格式错误');
     }
-    
-    console.log('[loadCoursesFromServer] 从服务器获取课程数量:', courses.length);
-    
-    // 先转换所有课程
-    const allCourses = courses.map(convertCourseFromAPI);
-    
-    // 检查是否有 is_active 字段，如果所有课程都被过滤掉，则使用全部课程
-    const activeCourses = allCourses.filter(function(c) { 
-      // 如果原数据没有is_active字段，或者is_active不为0，则保留
-      const original = courses.find(function(oc) { return oc.id === c.id; });
-      return !original || original.is_active !== 0;
-    });
-    
-    // 如果过滤后为空但原来有课程数据，则使用全部课程
-    if (activeCourses.length === 0 && allCourses.length > 0) {
-      console.warn('[loadCoursesFromServer] 所有课程都被is_active过滤，使用全部课程');
-      COURSES = allCourses;
-    } else {
-      COURSES = activeCourses;
-    }
-    
-    console.log('[loadCoursesFromServer] 最终加载课程数量:', COURSES.length);
-    
-    // 重新同步已保存的选课数据（如果有的话）
-    try {
-      const saved = localStorage.getItem('pjyz_course_selection_state_v1');
-      if (saved) {
-        const snap = JSON.parse(saved);
-        if (snap && snap.courses && Array.isArray(snap.courses)) {
-          snap.courses.forEach(function(sc) {
-            const course = COURSES.find(function(c) { return c.id === sc.id; });
-            if (course && sc.students) {
-              // 保留已选学生，但只保留有效槽位内的
-              const preserved = sc.students.slice(0, course.students.length);
-              course.students = preserved.concat(
-                Array(Math.max(0, course.students.length - preserved.length)).fill(null)
-              );
-            }
-          });
-        }
-      }
-    } catch(e) {
-      console.warn('恢复选课数据失败:', e);
-    }
-    
+
+    applyCoursesFromApiList(courses);
+    saveCoursesCache(courses);
+    reapplyLocalCourseSelections();
     return true;
   } catch(e) {
     console.warn('加载课程数据失败:', e.message);
-    showToast('加载课程数据失败: ' + e.message + '，请确保管理员已上传课程', 'error');
-    COURSES = [];
+    if (!COURSES.length) {
+      showToast('加载课程数据失败: ' + e.message + '，请确保管理员已上传课程', 'error');
+      COURSES = [];
+    }
     return false;
   }
 }
@@ -3358,16 +3389,19 @@ async function isServerClassSelectionEmpty() {
     var qs = new URLSearchParams();
     qs.set('grade', gradeName);
     qs.set('class_name', classNumber + '班');
-    var selData = await apiRequest('GET', '/api/selections?' + qs.toString());
+    var uq = new URLSearchParams();
+    uq.set('grade', gradeName);
+    uq.set('class', classNumber + '班');
+    var pair = await Promise.all([
+      apiRequest('GET', '/api/selections?' + qs.toString()),
+      apiRequest('GET', '/api/unselected-students?' + uq.toString())
+    ]);
+    var selData = pair[0];
+    var udata = pair[1];
     var selRows = (Array.isArray(selData) ? selData : (selData.selections || [])).filter(function(row) {
       return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
     });
     if (selRows.length) return false;
-
-    var uq = new URLSearchParams();
-    uq.set('grade', gradeName);
-    uq.set('class', classNumber + '班');
-    var udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
     var unsel = ((udata && udata.unselected) || []).filter(function(row) {
       return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
     });
@@ -4299,16 +4333,32 @@ function onNameClick(e) {
 }
 
 // ===== Excel 文件处理 =====
-// 检查 XLSX 库是否已加载完成
+// 按需加载 XLSX（首屏不抢带宽）
 function ensureXLSX() {
   if (typeof XLSX !== 'undefined') return true;
+  if (typeof loadXlsxLibrary === 'function') loadXlsxLibrary();
   showToast('Excel 处理库正在加载中，请稍后再试…', 'warning');
   return false;
 }
 
-function handleFile(file) {
+async function ensureXLSXReady() {
+  if (typeof XLSX !== 'undefined') return true;
+  if (typeof loadXlsxLibrary !== 'function') {
+    showToast('Excel 处理库不可用', 'error');
+    return false;
+  }
+  showToast('正在加载 Excel 组件…', 'warning');
+  var ok = await loadXlsxLibrary();
+  if (!ok || typeof XLSX === 'undefined') {
+    showToast('Excel 处理库加载失败，请检查网络后重试', 'error');
+    return false;
+  }
+  return true;
+}
+
+async function handleFile(file) {
   if (!file) return;
-  if (!ensureXLSX()) return;
+  if (!(await ensureXLSXReady())) return;
   if (!/\.(xlsx|xls)$/i.test(file.name)) {
     showToast('请上传 .xlsx 或 .xls 格式的文件', 'error');
     return;
@@ -4527,34 +4577,39 @@ async function restoreSelectionsFromServer() {
   updateClassName();
 
   let rows = [];
+  let unselected = [];
   try {
     const qs = new URLSearchParams();
     qs.set('grade', gradeName);
     qs.set('class_name', classNumber + '班');
-    const data = await apiRequest('GET', '/api/selections?' + qs.toString());
+    const uq = new URLSearchParams();
+    uq.set('grade', gradeName);
+    uq.set('class', classNumber + '班');
+    const pair = await Promise.all([
+      apiRequest('GET', '/api/selections?' + qs.toString()).catch(function (e) {
+        console.warn('restoreSelectionsFromServer selections:', e.message);
+        return { selections: [] };
+      }),
+      apiRequest('GET', '/api/unselected-students?' + uq.toString()).catch(function (e) {
+        console.warn('restoreSelectionsFromServer unselected:', e.message);
+        return { unselected: [] };
+      })
+    ]);
+    const data = pair[0];
+    const udata = pair[1];
     rows = Array.isArray(data) ? data : (data.selections || []);
+    unselected = (udata && udata.unselected) || [];
   } catch (e) {
-    console.warn('restoreSelectionsFromServer selections:', e.message);
+    console.warn('restoreSelectionsFromServer:', e.message);
     return false;
   }
 
   rows = rows.filter(function(row) {
     return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
   });
-
-  let unselected = [];
-  try {
-    const uq = new URLSearchParams();
-    uq.set('grade', gradeName);
-    uq.set('class', classNumber + '班');
-    const udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
-    unselected = (udata && udata.unselected) || [];
-    unselected = unselected.filter(function(row) {
-      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
-    });
-  } catch (e) {
-    console.warn('restoreSelectionsFromServer unselected:', e.message);
-  }
+  unselected = unselected.filter(function(row) {
+    return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+  });
 
   if (!rows.length && !unselected.length) return false;
 
@@ -4763,7 +4818,7 @@ async function exportExcel() {
     showToast('当前状态禁止选课，无法保存', 'error');
     return;
   }
-  if (!ensureXLSX()) return;
+  if (!(await ensureXLSXReady())) return;
   if (students.length === 0) {
     showToast('请先上传学生名单', 'error');
     return;
@@ -5508,25 +5563,46 @@ document.addEventListener('keydown', e => {
   });
 })();
 
-// ===== 初始化：加载课程数据 → 加载持久化状态 → 首次渲染 =====
+// ===== 初始化：先本地首屏渲染，再后台同步（避免空白等待）=====
 (async function initBootstrap() {
+  var painted = false;
+  function paintNow() {
+    try {
+      renderAll();
+      painted = true;
+    } catch (e) {
+      console.error('paintNow failed:', e);
+    }
+  }
+
   try {
+    // 1) 同步：课程缓存 + 本地草稿 → 立刻出表
+    hydrateCoursesFromCache();
+    var loaded = loadStateFromStorage();
+    applyBanzhurenClassPreset();
+    if (COURSES.length) paintNow();
+
+    // 2) 关键：课程与开关并行拉取（不等待用户资料）
     var sync = { revision: 0 };
-    await Promise.all([
+    var networkReady = Promise.all([
       loadCoursesFromServer(),
       loadSelectionStatus(),
-      syncUserProfile(),
       fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; })
     ]);
 
-    var loaded = loadStateFromStorage();
-    applyBanzhurenClassPreset();
+    // 用户资料不阻塞首屏
+    setTimeout(function () { syncUserProfile().catch(function () {}); }, 0);
+
+    await networkReady;
+    if (!painted || COURSES.length) paintNow();
+
     var localRev = getLocalDataRevision();
 
     // 管理员已在后台变更选课数据 → 丢弃过期的本地草稿（班主任自行上传除外）
     if (loaded && sync.revision > localRev && studentListSource !== 'upload') {
       clearLocalSelectionDraft();
       loaded = false;
+      paintNow();
     }
 
     if (loaded && students.length > 0 && studentListSource !== 'upload') {
@@ -5534,6 +5610,7 @@ document.addEventListener('keydown', e => {
       if (serverEmpty) {
         clearLocalSelectionDraft();
         loaded = false;
+        paintNow();
       }
     }
 
@@ -5551,15 +5628,19 @@ document.addEventListener('keydown', e => {
     }
 
     saveState(sync.revision);
+    paintNow();
   } catch (e) {
     console.error('[initBootstrap] init failed:', e);
+    if (!painted) paintNow();
   }
-
-  renderAll();
 
   if (COURSES.length === 0) {
     showToast('暂无课程数据，请联系管理员上传课程', 'warning');
   }
+
+  try {
+    window.dispatchEvent(new Event('pjyz-xuanke-ready'));
+  } catch (_) {}
 
   setInterval(loadSelectionStatus, 30000);
 
@@ -5742,6 +5823,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260829a"></script>
+<script src="js/banzhuren-portal.js?v=20260904b"></script>
 </body>
 </html>

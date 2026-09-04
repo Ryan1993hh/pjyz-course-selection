@@ -922,10 +922,22 @@
 
     bindProfilePassword();
 
-    initSyncRevision();
-    if (getToken()) {
-      loadClassStudents({ silent: true }).catch(function () {});
+    function startBackgroundData() {
+      initSyncRevision();
+      if (getToken()) {
+        loadClassStudents({ silent: true }).catch(function () {});
+      }
     }
+    // 等选课首屏就绪后再拉名单，避免与课程接口抢带宽
+    var bgStarted = false;
+    function kickBackground() {
+      if (bgStarted) return;
+      bgStarted = true;
+      startBackgroundData();
+    }
+    window.addEventListener('pjyz-xuanke-ready', kickBackground, { once: true });
+    setTimeout(kickBackground, 2500);
+
     setInterval(pollSelectionSync, 10000);
     setInterval(ensureLeaveDayFresh, 30000);
     document.addEventListener('visibilitychange', function () {
