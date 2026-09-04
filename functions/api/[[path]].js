@@ -2909,12 +2909,6 @@ async function handleClassQuotaAutoFill(db, request) {
   const grade = String(body.grade || '').trim();
   if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
 
-  // 可选：接收名额时优先加到这些课程（不选则任意未锁死课程）
-  const priorityIds = Array.isArray(body.priority_course_ids)
-    ? body.priority_course_ids.map((x) => parseInt(x, 10)).filter((n) => !isNaN(n))
-    : [];
-  const prioritySet = new Set(priorityIds.map(String));
-
   const ctx = await loadQuotaBoardContext(db, grade);
   const working = {};
   quotaBoardClassNums().forEach((cn) => {
@@ -2953,9 +2947,6 @@ async function handleClassQuotaAutoFill(db, request) {
 
   function pickDonorCourse(cn, rows) {
     const list = unlockedCourses().slice().sort((a, b) => {
-      const ap = prioritySet.has(String(a.id)) ? 0 : 1;
-      const bp = prioritySet.has(String(b.id)) ? 0 : 1;
-      if (ap !== bp) return ap - bp;
       const spareA = working[cn][String(a.id)];
       const spareB = working[cn][String(b.id)];
       if (spareA !== spareB) return spareB - spareA;
@@ -2967,20 +2958,22 @@ async function handleClassQuotaAutoFill(db, request) {
     return null;
   }
 
-  function pickReceiverCourse() {
-    const list = unlockedCourses().slice().sort((a, b) => {
-      const ap = prioritySet.has(String(a.id)) ? 0 : 1;
-      const bp = prioritySet.has(String(b.id)) ? 0 : 1;
-      if (ap !== bp) return ap - bp;
-      return Number(a.id) - Number(b.id);
-    });
-    return list[0] || null;
+  function pickReceiverCourse(preferCourseId) {
+    const list = unlockedCourses();
+    if (!list.length) return null;
+    if (preferCourseId != null) {
+      const hit = list.find((c) => Number(c.id) === Number(preferCourseId));
+      if (hit) return hit;
+    }
+    return list.slice().sort((a, b) => Number(a.id) - Number(b.id))[0];
   }
 
   const rows0 = snapshotRows();
   const totalOrdinary = rows0.reduce((s, r) => s + (parseInt(r.ordinary_students, 10) || 0), 0);
   const totalAvail = rows0.reduce((s, r) => s + (parseInt(r.ordinary_available_total, 10) || 0), 0);
   const classCount = rows0.length;
+  const shortBefore = rows0.filter((r) => r.gap > 0).length;
+  const surplusBefore = rows0.filter((r) => r.gap < 0).length;
   // 总可用名额足以让每班至少剩 1 个 → 目标 gap=-1；否则只补齐缺口到 gap=0
   const canLeaveOneEach = totalAvail >= totalOrdinary + classCount;
   const targetGap = canLeaveOneEach ? -1 : 0;
@@ -3021,7 +3014,8 @@ async function handleClassQuotaAutoFill(db, request) {
 
       const recv = receivers.find((r) => String(r.class_number) !== String(donor.class_number));
       if (!recv) break;
-      const courseTo = pickReceiverCourse();
+      // 优先同课程调剂，保持各课名额结构稳定
+      const courseTo = pickReceiverCourse(courseFrom.id);
       if (!courseTo) break;
 
       const cidFrom = String(courseFrom.id);
@@ -3067,6 +3061,11 @@ async function handleClassQuotaAutoFill(db, request) {
   await bumpSelectionDataRevision(db);
 
   const ctx2 = await loadQuotaBoardContext(db, grade);
+  const rowsAfter = buildQuotaBoardRows(ctx2);
+  const shortAfter = rowsAfter.filter((r) => r.gap > 0);
+  const leaveOneMiss = canLeaveOneEach
+    ? rowsAfter.filter((r) => r.gap > -1)
+    : [];
   return json({
     success: true,
     grade,
@@ -3074,9 +3073,25 @@ async function handleClassQuotaAutoFill(db, request) {
     mode_text: canLeaveOneEach
       ? '总名额充足：尽量让每班至少保留 1 个余额'
       : '总名额不足保留每班 1 余额：仅按剩余优先补齐现有缺口',
-    priority_course_ids: priorityIds,
+    summary: {
+      short_before: shortBefore,
+      surplus_before: surplusBefore,
+      moved: adjustments.length,
+      short_after: shortAfter.length,
+      short_after_classes: shortAfter.map((r) => ({
+        class_number: r.class_number,
+        gap: r.gap,
+        status_text: r.status_text
+      })),
+      leave_one_miss: leaveOneMiss.length,
+      leave_one_miss_classes: leaveOneMiss.map((r) => ({
+        class_number: r.class_number,
+        gap: r.gap,
+        status_text: r.status_text
+      }))
+    },
     adjustments,
-    rows: buildQuotaBoardRows(ctx2)
+    rows: rowsAfter
   });
 }
 

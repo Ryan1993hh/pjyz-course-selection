@@ -66,13 +66,27 @@
       '.cqb-adj-box h4{margin:0 0 10px;color:#0f766e;}' +
       '.cqb-adj-box ul{margin:0;padding-left:18px;font-size:13px;line-height:1.6;}' +
       '.cqb-adj-box .ok{margin-top:12px;width:100%;}' +
-      '.cqb-pick-list{max-height:46vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin:10px 0;}' +
-      '.cqb-pick-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;}' +
-      '.cqb-pick-item:hover{background:#f0fdfa;}' +
-      '.cqb-pick-item input{width:16px;height:16px;}' +
-      '.cqb-pick-item .meta{font-size:12px;color:#64748b;}' +
-      '.cqb-pick-actions{display:flex;gap:8px;margin-top:12px;}' +
-      '.cqb-pick-actions .btn{flex:1;}';
+      '.cqb-adj-summary{margin:0 0 12px;padding:10px 12px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;font-size:13px;line-height:1.55;color:#0f766e;}' +
+      '.cqb-adj-summary strong{font-weight:700;color:#115e59;}' +
+      '@media (max-width:640px){' +
+      '.cqb-toolbar{gap:6px;padding:0 0 10px;}' +
+      '.cqb-toolbar .btn{min-height:44px;height:auto;padding:0 10px;font-size:13px;flex:1 1 calc(33.333% - 6px);}' +
+      '.cqb-grade-label{font-size:14px;width:100%;}' +
+      '.cqb-grade-label select{min-height:44px;font-size:16px;}' +
+      '.cqb-table-wrap{margin:0 -10px;width:calc(100% + 20px);border-radius:0;border-left:none;border-right:none;-webkit-overflow-scrolling:touch;}' +
+      '.cqb-table{font-size:16px;width:max-content;min-width:100%;}' +
+      '.cqb-table th,.cqb-table td{padding:10px 8px;font-size:16px;}' +
+      '.cqb-table th:nth-child(4),.cqb-table td:nth-child(4),' +
+      '.cqb-table th:nth-child(5),.cqb-table td:nth-child(5),' +
+      '.cqb-table th:nth-child(6),.cqb-table td:nth-child(6){display:none;}' +
+      '.cqb-table th:nth-child(2),.cqb-table td:nth-child(2){min-width:108px;}' +
+      '.cqb-table th:nth-child(3),.cqb-table td:nth-child(3){min-width:72px;}' +
+      '.cqb-table th:nth-child(7),.cqb-table td:nth-child(7){min-width:88px;}' +
+      '.cqb-status{font-size:13px;}' +
+      '.cqb-expand{width:36px;height:36px;min-width:36px;}' +
+      '.cqb-detail{font-size:14px;min-width:520px;}' +
+      '.cqb-act button{min-height:36px;height:36px;padding:0 10px;font-size:13px;}' +
+      '}';
     document.head.appendChild(style);
   }
 
@@ -89,14 +103,14 @@
       '      <option value="七年级">七年级</option>' +
       '    </select>' +
       '  </label>' +
-      '  <button type="button" class="btn btn-primary btn-sm" id="cqbAutoFillBtn">一键名额补齐</button>' +
-      '  <button type="button" class="btn btn-outline btn-sm" id="cqbRestoreBtn">恢复初始配置</button>' +
-      '  <button type="button" class="btn btn-outline btn-sm" id="cqbRefreshBtn">刷新</button>' +
+      '  <button type="button" class="btn btn-primary btn-sm" id="cqbAutoFillBtn">⚡ <span class="txt-full">一键名额补齐</span><span class="txt-short">补齐</span></button>' +
+      '  <button type="button" class="btn btn-outline btn-sm" id="cqbRestoreBtn">↺ <span class="txt-full">恢复初始配置</span><span class="txt-short">恢复</span></button>' +
+      '  <button type="button" class="btn btn-outline btn-sm" id="cqbRefreshBtn">🔄 刷新</button>' +
       '</div>' +
       '<div class="cqb-table-wrap"><table class="cqb-table" id="cqbTable">' +
       '  <thead><tr>' +
-      '    <th></th><th>班级名称</th><th>班级总人数</th><th>内定学生总数</th>' +
-      '    <th>普通学生数</th><th>总固定名额</th><th>普通可用总名额</th><th>名额状态</th>' +
+      '    <th></th><th>班级名称</th><th><span class="txt-full">班级总人数</span><span class="txt-short">人数</span></th><th>内定学生总数</th>' +
+      '    <th>普通学生数</th><th>总固定名额</th><th><span class="txt-full">普通可用总名额</span><span class="txt-short">可用额</span></th><th>名额状态</th>' +
       '  </tr></thead>' +
       '  <tbody id="cqbTbody"><tr><td colspan="8" class="cqb-empty">加载中…</td></tr></tbody>' +
       '</table></div>';
@@ -286,8 +300,23 @@
     });
   }
 
+  function previewBoardState(rows) {
+    var list = rows || [];
+    var shortList = [];
+    var surplusList = [];
+    list.forEach(function (r) {
+      var gap = parseInt(r.gap, 10) || 0;
+      if (gap > 0) shortList.push({ cn: r.class_number, gap: gap });
+      if (gap < 0) surplusList.push({ cn: r.class_number, surplus: -gap });
+    });
+    shortList.sort(function (a, b) { return b.gap - a.gap || a.cn - b.cn; });
+    surplusList.sort(function (a, b) { return b.surplus - a.surplus || a.cn - b.cn; });
+    return { shortList: shortList, surplusList: surplusList };
+  }
+
   function showAdjustments(list, meta) {
     meta = meta || {};
+    var summary = meta.summary || {};
     var wrap = document.createElement('div');
     wrap.className = 'cqb-adj-modal';
     var items = (list || []).map(function (a) {
@@ -301,7 +330,26 @@
     var modeHint = meta.mode_text
       ? '<p style="margin:0 0 10px;font-size:13px;color:#64748b;">' + esc(meta.mode_text) + '</p>'
       : '';
-    wrap.innerHTML = '<div class="cqb-adj-box"><h4>一键补齐明细</h4>' + modeHint +
+    var shortAfter = Array.isArray(summary.short_after_classes) ? summary.short_after_classes : [];
+    var leaveMiss = Array.isArray(summary.leave_one_miss_classes) ? summary.leave_one_miss_classes : [];
+    var summaryHtml =
+      '<div class="cqb-adj-summary">' +
+      '共调剂 <strong>' + esc(summary.moved != null ? summary.moved : (list || []).length) + '</strong> 次' +
+      '（缺口班 ' + esc(summary.short_before != null ? summary.short_before : '—') +
+      ' → ' + esc(summary.short_after != null ? summary.short_after : '—') +
+      '；剩余班 ' + esc(summary.surplus_before != null ? summary.surplus_before : '—') + '）' +
+      (shortAfter.length
+        ? '<br>仍缺：' + shortAfter.map(function (r) {
+            return esc(state.grade + '(' + r.class_number + ')班差' + r.gap);
+          }).join('、')
+        : '<br>缺口已全部补齐') +
+      (meta.mode === 'leave_one' && leaveMiss.length
+        ? '<br>尚未达到「每班留 1」：' + leaveMiss.map(function (r) {
+            return esc(state.grade + '(' + r.class_number + ')班');
+          }).join('、')
+        : '') +
+      '</div>';
+    wrap.innerHTML = '<div class="cqb-adj-box"><h4>一键补齐明细</h4>' + modeHint + summaryHtml +
       (items ? '<ul>' + items + '</ul>' : '<p>本次无需调剂，各班已配齐或无可释放名额。</p>') +
       '<button type="button" class="btn btn-primary ok">知道了</button></div>';
     document.body.appendChild(wrap);
@@ -320,7 +368,8 @@
       renderTable();
       showAdjustments(data.adjustments || [], {
         mode: data.mode,
-        mode_text: data.mode_text
+        mode_text: data.mode_text,
+        summary: data.summary || {}
       });
       toast(data.mode_text || '一键补齐完成', 'success');
     } catch (e) {
@@ -331,11 +380,22 @@
   }
 
   function onAutoFill() {
+    var preview = previewBoardState(state.rows);
+    var shortHint = preview.shortList.length
+      ? preview.shortList.slice(0, 6).map(function (x) {
+          return state.grade + '(' + x.cn + ')班差' + x.gap;
+        }).join('、') + (preview.shortList.length > 6 ? '…' : '')
+      : '无';
+    var surplusHint = preview.surplusList.length
+      ? preview.surplusList.slice(0, 6).map(function (x) {
+          return state.grade + '(' + x.cn + ')班余' + x.surplus;
+        }).join('、') + (preview.surplusList.length > 6 ? '…' : '')
+      : '无';
     var msg =
       '将按「' + state.grade + '」名额状态列调配：\n' +
-      '1. 按剩余名额从多到少，优先用空余名额补缺口\n' +
-      '2. 尽量让每班至少保留 1 个余额；做不到则只补齐现有缺口\n' +
-      '3. 班级间零和调剂，不新增总名额\n\n' +
+      '· 缺口班 ' + preview.shortList.length + ' 个：' + shortHint + '\n' +
+      '· 剩余班 ' + preview.surplusList.length + ' 个：' + surplusHint + '\n\n' +
+      '规则：优先同课程调剂；剩余多的班先出；尽量每班留 1 余额；零和、不新增总名额。\n\n' +
       '确定开始？';
     if (!confirm(msg)) return;
     runAutoFill();

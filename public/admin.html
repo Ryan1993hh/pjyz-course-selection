@@ -1604,6 +1604,7 @@ table.courses-table td[data-field="description"] {
   gap: 6px;
 }
 .mob-only { display: none !important; }
+.txt-short { display: none; }
 .stats-mini {
   display: flex;
   gap: 12px;
@@ -3143,6 +3144,255 @@ th.sortable.active .sort-icon { opacity: 1; }
   .import-stats { grid-template-columns: 1fr; }
   .btn-logout span:not(.btn-logout-icon) { display: none; }
 }
+
+/* ===== 手机端紧凑布局（≤640px，桌面不受影响） ===== */
+@media (max-width: 640px) {
+  html, body {
+    font-size: 16px;
+    overflow-x: hidden;
+  }
+  body {
+    padding: 6px;
+    padding-bottom: calc(6px + var(--safe-bottom));
+  }
+  .layout { padding: 0; gap: 6px; }
+  .header { margin: 0 0 6px; padding: 8px 10px; gap: 6px; }
+  .card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .section-header {
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  .section-header h2 { font-size: 17px; }
+  .section-header .desc { display: none; }
+  .card-title { font-size: 16px; margin-bottom: 8px; }
+  .course-list-title .card-title-right > span[style] { display: none; }
+
+  /* 按钮组：缩小 + 换行，优先一行 */
+  .txt-full { display: none !important; }
+  .txt-short { display: inline !important; }
+  .btn,
+  .btn.btn-sm,
+  .section-header-actions .btn,
+  .card-title-right .btn,
+  .hours-panel-actions .btn,
+  .data-toolbar .btn,
+  .user-toolbar .btn,
+  .action-bar .btn,
+  .selections-title-actions .btn,
+  .filter-row-actions .btn,
+  .bd-head-actions .btn {
+    height: auto;
+    min-height: var(--touch-min);
+    padding: 0 10px;
+    font-size: 13px;
+    letter-spacing: 0;
+    gap: 4px;
+    width: auto !important;
+    flex: 0 1 auto;
+  }
+  .section-header-actions,
+  .card-title-right,
+  .hours-panel-actions,
+  .data-toolbar-right,
+  .action-bar,
+  .selections-title-actions,
+  .filter-row-actions,
+  .filter-actions,
+  .selection-toolbar,
+  .board-toolbar,
+  .bd-summary-bar,
+  .user-toolbar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+  .filter-actions .btn,
+  .selection-toolbar .btn,
+  .board-toolbar .btn,
+  .section-header-actions .btn,
+  .action-bar .btn {
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: calc(33.333% - 6px);
+    max-width: 100%;
+  }
+  .action-bar .btn { flex: 1 1 100%; }
+  .selections-title-actions .btn { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .data-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+  .data-toolbar-left { width: 100%; }
+  .user-toolbar .search-input {
+    flex: 1 1 100%;
+    min-width: 0;
+    font-size: 16px;
+    min-height: var(--touch-min);
+  }
+  .user-toolbar .stat-info { font-size: 13px; width: 100%; }
+
+  /* 顶部课程模块：两列紧凑 */
+  .course-top-bar { gap: 6px; }
+  .course-section-head { padding: 4px 2px; }
+  .course-section-head .desc { display: none; }
+  .course-top-modules {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .course-mod-card {
+    min-height: 52px;
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .course-mod-card .mod-desc { display: none; }
+  .course-mod-card .mod-title { font-size: 13px; }
+  .course-mod-upload .upload-area { padding: 8px; }
+  .course-mod-upload .hint { display: none; }
+
+  /* 表格：横向滚动 + 压缩 + 隐藏非核心列 */
+  .table-wrap,
+  .hours-table-wrap,
+  .bd-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -10px;
+    margin-right: -10px;
+    width: calc(100% + 20px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  table.courses-table,
+  table.sel-table,
+  table.usr-table {
+    min-width: 0 !important;
+    width: max-content;
+    max-width: none;
+  }
+  table.courses-table th,
+  table.courses-table td,
+  table.sel-table th,
+  table.sel-table td,
+  table.usr-table th,
+  table.usr-table td,
+  th, td {
+    padding: 10px 8px !important;
+    font-size: 16px !important;
+    line-height: 1.35;
+  }
+  table.courses-table .course-name,
+  table.courses-table td[data-field="description"],
+  table.sel-table .course-link,
+  .limit-badge, .req-tag {
+    font-size: 15px !important;
+  }
+  table.sel-table .btn-sm {
+    min-height: 36px;
+    height: 36px;
+    font-size: 13px !important;
+    padding: 0 8px;
+  }
+
+  /* 课程表：保留名称、老师、名额、操作 */
+  table.courses-table col:nth-child(1),
+  table.courses-table col:nth-child(2),
+  table.courses-table col:nth-child(4),
+  table.courses-table col:nth-child(6),
+  table.courses-table col:nth-child(7),
+  table.courses-table th:nth-child(1),
+  table.courses-table td:nth-child(1),
+  table.courses-table th:nth-child(2),
+  table.courses-table td:nth-child(2),
+  table.courses-table th:nth-child(4),
+  table.courses-table td:nth-child(4),
+  table.courses-table th:nth-child(6),
+  table.courses-table td:nth-child(6),
+  table.courses-table th:nth-child(7),
+  table.courses-table td:nth-child(7) {
+    display: none;
+  }
+  table.courses-table th:nth-child(3),
+  table.courses-table td:nth-child(3) { min-width: 112px; }
+  table.courses-table th:nth-child(5),
+  table.courses-table td:nth-child(5) { min-width: 72px; }
+  table.courses-table th:nth-child(8),
+  table.courses-table td:nth-child(8),
+  table.courses-table th:nth-child(9),
+  table.courses-table td:nth-child(9) { min-width: 64px; }
+
+  /* 选课表：保留班级、姓名、课程、操作 */
+  table.sel-table {
+    --sel-col-w: 88px;
+    --sel-col-w-class: 108px;
+    --sel-col-w-gender: 0;
+    --sel-col-w-course: 140px;
+    --sel-col-w-actions: 120px;
+  }
+  table.sel-table th:nth-child(2),
+  table.sel-table td:nth-child(2),
+  table.sel-table th:nth-child(5),
+  table.sel-table td:nth-child(5) {
+    display: none !important;
+  }
+
+  /* 用户表：保留账号、姓名、班级、角色、操作 */
+  table.usr-table th:nth-child(1),
+  table.usr-table td:nth-child(1),
+  table.usr-table th:nth-child(3),
+  table.usr-table td:nth-child(3),
+  table.usr-table th:nth-child(5),
+  table.usr-table td:nth-child(5),
+  table.usr-table th:nth-child(7),
+  table.usr-table td:nth-child(7),
+  table.usr-table th:nth-child(8),
+  table.usr-table td:nth-child(8),
+  table.usr-table th:nth-child(10),
+  table.usr-table td:nth-child(10) {
+    display: none !important;
+  }
+  table.usr-table th:nth-child(2),
+  table.usr-table td:nth-child(2) { min-width: 88px; }
+  table.usr-table th:nth-child(4),
+  table.usr-table td:nth-child(4) { min-width: 72px; }
+  table.usr-table th:nth-child(6),
+  table.usr-table td:nth-child(6) { min-width: 96px; }
+
+  /* 看板 KPI / 侧栏更紧凑 */
+  .board-kpis {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .board-kpi { padding: 10px 6px; }
+  .board-kpi .k-n { font-size: 18px; }
+  .board-kpi .k-l { font-size: 12px; }
+  .board-side { max-height: 220px; }
+  #section-board .section-header > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    align-items: center;
+  }
+  .board-schedule-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    flex: 1 1 auto;
+  }
+  .form-input, .form-select {
+    font-size: 16px !important;
+    min-height: var(--touch-min);
+  }
+}
 </style>
 </head>
 <body>
@@ -3241,7 +3491,7 @@ th.sortable.active .sort-icon { opacity: 1; }
           <span>课程列表</span>
           <span class="card-title-right">
             <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;margin-right:12px;">支持点击单元格行内编辑</span>
-            <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ 新增一行</button>
+            <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ <span class="txt-full">新增一行</span><span class="txt-short">新增</span></button>
           </span>
         </div>
         <div class="table-wrap">
@@ -3267,8 +3517,8 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <th>授课老师</th>
                 <th>授课地点</th>
                 <th>报名要求</th>
-                <th>六年级名额</th>
-                <th>七年级名额</th>
+                <th><span class="txt-full">六年级名额</span><span class="txt-short">六·额</span></th>
+                <th><span class="txt-full">七年级名额</span><span class="txt-short">七·额</span></th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -3276,7 +3526,7 @@ th.sortable.active .sort-icon { opacity: 1; }
           </table>
         </div>
         <div class="action-bar">
-          <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ 确认保存全部课程</button>
+          <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ <span class="txt-full">确认保存全部课程</span><span class="txt-short">保存</span></button>
         </div>
       </div>
 
@@ -3300,10 +3550,10 @@ th.sortable.active .sort-icon { opacity: 1; }
             <h2>选课数据看板</h2>
             <div class="selections-title-actions mob-only">
               <div class="selection-lock-wrap">
-                <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 禁止选课</button>
+                <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
                 <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
               </div>
-              <button type="button" class="btn btn-success btn-sm" id="exportBtnMob">⬇ 导出 Excel</button>
+              <button type="button" class="btn btn-success btn-sm" id="exportBtnMob">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
             </div>
           </div>
           <p class="desc">按年级 / 班级 / 课程筛选，支持批量操作与 Excel 导出</p>
@@ -3344,14 +3594,14 @@ th.sortable.active .sort-icon { opacity: 1; }
                   <input type="text" class="form-input" id="filterStudent" placeholder="输入学生姓名">
                 </div>
                 <button type="button" class="btn btn-primary btn-block" id="queryBtn">🔍 查询</button>
-                <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn">重置筛选</button>
+                <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
               </div>
               <div class="filter-row filter-row-actions">
-                <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 内定学生</button>
-                <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 未选课学生</button>
-                <button type="button" class="btn btn-outline btn-block mob-only" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 导入学生名单</button>
-                <button type="button" class="btn btn-danger btn-block mob-only" id="batchDeleteBtnMob" disabled>🗑 批量删除</button>
-                <button type="button" class="btn btn-primary btn-block mob-only" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 提前录课</button>
+                <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
+                <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 <span class="txt-full">未选课学生</span><span class="txt-short">未选</span></button>
+                <button type="button" class="btn btn-outline btn-block mob-only" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
+                <button type="button" class="btn btn-danger btn-block mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
+                <button type="button" class="btn btn-primary btn-block mob-only" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
             </div>
           </div>
@@ -3422,10 +3672,10 @@ th.sortable.active .sort-icon { opacity: 1; }
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
           <div class="board-schedule-wrap">
-            <button type="button" class="btn btn-warning" id="boardSuspendBtn">今日停课</button>
+            <button type="button" class="btn btn-warning" id="boardSuspendBtn"><span class="txt-full">今日停课</span><span class="txt-short">停课</span></button>
             <span class="board-schedule-status" id="boardScheduleStatus">停课状态</span>
           </div>
-          <button type="button" class="btn btn-outline" id="boardRefreshBtn">刷新</button>
+          <button type="button" class="btn btn-outline" id="boardRefreshBtn">🔄 <span class="txt-full">刷新</span><span class="txt-short">刷新</span></button>
         </div>
       </div>
 
@@ -3465,9 +3715,9 @@ th.sortable.active .sort-icon { opacity: 1; }
             <div class="hours-panel-head">
               <h3 id="courseHoursTitle">上课记录</h3>
               <div class="hours-panel-actions">
-                <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddDateBtn" style="display:none">新增日期</button>
-                <button type="button" class="btn btn-outline btn-sm" id="courseHoursEditBtn">编辑</button>
-                <button type="button" class="btn btn-success btn-sm" id="courseHoursExportBtn">导出表格</button>
+                <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddDateBtn" style="display:none">+ <span class="txt-full">新增日期</span><span class="txt-short">日期</span></button>
+                <button type="button" class="btn btn-outline btn-sm" id="courseHoursEditBtn">✎ <span class="txt-full">编辑</span><span class="txt-short">编辑</span></button>
+                <button type="button" class="btn btn-success btn-sm" id="courseHoursExportBtn">⬇ <span class="txt-full">导出表格</span><span class="txt-short">导出</span></button>
               </div>
             </div>
             <div class="hours-panel-body">
@@ -3510,10 +3760,10 @@ th.sortable.active .sort-icon { opacity: 1; }
           <p class="desc">管理教师与管理员账号，支持批量导入用户数据</p>
         </div>
         <div class="section-header-actions">
-          <button type="button" class="btn btn-outline" id="consistencyCheckBtn">🔍 数据校验</button>
-          <button type="button" class="btn btn-outline" id="importHistoryBtn">📋 导入历史</button>
-          <button type="button" class="btn btn-outline" id="importUserBtn">⬆ 导入用户</button>
-          <button type="button" class="btn btn-primary" id="addUserBtn">+ 添加用户</button>
+          <button type="button" class="btn btn-outline" id="consistencyCheckBtn">🔍 <span class="txt-full">数据校验</span><span class="txt-short">校验</span></button>
+          <button type="button" class="btn btn-outline" id="importHistoryBtn">📋 <span class="txt-full">导入历史</span><span class="txt-short">历史</span></button>
+          <button type="button" class="btn btn-outline" id="importUserBtn">⬆ <span class="txt-full">导入用户</span><span class="txt-short">导入</span></button>
+          <button type="button" class="btn btn-primary" id="addUserBtn">+ <span class="txt-full">添加用户</span><span class="txt-short">添加</span></button>
         </div>
       </div>
 
@@ -7637,6 +7887,6 @@ if (checkLogin()){
   initAll();
 }
 </script>
-<script src="js/class-quota-board.js?v=20260904c"></script>
+<script src="js/class-quota-board.js?v=20260905a"></script>
 </body>
 </html>
