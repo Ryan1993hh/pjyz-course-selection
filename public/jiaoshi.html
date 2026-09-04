@@ -1353,11 +1353,21 @@ html[data-skin="ink"] .fs-act.cancel-btn { background: #334155; color: var(--tex
   color: #f8fafc;
   background: linear-gradient(180deg, #374151 0%, #1f2937 48%, #111827 52%, #0b1220 100%);
 }
+.flip-unit .flip-num.flip-tick {
+  animation: flipTick 0.28s ease;
+}
+@keyframes flipTick {
+  0% { transform: rotateX(-70deg); opacity: 0.35; }
+  100% { transform: rotateX(0deg); opacity: 1; }
+}
 .flip-colon {
   font-size: clamp(36px, 10vw, 64px);
   font-weight: 700;
   opacity: 0.85;
   padding-bottom: 8px;
+}
+.timer-fs-overlay.is-browser-fs .timer-fs-top {
+  top: max(16px, env(safe-area-inset-top));
 }
 .timer-fs-controls {
   display: flex;
@@ -4353,7 +4363,14 @@ function syncFlipDigits(text) {
   const ids = ["flipM1", "flipM2", "flipS1", "flipS2"];
   ids.forEach((id, i) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = t[i] || "0";
+    if (!el) return;
+    const next = t[i] || "0";
+    if (el.textContent !== next) {
+      el.textContent = next;
+      el.classList.remove("flip-tick");
+      void el.offsetWidth;
+      el.classList.add("flip-tick");
+    }
   });
 }
 
@@ -4419,7 +4436,7 @@ function applyTimerClockSkin(skin) {
   try { localStorage.setItem(TIMER_CLOCK_SKIN_KEY, name); } catch (_) {}
 }
 
-function openTimerFullscreen() {
+async function openTimerFullscreen() {
   const overlay = document.getElementById("timerFsOverlay");
   if (!overlay) return;
   let skin = "digital";
@@ -4427,11 +4444,27 @@ function openTimerFullscreen() {
   applyTimerClockSkin(skin);
   updateTimerDisplay();
   overlay.classList.add("show");
+  try {
+    if (overlay.requestFullscreen) {
+      await overlay.requestFullscreen();
+      overlay.classList.add("is-browser-fs");
+    } else if (overlay.webkitRequestFullscreen) {
+      overlay.webkitRequestFullscreen();
+      overlay.classList.add("is-browser-fs");
+    }
+  } catch (_) {}
 }
 
-function closeTimerFullscreen() {
+async function closeTimerFullscreen() {
   const overlay = document.getElementById("timerFsOverlay");
-  if (overlay) overlay.classList.remove("show");
+  if (overlay) {
+    overlay.classList.remove("show");
+    overlay.classList.remove("is-browser-fs");
+  }
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  } catch (_) {}
 }
 
 function exportCsv(filename, headers, rows) {
@@ -4829,6 +4862,12 @@ document.getElementById("toggleCurrentPassBtn") && document.getElementById("togg
 });
 
 document.getElementById("openSkinPickerBtn") && document.getElementById("openSkinPickerBtn").addEventListener("click", openSkinPicker);
+document.getElementById("openSkinPickerBtn") && document.getElementById("openSkinPickerBtn").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    openSkinPicker();
+  }
+});
 document.getElementById("skinPickerClose") && document.getElementById("skinPickerClose").addEventListener("click", closeSkinPicker);
 document.getElementById("skinPickerMask") && document.getElementById("skinPickerMask").addEventListener("click", (e) => {
   if (e.target.id === "skinPickerMask") closeSkinPicker();
@@ -4840,6 +4879,14 @@ document.getElementById("skinGrid") && document.getElementById("skinGrid").addEv
   applySkin(btn.dataset.skin);
   toast("已切换皮肤：" + (SKIN_LABELS[btn.dataset.skin] || ""), "success");
   closeSkinPicker();
+});
+
+document.addEventListener("fullscreenchange", () => {
+  const overlay = document.getElementById("timerFsOverlay");
+  if (!overlay) return;
+  if (!document.fullscreenElement && overlay.classList.contains("show")) {
+    overlay.classList.remove("is-browser-fs");
+  }
 });
 
 function exportStudentsExcel() {
