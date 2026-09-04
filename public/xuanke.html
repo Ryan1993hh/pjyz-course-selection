@@ -3064,6 +3064,7 @@ function convertCourseFromAPI(apiCourse) {
     requirement: apiCourse.requirement || '',
     description: apiCourse.description || '',
     limit: { '六年级': limit6, '七年级': limit7 },
+    selection_locked: apiCourse.selection_locked === true || apiCourse.selection_locked === 1 || apiCourse.selection_locked === '1',
     students: Array(totalLimit).fill(null)
   };
 }
@@ -4106,9 +4107,12 @@ function renderTable() {
           const tip = locked ? '该生已被确定，不可修改' : '点击取消';
           html += `<span class="slot filled${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-locked="${locked ? '1' : '0'}" title="${tip}">${esc(name)}</span>`;
         } else {
-          const lockedCls = needClassSel ? ' locked' : '';
-          const lockedTitle = needClassSel ? ' title="请先选择班级后再选课"' : '';
-          html += `<span class="slot empty${lockedCls}" data-course="${c.id}" data-slot="${idx}"${lockedTitle}>+ 点击选择</span>`;
+          const courseLocked = !!c.selection_locked;
+          const lockedCls = (needClassSel || courseLocked) ? ' locked' : '';
+          const lockedTitle = courseLocked
+            ? ' title="该课程已选定学生，不参与选课"'
+            : (needClassSel ? ' title="请先选择班级后再选课"' : '');
+          html += `<span class="slot empty${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-selection-locked="${courseLocked ? '1' : '0'}"${lockedTitle}>+ 点击选择</span>`;
         }
       });
     }
@@ -4188,6 +4192,13 @@ function onSlotClick(e) {
     course.students[slotIndex] = null;
     renderAll();
     showToast(`已取消 ${currentName} 的 ${course.name}`, 'warning');
+    return;
+  }
+
+  // 课程已锁定：空位不可选
+  if (course.selection_locked) {
+    shakeElement(e.currentTarget);
+    showToast('该课程已选定学生，不参与选课', 'error');
     return;
   }
 

@@ -45,7 +45,8 @@ const INIT_STATEMENTS = [
     limit_grade6 INTEGER DEFAULT 0,
     limit_grade7 INTEGER DEFAULT 0,
     selected_count INTEGER DEFAULT 0,
-    is_active INTEGER DEFAULT 1
+    is_active INTEGER DEFAULT 1,
+    selection_locked INTEGER DEFAULT 0
   )`,
   `CREATE TABLE IF NOT EXISTS classes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -436,6 +437,16 @@ async function ensureDbReady(db) {
       console.warn('Selections schema migration error:', selSchemaErr.message);
     }
 
+    try {
+      const courseColsRes = await db.prepare('PRAGMA table_info(courses)').all();
+      const courseColNames = (courseColsRes.results || []).map((c) => c.name);
+      if (!courseColNames.includes('selection_locked')) {
+        await db.prepare('ALTER TABLE courses ADD COLUMN selection_locked INTEGER DEFAULT 0').run();
+      }
+    } catch (courseSchemaErr) {
+      console.warn('Courses schema migration error:', courseSchemaErr.message);
+    }
+
     const adminCheck = await db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').bind('admin').first();
     if (adminCheck.count === 0) {
       const salt = await generateSalt();
@@ -713,7 +724,8 @@ async function handleCoursesGet(db) {
     limit_grade6: c.limit_grade6 || 0,
     limit_grade7: c.limit_grade7 || 0,
     selected_count: c.selected_count || 0,
-    is_active: c.is_active !== 0
+    is_active: c.is_active !== 0,
+    selection_locked: Number(c.selection_locked) === 1
   }));
   return json({ courses });
 }
@@ -724,15 +736,16 @@ async function handleCoursesBatchSave(db, request) {
   try {
     const body = await request.json();
     const arr = Array.isArray(body) ? body : (body.courses || []);
-
+    
     await db.prepare('DELETE FROM courses').run();
-
+    
     const insertStmts = (arr || []).map((c) => {
       const id = (c.id !== undefined && c.id !== null && c.id !== '') ? c.id : null;
+      const selectionLocked = (c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1') ? 1 : 0;
       if (id) {
         return db.prepare(
-          `INSERT INTO courses (id, category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO courses (id, category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active, selection_locked)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id,
           c.category || '体育健康类',
@@ -744,30 +757,32 @@ async function handleCoursesBatchSave(db, request) {
           parseInt(c.limit_grade6, 10) || 0,
           parseInt(c.limit_grade7, 10) || 0,
           c.selected_count || 0,
-          c.is_active !== false ? 1 : 0
+          c.is_active !== false ? 1 : 0,
+          selectionLocked
         );
       }
       return db.prepare(
-        `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active, selection_locked)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
-        c.category || '体育健康类',
-        c.name || '',
-        c.description || '',
-        c.teacher || '',
-        c.location || '',
-        c.requirement || '',
-        parseInt(c.limit_grade6, 10) || 0,
-        parseInt(c.limit_grade7, 10) || 0,
-        c.selected_count || 0,
-        c.is_active !== false ? 1 : 0
+          c.category || '体育健康类',
+          c.name || '',
+          c.description || '',
+          c.teacher || '',
+          c.location || '',
+          c.requirement || '',
+          parseInt(c.limit_grade6, 10) || 0,
+          parseInt(c.limit_grade7, 10) || 0,
+          c.selected_count || 0,
+          c.is_active !== false ? 1 : 0,
+          selectionLocked
       );
     });
     await runD1Batch(db, insertStmts);
 
     // 用户绑定优先：保存课程后立刻用用户管理里的老师名覆盖
     await applyAllBoundTeachersToCourses(db);
-
+    
     const results = await db.prepare('SELECT * FROM courses').all();
     return json({ success: true, count: (results.results || []).length, courses: results.results || [] });
   } catch (e) {
@@ -803,8 +818,12 @@ async function handleCourseUpdate(db, request, id) {
   const body = await request.json();
   const existing = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(id).first();
   if (!existing) return json({ error: '课程不存在' }, 404);
+
+  const selectionLocked = body.selection_locked !== undefined
+    ? ((body.selection_locked === true || body.selection_locked === 1 || body.selection_locked === '1') ? 1 : 0)
+    : (Number(existing.selection_locked) === 1 ? 1 : 0);
   
-  await db.prepare(`UPDATE courses SET category=?, name=?, description=?, teacher=?, location=?, requirement=?, limit_grade6=?, limit_grade7=?, selected_count=?, is_active=? WHERE id=?`).bind(
+  await db.prepare(`UPDATE courses SET category=?, name=?, description=?, teacher=?, location=?, requirement=?, limit_grade6=?, limit_grade7=?, selected_count=?, is_active=?, selection_locked=? WHERE id=?`).bind(
     body.category !== undefined ? body.category : existing.category,
     body.name !== undefined ? body.name : existing.name,
     body.description !== undefined ? body.description : existing.description,
@@ -815,11 +834,48 @@ async function handleCourseUpdate(db, request, id) {
     body.limit_grade7 !== undefined ? body.limit_grade7 : existing.limit_grade7,
     body.selected_count !== undefined ? body.selected_count : existing.selected_count,
     body.is_active !== undefined ? (body.is_active ? 1 : 0) : existing.is_active,
+    selectionLocked,
     id
   ).run();
   
   const course = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(id).first();
   return json({ course });
+}
+
+async function handleCourseSelectionLock(db, request, id) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const existing = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(id).first();
+  if (!existing) return json({ error: '课程不存在' }, 404);
+  let body = {};
+  try { body = await request.json(); } catch (_) { body = {}; }
+  const locked = body.selection_locked !== undefined
+    ? ((body.selection_locked === true || body.selection_locked === 1 || body.selection_locked === '1') ? 1 : 0)
+    : (Number(existing.selection_locked) === 1 ? 0 : 1);
+  await db.prepare('UPDATE courses SET selection_locked = ? WHERE id = ?').bind(locked, id).run();
+  try {
+    if (existing.name) await syncTeacherClassroomStudentsFromSelections(db, existing.name);
+  } catch (syncErr) {
+    console.warn('selection-lock classroom sync:', syncErr && syncErr.message);
+  }
+  const course = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(id).first();
+  return json({
+    success: true,
+    course: {
+      id: course.id,
+      category: course.category || '',
+      name: course.name || '',
+      description: course.description || '',
+      teacher: course.teacher || '',
+      location: course.location || '',
+      requirement: course.requirement || '',
+      limit_grade6: course.limit_grade6 || 0,
+      limit_grade7: course.limit_grade7 || 0,
+      selected_count: course.selected_count || 0,
+      is_active: course.is_active !== 0,
+      selection_locked: Number(course.selection_locked) === 1
+    }
+  });
 }
 
 async function handleCourseDelete(db, request, id) {
@@ -2588,7 +2644,7 @@ async function handleUsersImport(db, request) {
     let imported = 0;
     let failed = 0;
     const errors = [];
-
+    
     const existingRes = await db.prepare('SELECT username FROM users').all();
     const existingSet = new Set((existingRes.results || []).map((r) => String(r.username || '').trim()));
 
@@ -2632,8 +2688,8 @@ async function handleUsersImport(db, request) {
           `INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, course_name, email, phone, status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
         ).bind(
-          u.username,
-          u.password,
+        u.username,
+        u.password,
           u.password_hash,
           u.salt,
           u.rolesStr,
@@ -2699,7 +2755,7 @@ async function handleUsersImport(db, request) {
     } catch (histErr) {
       console.error('Failed to record import history:', histErr.message);
     }
-
+    
     return json({ success: true, imported: imported, failed: failed, errors: errors });
   } catch (e) {
     return json({ error: '导入失败：' + e.message }, 400);
@@ -3142,9 +3198,12 @@ function studentsFromSelectionRows(selRows) {
 async function getAuthoritativeClassroomStudentsFromSelections(db, courseName) {
   const name = String(courseName || '').trim();
   if (!name) return [];
-  const selRes = await db.prepare(
-    'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ? ORDER BY id ASC'
-  ).bind(name).all();
+  const course = await db.prepare('SELECT selection_locked FROM courses WHERE name = ? LIMIT 1').bind(name).first();
+  const selectionLocked = course && Number(course.selection_locked) === 1;
+  const sql = selectionLocked
+    ? 'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ? AND COALESCE(is_locked, 0) = 1 ORDER BY id ASC'
+    : 'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ? ORDER BY id ASC';
+  const selRes = await db.prepare(sql).bind(name).all();
   return normalizeClassroomStudents(studentsFromSelectionRows(selRes.results || []));
 }
 
@@ -5460,6 +5519,12 @@ export async function onRequest(context) {
     if (method === 'GET') return handleCoursesGet(db);
     if (method === 'PUT') return handleCoursesBatchSave(db, request);
     if (method === 'POST') return handleCourseCreate(db, request);
+  }
+
+  // /api/courses/:id/selection-lock
+  const courseLockMatch = path.match(/^\/api\/courses\/(\d+)\/selection-lock$/);
+  if (courseLockMatch && method === 'PUT') {
+    return handleCourseSelectionLock(db, request, parseInt(courseLockMatch[1], 10));
   }
 
   // /api/courses/:id

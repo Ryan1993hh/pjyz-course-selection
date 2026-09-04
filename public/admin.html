@@ -1749,7 +1749,8 @@ table.courses-table td[data-field="location"]     { background-color: var(--col-
 table.courses-table td[data-field="requirement"]  { background-color: var(--col-7);  text-align: left; }
 table.courses-table td[data-field="limit_grade6"] { background-color: var(--col-8);  text-align: center; font-weight: 600; }
 table.courses-table td[data-field="limit_grade7"] { background-color: var(--col-9);  text-align: center; font-weight: 600; }
-table.courses-table td.row-actions                { background-color: var(--col-10); text-align: center; }
+table.courses-table td.row-actions                { background-color: var(--col-10); text-align: center; white-space: nowrap; }
+table.courses-table td.row-actions .btn-sm + .btn-sm { margin-left: 4px; }
 
 table.courses-table tbody tr:hover td.seq                        { background-color: var(--col-1-h); }
 table.courses-table tbody tr:hover td[data-field="category"]     { background-color: var(--col-2-h); }
@@ -4556,6 +4557,37 @@ function renderCourses(){
       td.addEventListener('click', function(){ startEdit(td, idx); });
     });
 
+    const actions = tr.querySelector('.row-actions');
+
+    const lockBtn = document.createElement('button');
+    lockBtn.className = c.selection_locked ? 'btn btn-warning btn-sm' : 'btn btn-outline btn-sm';
+    lockBtn.textContent = c.selection_locked ? '解锁' : '锁定';
+    lockBtn.title = c.selection_locked ? '解锁后可重新参与选课' : '锁定后选课页不可再选该课';
+    lockBtn.addEventListener('click', async function(){
+      if (!c.id) {
+        toast('请先保存课程后再锁定', 'warning');
+        return;
+      }
+      const nextLocked = !c.selection_locked;
+      lockBtn.disabled = true;
+      try {
+        const data = await request('PUT', '/api/courses/' + c.id + '/selection-lock', {
+          selection_locked: nextLocked
+        });
+        if (data && data.course) {
+          coursesData[idx].selection_locked = !!data.course.selection_locked;
+        } else {
+          coursesData[idx].selection_locked = nextLocked;
+        }
+        renderCourses();
+        toast(nextLocked ? '已锁定：选课页不可再选该课' : '已解锁：可重新参与选课', 'success');
+      } catch (e) {
+        toast('操作失败：' + e.message, 'error');
+        lockBtn.disabled = false;
+      }
+    });
+    actions.appendChild(lockBtn);
+
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-danger btn-sm';
     delBtn.textContent = '删除';
@@ -4564,7 +4596,7 @@ function renderCourses(){
       renderCourses();
       toast('已删除一行，点击"确认保存"以提交', 'warning');
     });
-    tr.querySelector('.row-actions').appendChild(delBtn);
+    actions.appendChild(delBtn);
 
     tbody.appendChild(tr);
   });
@@ -4632,7 +4664,11 @@ function startEdit(td, idx){
 async function loadCourses(){
   try {
     const data = await request('GET', '/api/courses');
-    coursesData = Array.isArray(data) ? data : (data.courses || []);
+    coursesData = (Array.isArray(data) ? data : (data.courses || [])).map(function(c){
+      return Object.assign({}, c, {
+        selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
+      });
+    });
     renderCourses();
   } catch(e){
     toast('加载课程失败：' + e.message, 'error');
@@ -4657,14 +4693,18 @@ async function saveCourses(){
         limit_grade6: parseInt(c.limit_grade6, 10) || 0,
         limit_grade7: parseInt(c.limit_grade7, 10) || 0,
         selected_count: c.selected_count || 0,
-        is_active: c.is_active !== false
+        is_active: c.is_active !== false,
+        selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
       };
     });
     const data = await request('PUT', '/api/courses', payload);
     if (data.success){
       if (data.courses && data.courses.length) {
         coursesData = data.courses.map(function(c){
-          return Object.assign({}, c, { is_active: c.is_active !== 0 && c.is_active !== false });
+          return Object.assign({}, c, {
+            is_active: c.is_active !== 0 && c.is_active !== false,
+            selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
+          });
         });
       }
       renderCourses();
