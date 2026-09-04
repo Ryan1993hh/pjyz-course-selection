@@ -788,7 +788,49 @@ async function handleAccountPasswordPut(db, request) {
 // ---- Courses ----
 async function handleCoursesGet(db) {
   const results = await db.prepare('SELECT * FROM courses').all();
-  const courses = results.results.map(c => ({
+  const courses = (results.results || []).map(mapCourseApiRow);
+  return json({ courses });
+}
+
+function normalizeCourseSaveRow(c, boundTeacherName) {
+  const name = String((c && c.name) || '');
+  const teacher = (boundTeacherName && String(boundTeacherName).trim())
+    ? String(boundTeacherName).trim()
+    : String((c && c.teacher) || '');
+  const selectionLocked = (c && (c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1')) ? 1 : 0;
+  const isActive = (c && c.is_active !== false && c.is_active !== 0) ? 1 : 0;
+  return {
+    category: (c && c.category) || '体育健康类',
+    name: name,
+    description: String((c && c.description) || ''),
+    teacher: teacher,
+    location: String((c && c.location) || ''),
+    requirement: String((c && c.requirement) || ''),
+    limit_grade6: parseInt(c && c.limit_grade6, 10) || 0,
+    limit_grade7: parseInt(c && c.limit_grade7, 10) || 0,
+    selected_count: parseInt(c && c.selected_count, 10) || 0,
+    is_active: isActive,
+    selection_locked: selectionLocked
+  };
+}
+
+function courseSaveRowEqualsExisting(existing, next) {
+  if (!existing || !next) return false;
+  return String(existing.category || '') === String(next.category || '')
+    && String(existing.name || '') === String(next.name || '')
+    && String(existing.description || '') === String(next.description || '')
+    && String(existing.teacher || '') === String(next.teacher || '')
+    && String(existing.location || '') === String(next.location || '')
+    && String(existing.requirement || '') === String(next.requirement || '')
+    && (parseInt(existing.limit_grade6, 10) || 0) === (parseInt(next.limit_grade6, 10) || 0)
+    && (parseInt(existing.limit_grade7, 10) || 0) === (parseInt(next.limit_grade7, 10) || 0)
+    && (parseInt(existing.selected_count, 10) || 0) === (parseInt(next.selected_count, 10) || 0)
+    && (existing.is_active !== 0 ? 1 : 0) === (next.is_active ? 1 : 0)
+    && (Number(existing.selection_locked) === 1 ? 1 : 0) === (next.selection_locked ? 1 : 0);
+}
+
+function mapCourseApiRow(c) {
+  return {
     id: c.id,
     category: c.category || '',
     name: c.name || '',
@@ -799,10 +841,9 @@ async function handleCoursesGet(db) {
     limit_grade6: c.limit_grade6 || 0,
     limit_grade7: c.limit_grade7 || 0,
     selected_count: c.selected_count || 0,
-    is_active: c.is_active !== 0,
+    is_active: c.is_active !== 0 && c.is_active !== false,
     selection_locked: Number(c.selection_locked) === 1
-  }));
-  return json({ courses });
+  };
 }
 
 async function handleCoursesBatchSave(db, request) {
@@ -811,55 +852,95 @@ async function handleCoursesBatchSave(db, request) {
   try {
     const body = await request.json();
     const arr = Array.isArray(body) ? body : (body.courses || []);
-    
-    await db.prepare('DELETE FROM courses').run();
-    
-    const insertStmts = (arr || []).map((c) => {
-      const id = (c.id !== undefined && c.id !== null && c.id !== '') ? c.id : null;
-      const selectionLocked = (c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1') ? 1 : 0;
-      if (id) {
-        return db.prepare(
-          `INSERT INTO courses (id, category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active, selection_locked)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          id,
-          c.category || '体育健康类',
-          c.name || '',
-          c.description || '',
-          c.teacher || '',
-          c.location || '',
-          c.requirement || '',
-          parseInt(c.limit_grade6, 10) || 0,
-          parseInt(c.limit_grade7, 10) || 0,
-          c.selected_count || 0,
-          c.is_active !== false ? 1 : 0,
-          selectionLocked
-        );
-      }
-      return db.prepare(
-        `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active, selection_locked)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(
-          c.category || '体育健康类',
-          c.name || '',
-          c.description || '',
-          c.teacher || '',
-          c.location || '',
-          c.requirement || '',
-          parseInt(c.limit_grade6, 10) || 0,
-          parseInt(c.limit_grade7, 10) || 0,
-          c.selected_count || 0,
-          c.is_active !== false ? 1 : 0,
-          selectionLocked
-      );
-    });
-    await runD1Batch(db, insertStmts);
 
-    // 用户绑定优先：保存课程后立刻用用户管理里的老师名覆盖
-    await applyAllBoundTeachersToCourses(db);
-    
-    const results = await db.prepare('SELECT * FROM courses').all();
-    return json({ success: true, count: (results.results || []).length, courses: results.results || [] });
+    // 差量保存：只写变更行，避免「全表删除 + 全量插入 + 二次老师同步」的多次 D1 往返
+    const [existingRes, teacherMap] = await Promise.all([
+      db.prepare('SELECT * FROM courses').all(),
+      getBoundTeacherNameMap(db)
+    ]);
+    const existingById = new Map();
+    (existingRes.results || []).forEach((row) => {
+      existingById.set(String(row.id), row);
+    });
+
+    const stmts = [];
+    const keepIds = new Set();
+    const outCourses = [];
+    let hasNewInserts = false;
+
+    for (const raw of (arr || [])) {
+      const name = String((raw && raw.name) || '').trim();
+      const boundTeacher = name ? teacherMap.get(name) : null;
+      const next = normalizeCourseSaveRow(raw, boundTeacher);
+      const rawId = (raw && raw.id !== undefined && raw.id !== null && raw.id !== '') ? raw.id : null;
+      const idKey = rawId != null ? String(rawId) : '';
+      const existing = idKey ? existingById.get(idKey) : null;
+
+      if (existing) {
+        keepIds.add(idKey);
+        if (!courseSaveRowEqualsExisting(existing, next)) {
+          stmts.push(
+            db.prepare(
+              `UPDATE courses SET category=?, name=?, description=?, teacher=?, location=?, requirement=?,
+               limit_grade6=?, limit_grade7=?, selected_count=?, is_active=?, selection_locked=? WHERE id=?`
+            ).bind(
+              next.category,
+              next.name,
+              next.description,
+              next.teacher,
+              next.location,
+              next.requirement,
+              next.limit_grade6,
+              next.limit_grade7,
+              next.selected_count,
+              next.is_active,
+              next.selection_locked,
+              existing.id
+            )
+          );
+        }
+        outCourses.push(mapCourseApiRow(Object.assign({ id: existing.id }, next)));
+      } else {
+        hasNewInserts = true;
+        stmts.push(
+          db.prepare(
+            `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active, selection_locked)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            next.category,
+            next.name,
+            next.description,
+            next.teacher,
+            next.location,
+            next.requirement,
+            next.limit_grade6,
+            next.limit_grade7,
+            next.selected_count,
+            next.is_active,
+            next.selection_locked
+          )
+        );
+        outCourses.push(mapCourseApiRow(Object.assign({ id: null }, next)));
+      }
+    }
+
+    existingById.forEach((row, idKey) => {
+      if (!keepIds.has(idKey)) {
+        stmts.push(db.prepare('DELETE FROM courses WHERE id = ?').bind(row.id));
+      }
+    });
+
+    if (stmts.length) {
+      await runD1Batch(db, stmts);
+    }
+
+    if (hasNewInserts) {
+      const results = await db.prepare('SELECT * FROM courses').all();
+      const courses = (results.results || []).map(mapCourseApiRow);
+      return json({ success: true, count: courses.length, courses: courses });
+    }
+
+    return json({ success: true, count: outCourses.length, courses: outCourses });
   } catch (e) {
     return json({ error: '保存失败：' + e.message }, 400);
   }
