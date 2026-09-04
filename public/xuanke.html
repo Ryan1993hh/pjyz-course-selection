@@ -3466,7 +3466,7 @@ function clearLocalSelectionDraft() {
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
       '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
-      '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列（建议含「性别」列）</span>';
+      '<span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列）</span>';
   }
 }
 
@@ -3762,7 +3762,7 @@ function resetState(silent) {
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
       '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
-      '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列（建议含「性别」列）</span>';
+      '<span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列）</span>';
   }
 
   // 6. 关闭可能打开的 modal / lottery
