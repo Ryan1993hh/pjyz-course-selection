@@ -4112,7 +4112,8 @@ function renderTable() {
           const lockedTitle = courseLocked
             ? ' title="该课程已选定学生，不参与选课"'
             : (needClassSel ? ' title="请先选择班级后再选课"' : '');
-          html += `<span class="slot empty${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-selection-locked="${courseLocked ? '1' : '0'}"${lockedTitle}>+ 点击选择</span>`;
+          const emptyLabel = courseLocked ? '不可选择' : '+ 点击选择';
+          html += `<span class="slot empty${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-selection-locked="${courseLocked ? '1' : '0'}"${lockedTitle}>${emptyLabel}</span>`;
         }
       });
     }
