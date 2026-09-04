@@ -1,6 +1,6 @@
 /**
  * 后台「班级名额看板」
- * 按年级隔离；不改课程全年级基础名额；调剂写入 class_course_quotas
+ * 页内切换（替换课程列表），非弹窗
  */
 (function (global) {
   'use strict';
@@ -8,8 +8,10 @@
   var state = {
     grade: '六年级',
     rows: [],
-    expanded: {}
+    expanded: {},
+    view: 'courses' // courses | board
   };
+  var mounted = false;
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -31,88 +33,66 @@
     else alert(msg);
   }
 
-  function ensureModal() {
-    var el = document.getElementById('classQuotaBoardModal');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'classQuotaBoardModal';
-    el.className = 'cqb-modal';
-    el.innerHTML =
-      '<div class="cqb-dialog" role="dialog" aria-modal="true" aria-labelledby="cqbTitle">' +
-      '  <div class="cqb-header">' +
-      '    <div>' +
-      '      <h3 id="cqbTitle">班级名额看板</h3>' +
-      '      <p class="cqb-desc">按年级独立运算；不改全年级统一基础名额；不删除内定学生</p>' +
-      '    </div>' +
-      '    <button type="button" class="cqb-close" id="cqbCloseBtn" aria-label="关闭">×</button>' +
-      '  </div>' +
-      '  <div class="cqb-toolbar">' +
-      '    <label class="cqb-grade-label">年级' +
-      '      <select id="cqbGradeSelect">' +
-      '        <option value="六年级">六年级</option>' +
-      '        <option value="七年级">七年级</option>' +
-      '      </select>' +
-      '    </label>' +
-      '    <button type="button" class="btn btn-primary btn-sm" id="cqbAutoFillBtn">一键名额补齐</button>' +
-      '    <button type="button" class="btn btn-outline btn-sm" id="cqbRestoreBtn">恢复初始配置</button>' +
-      '    <button type="button" class="btn btn-outline btn-sm" id="cqbRefreshBtn">刷新</button>' +
-      '  </div>' +
-      '  <div class="cqb-body">' +
-      '    <div class="cqb-table-wrap"><table class="cqb-table" id="cqbTable">' +
-      '      <thead><tr>' +
-      '        <th></th><th>班级名称</th><th>班级总人数</th><th>内定学生总数</th>' +
-      '        <th>普通学生数</th><th>总固定名额</th><th>普通可用总名额</th><th>名额状态</th>' +
-      '      </tr></thead>' +
-      '      <tbody id="cqbTbody"><tr><td colspan="8" class="cqb-empty">加载中…</td></tr></tbody>' +
-      '    </table></div>' +
-      '  </div>' +
-      '</div>';
-    document.body.appendChild(el);
+  function ensureStyles() {
+    if (document.getElementById('cqbStyle')) return;
+    var style = document.createElement('style');
+    style.id = 'cqbStyle';
+    style.textContent =
+      '.cqb-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:4px 0 14px;}' +
+      '.cqb-grade-label{font-size:13px;font-weight:600;color:#334155;display:inline-flex;align-items:center;gap:8px;}' +
+      '.cqb-grade-label select{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;}' +
+      '.cqb-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px;}' +
+      '.cqb-table{width:100%;border-collapse:collapse;font-size:13px;}' +
+      '.cqb-table th,.cqb-table td{padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap;}' +
+      '.cqb-table th{background:#f0fdfa;color:#0f766e;font-weight:700;position:sticky;top:0;z-index:1;}' +
+      '.cqb-table td.class-name{text-align:left;font-weight:600;}' +
+      '.cqb-empty{padding:28px!important;color:#94a3b8;}' +
+      '.cqb-status{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;}' +
+      '.cqb-status.balanced{background:#d1fae5;color:#047857;}' +
+      '.cqb-status.short{background:#fee2e2;color:#b91c1c;}' +
+      '.cqb-status.surplus{background:#e2e8f0;color:#475569;}' +
+      '.cqb-expand{border:1px solid #cbd5e1;background:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;}' +
+      '.cqb-size-input{width:64px;height:30px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;font-weight:600;}' +
+      '.cqb-detail-row td{background:#f8fafc;padding:0!important;}' +
+      '.cqb-detail{width:100%;border-collapse:collapse;font-size:12px;}' +
+      '.cqb-detail th,.cqb-detail td{padding:8px;border-bottom:1px solid #e2e8f0;}' +
+      '.cqb-detail th{background:#ecfeff;position:static;}' +
+      '.cqb-act{display:inline-flex;gap:4px;}' +
+      '.cqb-act button{height:28px;padding:0 8px;border-radius:6px;border:1px solid #99f6e4;background:#fff;color:#0f766e;font-size:11px;font-weight:700;cursor:pointer;}' +
+      '.cqb-act button:disabled{opacity:.45;cursor:not-allowed;}' +
+      '.cqb-adj-modal{position:fixed;inset:0;z-index:12100;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.45);padding:16px;}' +
+      '.cqb-adj-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:80vh;overflow:auto;padding:16px;}' +
+      '.cqb-adj-box h4{margin:0 0 10px;color:#0f766e;}' +
+      '.cqb-adj-box ul{margin:0;padding-left:18px;font-size:13px;line-height:1.6;}' +
+      '.cqb-adj-box .ok{margin-top:12px;width:100%;}';
+    document.head.appendChild(style);
+  }
 
-    if (!document.getElementById('cqbStyle')) {
-      var style = document.createElement('style');
-      style.id = 'cqbStyle';
-      style.textContent =
-        '.cqb-modal{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.55);}' +
-        '.cqb-modal.show{display:flex;}' +
-        '.cqb-dialog{width:min(1100px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.25);}' +
-        '.cqb-header{display:flex;justify-content:space-between;gap:12px;padding:16px 18px 8px;border-bottom:1px solid #e5e7eb;}' +
-        '.cqb-header h3{margin:0;font-size:18px;color:#0f766e;}' +
-        '.cqb-desc{margin:4px 0 0;font-size:12px;color:#64748b;}' +
-        '.cqb-close{border:none;background:transparent;font-size:28px;line-height:1;cursor:pointer;color:#64748b;}' +
-        '.cqb-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 18px;}' +
-        '.cqb-grade-label{font-size:13px;font-weight:600;color:#334155;display:inline-flex;align-items:center;gap:8px;}' +
-        '.cqb-grade-label select{height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;}' +
-        '.cqb-body{padding:0 18px 18px;}' +
-        '.cqb-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px;}' +
-        '.cqb-table{width:100%;border-collapse:collapse;font-size:13px;}' +
-        '.cqb-table th,.cqb-table td{padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap;}' +
-        '.cqb-table th{background:#f0fdfa;color:#0f766e;font-weight:700;position:sticky;top:0;z-index:1;}' +
-        '.cqb-table td.class-name{text-align:left;font-weight:600;}' +
-        '.cqb-empty{padding:28px!important;color:#94a3b8;}' +
-        '.cqb-status{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;}' +
-        '.cqb-status.balanced{background:#d1fae5;color:#047857;}' +
-        '.cqb-status.short{background:#fee2e2;color:#b91c1c;}' +
-        '.cqb-status.surplus{background:#e2e8f0;color:#475569;}' +
-        '.cqb-expand{border:1px solid #cbd5e1;background:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;}' +
-        '.cqb-size-input{width:64px;height:30px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;font-weight:600;}' +
-        '.cqb-detail-row td{background:#f8fafc;padding:0!important;}' +
-        '.cqb-detail{width:100%;border-collapse:collapse;font-size:12px;}' +
-        '.cqb-detail th,.cqb-detail td{padding:8px;border-bottom:1px solid #e2e8f0;}' +
-        '.cqb-detail th{background:#ecfeff;position:static;}' +
-        '.cqb-act{display:inline-flex;gap:4px;}' +
-        '.cqb-act button{height:28px;padding:0 8px;border-radius:6px;border:1px solid #99f6e4;background:#fff;color:#0f766e;font-size:11px;font-weight:700;cursor:pointer;}' +
-        '.cqb-act button:disabled{opacity:.45;cursor:not-allowed;}' +
-        '.cqb-adj-modal{position:fixed;inset:0;z-index:12100;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.45);padding:16px;}' +
-        '.cqb-adj-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:80vh;overflow:auto;padding:16px;}' +
-        '.cqb-adj-box h4{margin:0 0 10px;color:#0f766e;}' +
-        '.cqb-adj-box ul{margin:0;padding-left:18px;font-size:13px;line-height:1.6;}' +
-        '.cqb-adj-box .ok{margin-top:12px;width:100%;}';
-      document.head.appendChild(style);
-    }
+  function ensureMount() {
+    ensureStyles();
+    var mount = document.getElementById('classQuotaBoardMount');
+    if (!mount) return null;
+    if (mounted) return mount;
+    mount.innerHTML =
+      '<div class="cqb-toolbar">' +
+      '  <label class="cqb-grade-label">年级' +
+      '    <select id="cqbGradeSelect">' +
+      '      <option value="六年级">六年级</option>' +
+      '      <option value="七年级">七年级</option>' +
+      '    </select>' +
+      '  </label>' +
+      '  <button type="button" class="btn btn-primary btn-sm" id="cqbAutoFillBtn">一键名额补齐</button>' +
+      '  <button type="button" class="btn btn-outline btn-sm" id="cqbRestoreBtn">恢复初始配置</button>' +
+      '  <button type="button" class="btn btn-outline btn-sm" id="cqbRefreshBtn">刷新</button>' +
+      '</div>' +
+      '<div class="cqb-table-wrap"><table class="cqb-table" id="cqbTable">' +
+      '  <thead><tr>' +
+      '    <th></th><th>班级名称</th><th>班级总人数</th><th>内定学生总数</th>' +
+      '    <th>普通学生数</th><th>总固定名额</th><th>普通可用总名额</th><th>名额状态</th>' +
+      '  </tr></thead>' +
+      '  <tbody id="cqbTbody"><tr><td colspan="8" class="cqb-empty">加载中…</td></tr></tbody>' +
+      '</table></div>';
 
-    document.getElementById('cqbCloseBtn').addEventListener('click', close);
-    el.addEventListener('click', function (e) { if (e.target === el) close(); });
     document.getElementById('cqbGradeSelect').addEventListener('change', function (e) {
       state.grade = e.target.value;
       state.expanded = {};
@@ -121,19 +101,47 @@
     document.getElementById('cqbRefreshBtn').addEventListener('click', loadBoard);
     document.getElementById('cqbAutoFillBtn').addEventListener('click', onAutoFill);
     document.getElementById('cqbRestoreBtn').addEventListener('click', onRestore);
-    return el;
+    mounted = true;
+    return mount;
   }
 
-  function open() {
-    var modal = ensureModal();
-    document.getElementById('cqbGradeSelect').value = state.grade;
-    modal.classList.add('show');
+  function setActiveButtons() {
+    var boardBtn = document.getElementById('openClassQuotaBoardBtn');
+    var listBtn = document.getElementById('showCoursesListBtn');
+    if (boardBtn) boardBtn.classList.toggle('is-active', state.view === 'board');
+    if (listBtn) listBtn.classList.toggle('is-active', state.view === 'courses');
+  }
+
+  function showBoard() {
+    ensureMount();
+    state.view = 'board';
+    var list = document.getElementById('coursesListPanel');
+    var board = document.getElementById('classQuotaBoardPanel');
+    var upload = document.getElementById('courseUploadPanel');
+    if (list) list.style.display = 'none';
+    if (board) {
+      board.hidden = false;
+      board.style.display = '';
+    }
+    if (upload) upload.style.display = 'none';
+    setActiveButtons();
+    var gradeSel = document.getElementById('cqbGradeSelect');
+    if (gradeSel) gradeSel.value = state.grade;
     loadBoard();
   }
 
-  function close() {
-    var modal = document.getElementById('classQuotaBoardModal');
-    if (modal) modal.classList.remove('show');
+  function showCourses() {
+    state.view = 'courses';
+    var list = document.getElementById('coursesListPanel');
+    var board = document.getElementById('classQuotaBoardPanel');
+    var upload = document.getElementById('courseUploadPanel');
+    if (list) list.style.display = '';
+    if (board) {
+      board.style.display = 'none';
+      board.hidden = true;
+    }
+    if (upload) upload.style.display = '';
+    setActiveButtons();
   }
 
   async function loadBoard() {
@@ -322,8 +330,11 @@
   }
 
   function bindEntry() {
-    var btn = document.getElementById('openClassQuotaBoardBtn');
-    if (btn) btn.addEventListener('click', open);
+    var boardBtn = document.getElementById('openClassQuotaBoardBtn');
+    var listBtn = document.getElementById('showCoursesListBtn');
+    if (boardBtn) boardBtn.addEventListener('click', showBoard);
+    if (listBtn) listBtn.addEventListener('click', showCourses);
+    setActiveButtons();
   }
 
   if (document.readyState === 'loading') {
@@ -332,5 +343,10 @@
     bindEntry();
   }
 
-  global.ClassQuotaBoard = { open: open, close: close, reload: loadBoard };
+  global.ClassQuotaBoard = {
+    open: showBoard,
+    showCourses: showCourses,
+    close: showCourses,
+    reload: loadBoard
+  };
 })(window);
