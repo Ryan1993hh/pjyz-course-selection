@@ -1205,6 +1205,23 @@ tr.no-quota:hover td { opacity: 0.7; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 英文/较长姓名：允许换行完整显示，避免被省略号截断 */
+.name-card.is-latin {
+  font-size: 12px;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
+  overflow: visible;
+  text-overflow: unset;
+}
+.slot.filled.is-latin,
+.slot.filled.locked-seat.is-latin {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
+  max-width: 168px;
+  text-align: center;
+}
 .name-card:hover {
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
   color: white;
@@ -2789,7 +2806,7 @@ tr.no-quota:hover td { opacity: 0.7; }
       <span class="icon">📁</span>
       <div class="text-col" id="uploadTextCol">
         <span class="title"><span class="desktop-only">点击或拖拽上传学生名单</span><span class="mob-only">点击上传学生名单</span></span>
-        <span class="hint">支持 .xlsx / .xls 格式，需包含「姓名」列（建议含「性别」列）</span>
+        <span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列）</span>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
     </div>
@@ -4324,8 +4341,9 @@ function renderTable() {
         if (name) {
           const locked = lockedStudentNames.has(name);
           const lockedCls = locked ? ' locked-seat' : '';
-          const tip = locked ? '该生已被确定，不可修改' : '点击取消';
-          html += `<span class="slot filled${lockedCls}" data-course="${c.id}" data-slot="${idx}" data-locked="${locked ? '1' : '0'}" title="${tip}">${esc(name)}</span>`;
+          const latinCls = isLatinHeavyName(name) ? ' is-latin' : '';
+          const tip = locked ? '该生已被确定，不可修改' : ('点击取消 · ' + name);
+          html += `<span class="slot filled${lockedCls}${latinCls}" data-course="${c.id}" data-slot="${idx}" data-locked="${locked ? '1' : '0'}" title="${esc(tip)}">${esc(name)}</span>`;
         } else {
           const lockedCls = (needClassSel || courseLocked) ? ' locked' : '';
           const lockedTitle = courseLocked
@@ -4480,11 +4498,12 @@ function renderNameGrid(filter) {
     const disabled = isAssigned || isLocked;
     const g = getStudentGender(name);
     const genderTag = g ? `<span class="gender-tag">${esc(g)}</span>` : '';
-    let title = '';
+    const latinCls = isLatinHeavyName(name) ? ' is-latin' : '';
+    let title = esc(name);
     if (isLocked) title = '该生已被确定，不可修改';
     else if (isAssigned) title = '已选其他课程';
     const extra = isLocked ? ' 🔒' : (isAssigned ? ' ✓' : '');
-    return `<div class="name-card ${disabled ? 'disabled' : ''}${isLocked ? ' locked-pre' : ''}" data-name="${esc(name)}" data-locked="${isLocked ? '1' : '0'}" title="${title}">${esc(name)}${genderTag}${extra}</div>`;
+    return `<div class="name-card${latinCls} ${disabled ? 'disabled' : ''}${isLocked ? ' locked-pre' : ''}" data-name="${esc(name)}" data-locked="${isLocked ? '1' : '0'}" title="${title}">${esc(name)}${genderTag}${extra}</div>`;
   }).join('');
   nameGrid.querySelectorAll('.name-card:not(.disabled)').forEach(card => {
     card.addEventListener('click', onNameClick);
@@ -4541,6 +4560,82 @@ async function ensureXLSXReady() {
   return true;
 }
 
+/** 姓名是否以拉丁字母为主（英文名显示优化） */
+function isLatinHeavyName(name) {
+  const s = String(name || '');
+  if (!s) return false;
+  const latin = (s.match(/[A-Za-z]/g) || []).length;
+  const cjk = (s.match(/[\u4e00-\u9fff]/g) || []).length;
+  return latin >= 2 && latin > cjk;
+}
+
+/** 规范化导入的学生姓名：保留中英文、空格、连字符、撇号等 */
+function normalizeImportedStudentName(raw) {
+  if (raw == null) return '';
+  // Excel 数字单元格（学号）不当作姓名
+  if (typeof raw === 'number' && isFinite(raw)) return '';
+  let s = String(raw).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+  if (!s) return '';
+  s = s.replace(/\s+/g, ' ');
+  // 纯序号
+  if (/^\d{1,8}$/.test(s)) return '';
+  // 误入表头
+  if (/^(姓名|名字|学生姓名|英文名|english\s*name|student\s*name|full\s*name|name)$/i.test(s)) return '';
+  // 至少包含一个字母或汉字
+  if (!/[A-Za-z\u4e00-\u9fff]/.test(s)) return '';
+  // 过长保护
+  if (s.length > 60) s = s.slice(0, 60).trim();
+  return s;
+}
+
+function normalizeHeaderLabel(h) {
+  return String(h == null ? '' : h).trim().toLowerCase().replace(/[\s_\-（）()]/g, '');
+}
+
+/** 识别姓名列；同时返回英文名列作为空姓名时的回退 */
+function findStudentNameColumns(headerRow) {
+  const headers = (headerRow || []).map(function(h) { return String(h == null ? '' : h).trim(); });
+  const norms = headers.map(normalizeHeaderLabel);
+  let nameIdx = -1;
+  let englishIdx = -1;
+
+  const primaryExact = ['姓名', '学生姓名', '名字', '学员姓名'];
+  for (let i = 0; i < headers.length; i++) {
+    if (primaryExact.indexOf(headers[i]) >= 0) { nameIdx = i; break; }
+  }
+  if (nameIdx < 0) {
+    for (let i = 0; i < norms.length; i++) {
+      const n = norms[i];
+      if (/^(姓名|学生姓名|名字|学员姓名)$/.test(n) || /学生姓名|学员姓名/.test(n)) {
+        nameIdx = i;
+        break;
+      }
+    }
+  }
+
+  for (let i = 0; i < norms.length; i++) {
+    const n = norms[i];
+    if (
+      n === '英文名' || n === '英文姓名' || n === '外文名' ||
+      n === 'englishname' || n === 'engname' ||
+      n === 'studentname' || n === 'fullname' || n === 'name'
+    ) {
+      if (englishIdx < 0 && i !== nameIdx) englishIdx = i;
+    }
+  }
+  // 「Name」单独作为主姓名列
+  if (nameIdx < 0) {
+    for (let i = 0; i < norms.length; i++) {
+      if (norms[i] === 'name' || norms[i] === 'studentname' || norms[i] === 'fullname' || norms[i] === 'englishname' || norms[i] === '英文名') {
+        nameIdx = i;
+        break;
+      }
+    }
+  }
+
+  return { nameIdx: nameIdx, englishIdx: englishIdx, headerFound: nameIdx >= 0 || englishIdx >= 0 };
+}
+
 async function handleFile(file) {
   if (!file) return;
   if (!(await ensureXLSXReady())) return;
@@ -4556,47 +4651,65 @@ async function handleFile(file) {
       const wb = XLSX.read(data, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       // 以二维数组形式读取（保留空单元格为空串）
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
       if (rows.length === 0) {
         showToast('Excel 文件为空', 'error');
         return;
       }
-      // 查找"姓名"列：优先匹配常见表头
-      const header = rows[0].map(h => String(h).trim());
-      let nameIdx = header.findIndex(h =>
-        h === '姓名' || h === '名字' || h === '学生姓名' || /^name$/i.test(h)
-      );
-      const genderIdx = header.findIndex(h =>
-        h === '性别' || h === '学生性别' || /^gender$/i.test(h) || h === '男女'
-      );
-      let headerFound = nameIdx !== -1;
+      const header = rows[0].map(function(h) { return String(h).trim(); });
+      const cols = findStudentNameColumns(header);
+      let nameIdx = cols.nameIdx;
+      const englishIdx = cols.englishIdx;
+      let headerFound = cols.headerFound;
       if (!headerFound) {
-        // 未找到姓名列 → 退而求其次使用第一列
+        // 未找到姓名列 → 退而求其次使用第一列非纯数字列
         nameIdx = 0;
+        for (let c = 0; c < header.length; c++) {
+          const sample = normalizeImportedStudentName(rows[Math.min(1, rows.length - 1)][c]);
+          if (sample) { nameIdx = c; break; }
+        }
       }
-      // 判断第一行是否为表头（首单元格是否包含"姓名/名字/name"字样）
-      const firstCell = String(rows[0][nameIdx] || '').trim();
-      const looksLikeHeader = /姓名|名字|name/i.test(firstCell);
+      const genderIdx = header.findIndex(function(h) {
+        return h === '性别' || h === '学生性别' || /^gender$/i.test(h) || h === '男女';
+      });
+
+      const firstPrimary = String(rows[0][nameIdx >= 0 ? nameIdx : 0] || '').trim();
+      const firstEnglish = englishIdx >= 0 ? String(rows[0][englishIdx] || '').trim() : '';
+      const looksLikeHeader = /姓名|名字|name|英文/i.test(firstPrimary + firstEnglish);
       const startRow = looksLikeHeader ? 1 : 0;
 
-      // 提取学生姓名
+      // 提取学生姓名（中文名优先；空则回退英文名列）
       const names = [];
       const genders = {};
       for (let i = startRow; i < rows.length; i++) {
-        const cell = rows[i][nameIdx];
-        const name = cell ? String(cell).trim() : '';
-        if (name) {
-          names.push(name);
-          if (genderIdx !== -1) {
-            const g = normalizeGender(rows[i][genderIdx]);
-            if (g) genders[name] = g;
-          }
+        const row = rows[i] || [];
+        let name = '';
+        if (nameIdx >= 0) name = normalizeImportedStudentName(row[nameIdx]);
+        if (!name && englishIdx >= 0) name = normalizeImportedStudentName(row[englishIdx]);
+        // 同一格可能写成「中文名/英文名」或「中文名（English）」
+        if (!name && nameIdx >= 0) {
+          const raw = String(row[nameIdx] == null ? '' : row[nameIdx]).trim();
+          const m = raw.match(/[A-Za-z][A-Za-z0-9·•．.\-'’\s]{1,40}/);
+          if (m) name = normalizeImportedStudentName(m[0]);
+        }
+        if (!name) continue;
+        names.push(name);
+        if (genderIdx !== -1) {
+          const g = normalizeGender(row[genderIdx]);
+          if (g) genders[name] = g;
         }
       }
-      // 去重
-      const unique = [...new Set(names)];
+      // 去重（大小写不敏感合并英文名，保留首次写法）
+      const unique = [];
+      const seen = new Set();
+      names.forEach(function(n) {
+        const key = /[A-Za-z]/.test(n) && !/[\u4e00-\u9fff]/.test(n) ? n.toLowerCase() : n;
+        if (seen.has(key)) return;
+        seen.add(key);
+        unique.push(n);
+      });
       if (unique.length === 0) {
-        showToast('未读取到任何学生姓名', 'error');
+        showToast('未读取到任何学生姓名（支持中文名与英文名）', 'error');
         return;
       }
       // 重置选课状态；班主任上传名单优先于后台录入
@@ -4623,17 +4736,17 @@ async function handleFile(file) {
       renderAll();
       refreshPreEnrollments().then(function(n) {
         if (!headerFound) {
-          showToast(`未找到"姓名"列，已使用第一列作为姓名（共 ${unique.length} 人）` + (n ? '，已同步内定学生 ' + n + ' 人' : ''), 'warning');
+          showToast(`未找到"姓名"列，已自动识别姓名列（共 ${unique.length} 人，含英文名）` + (n ? '，已同步内定学生 ' + n + ' 人' : ''), 'warning');
         } else if (n > 0) {
-          showToast(`成功读取 ${unique.length} 名学生，已同步内定学生 ${n} 人`, 'success');
+          showToast(`成功读取 ${unique.length} 名学生（支持英文名），已同步内定学生 ${n} 人`, 'success');
         } else {
-          showToast(`成功读取 ${unique.length} 名学生`, 'success');
+          showToast(`成功读取 ${unique.length} 名学生（支持中英文姓名）`, 'success');
         }
       }).catch(function() {
         if (!headerFound) {
-          showToast(`未找到"姓名"列，已使用第一列作为姓名（共 ${unique.length} 人）`, 'warning');
+          showToast(`未找到"姓名"列，已自动识别姓名列（共 ${unique.length} 人）`, 'warning');
         } else {
-          showToast(`成功读取 ${unique.length} 名学生`, 'success');
+          showToast(`成功读取 ${unique.length} 名学生（支持中英文姓名）`, 'success');
         }
       });
       return;
@@ -5465,7 +5578,7 @@ document.addEventListener('keydown', e => {
     displayPool.forEach(function (txt, i) {
       var c = document.createElement('div');
       c.className = 'shuffle-card shuffling';
-      c.textContent = txt.length > 4 ? txt.slice(0, 3) + '…' : txt;
+      c.textContent = txt.length > 12 ? txt.slice(0, 11) + '…' : txt;
       c.style.animationDelay = (i * 0.05) + 's';
       m2_deck.appendChild(c);
       cards.push(c);
@@ -5478,7 +5591,7 @@ document.addEventListener('keydown', e => {
       var shuffledDisplay = shuffle(displayPool);
       cards.forEach(function (c, i) {
         var txt = shuffledDisplay[i];
-        c.textContent = txt.length > 4 ? txt.slice(0, 3) + '…' : txt;
+        c.textContent = txt.length > 12 ? txt.slice(0, 11) + '…' : txt;
         c.classList.remove('shuffling');
         void c.offsetWidth;
         c.classList.add('shuffling');
