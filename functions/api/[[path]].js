@@ -867,6 +867,9 @@ async function handleCoursesBatchSave(db, request) {
     const keepIds = new Set();
     const outCourses = [];
     let hasNewInserts = false;
+    let updatedCount = 0;
+    let insertedCount = 0;
+    let deletedCount = 0;
 
     for (const raw of (arr || [])) {
       const name = String((raw && raw.name) || '').trim();
@@ -879,6 +882,7 @@ async function handleCoursesBatchSave(db, request) {
       if (existing) {
         keepIds.add(idKey);
         if (!courseSaveRowEqualsExisting(existing, next)) {
+          updatedCount += 1;
           stmts.push(
             db.prepare(
               `UPDATE courses SET category=?, name=?, description=?, teacher=?, location=?, requirement=?,
@@ -902,6 +906,7 @@ async function handleCoursesBatchSave(db, request) {
         outCourses.push(mapCourseApiRow(Object.assign({ id: existing.id }, next)));
       } else {
         hasNewInserts = true;
+        insertedCount += 1;
         stmts.push(
           db.prepare(
             `INSERT INTO courses (category, name, description, teacher, location, requirement, limit_grade6, limit_grade7, selected_count, is_active, selection_locked)
@@ -926,6 +931,7 @@ async function handleCoursesBatchSave(db, request) {
 
     existingById.forEach((row, idKey) => {
       if (!keepIds.has(idKey)) {
+        deletedCount += 1;
         stmts.push(db.prepare('DELETE FROM courses WHERE id = ?').bind(row.id));
       }
     });
@@ -937,10 +943,26 @@ async function handleCoursesBatchSave(db, request) {
     if (hasNewInserts) {
       const results = await db.prepare('SELECT * FROM courses').all();
       const courses = (results.results || []).map(mapCourseApiRow);
-      return json({ success: true, count: courses.length, courses: courses });
+      return json({
+        success: true,
+        count: courses.length,
+        changed: updatedCount + insertedCount + deletedCount,
+        updated: updatedCount,
+        inserted: insertedCount,
+        deleted: deletedCount,
+        courses: courses
+      });
     }
 
-    return json({ success: true, count: outCourses.length, courses: outCourses });
+    return json({
+      success: true,
+      count: outCourses.length,
+      changed: updatedCount + insertedCount + deletedCount,
+      updated: updatedCount,
+      inserted: insertedCount,
+      deleted: deletedCount,
+      courses: outCourses
+    });
   } catch (e) {
     return json({ error: '保存失败：' + e.message }, 400);
   }

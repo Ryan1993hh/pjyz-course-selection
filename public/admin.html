@@ -4591,6 +4591,34 @@ function escapeAttr(s){
 /* ============ Module 1: Courses ============ */
 const CATEGORIES = ['体育健康类','艺术技艺类','人文社科类'];
 let coursesData = [];
+let coursesSavedSnapshot = '';
+
+function buildCoursesSnapshot(list) {
+  return JSON.stringify((list || []).map(function(c){
+    return {
+      id: c.id == null ? '' : String(c.id),
+      category: c.category || '体育健康类',
+      name: c.name || '',
+      description: c.description || '',
+      teacher: c.teacher || '',
+      location: c.location || '',
+      requirement: c.requirement || '',
+      limit_grade6: parseInt(c.limit_grade6, 10) || 0,
+      limit_grade7: parseInt(c.limit_grade7, 10) || 0,
+      selected_count: parseInt(c.selected_count, 10) || 0,
+      is_active: c.is_active !== false && c.is_active !== 0,
+      selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
+    };
+  }));
+}
+
+function markCoursesSaved(list) {
+  coursesSavedSnapshot = buildCoursesSnapshot(list == null ? coursesData : list);
+}
+
+function isCoursesDirty() {
+  return buildCoursesSnapshot(coursesData) !== coursesSavedSnapshot;
+}
 
 function renderCourses(){
   const tbody = document.getElementById('coursesBody');
@@ -4740,6 +4768,7 @@ async function loadCourses(){
         selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
       });
     });
+    markCoursesSaved(coursesData);
     renderCourses();
   } catch(e){
     toast('加载课程失败：' + e.message, 'error');
@@ -4748,6 +4777,10 @@ async function loadCourses(){
 
 async function saveCourses(){
   const btn = document.getElementById('saveCoursesBtn');
+  if (!isCoursesDirty()) {
+    toast('没有需要保存的修改', 'info');
+    return;
+  }
   btn.disabled = true;
   const prevText = btn.textContent;
   btn.textContent = '保存中…';
@@ -4770,16 +4803,29 @@ async function saveCourses(){
     });
     const data = await request('PUT', '/api/courses', payload);
     if (data.success){
-      if (data.courses && data.courses.length) {
+      const needRefreshIds = (data.inserted || 0) > 0 || (data.courses || []).some(function(c){ return c && c.id != null; });
+      if (data.courses && data.courses.length && needRefreshIds) {
         coursesData = data.courses.map(function(c){
           return Object.assign({}, c, {
             is_active: c.is_active !== 0 && c.is_active !== false,
             selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
           });
         });
+        renderCourses();
       }
-      renderCourses();
-      toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
+      markCoursesSaved(coursesData);
+      const changed = data.changed != null ? data.changed : null;
+      if (changed === 0) {
+        toast('保存完成：内容无变化', 'success');
+      } else if (changed != null) {
+        const parts = [];
+        if (data.updated) parts.push('更新 ' + data.updated);
+        if (data.inserted) parts.push('新增 ' + data.inserted);
+        if (data.deleted) parts.push('删除 ' + data.deleted);
+        toast('保存成功（' + (parts.join('，') || ('变更 ' + changed)) + '）', 'success');
+      } else {
+        toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
+      }
     } else {
       toast('保存失败', 'error');
     }
