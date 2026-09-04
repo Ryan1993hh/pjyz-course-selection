@@ -694,7 +694,56 @@ body {
   background-repeat: no-repeat;
   background-position: right 4px center;
 }
-.stat-input select:disabled { color: var(--muted); cursor: not-allowed; }
+.stat-input select:disabled {
+  color: var(--text);
+  cursor: not-allowed;
+  opacity: 0.92;
+  background-image: none;
+}
+.stat-input.is-locked {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.stat-input.is-locked select:disabled {
+  color: #334155;
+}
+.stat-class-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.stat-class-row select {
+  flex: 1;
+  min-width: 0;
+}
+.stat-reselect-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(13, 148, 136, 0.45);
+  background: #fff;
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.stat-reselect-btn:hover {
+  background: #f0fdfa;
+  border-color: var(--primary);
+}
+.stat-reselect-btn.is-unlocked {
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #b45309;
+  background: #fffbeb;
+}
 .stat-input select option { font-weight: normal; }
 .stat-card {
   padding: 8px 18px;
@@ -2161,6 +2210,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   .control-bar .stat-selected { grid-column: 2; grid-row: 3; }
   .control-bar .stat-unselected { grid-column: 3; grid-row: 3; }
   .control-bar .stat-reset-btn { grid-column: 4; grid-row: 3; }
+  .stat-reselect-btn { height: 28px; padding: 0 8px; font-size: 11px; }
   .stat-input { min-width: 0; padding: 6px 8px; }
   .stat-input label { font-size: 11px; margin-bottom: 2px; }
   .stat-input select { font-size: 14px; padding-right: 18px; }
@@ -3634,6 +3684,7 @@ function resetState(silent) {
   lockedStudentNames = new Set();
   studentListSource = '';
   rosterReadyTip = false;
+  classSelectUnlocked = false;
 
   // 2. 重置所有课程的 students 为初始空槽（按 limit 初始化）
   COURSES.forEach(function (c) {
@@ -3654,7 +3705,10 @@ function resetState(silent) {
 
   if (silent) return;
 
-  // 4. UI：上传模块恢复到初始文案
+  // 4. 班主任恢复管理员绑定的年级班级（并重新锁定）
+  applyBanzhurenClassPreset();
+
+  // 5. UI：上传模块恢复到初始文案
   var uploadTextCol = document.getElementById('uploadTextCol');
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
@@ -3662,11 +3716,11 @@ function resetState(silent) {
       '<span class="hint">支持 .xlsx / .xls，需要包含「姓名」列（建议含「性别」列）</span>';
   }
 
-  // 5. 关闭可能打开的 modal / lottery
+  // 6. 关闭可能打开的 modal / lottery
   try { closeModal(); } catch (_) { /* 忽略 */ }
   try { closeLottery(); } catch (_) { /* 忽略 */ }
 
-  // 6. 重渲染 UI
+  // 7. 重渲染 UI
   renderAll();
 }
 
@@ -3678,6 +3732,8 @@ let studentListSource = ''; // upload | roster | local | server — 名单来源
 let gradeName = '';         // 年级名称（六年级 / 七年级）
 let classNumber = '';       // 班级序号（如 "3"）
 let className = '';         // 组合后的班级名称（如 "六年级(3)班"）
+let banzhurenClassBound = false; // 管理员已为班主任绑定年级班级
+let classSelectUnlocked = false; // 点击「重选班级」后允许改选
 let fileName = '';           // 上传的文件名
 let lockedStudentNames = new Set(); // 提前录课锁定学生（不可退出/改选）
 let currentSelect = null;   // 当前正在选课的位置 { courseId, slotIndex }
@@ -3849,27 +3905,40 @@ function esc(str) {
 }
 
 // ===== 渲染：信息统计栏 =====
+function isClassSelectLocked() {
+  return !!banzhurenClassBound && !classSelectUnlocked;
+}
+
 function renderStats() {
   if (!statsCard) return;
   const total = students.length;
   const selected = countSelected();
   const unselected = total - selected;
+  const classLocked = isClassSelectLocked();
+  const lockAttr = classLocked ? ' disabled' : (!gradeName ? ' disabled' : '');
+  const lockCls = classLocked ? ' is-locked' : '';
   // 直接输出子节点（父容器 statsCard 本身就是 .stats-bar 且 display: contents，平铺到控制条 grid）
   statsCard.innerHTML = `
-      <div class="stat-input stat-input-class stat-grade">
+      <div class="stat-input stat-input-class stat-grade${lockCls}">
         <label>年级</label>
-        <select id="gradeSelect">
+        <select id="gradeSelect"${classLocked ? ' disabled' : ''}>
           <option value="">请选择</option>
           <option value="六年级" ${gradeName === '六年级' ? 'selected' : ''}>六年级</option>
           <option value="七年级" ${gradeName === '七年级' ? 'selected' : ''}>七年级</option>
         </select>
       </div>
-      <div class="stat-input stat-input-class stat-class">
+      <div class="stat-input stat-input-class stat-class${lockCls}">
         <label>班级</label>
-        <select id="classSelect" ${!gradeName ? 'disabled' : ''}>
-          <option value="">请先选择年级</option>
-          ${buildClassOptions()}
-        </select>
+        <div class="stat-class-row">
+          <select id="classSelect"${lockAttr}>
+            <option value="">${gradeName ? '请选择班级' : '请先选择年级'}</option>
+            ${buildClassOptions()}
+          </select>
+          ${banzhurenClassBound ? `
+          <button type="button" class="stat-reselect-btn${classSelectUnlocked ? ' is-unlocked' : ''}" id="reselectClassBtn" title="${classSelectUnlocked ? '已可修改年级班级' : '解锁后可改选其他班级'}">
+            ${classSelectUnlocked ? '已解锁' : '重选班级'}
+          </button>` : ''}
+        </div>
       </div>
       <div class="stat-roster-tip${rosterReadyTip ? ' show' : ''}" id="rosterReadyTip" aria-live="polite">
         <span class="tip-dot" aria-hidden="true"></span>
@@ -3894,8 +3963,21 @@ function renderStats() {
   // 绑定年级、班级下拉联动
   const gradeSelect = document.getElementById('gradeSelect');
   const classSelect = document.getElementById('classSelect');
+  const reselectBtn = document.getElementById('reselectClassBtn');
+  if (reselectBtn) {
+    reselectBtn.addEventListener('click', function () {
+      if (classSelectUnlocked) {
+        showToast('年级班级已可修改', 'success');
+        return;
+      }
+      classSelectUnlocked = true;
+      renderAll();
+      showToast('已解锁，可重新选择年级和班级', 'success');
+    });
+  }
   if (gradeSelect) {
     gradeSelect.addEventListener('change', e => {
+      if (isClassSelectLocked()) return;
       gradeName = e.target.value;
       classNumber = '';
       className = '';
@@ -3907,6 +3989,7 @@ function renderStats() {
   }
   if (classSelect) {
     classSelect.addEventListener('change', async e => {
+      if (isClassSelectLocked()) return;
       classNumber = e.target.value;
       updateClassName();
       await refreshPreEnrollments();
@@ -3960,20 +4043,33 @@ function parseClassNameToGradeAndNumber(classStr) {
 function applyBanzhurenClassPreset() {
   try {
     const userStr = localStorage.getItem('pjyz_user');
-    if (!userStr) return;
+    if (!userStr) {
+      banzhurenClassBound = false;
+      return;
+    }
     const user = JSON.parse(userStr);
     const roles = user.roles && user.roles.length
       ? user.roles
       : (user.role ? [user.role] : []);
-    if (roles.indexOf('banzhuren') === -1) return;
+    if (roles.indexOf('banzhuren') === -1) {
+      banzhurenClassBound = false;
+      return;
+    }
 
     const parsed = parseClassNameToGradeAndNumber(user.class_name || '');
-    if (!parsed.grade || !parsed.classNum) return;
+    if (!parsed.grade || !parsed.classNum) {
+      banzhurenClassBound = false;
+      return;
+    }
 
-    gradeName = parsed.grade;
-    classNumber = parsed.classNum;
-    updateClassName();
-    syncCourseSlots();
+    banzhurenClassBound = true;
+    // 未解锁时始终回填管理员绑定的年级班级
+    if (!classSelectUnlocked) {
+      gradeName = parsed.grade;
+      classNumber = parsed.classNum;
+      updateClassName();
+      syncCourseSlots();
+    }
   } catch (e) {
     console.warn('applyBanzhurenClassPreset:', e);
   }
@@ -4066,6 +4162,12 @@ async function syncUserProfile() {
     const data = await apiRequest('GET', '/api/auth/me');
     if (data && data.user) {
       localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+      const prevGrade = gradeName;
+      const prevClass = classNumber;
+      applyBanzhurenClassPreset();
+      if (gradeName !== prevGrade || classNumber !== prevClass) {
+        renderAll();
+      }
     }
   } catch (e) {
     console.warn('syncUserProfile:', e);
