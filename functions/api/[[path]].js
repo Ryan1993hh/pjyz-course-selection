@@ -2805,6 +2805,12 @@ async function handleClassQuotaAutoFill(db, request) {
   const grade = String(body.grade || '').trim();
   if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
 
+  const priorityIds = Array.isArray(body.priority_course_ids)
+    ? body.priority_course_ids.map((x) => parseInt(x, 10)).filter((n) => !isNaN(n))
+    : [];
+  if (!priorityIds.length) return json({ error: '请先选择优先调剂的课程' }, 400);
+  const prioritySet = new Set(priorityIds.map(String));
+
   const ctx = await loadQuotaBoardContext(db, grade);
   // working quotas: classNum -> courseId -> effective
   const working = {};
@@ -2843,70 +2849,94 @@ async function handleClassQuotaAutoFill(db, request) {
     return (eff - 1) >= pre;
   }
 
-  // 第一优先级：同课程定向补齐
-  ctx.courses.forEach((course) => {
-    if (Number(course.selection_locked) === 1) return;
-    let guard = 0;
-    while (guard++ < 200) {
-      const rows = snapshotRows();
-      const donors = quotaBoardClassNums().filter((cn) => canDonate(cn, course));
-      const receivers = rows
-        .filter((r) => r.gap > 0)
-        .sort((a, b) => b.gap - a.gap);
-      if (!donors.length || !receivers.length) break;
-      const donorCn = donors[0];
-      const recv = receivers[0];
-      const cid = String(course.id);
-      working[donorCn][cid] = working[donorCn][cid] - 1;
-      working[recv.class_number][cid] = working[recv.class_number][cid] + 1;
-      adjustments.push({
-        type: 'same_course',
-        course_id: course.id,
-        course_name: course.name,
-        from_class: donorCn,
-        to_class: recv.class_number,
-        amount: 1
-      });
-    }
+  // 优先课程在前，其余在后
+  const orderedCourses = ctx.courses.slice().sort((a, b) => {
+    const ap = prioritySet.has(String(a.id)) ? 0 : 1;
+    const bp = prioritySet.has(String(b.id)) ? 0 : 1;
+    if (ap !== bp) return ap - bp;
+    return Number(a.id) - Number(b.id);
   });
+  const priorityCourses = orderedCourses.filter((c) => prioritySet.has(String(c.id)));
+  const otherCourses = orderedCourses.filter((c) => !prioritySet.has(String(c.id)));
 
-  // 第二优先级：跨课程兜底
-  let guard2 = 0;
-  while (guard2++ < 500) {
-    const rows = snapshotRows();
-    const receivers = rows.filter((r) => r.gap > 0).sort((a, b) => b.gap - a.gap);
-    if (!receivers.length) break;
-    let donated = false;
-    for (const course of ctx.courses) {
-      if (Number(course.selection_locked) === 1) continue;
-      const donors = quotaBoardClassNums().filter((cn) => canDonate(cn, course));
-      if (!donors.length) continue;
-      const donorCn = donors[0];
-      const recv = receivers[0];
-      // 接收方加到一门未锁死课程上（优先本课程）
-      let targetCourse = course;
-      if (Number(targetCourse.selection_locked) === 1) {
-        targetCourse = ctx.courses.find((c) => Number(c.selection_locked) !== 1) || course;
+  function runSameCoursePass(courseList) {
+    courseList.forEach((course) => {
+      if (Number(course.selection_locked) === 1) return;
+      let guard = 0;
+      while (guard++ < 200) {
+        const rows = snapshotRows();
+        const donors = quotaBoardClassNums().filter((cn) => canDonate(cn, course));
+        const receivers = rows
+          .filter((r) => r.gap > 0)
+          .sort((a, b) => b.gap - a.gap);
+        if (!donors.length || !receivers.length) break;
+        const donorCn = donors[0];
+        const recv = receivers[0];
+        const cid = String(course.id);
+        working[donorCn][cid] = working[donorCn][cid] - 1;
+        working[recv.class_number][cid] = working[recv.class_number][cid] + 1;
+        adjustments.push({
+          type: 'same_course',
+          priority: prioritySet.has(String(course.id)),
+          course_id: course.id,
+          course_name: course.name,
+          from_class: donorCn,
+          to_class: recv.class_number,
+          amount: 1
+        });
       }
-      const cidFrom = String(course.id);
-      const cidTo = String(targetCourse.id);
-      working[donorCn][cidFrom] = working[donorCn][cidFrom] - 1;
-      working[recv.class_number][cidTo] = working[recv.class_number][cidTo] + 1;
-      adjustments.push({
-        type: 'cross_course',
-        course_id: course.id,
-        course_name: course.name,
-        to_course_id: targetCourse.id,
-        to_course_name: targetCourse.name,
-        from_class: donorCn,
-        to_class: recv.class_number,
-        amount: 1
-      });
-      donated = true;
-      break;
-    }
-    if (!donated) break;
+    });
   }
+
+  function runCrossCoursePass(donorCourseList) {
+    let guard2 = 0;
+    while (guard2++ < 500) {
+      const rows = snapshotRows();
+      const receivers = rows.filter((r) => r.gap > 0).sort((a, b) => b.gap - a.gap);
+      if (!receivers.length) break;
+      let donated = false;
+      for (const course of donorCourseList) {
+        if (Number(course.selection_locked) === 1) continue;
+        const donors = quotaBoardClassNums().filter((cn) => canDonate(cn, course));
+        if (!donors.length) continue;
+        const donorCn = donors[0];
+        const recv = receivers[0];
+        let targetCourse = course;
+        if (Number(targetCourse.selection_locked) === 1) {
+          targetCourse = orderedCourses.find((c) => Number(c.selection_locked) !== 1) || course;
+        }
+        // 接收优先加到优先课程上（若未锁死）
+        const preferredTarget = priorityCourses.find((c) => Number(c.selection_locked) !== 1) || targetCourse;
+        if (Number(preferredTarget.selection_locked) !== 1) targetCourse = preferredTarget;
+        const cidFrom = String(course.id);
+        const cidTo = String(targetCourse.id);
+        working[donorCn][cidFrom] = working[donorCn][cidFrom] - 1;
+        working[recv.class_number][cidTo] = working[recv.class_number][cidTo] + 1;
+        adjustments.push({
+          type: 'cross_course',
+          priority: prioritySet.has(String(course.id)),
+          course_id: course.id,
+          course_name: course.name,
+          to_course_id: targetCourse.id,
+          to_course_name: targetCourse.name,
+          from_class: donorCn,
+          to_class: recv.class_number,
+          amount: 1
+        });
+        donated = true;
+        break;
+      }
+      if (!donated) break;
+    }
+  }
+
+  // 1) 优先课程：同课程补齐
+  runSameCoursePass(priorityCourses);
+  // 2) 优先课程：跨课程兜底
+  runCrossCoursePass(priorityCourses);
+  // 3) 仍有缺口时，再用其余课程补齐
+  runSameCoursePass(otherCourses);
+  runCrossCoursePass(otherCourses);
 
   // 持久化：只写与基础名额不同的覆盖
   const stmts = [];
@@ -2934,6 +2964,7 @@ async function handleClassQuotaAutoFill(db, request) {
   return json({
     success: true,
     grade,
+    priority_course_ids: priorityIds,
     adjustments,
     rows: buildQuotaBoardRows(ctx2)
   });
