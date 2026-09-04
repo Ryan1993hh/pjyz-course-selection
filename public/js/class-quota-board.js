@@ -158,6 +158,7 @@
     try {
       var data = await apiRequest('GET', '/api/class-quota-board?grade=' + encodeURIComponent(state.grade));
       state.rows = data.rows || [];
+      state.courses = data.courses || [];
       renderTable();
     } catch (e) {
       if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="cqb-empty">加载失败：' + esc(e.message) + '</td></tr>';
