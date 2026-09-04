@@ -97,15 +97,29 @@
     var p = normalizePagePath(page);
     if (!p || p === 'denglu' || p === 'login') return;
     try {
+      if (document.querySelector('link[data-pjyz-prefetch="' + p + '"]')) return;
       var link = document.createElement('link');
       link.rel = 'prefetch';
+      link.as = 'document';
       link.href = p;
+      link.setAttribute('data-pjyz-prefetch', p);
       document.head.appendChild(link);
+      // 同步用 fetch 预热缓存，跳转时浏览器更可能命中
+      if (window.fetch) {
+        fetch(p, { credentials: 'same-origin', priority: 'low' }).catch(function () {});
+      }
     } catch (_) {}
   }
 
   function prefetchRolePages(user) {
     getUserRoles(user).forEach(function (r) {
+      prefetchPage(ROLE_PAGES[r]);
+    });
+  }
+
+  /** 登录页预取全部角色落地页，缩短登录后跳转等待 */
+  function prefetchAllRolePages() {
+    ROLE_ORDER.forEach(function (r) {
       prefetchPage(ROLE_PAGES[r]);
     });
   }
@@ -305,6 +319,7 @@
     normalizeRolesInput: normalizeRolesInput,
     prefetchPage: prefetchPage,
     prefetchRolePages: prefetchRolePages,
+    prefetchAllRolePages: prefetchAllRolePages,
     navigateToPage: navigateToPage
   };
 })(window);

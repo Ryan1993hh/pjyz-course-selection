@@ -727,14 +727,19 @@
   </div>
 </div>
 
-<script src="js/role-utils.js?v=20260827t"></script>
+<script src="js/role-utils.js?v=20260904a"></script>
 <script>
 (function () {
   'use strict';
 
-  if (window.PjyzRole && typeof PjyzRole.prefetchRolePages === 'function') {
+  if (window.PjyzRole && typeof PjyzRole.prefetchAllRolePages === 'function') {
+    PjyzRole.prefetchAllRolePages();
+  } else if (window.PjyzRole && typeof PjyzRole.prefetchRolePages === 'function') {
     PjyzRole.prefetchRolePages();
   }
+  try {
+    fetch('/api/login', { method: 'OPTIONS' }).catch(function () {});
+  } catch (_) {}
 
   var form        = document.getElementById('loginForm');
   var usernameEl  = document.getElementById('username');
@@ -929,7 +934,7 @@
     if (rememberEl.checked && passwordEl.value) loginBtn.focus();
     else if (usernameEl.value && !passwordEl.value) passwordEl.focus();
     else usernameEl.focus();
-  }, 600);
+  }, 120);
 })();
 </script>
 </body>

@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>登录 · 浦江一中拓展课 系统</title>
+<link rel="prefetch" href="admin" as="document" />
+<link rel="prefetch" href="xuanke" as="document" />
+<link rel="prefetch" href="jiaoshi" as="document" />
 <style>
   /* ===== 全局重置 ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -727,14 +730,20 @@
   </div>
 </div>
 
-<script src="js/role-utils.js?v=20260827t"></script>
+<script src="js/role-utils.js?v=20260904a"></script>
 <script>
 (function () {
   'use strict';
 
-  if (window.PjyzRole && typeof PjyzRole.prefetchRolePages === 'function') {
+  // 登录页提前预热 API 与三大落地页，缩短点击登录后的等待
+  if (window.PjyzRole && typeof PjyzRole.prefetchAllRolePages === 'function') {
+    PjyzRole.prefetchAllRolePages();
+  } else if (window.PjyzRole && typeof PjyzRole.prefetchRolePages === 'function') {
     PjyzRole.prefetchRolePages();
   }
+  try {
+    fetch('/api/login', { method: 'OPTIONS' }).catch(function () {});
+  } catch (_) {}
 
   var form        = document.getElementById('loginForm');
   var usernameEl  = document.getElementById('username');
@@ -809,6 +818,7 @@
     if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') {
       PjyzRole.prefetchPage(redirectUrl);
     }
+    // 立即跳转，不等待预取完成
     window.location.replace(redirectUrl);
   }
 
@@ -882,10 +892,8 @@
       if (data.success && data.token) {
         try {
           persistLoginSession(username, password, data);
-          redirectAfterLogin(data.user);
-        } catch (_) {
-          redirectAfterLogin(data.user);
-        }
+        } catch (_) {}
+        redirectAfterLogin(data.user);
         return;
       } else {
         showMsg(data.error || '登录失败', 'error');

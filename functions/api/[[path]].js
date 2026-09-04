@@ -158,6 +158,181 @@ const INIT_STATEMENTS = [
 
 const SELECTION_STATUS_KEY = 'selection_enabled';
 const SELECTION_DATA_REVISION_KEY = 'selection_data_revision';
+/** 变更建表/迁移逻辑时递增，用于跳过已完成的冷启动初始化 */
+const SCHEMA_VERSION_KEY = '_schema_version';
+const SCHEMA_VERSION = '20260904c';
+
+/** Worker 隔离区内只跑一次建表/迁移，避免每个 API 请求都打大量 D1 */
+let dbInitPromise = null;
+let dbSchemaReady = false;
+
+function isMissingRelationError(err) {
+  const msg = String((err && err.message) || err || '').toLowerCase();
+  return msg.includes('no such table') || msg.includes('no such column');
+}
+
+async function runD1Statements(db, sqlList) {
+  const stmts = (sqlList || []).map((sql) => db.prepare(sql));
+  if (!stmts.length) return;
+  if (typeof db.batch === 'function') {
+    const CHUNK = 20;
+    for (let i = 0; i < stmts.length; i += CHUNK) {
+      await db.batch(stmts.slice(i, i + CHUNK));
+    }
+    return;
+  }
+  for (const stmt of stmts) {
+    await stmt.run();
+  }
+}
+
+async function ensureDbReady(db) {
+  if (dbSchemaReady) return;
+  if (dbInitPromise) return dbInitPromise;
+  dbInitPromise = (async () => {
+    // 快路径：schema 版本已对齐则跳过建表/迁移（约 1 次 D1 读）
+    try {
+      const ver = await db.prepare('SELECT value FROM system_settings WHERE key = ?')
+        .bind(SCHEMA_VERSION_KEY).first();
+      if (ver && String(ver.value) === SCHEMA_VERSION) {
+        dbSchemaReady = true;
+        return;
+      }
+    } catch (_) {
+      // system_settings 可能尚未创建，继续完整初始化
+    }
+
+    await runD1Statements(db, INIT_STATEMENTS);
+
+    try {
+      const columnsRes = await db.prepare('PRAGMA table_info(users)').all();
+      const colNames = (columnsRes.results || []).map((c) => c.name);
+      const requiredCols = [
+        { name: 'password_hash', def: "TEXT NOT NULL DEFAULT ''" },
+        { name: 'salt', def: "TEXT NOT NULL DEFAULT ''" },
+        { name: 'roles', def: "TEXT NOT NULL DEFAULT 'teacher'" },
+        { name: 'status', def: "TEXT NOT NULL DEFAULT 'active'" },
+        { name: 'email', def: "TEXT DEFAULT ''" },
+        { name: 'phone', def: "TEXT DEFAULT ''" },
+        { name: 'created_at', def: "TEXT DEFAULT ''" },
+        { name: 'updated_at', def: "TEXT DEFAULT ''" },
+        { name: 'password', def: "TEXT DEFAULT ''" },
+        { name: 'course_name', def: "TEXT DEFAULT ''" }
+      ];
+      for (const col of requiredCols) {
+        if (!colNames.includes(col.name)) {
+          try {
+            await db.prepare(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`).run();
+          } catch (alterErr) {
+            console.warn(`Alter table add ${col.name} skipped:`, alterErr.message);
+          }
+        }
+      }
+      if (colNames.includes('password')) {
+        try {
+          await db.prepare("UPDATE users SET password='' WHERE password IS NULL OR password = ''").run();
+        } catch (e) {}
+      }
+      if (!colNames.includes('created_at')) {
+        try {
+          await db.prepare("UPDATE users SET created_at=datetime('now') WHERE created_at='' OR created_at IS NULL").run();
+        } catch (e) {}
+      }
+    } catch (schemaErr) {
+      console.warn('Schema migration check error:', schemaErr.message);
+    }
+
+    try {
+      const selColsRes = await db.prepare('PRAGMA table_info(selections)').all();
+      const selColNames = (selColsRes.results || []).map((c) => c.name);
+      if (!selColNames.includes('gender')) {
+        await db.prepare("ALTER TABLE selections ADD COLUMN gender TEXT DEFAULT ''").run();
+      }
+      if (!selColNames.includes('is_locked')) {
+        await db.prepare('ALTER TABLE selections ADD COLUMN is_locked INTEGER DEFAULT 0').run();
+      }
+    } catch (selSchemaErr) {
+      console.warn('Selections schema migration error:', selSchemaErr.message);
+    }
+
+    try {
+      const courseColsRes = await db.prepare('PRAGMA table_info(courses)').all();
+      const courseColNames = (courseColsRes.results || []).map((c) => c.name);
+      if (!courseColNames.includes('selection_locked')) {
+        await db.prepare('ALTER TABLE courses ADD COLUMN selection_locked INTEGER DEFAULT 0').run();
+      }
+    } catch (courseSchemaErr) {
+      console.warn('Courses schema migration error:', courseSchemaErr.message);
+    }
+
+    const adminCheck = await db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').bind('admin').first();
+    if (adminCheck.count === 0) {
+      const salt = await generateSalt();
+      const passwordHash = await hashPassword('123456', salt);
+      const result = await db.prepare(`INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, status)
+        VALUES (?, ?, ?, ?, 'admin', '', '', 'active')`).bind('admin', '123456', passwordHash, salt).run();
+      const userId = result.meta.last_row_id;
+      await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, 'admin').run();
+    }
+
+    await db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').bind(SELECTION_STATUS_KEY, '1').run();
+    await db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').bind(SELECTION_DATA_REVISION_KEY, '0').run();
+
+    try {
+      const legacyCheck = await db.prepare("SELECT COUNT(*) as count FROM users WHERE password_hash IS NULL OR password_hash = ''").first();
+      if (legacyCheck.count > 0) {
+        const legacyUsers = await db.prepare("SELECT * FROM users WHERE password_hash IS NULL OR password_hash = ''").all();
+        for (const u of legacyUsers.results) {
+          const oldPassword = u.password || '123456';
+          const oldRole = u.role || u.roles || 'teacher';
+          const rolesList = String(oldRole).split(',').filter(Boolean);
+          if (rolesList.length === 0) rolesList.push('teacher');
+          const rolesStr = rolesList.join(',');
+
+          const salt = await generateSalt();
+          const passwordHash = await hashPassword(oldPassword, salt);
+          await db.prepare(`UPDATE users SET password_hash=?, salt=?, roles=?, status='active', updated_at=datetime('now') WHERE id=?`).bind(passwordHash, salt, rolesStr, u.id).run();
+
+          for (const r of rolesList) {
+            await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(u.id, r).run();
+          }
+        }
+        console.log(`Migrated ${legacyCheck.count} legacy users to new password format`);
+      }
+    } catch (migrateErr) {
+      console.warn('Password migration error:', migrateErr.message);
+    }
+
+    try {
+      const usColsRes = await db.prepare('PRAGMA table_info(unselected_students)').all();
+      const usColNames = (usColsRes.results || []).map((c) => c.name);
+      if (!usColNames.includes('user_id')) {
+        await db.prepare('ALTER TABLE unselected_students ADD COLUMN user_id INTEGER DEFAULT NULL').run();
+      }
+      if (!usColNames.includes('username')) {
+        await db.prepare("ALTER TABLE unselected_students ADD COLUMN username TEXT DEFAULT ''").run();
+      }
+      if (!usColNames.includes('user_uploaded_at')) {
+        await db.prepare("ALTER TABLE unselected_students ADD COLUMN user_uploaded_at TEXT DEFAULT ''").run();
+      }
+    } catch (usMigrateErr) {
+      console.warn('Unselected students migration error:', usMigrateErr.message);
+    }
+
+    try {
+      await db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)')
+        .bind(SCHEMA_VERSION_KEY, SCHEMA_VERSION).run();
+    } catch (verErr) {
+      console.warn('Schema version write error:', verErr.message);
+    }
+    dbSchemaReady = true;
+  })().catch((err) => {
+    dbInitPromise = null;
+    dbSchemaReady = false;
+    throw err;
+  });
+  return dbInitPromise;
+}
 const CLASS_SCHEDULE_KEY = 'class_schedule_control';
 const COURSE_HOURS_HIDDEN_DATES_KEY = 'course_hours_hidden_dates';
 const COURSE_HOURS_EXTRA_DATES_KEY = 'course_hours_extra_dates';
@@ -376,137 +551,6 @@ function json(data, status = 200) {
   });
 }
 
-/** Worker 隔离区内只跑一次建表/迁移，避免每个 API 请求都打大量 D1 */
-let dbInitPromise = null;
-
-async function ensureDbReady(db) {
-  if (dbInitPromise) return dbInitPromise;
-  dbInitPromise = (async () => {
-    for (const sql of INIT_STATEMENTS) {
-      await db.prepare(sql).run();
-    }
-
-    try {
-      const columnsRes = await db.prepare('PRAGMA table_info(users)').all();
-      const colNames = (columnsRes.results || []).map((c) => c.name);
-      const requiredCols = [
-        { name: 'password_hash', def: "TEXT NOT NULL DEFAULT ''" },
-        { name: 'salt', def: "TEXT NOT NULL DEFAULT ''" },
-        { name: 'roles', def: "TEXT NOT NULL DEFAULT 'teacher'" },
-        { name: 'status', def: "TEXT NOT NULL DEFAULT 'active'" },
-        { name: 'email', def: "TEXT DEFAULT ''" },
-        { name: 'phone', def: "TEXT DEFAULT ''" },
-        { name: 'created_at', def: "TEXT DEFAULT ''" },
-        { name: 'updated_at', def: "TEXT DEFAULT ''" },
-        { name: 'password', def: "TEXT DEFAULT ''" },
-        { name: 'course_name', def: "TEXT DEFAULT ''" }
-      ];
-      for (const col of requiredCols) {
-        if (!colNames.includes(col.name)) {
-          try {
-            await db.prepare(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`).run();
-          } catch (alterErr) {
-            console.warn(`Alter table add ${col.name} skipped:`, alterErr.message);
-          }
-        }
-      }
-      if (colNames.includes('password')) {
-        try {
-          await db.prepare("UPDATE users SET password='' WHERE password IS NULL OR password = ''").run();
-        } catch (e) {}
-      }
-      if (!colNames.includes('created_at')) {
-        try {
-          await db.prepare("UPDATE users SET created_at=datetime('now') WHERE created_at='' OR created_at IS NULL").run();
-        } catch (e) {}
-      }
-    } catch (schemaErr) {
-      console.warn('Schema migration check error:', schemaErr.message);
-    }
-
-    try {
-      const selColsRes = await db.prepare('PRAGMA table_info(selections)').all();
-      const selColNames = (selColsRes.results || []).map((c) => c.name);
-      if (!selColNames.includes('gender')) {
-        await db.prepare("ALTER TABLE selections ADD COLUMN gender TEXT DEFAULT ''").run();
-      }
-      if (!selColNames.includes('is_locked')) {
-        await db.prepare('ALTER TABLE selections ADD COLUMN is_locked INTEGER DEFAULT 0').run();
-      }
-    } catch (selSchemaErr) {
-      console.warn('Selections schema migration error:', selSchemaErr.message);
-    }
-
-    try {
-      const courseColsRes = await db.prepare('PRAGMA table_info(courses)').all();
-      const courseColNames = (courseColsRes.results || []).map((c) => c.name);
-      if (!courseColNames.includes('selection_locked')) {
-        await db.prepare('ALTER TABLE courses ADD COLUMN selection_locked INTEGER DEFAULT 0').run();
-      }
-    } catch (courseSchemaErr) {
-      console.warn('Courses schema migration error:', courseSchemaErr.message);
-    }
-
-    const adminCheck = await db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').bind('admin').first();
-    if (adminCheck.count === 0) {
-      const salt = await generateSalt();
-      const passwordHash = await hashPassword('123456', salt);
-      const result = await db.prepare(`INSERT INTO users (username, password, password_hash, salt, roles, teacher_name, class_name, status)
-        VALUES (?, ?, ?, ?, 'admin', '', '', 'active')`).bind('admin', '123456', passwordHash, salt).run();
-      const userId = result.meta.last_row_id;
-      await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(userId, 'admin').run();
-    }
-
-    await db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').bind(SELECTION_STATUS_KEY, '1').run();
-    await db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').bind(SELECTION_DATA_REVISION_KEY, '0').run();
-
-    try {
-      const legacyCheck = await db.prepare("SELECT COUNT(*) as count FROM users WHERE password_hash IS NULL OR password_hash = ''").first();
-      if (legacyCheck.count > 0) {
-        const legacyUsers = await db.prepare("SELECT * FROM users WHERE password_hash IS NULL OR password_hash = ''").all();
-        for (const u of legacyUsers.results) {
-          const oldPassword = u.password || '123456';
-          const oldRole = u.role || u.roles || 'teacher';
-          const rolesList = String(oldRole).split(',').filter(Boolean);
-          if (rolesList.length === 0) rolesList.push('teacher');
-          const rolesStr = rolesList.join(',');
-
-          const salt = await generateSalt();
-          const passwordHash = await hashPassword(oldPassword, salt);
-          await db.prepare(`UPDATE users SET password_hash=?, salt=?, roles=?, status='active', updated_at=datetime('now') WHERE id=?`).bind(passwordHash, salt, rolesStr, u.id).run();
-
-          for (const r of rolesList) {
-            await db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (?, ?)').bind(u.id, r).run();
-          }
-        }
-        console.log(`Migrated ${legacyCheck.count} legacy users to new password format`);
-      }
-    } catch (migrateErr) {
-      console.warn('Password migration error:', migrateErr.message);
-    }
-
-    try {
-      const usColsRes = await db.prepare('PRAGMA table_info(unselected_students)').all();
-      const usColNames = (usColsRes.results || []).map((c) => c.name);
-      if (!usColNames.includes('user_id')) {
-        await db.prepare('ALTER TABLE unselected_students ADD COLUMN user_id INTEGER DEFAULT NULL').run();
-      }
-      if (!usColNames.includes('username')) {
-        await db.prepare("ALTER TABLE unselected_students ADD COLUMN username TEXT DEFAULT ''").run();
-      }
-      if (!usColNames.includes('user_uploaded_at')) {
-        await db.prepare("ALTER TABLE unselected_students ADD COLUMN user_uploaded_at TEXT DEFAULT ''").run();
-      }
-    } catch (usMigrateErr) {
-      console.warn('Unselected students migration error:', usMigrateErr.message);
-    }
-  })().catch((err) => {
-    dbInitPromise = null;
-    throw err;
-  });
-  return dbInitPromise;
-}
-
 // ---- Token (Web Crypto API) - 支持多角色 ----
 async function createToken(userId, roles) {
   const expiry = Date.now() + 8 * 60 * 60 * 1000;
@@ -583,23 +627,37 @@ async function handleHealth(db) {
 
 // ---- Login ----
 async function handleLogin(db, request) {
+  let body;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch (e) {
+    return json({ error: '请求格式错误' }, 400);
+  }
+  try {
     const { username, password } = body || {};
     if (!username || !password) return json({ error: '用户名和密码不能为空' }, 400);
-    
-    const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+
+    const user = await db.prepare(
+      'SELECT id, username, password, password_hash, salt, roles, teacher_name, class_name, course_name, email, phone, status FROM users WHERE username = ?'
+    ).bind(username).first();
     if (!user) return json({ error: '账号不存在' }, 401);
-    
+
     if (user.status === 'locked') return json({ error: '账号已被锁定，请联系管理员', status: 'locked' }, 403);
     if (user.status === 'disabled') return json({ error: '账号已被禁用，请联系管理员', status: 'disabled' }, 403);
-    
-    const passwordOk = await verifyPassword(password, user.salt || '', user.password_hash || '');
+
+    let passwordOk = false;
+    if (user.password_hash && user.salt) {
+      passwordOk = await verifyPassword(password, user.salt || '', user.password_hash || '');
+    }
+    // 兼容尚未迁移 hash 的旧账号，避免登录被全量迁移拖慢
+    if (!passwordOk && user.password != null && String(user.password) === String(password)) {
+      passwordOk = true;
+    }
     if (!passwordOk) return json({ error: '账号或密码错误' }, 401);
-    
+
     const roles = (user.roles || 'teacher').split(',').filter(Boolean);
     const token = await createToken(user.id, roles);
-    
+
     return json({
       success: true,
       token,
@@ -617,7 +675,9 @@ async function handleLogin(db, request) {
       }
     });
   } catch (e) {
-    return json({ error: '请求格式错误' }, 400);
+    if (isMissingRelationError(e)) throw e;
+    console.error('handleLogin error:', e);
+    return json({ error: '登录失败，请稍后重试' }, 500);
   }
 }
 
@@ -5401,6 +5461,27 @@ export async function onRequest(context) {
   // CORS 预检不走数据库，直接返回
   if (method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+
+  // 登录走快路径：跳过冷启动建表/迁移，仅查用户（失败再补初始化）
+  if (path === '/api/login' && method === 'POST') {
+    try {
+      return await handleLogin(db, request);
+    } catch (e) {
+      if (isMissingRelationError(e)) {
+        try { await ensureDbReady(db); } catch (initErr) {
+          console.error('DB init error on login:', initErr);
+        }
+        try {
+          return await handleLogin(db, request);
+        } catch (retryErr) {
+          console.error('login retry error:', retryErr);
+          return json({ error: '登录服务暂不可用' }, 500);
+        }
+      }
+      console.error('login error:', e);
+      return json({ error: '登录失败，请稍后重试' }, 500);
+    }
   }
 
   try {
