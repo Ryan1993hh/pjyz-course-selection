@@ -125,13 +125,11 @@
     state.view = 'board';
     var list = document.getElementById('coursesListPanel');
     var board = document.getElementById('classQuotaBoardPanel');
-    var upload = document.getElementById('courseUploadPanel');
     if (list) list.style.display = 'none';
     if (board) {
       board.hidden = false;
       board.style.display = '';
     }
-    if (upload) upload.style.display = 'none';
     setActiveButtons();
     var gradeSel = document.getElementById('cqbGradeSelect');
     if (gradeSel) gradeSel.value = state.grade;
@@ -142,13 +140,11 @@
     state.view = 'courses';
     var list = document.getElementById('coursesListPanel');
     var board = document.getElementById('classQuotaBoardPanel');
-    var upload = document.getElementById('courseUploadPanel');
     if (list) list.style.display = '';
     if (board) {
       board.style.display = 'none';
       board.hidden = true;
     }
-    if (upload) upload.style.display = '';
     setActiveButtons();
   }
 

@@ -1097,32 +1097,99 @@ html[data-skin="ink"] .fs-act.cancel-btn { background: #334155; color: var(--tex
 }
 .lottery-box {
   text-align: center;
-  padding: 28px 16px;
-  background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+  padding: 24px 16px 20px;
+  background: linear-gradient(145deg, #ecfeff 0%, #f0fdfa 45%, #e0f2fe 100%);
   border-radius: var(--radius);
   margin-bottom: 14px;
   position: relative;
   overflow: hidden;
 }
+.lottery-box::before {
+  content: "";
+  position: absolute;
+  inset: -40% auto auto -20%;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(20,184,166,0.22), transparent 70%);
+  pointer-events: none;
+}
+.lottery-stage {
+  position: relative;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
 .lottery-result {
-  font-size: clamp(22px, 6vw, 28px);
-  font-weight: 700;
-  min-height: 42px;
-  letter-spacing: -0.5px;
+  position: relative;
+  z-index: 2;
+  font-size: clamp(24px, 7vw, 32px);
+  font-weight: 800;
+  min-height: 48px;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  text-shadow: 0 2px 12px rgba(13, 148, 136, 0.15);
 }
 .lottery-result.spinning {
-  animation: lotteryRollPulse 0.08s linear infinite;
+  animation: lotteryRollPulse 0.09s linear infinite;
+  color: var(--primary-dark);
 }
 @keyframes lotteryRollPulse {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
-  50% { transform: scale(1.06); opacity: 1; }
+  0%, 100% { transform: scale(1) rotate(-0.4deg); opacity: 0.8; filter: blur(0.4px); }
+  50% { transform: scale(1.08) rotate(0.4deg); opacity: 1; filter: blur(0); }
 }
 .lottery-result.winner {
-  animation: lotteryWinnerIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1);
+  animation: lotteryWinnerIn 0.7s cubic-bezier(0.34, 1.45, 0.64, 1);
+  color: #0f766e;
 }
 @keyframes lotteryWinnerIn {
-  0% { transform: scale(0.6); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% { transform: scale(0.4) translateY(18px); opacity: 0; }
+  55% { transform: scale(1.18) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.lottery-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+.lottery-confetti span {
+  position: absolute;
+  top: -10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: lotteryConfettiFall 1.1s ease-out forwards;
+}
+@keyframes lotteryConfettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110px) rotate(240deg); opacity: 0; }
+}
+.lottery-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251,191,36,0.35), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.lottery-result.winner ~ .lottery-glow,
+.lottery-stage.has-winner .lottery-glow {
+  animation: lotteryGlowPulse 0.9s ease-out;
+}
+@keyframes lotteryGlowPulse {
+  0% { opacity: 0; transform: scale(0.6); }
+  40% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.6); }
 }
 .lottery-pool-hint {
   font-size: 12px;
@@ -1135,7 +1202,244 @@ html[data-skin="ink"] .fs-act.cancel-btn { background: #334155; color: var(--tex
 }
 .lottery-draw-btn.show { display: inline-flex; }
 
-/* 选人抽签弹层 */
+.timer-display {
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: clamp(36px, 10vw, 48px);
+  font-weight: 300;
+  text-align: center;
+  letter-spacing: 2px;
+  margin: 16px 0;
+}
+.timer-modes { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.mode-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mode-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+.timer-controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+/* 计时器全屏 */
+.timer-fs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
+  color: #fff;
+  padding: 24px 16px 32px;
+}
+.timer-fs-overlay.show { display: flex; }
+.timer-fs-overlay[data-clock-skin="digital"] { background: radial-gradient(ellipse at center, #0f172a 0%, #020617 70%); }
+.timer-fs-overlay[data-clock-skin="flip"] { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); }
+.timer-fs-overlay[data-clock-skin="neon"] { background: #050510; }
+.timer-fs-overlay[data-clock-skin="minimal"] { background: #f8fafc; color: #0f172a; }
+.timer-fs-top {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.timer-fs-skins {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.timer-skin-btn {
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: inherit;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.timer-fs-overlay[data-clock-skin="minimal"] .timer-skin-btn {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+.timer-skin-btn.active {
+  background: var(--primary, #14b8a6);
+  border-color: transparent;
+  color: #fff;
+}
+.timer-fs-close {
+  border: none;
+  background: rgba(255,255,255,0.12);
+  color: inherit;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+}
+.timer-fs-overlay[data-clock-skin="minimal"] .timer-fs-close { background: #e2e8f0; }
+.timer-fs-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 920px;
+}
+.timer-fs-label {
+  font-size: 14px;
+  opacity: 0.7;
+  letter-spacing: 2px;
+}
+.timer-fs-digital {
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: clamp(64px, 18vw, 140px);
+  font-weight: 200;
+  letter-spacing: 6px;
+  line-height: 1;
+}
+.timer-fs-overlay[data-clock-skin="neon"] .timer-fs-digital {
+  color: #67e8f9;
+  text-shadow: 0 0 12px #22d3ee, 0 0 36px #06b6d4, 0 0 64px #0891b2;
+  font-weight: 500;
+}
+.timer-fs-overlay[data-clock-skin="minimal"] .timer-fs-digital {
+  font-weight: 300;
+  color: #0f172a;
+  letter-spacing: 4px;
+}
+.timer-fs-flip {
+  display: none;
+  gap: 10px;
+  align-items: center;
+}
+.timer-fs-overlay[data-clock-skin="flip"] .timer-fs-digital { display: none; }
+.timer-fs-overlay[data-clock-skin="flip"] .timer-fs-flip { display: flex; }
+.flip-unit {
+  position: relative;
+  width: clamp(64px, 16vw, 110px);
+  height: clamp(88px, 22vw, 150px);
+  background: #111827;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.flip-unit::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: rgba(0,0,0,0.55);
+  z-index: 2;
+}
+.flip-unit .flip-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: clamp(40px, 12vw, 84px);
+  font-weight: 700;
+  color: #f8fafc;
+  background: linear-gradient(180deg, #374151 0%, #1f2937 48%, #111827 52%, #0b1220 100%);
+}
+.flip-colon {
+  font-size: clamp(36px, 10vw, 64px);
+  font-weight: 700;
+  opacity: 0.85;
+  padding-bottom: 8px;
+}
+.timer-fs-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+.timer-fs-controls .btn {
+  min-width: 96px;
+}
+
+/* 皮肤弹窗 */
+.skin-picker-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+.skin-picker-mask.show { display: flex; }
+.skin-picker-sheet {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card, #fff);
+  border-radius: 20px 20px 16px 16px;
+  padding: 18px 16px 20px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+  animation: skinSheetIn 0.28s ease;
+}
+@keyframes skinSheetIn {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.skin-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.skin-picker-head h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.skin-picker-close {
+  border: none;
+  background: #f1f5f9;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  color: #64748b;
+}
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.skin-swatch {
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 10px 8px;
+  cursor: pointer;
+  background: var(--bg, #f8fafc);
+  text-align: center;
+}
+.skin-swatch.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.skin-swatch .swatch-bar {
+  height: 28px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.skin-swatch .swatch-name { font-size: 12px; font-weight: 600; color: var(--text); }
 .ta-picker-mask {
   position: fixed;
   inset: 0;
@@ -1279,25 +1583,6 @@ html[data-skin="ink"] .fs-act.cancel-btn { background: #334155; color: var(--tex
 @media (max-width: 360px) {
   .ta-picker-body { grid-template-columns: 1fr; }
 }
-.timer-display {
-  font-family: "SF Mono", "Menlo", monospace;
-  font-size: clamp(36px, 10vw, 48px);
-  font-weight: 300;
-  text-align: center;
-  letter-spacing: 2px;
-  margin: 16px 0;
-}
-.timer-modes { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
-.mode-btn {
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 999px;
-  padding: 8px 16px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.mode-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
-.timer-controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .activity-item {
   display: flex;
   align-items: center;
@@ -1566,30 +1851,6 @@ table.attendance-table th { background: #f5f5f7; color: var(--muted); font-size:
   color: #fff;
   cursor: pointer;
 }
-.skin-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  padding: 14px;
-}
-.skin-swatch {
-  border: 2px solid transparent;
-  border-radius: 14px;
-  padding: 10px 8px;
-  cursor: pointer;
-  background: var(--bg);
-  text-align: center;
-}
-.skin-swatch.active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
-}
-.skin-swatch .swatch-bar {
-  height: 28px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-.skin-swatch .swatch-name { font-size: 12px; font-weight: 600; color: var(--text); }
 .profile-pass-panel { display: none; padding: 0 14px 14px; }
 .profile-pass-panel.show { display: block; }
 .profile-pass-row {
@@ -2020,7 +2281,11 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
     <div class="card">
       <div class="card-title">🎯 幸运抽签</div>
       <div class="lottery-box">
-        <div class="lottery-result" id="lotteryResult">🎯 点击抽签</div>
+        <div class="lottery-stage" id="lotteryStage">
+          <div class="lottery-confetti" id="lotteryConfetti" aria-hidden="true"></div>
+          <div class="lottery-glow" aria-hidden="true"></div>
+          <div class="lottery-result" id="lotteryResult">🎯 点击抽签</div>
+        </div>
         <div class="lottery-pool-hint" id="lotteryPoolHint"></div>
         <button type="button" class="btn btn-primary lottery-draw-btn" id="lotteryDrawBtn">🎲 开始抽取</button>
       </div>
@@ -2044,6 +2309,7 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
         <button type="button" class="btn btn-primary" id="timerPlay">▶ 开始</button>
         <button type="button" class="btn btn-secondary" id="timerPause">⏸ 暂停</button>
         <button type="button" class="btn btn-danger" id="timerStop">⏹ 停止</button>
+        <button type="button" class="btn btn-secondary" id="timerFullscreenBtn">⛶ 全屏</button>
       </div>
     </div>
     <div class="card">
@@ -2173,15 +2439,15 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
         </div>
       </div>
 
-      <div class="profile-section-title">更换皮肤</div>
+      <div class="profile-section-title">外观</div>
       <div class="profile-group">
-        <div class="skin-grid" id="skinGrid">
-          <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
-          <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
-          <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
-          <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
-          <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
-          <button type="button" class="skin-swatch" data-skin="ink"><div class="swatch-bar" style="background:linear-gradient(135deg,#334155,#0f172a)"></div><div class="swatch-name">墨夜</div></button>
+        <div class="profile-item" id="openSkinPickerBtn" style="cursor:pointer" role="button" tabindex="0">
+          <div class="pi-ico">🎨</div>
+          <div class="pi-body">
+            <div class="pi-label">更换皮肤</div>
+            <div class="pi-value" id="currentSkinLabel">青绿</div>
+          </div>
+          <span class="pi-chevron">›</span>
         </div>
       </div>
 
@@ -2313,6 +2579,53 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
     <div class="ta-picker-foot">
       <button type="button" class="btn btn-secondary" id="taPickerCancel">取消</button>
       <button type="button" class="btn btn-confirm-pick" id="taPickerConfirm">确认选人</button>
+    </div>
+  </div>
+</div>
+
+<!-- 计时器全屏 -->
+<div class="timer-fs-overlay" id="timerFsOverlay" data-clock-skin="digital">
+  <div class="timer-fs-top">
+    <div class="timer-fs-skins">
+      <button type="button" class="timer-skin-btn active" data-clock-skin="digital">数字</button>
+      <button type="button" class="timer-skin-btn" data-clock-skin="flip">翻页</button>
+      <button type="button" class="timer-skin-btn" data-clock-skin="neon">霓虹</button>
+      <button type="button" class="timer-skin-btn" data-clock-skin="minimal">极简</button>
+    </div>
+    <button type="button" class="timer-fs-close" id="timerFsClose" aria-label="关闭全屏">✕</button>
+  </div>
+  <div class="timer-fs-body">
+    <div class="timer-fs-label" id="timerFsLabel">正计时</div>
+    <div class="timer-fs-digital" id="timerFsDigital">00:00</div>
+    <div class="timer-fs-flip" id="timerFsFlip" aria-hidden="true">
+      <div class="flip-unit"><div class="flip-num" id="flipM1">0</div></div>
+      <div class="flip-unit"><div class="flip-num" id="flipM2">0</div></div>
+      <div class="flip-colon">:</div>
+      <div class="flip-unit"><div class="flip-num" id="flipS1">0</div></div>
+      <div class="flip-unit"><div class="flip-num" id="flipS2">0</div></div>
+    </div>
+    <div class="timer-fs-controls">
+      <button type="button" class="btn btn-primary" id="timerFsPlay">▶ 开始</button>
+      <button type="button" class="btn btn-secondary" id="timerFsPause">⏸ 暂停</button>
+      <button type="button" class="btn btn-danger" id="timerFsStop">⏹ 停止</button>
+    </div>
+  </div>
+</div>
+
+<!-- 皮肤选择弹窗 -->
+<div class="skin-picker-mask" id="skinPickerMask" role="dialog" aria-modal="true">
+  <div class="skin-picker-sheet">
+    <div class="skin-picker-head">
+      <h4>更换皮肤</h4>
+      <button type="button" class="skin-picker-close" id="skinPickerClose" aria-label="关闭">×</button>
+    </div>
+    <div class="skin-grid" id="skinGrid">
+      <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
+      <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
+      <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
+      <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
+      <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
+      <button type="button" class="skin-swatch" data-skin="ink"><div class="swatch-bar" style="background:linear-gradient(135deg,#334155,#0f172a)"></div><div class="swatch-name">墨夜</div></button>
     </div>
   </div>
 </div>
@@ -3782,6 +4095,15 @@ function setCurrentPassVisible(visible) {
 
 const SKIN_KEY = "pjyz_teacher_skin";
 const SKIN_LIST = ["teal", "violet", "ocean", "sunset", "forest", "ink"];
+const SKIN_LABELS = {
+  teal: "青绿",
+  violet: "紫罗兰",
+  ocean: "海蓝",
+  sunset: "暖橙",
+  forest: "森绿",
+  ink: "墨夜"
+};
+const TIMER_CLOCK_SKIN_KEY = "pjyz_timer_clock_skin";
 
 function applySkin(skin) {
   const name = SKIN_LIST.indexOf(skin) > -1 ? skin : "teal";
@@ -3789,6 +4111,8 @@ function applySkin(skin) {
   else document.documentElement.setAttribute("data-skin", name);
   try { localStorage.setItem(SKIN_KEY, name); } catch (_) {}
   renderSkinSwatches();
+  const label = document.getElementById("currentSkinLabel");
+  if (label) label.textContent = SKIN_LABELS[name] || name;
 }
 
 function renderSkinSwatches() {
@@ -3799,6 +4123,20 @@ function renderSkinSwatches() {
   grid.querySelectorAll(".skin-swatch").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.skin === cur);
   });
+  const label = document.getElementById("currentSkinLabel");
+  if (label) label.textContent = SKIN_LABELS[cur] || cur;
+}
+
+function openSkinPicker() {
+  const mask = document.getElementById("skinPickerMask");
+  if (!mask) return;
+  renderSkinSwatches();
+  mask.classList.add("show");
+}
+
+function closeSkinPicker() {
+  const mask = document.getElementById("skinPickerMask");
+  if (mask) mask.classList.remove("show");
 }
 
 function initSkin() {
@@ -4010,16 +4348,90 @@ function formatTimer(sec) {
   return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
 }
 
+function syncFlipDigits(text) {
+  const t = String(text || "00:00").replace(":", "");
+  const ids = ["flipM1", "flipM2", "flipS1", "flipS2"];
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t[i] || "0";
+  });
+}
+
 function updateTimerDisplay() {
-  document.getElementById("timerDisplay").textContent = formatTimer(timer.seconds);
+  const text = formatTimer(timer.seconds);
+  const mainEl = document.getElementById("timerDisplay");
+  if (mainEl) mainEl.textContent = text;
+  const fsDigital = document.getElementById("timerFsDigital");
+  if (fsDigital) fsDigital.textContent = text;
+  syncFlipDigits(text);
+  const fsLabel = document.getElementById("timerFsLabel");
+  if (fsLabel) fsLabel.textContent = timer.mode === "down" ? "倒计时" : "正计时";
   if (timer.mode === "down" && timer.seconds <= 0 && timer.running) {
     timer.running = false;
     clearInterval(timer.interval);
-    document.getElementById("timerDisplay").style.color = "var(--danger)";
+    if (mainEl) mainEl.style.color = "var(--danger)";
+    if (fsDigital) fsDigital.style.color = "#f87171";
     toast("倒计时结束", "success");
   } else {
-    document.getElementById("timerDisplay").style.color = "";
+    if (mainEl) mainEl.style.color = "";
+    if (fsDigital) fsDigital.style.color = "";
   }
+}
+
+function startTimerRun() {
+  if (timer.running) return;
+  if (timer.mode === "down" && timer.seconds <= 0) {
+    timer.seconds = (Number(document.getElementById("timerMinutes").value) || 5) * 60;
+  }
+  timer.running = true;
+  clearInterval(timer.interval);
+  timer.interval = setInterval(() => {
+    if (timer.mode === "up") timer.seconds++;
+    else timer.seconds = Math.max(0, timer.seconds - 1);
+    updateTimerDisplay();
+    if (timer.mode === "down" && timer.seconds <= 0) {
+      clearInterval(timer.interval);
+      timer.running = false;
+    }
+  }, 1000);
+  updateTimerDisplay();
+}
+
+function pauseTimerRun() {
+  timer.running = false;
+  clearInterval(timer.interval);
+}
+
+function stopTimerRun() {
+  timer.running = false;
+  clearInterval(timer.interval);
+  timer.seconds = timer.mode === "down" ? (Number(document.getElementById("timerMinutes").value) || 5) * 60 : 0;
+  updateTimerDisplay();
+}
+
+function applyTimerClockSkin(skin) {
+  const name = ["digital", "flip", "neon", "minimal"].indexOf(skin) > -1 ? skin : "digital";
+  const overlay = document.getElementById("timerFsOverlay");
+  if (overlay) overlay.setAttribute("data-clock-skin", name);
+  document.querySelectorAll(".timer-skin-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.clockSkin === name);
+  });
+  try { localStorage.setItem(TIMER_CLOCK_SKIN_KEY, name); } catch (_) {}
+}
+
+function openTimerFullscreen() {
+  const overlay = document.getElementById("timerFsOverlay");
+  if (!overlay) return;
+  let skin = "digital";
+  try { skin = localStorage.getItem(TIMER_CLOCK_SKIN_KEY) || "digital"; } catch (_) {}
+  applyTimerClockSkin(skin);
+  updateTimerDisplay();
+  overlay.classList.add("show");
+}
+
+function closeTimerFullscreen() {
+  const overlay = document.getElementById("timerFsOverlay");
+  if (overlay) overlay.classList.remove("show");
 }
 
 function exportCsv(filename, headers, rows) {
@@ -4135,34 +4547,62 @@ function showLotteryDrawBtn(show) {
   btn.disabled = false;
 }
 
+function burstLotteryConfetti() {
+  const box = document.getElementById("lotteryConfetti");
+  const stage = document.getElementById("lotteryStage");
+  if (!box) return;
+  box.innerHTML = "";
+  if (stage) stage.classList.add("has-winner");
+  const colors = ["#14b8a6", "#f59e0b", "#38bdf8", "#f472b6", "#a78bfa", "#f97316"];
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement("span");
+    s.style.left = (8 + Math.random() * 84) + "%";
+    s.style.background = colors[i % colors.length];
+    s.style.animationDelay = (Math.random() * 0.18) + "s";
+    s.style.transform = "rotate(" + (Math.random() * 90) + "deg)";
+    box.appendChild(s);
+  }
+  setTimeout(() => {
+    box.innerHTML = "";
+    if (stage) stage.classList.remove("has-winner");
+  }, 1200);
+}
+
 function runLotterySpin(pool, onDone) {
   if (!pool || !pool.length) return;
   if (lotterySpinning) return;
   lotterySpinning = true;
   const resultEl = document.getElementById("lotteryResult");
   const drawBtn = document.getElementById("lotteryDrawBtn");
+  const stage = document.getElementById("lotteryStage");
   if (drawBtn) drawBtn.disabled = true;
+  if (stage) stage.classList.remove("has-winner");
   resultEl.classList.remove("winner");
   resultEl.classList.add("spinning");
   let ticks = 0;
-  const total = 28 + Math.floor(Math.random() * 12);
-  clearInterval(lotterySpinTimer);
-  lotterySpinTimer = setInterval(() => {
+  const total = 32 + Math.floor(Math.random() * 16);
+  let delay = 36;
+  clearTimeout(lotterySpinTimer);
+  function tick() {
     const s = pool[Math.floor(Math.random() * pool.length)];
     resultEl.textContent = s.student_name;
     ticks++;
     if (ticks >= total) {
-      clearInterval(lotterySpinTimer);
       lotterySpinTimer = null;
       const winner = pool[Math.floor(Math.random() * pool.length)];
       resultEl.classList.remove("spinning");
       resultEl.classList.add("winner");
       resultEl.textContent = "🎉 " + winner.student_name;
+      burstLotteryConfetti();
       lotterySpinning = false;
       if (drawBtn) drawBtn.disabled = false;
       if (typeof onDone === "function") onDone(winner);
+      return;
     }
-  }, 70);
+    delay = Math.min(110, delay + (ticks > total - 10 ? 8 : 1.5));
+    lotterySpinTimer = setTimeout(tick, delay);
+  }
+  lotterySpinTimer = setTimeout(tick, delay);
 }
 
 function openTaPicker() {
@@ -4251,32 +4691,33 @@ document.querySelectorAll(".mode-btn").forEach(btn => {
 });
 
 document.getElementById("timerPlay").addEventListener("click", () => {
-  if (timer.running) return;
-  if (timer.mode === "down" && timer.seconds <= 0) {
-    timer.seconds = (Number(document.getElementById("timerMinutes").value) || 5) * 60;
-  }
-  timer.running = true;
-  timer.interval = setInterval(() => {
-    if (timer.mode === "up") timer.seconds++;
-    else timer.seconds = Math.max(0, timer.seconds - 1);
-    updateTimerDisplay();
-    if (timer.mode === "down" && timer.seconds <= 0) {
-      clearInterval(timer.interval);
-      timer.running = false;
-    }
-  }, 1000);
+  startTimerRun();
 });
 
 document.getElementById("timerPause").addEventListener("click", () => {
-  timer.running = false;
-  clearInterval(timer.interval);
+  pauseTimerRun();
 });
 
 document.getElementById("timerStop").addEventListener("click", () => {
-  timer.running = false;
-  clearInterval(timer.interval);
-  timer.seconds = timer.mode === "down" ? (Number(document.getElementById("timerMinutes").value) || 5) * 60 : 0;
-  updateTimerDisplay();
+  stopTimerRun();
+});
+
+document.getElementById("timerFullscreenBtn") && document.getElementById("timerFullscreenBtn").addEventListener("click", openTimerFullscreen);
+document.getElementById("timerFsClose") && document.getElementById("timerFsClose").addEventListener("click", closeTimerFullscreen);
+document.getElementById("timerFsPlay") && document.getElementById("timerFsPlay").addEventListener("click", startTimerRun);
+document.getElementById("timerFsPause") && document.getElementById("timerFsPause").addEventListener("click", pauseTimerRun);
+document.getElementById("timerFsStop") && document.getElementById("timerFsStop").addEventListener("click", stopTimerRun);
+document.querySelectorAll(".timer-skin-btn").forEach(btn => {
+  btn.addEventListener("click", () => applyTimerClockSkin(btn.dataset.clockSkin));
+});
+document.getElementById("timerFsOverlay") && document.getElementById("timerFsOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "timerFsOverlay") closeTimerFullscreen();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeTimerFullscreen();
+    closeSkinPicker();
+  }
 });
 
 document.getElementById("createActivityBtn").addEventListener("click", () => {
@@ -4387,11 +4828,18 @@ document.getElementById("toggleCurrentPassBtn") && document.getElementById("togg
   setCurrentPassVisible(!visible);
 });
 
+document.getElementById("openSkinPickerBtn") && document.getElementById("openSkinPickerBtn").addEventListener("click", openSkinPicker);
+document.getElementById("skinPickerClose") && document.getElementById("skinPickerClose").addEventListener("click", closeSkinPicker);
+document.getElementById("skinPickerMask") && document.getElementById("skinPickerMask").addEventListener("click", (e) => {
+  if (e.target.id === "skinPickerMask") closeSkinPicker();
+});
+
 document.getElementById("skinGrid") && document.getElementById("skinGrid").addEventListener("click", (e) => {
   const btn = e.target.closest(".skin-swatch");
   if (!btn) return;
   applySkin(btn.dataset.skin);
-  toast("已切换皮肤", "success");
+  toast("已切换皮肤：" + (SKIN_LABELS[btn.dataset.skin] || ""), "success");
+  closeSkinPicker();
 });
 
 function exportStudentsExcel() {

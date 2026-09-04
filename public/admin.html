@@ -441,55 +441,126 @@ body {
   padding: 0;
 }
 
-/* ===== 课程管理左右布局（上传 + 列表）===== */
-.course-manage-row {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
+/* ===== 课程管理顶部四模块（等高一行）===== */
+.course-section-head {
+  margin-bottom: 2px;
 }
-.course-manage-left {
-  flex: 1 1 50%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+.course-section-head h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  letter-spacing: 2px;
+  margin: 0;
+}
+.course-section-head .desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.course-top-modules {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+  align-items: stretch;
 }
-.course-manage-left .section-header {
-  margin-bottom: 0;
-}
-.course-upload-right {
-  flex: 1 1 50%;
-  min-width: 0;
+.course-mod-card {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 8px;
-  align-self: flex-start;
+  min-height: 148px;
+  height: 100%;
+  padding: 14px 14px 12px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1.5px solid rgba(13, 148, 136, 0.16);
+  box-shadow: var(--shadow);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+  color: inherit;
 }
-.course-upload-right > .card {
-  padding: 12px 14px;
+button.course-mod-card {
+  appearance: none;
+  -webkit-appearance: none;
 }
-.course-upload-right .card-title {
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+.course-mod-card:hover {
+  border-color: rgba(13, 148, 136, 0.4);
+  box-shadow: 0 8px 22px rgba(13, 148, 136, 0.12);
+  transform: translateY(-2px);
 }
-.course-upload-right .upload-area {
-  padding: 10px 14px;
-  gap: 10px;
+.course-mod-card.is-active {
+  border-color: transparent;
+  background: linear-gradient(160deg, #0d9488 0%, #0f766e 100%);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(13, 148, 136, 0.28);
 }
-.course-upload-right .upload-area .icon {
-  font-size: 22px;
+.course-mod-card.is-active .mod-desc,
+.course-mod-card.is-active .mod-ico {
+  color: rgba(255, 255, 255, 0.9);
 }
-.course-upload-right .upload-area .hint {
+.course-mod-card .mod-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--primary-dark);
+  flex-shrink: 0;
+}
+.course-mod-card.is-active .mod-ico {
+  background: rgba(255, 255, 255, 0.18);
+}
+.course-mod-card .mod-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+}
+.course-mod-card .mod-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-top: auto;
+}
+.course-mod-upload {
+  cursor: default;
+  padding-bottom: 10px;
+}
+.course-mod-upload:hover {
+  transform: none;
+}
+.course-mod-upload .mod-title {
+  margin-bottom: 2px;
+}
+.course-mod-upload .upload-area {
+  flex: 1;
+  padding: 10px 12px;
+  gap: 8px;
+  min-height: 0;
+  align-items: center;
+}
+.course-mod-upload .upload-area .icon {
+  font-size: 20px;
+}
+.course-mod-upload .upload-area .hint {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.35;
+  white-space: normal;
 }
-.course-upload-right .upload-msg {
-  margin-top: 6px;
+.course-mod-upload .upload-msg {
+  margin-top: 0;
   padding: 4px 8px;
   min-height: 0;
+  font-size: 11.5px;
 }
 .course-list-card {
   flex: 1 1 100%;
@@ -1082,26 +1153,21 @@ table.courses-table td[data-field="description"] {
 @media (max-width: 640px) {
   .board-kpis { grid-template-columns: repeat(2, 1fr); }
   .bd-overview-grid { grid-template-columns: repeat(2, 1fr); }
+  .course-top-modules {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .course-mod-card {
+    min-height: 120px;
+    padding: 12px 10px;
+  }
+  .course-mod-card .mod-title { font-size: 13px; }
+  .course-mod-card .mod-desc { font-size: 11px; }
 }
 
-/* ===== 课程管理左右布局 ===== */
-.course-manage-row {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-.course-manage-left {
-  flex: 1 1 50%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.course-manage-left .section-header {
-  margin-bottom: 0;
-}
+/* ===== 课程列表卡片 ===== */
 .course-list-card {
-  flex: 1 1 50%;
+  flex: 1 1 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -2725,14 +2791,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th, table.sel-table td { padding: 8px 6px; font-size: 12px; }
 }
 @media (max-width: 1100px) {
-  .course-manage-row {
-    flex-direction: column;
+  .course-top-modules {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .course-manage-left,
-  .course-upload-right {
-    flex: 1 1 100%;
-    width: 100%;
-  }
+  .course-mod-card { min-height: 132px; }
   .selections-layout {
     flex-direction: column;
   }
@@ -3041,34 +3103,37 @@ th.sortable.active .sort-icon { opacity: 1; }
 
     <!-- ===== 模块一：课程管理 ===== -->
     <section class="section" id="section-courses">
-      <!-- 第一行：课程管理 + 上传文件（等宽） -->
-      <div class="course-manage-row">
-        <div class="course-manage-left">
-          <div class="section-header">
-            <div>
-              <h2>课程管理</h2>
-              <p class="desc">上传课程文件解析后，可在下方表格内编辑，确认后统一保存</p>
-              <div class="course-view-switch">
-                <button type="button" class="btn course-view-btn" id="openClassQuotaBoardBtn">班级名额看板</button>
-                <button type="button" class="btn course-view-btn is-active" id="showCoursesListBtn">拓展课程管理</button>
-              </div>
+      <div class="course-section-head">
+        <h2>课程管理</h2>
+        <p class="desc">班级、名额、课程与上传入口同排展示；下方表格可编辑后统一保存</p>
+      </div>
+      <div class="course-top-modules">
+        <button type="button" class="course-mod-card" id="manageClassesBtn">
+          <span class="mod-ico" aria-hidden="true">🏫</span>
+          <span class="mod-title">班级管理</span>
+          <span class="mod-desc">维护年级、班级与班主任信息</span>
+        </button>
+        <button type="button" class="course-mod-card" id="openClassQuotaBoardBtn">
+          <span class="mod-ico" aria-hidden="true">📊</span>
+          <span class="mod-title">班级名额看板</span>
+          <span class="mod-desc">按班级调剂课程名额，一键补齐</span>
+        </button>
+        <button type="button" class="course-mod-card is-active" id="showCoursesListBtn">
+          <span class="mod-ico" aria-hidden="true">📚</span>
+          <span class="mod-title">拓展课程管理</span>
+          <span class="mod-desc">编辑课程列表、名额与锁定状态</span>
+        </button>
+        <div class="course-mod-card course-mod-upload" id="courseUploadPanel">
+          <div class="mod-title">上传课程文件</div>
+          <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
+            <span class="icon">↑</span>
+            <div class="text-col">
+              <span class="title">点击或拖拽上传</span>
+              <span class="hint">csv / xlsx / xls / docx</span>
             </div>
           </div>
-        </div>
-
-        <div class="course-upload-right" id="courseUploadPanel">
-          <div class="card">
-            <div class="card-title">上传课程文件</div>
-            <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
-              <span class="icon">↑</span>
-              <div class="text-col">
-                <span class="title">点击或拖拽上传课程清单</span>
-                <span class="hint">支持 csv / xlsx / xls / docx。表头：类别、课程、简介、地点、老师、要求、六/七年级名额</span>
-              </div>
-            </div>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
-            <div class="upload-msg" id="uploadMsg">尚未上传文件，您也可以直接在下方表格中新增课程</div>
-          </div>
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
+          <div class="upload-msg" id="uploadMsg">可直接在下方表格新增</div>
         </div>
       </div>
 
