@@ -4196,10 +4196,10 @@ function onSlotClick(e) {
     return;
   }
 
-  // 课程已锁定：空位不可选
+  // 课程已锁定：空位不可选，抖动 + 按钮上方浮动提示
   if (course.selection_locked) {
     shakeElement(e.currentTarget);
-    showToast('该课程已选定学生，不参与选课', 'error');
+    showLockedFloatTip(e.currentTarget, '该课程已选定学生，不参与选课');
     return;
   }
 
