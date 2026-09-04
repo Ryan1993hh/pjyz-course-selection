@@ -1,20 +1,28 @@
 /**
  * 电子木鱼交互与音效（视觉参考 fish.leixf.cn）
  * 功德仅统计当天，跨日自动清零
+ * 快速连击：Web Audio 重叠播放 + WAAPI 动效，与点击同步
  */
 (function (global) {
   var MERIT_KEY = "pjyz_merit_daily";
   var AUDIO_SRC = "audio/muyu-tap.mp3?v=20260826b";
-  var AUDIO_POOL_SIZE = 8;
+  var AUDIO_POOL_SIZE = 16;
+  var MAX_PARTICLES = 14;
+  var ANIM_MS = 140;
+
   var meritCount = 0;
   var meritDate = "";
   var audioPool = [];
   var audioPoolIdx = 0;
-  var tapAnimTimer = null;
+  var audioCtx = null;
+  var audioBuffer = null;
+  var audioBufferLoading = null;
   var dayWatchTimer = null;
   var initialized = false;
   var boundStage = null;
   var suppressClickUntil = 0;
+  var activeAnims = [];
+  var bumpTimer = null;
 
   function todayKey() {
     var d = new Date();
@@ -66,19 +74,48 @@
     if (el) el.textContent = String(meritCount);
   }
 
-  function preloadTapAudio() {
-    if (audioPool.length) return;
-    for (var i = 0; i < AUDIO_POOL_SIZE; i++) {
-      try {
-        var audio = new Audio(AUDIO_SRC);
-        audio.preload = "auto";
-        audio.load();
-        audioPool.push(audio);
-      } catch (_) {}
-    }
+  function getAudioContext() {
+    var AC = global.AudioContext || global.webkitAudioContext;
+    if (!AC) return null;
+    if (!audioCtx) audioCtx = new AC();
+    return audioCtx;
   }
 
-  function playMuyuSound() {
+  function resumeAudioContext() {
+    var ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      try { ctx.resume(); } catch (_) {}
+    }
+    return ctx;
+  }
+
+  function preloadTapAudio() {
+    if (!audioPool.length) {
+      for (var i = 0; i < AUDIO_POOL_SIZE; i++) {
+        try {
+          var audio = new Audio(AUDIO_SRC);
+          audio.preload = "auto";
+          audio.load();
+          audioPool.push(audio);
+        } catch (_) {}
+      }
+    }
+    if (audioBuffer || audioBufferLoading) return;
+    var ctx = getAudioContext();
+    if (!ctx || typeof fetch !== "function") return;
+    audioBufferLoading = fetch(AUDIO_SRC)
+      .then(function (r) { return r.arrayBuffer(); })
+      .then(function (ab) { return ctx.decodeAudioData(ab); })
+      .then(function (buf) {
+        audioBuffer = buf;
+        audioBufferLoading = null;
+      })
+      .catch(function () {
+        audioBufferLoading = null;
+      });
+  }
+
+  function playHtmlAudioFallback() {
     if (!audioPool.length) preloadTapAudio();
     if (!audioPool.length) return;
     var audio = audioPool[audioPoolIdx % audioPool.length];
@@ -90,29 +127,77 @@
     } catch (_) {}
   }
 
+  function playMuyuSound() {
+    var ctx = resumeAudioContext();
+    if (ctx && audioBuffer) {
+      try {
+        var src = ctx.createBufferSource();
+        src.buffer = audioBuffer;
+        src.connect(ctx.destination);
+        src.start(0);
+        return;
+      } catch (_) {}
+    }
+    playHtmlAudioFallback();
+    if (!audioBuffer) preloadTapAudio();
+  }
+
   function bumpMeritCount() {
     var el = document.getElementById("meritCount");
     if (!el) return;
     el.classList.remove("bump");
     void el.offsetWidth;
     el.classList.add("bump");
-    setTimeout(function () { el.classList.remove("bump"); }, 200);
+    if (bumpTimer) clearTimeout(bumpTimer);
+    bumpTimer = setTimeout(function () {
+      el.classList.remove("bump");
+      bumpTimer = null;
+    }, 140);
   }
 
   function spawnMeritParticle() {
     var container = document.getElementById("meritParticles");
     var stage = document.getElementById("fishStage");
     if (!container || !stage) return;
+    while (container.childNodes.length >= MAX_PARTICLES) {
+      container.removeChild(container.firstChild);
+    }
     var node = document.createElement("div");
     node.className = "merit-particle";
     node.textContent = "功德 +1";
     var rect = stage.getBoundingClientRect();
-    var x = rect.width * (0.35 + Math.random() * 0.3);
-    var y = rect.height * (0.25 + Math.random() * 0.2);
+    var x = rect.width * (0.32 + Math.random() * 0.36);
+    var y = rect.height * (0.22 + Math.random() * 0.24);
     node.style.left = x + "px";
     node.style.top = y + "px";
     container.appendChild(node);
-    setTimeout(function () { node.remove(); }, 1000);
+    setTimeout(function () {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    }, 720);
+  }
+
+  function runElementAnim(el, keyframes, opts) {
+    if (!el) return;
+    if (typeof el.animate === "function") {
+      try {
+        var anim = el.animate(keyframes, opts);
+        activeAnims.push(anim);
+        if (activeAnims.length > 24) {
+          var old = activeAnims.shift();
+          try { if (old && old.cancel) old.cancel(); } catch (_) {}
+        }
+        anim.onfinish = function () {
+          var i = activeAnims.indexOf(anim);
+          if (i >= 0) activeAnims.splice(i, 1);
+        };
+        return;
+      } catch (_) {}
+    }
+    // 无 WAAPI 时退回 class 动画
+    el.classList.remove("strike");
+    void el.offsetWidth;
+    el.classList.add("strike");
+    setTimeout(function () { el.classList.remove("strike"); }, ANIM_MS + 20);
   }
 
   function playTapAnim() {
@@ -120,18 +205,16 @@
     if (!stage) return;
     var hammer = stage.querySelector(".wooden-hammer");
     var fish = stage.querySelector(".wooden-fish");
-    [hammer, fish].forEach(function (el) {
-      if (!el) return;
-      el.classList.remove("strike");
-      void el.offsetWidth;
-      el.classList.add("strike");
-    });
-    if (tapAnimTimer) clearTimeout(tapAnimTimer);
-    tapAnimTimer = setTimeout(function () {
-      if (hammer) hammer.classList.remove("strike");
-      if (fish) fish.classList.remove("strike");
-      tapAnimTimer = null;
-    }, 220);
+    runElementAnim(hammer, [
+      { transform: "rotate(16deg)" },
+      { transform: "rotate(52deg)", offset: 0.4 },
+      { transform: "rotate(16deg)" }
+    ], { duration: ANIM_MS, easing: "ease-out" });
+    runElementAnim(fish, [
+      { transform: "translateX(-50%) scale(1)" },
+      { transform: "translateX(-50%) scale(0.92)", offset: 0.4 },
+      { transform: "translateX(-50%) scale(1)" }
+    ], { duration: ANIM_MS, easing: "ease-out" });
   }
 
   function isClockOpen() {
@@ -142,8 +225,9 @@
   function tap() {
     if (!isClockOpen()) return;
     ensureTodayMerit();
-    playTapAnim();
+    // 音效与动效同步、立即响应，再更新计数
     playMuyuSound();
+    playTapAnim();
     meritCount += 1;
     saveMerit();
     updateMeritDisplay();
@@ -156,7 +240,8 @@
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    suppressClickUntil = Date.now() + 400;
+    suppressClickUntil = Date.now() + 350;
+    resumeAudioContext();
     tap();
   }
 
@@ -168,13 +253,16 @@
     }
     e.preventDefault();
     e.stopPropagation();
+    resumeAudioContext();
     tap();
   }
 
   function onKeyDown(e) {
     if (!isClockOpen()) return;
+    if (e.repeat) return;
     if (e.code === "Space" || e.key === " ") {
       e.preventDefault();
+      resumeAudioContext();
       tap();
     }
   }
@@ -193,7 +281,7 @@
     var stage = document.getElementById("fishStage");
     if (!stage || stage === boundStage) return;
     boundStage = stage;
-    stage.addEventListener("pointerdown", onPointerDown);
+    stage.addEventListener("pointerdown", onPointerDown, { passive: false });
     stage.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
   }

@@ -18,6 +18,7 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .clock-muyu-zone::after {
   content: "";
@@ -42,7 +43,8 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 18px rgba(232, 201, 122, 0.25));
-  transition: filter 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: filter 0.12s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
 }
 .clock-muyu-zone .merit-count.bump {
   filter: drop-shadow(0 0 28px rgba(232, 201, 122, 0.55));
@@ -100,6 +102,7 @@
   transform-origin: 50% 100%;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
   z-index: 1;
+  will-change: transform;
 }
 .clock-muyu-zone .wooden-hammer {
   position: absolute;
@@ -111,21 +114,22 @@
   transform-origin: 80% 85%;
   z-index: 3;
   pointer-events: none;
+  will-change: transform;
 }
 .clock-muyu-zone .wooden-hammer.strike {
-  animation: muyuHammerStrike 0.2s ease-out;
+  animation: muyuHammerStrike 0.14s ease-out;
 }
 .clock-muyu-zone .wooden-fish.strike {
-  animation: muyuFishHit 0.2s ease-out;
+  animation: muyuFishHit 0.14s ease-out;
 }
 @keyframes muyuHammerStrike {
   0% { transform: rotate(16deg); }
-  42% { transform: rotate(52deg); }
+  40% { transform: rotate(52deg); }
   100% { transform: rotate(16deg); }
 }
 @keyframes muyuFishHit {
   0%, 100% { transform: translateX(-50%) scale(1); }
-  42% { transform: translateX(-50%) scale(0.92); }
+  40% { transform: translateX(-50%) scale(0.92); }
 }
 .clock-muyu-zone .particles-container {
   position: absolute;
@@ -141,12 +145,13 @@
   color: var(--muyu-gold-300);
   text-shadow: 0 0 12px rgba(232, 201, 122, 0.8);
   pointer-events: none;
-  animation: muyuMeritFloat 1s ease forwards;
+  animation: muyuMeritFloat 0.7s ease forwards;
   white-space: nowrap;
+  will-change: transform, opacity;
 }
 @keyframes muyuMeritFloat {
   0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-48px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.08); }
 }
 .clock-muyu-zone .tap-hint {
   margin-top: 4px;
@@ -183,13 +188,69 @@
   background-position: 92.788462% 85.275819%;
 }
 
-@media (max-width: 480px) {
+/* 手机端：缩小木鱼，保证弹窗内完整可见 */
+@media (max-width: 640px) {
+  .clock-muyu-zone {
+    width: min(260px, 84vw);
+    margin: 4px 0 8px;
+    padding: 10px 10px 6px;
+    border-radius: 16px;
+  }
+  .clock-muyu-zone .merit-display { margin-bottom: 2px; }
+  .clock-muyu-zone .merit-count { font-size: 28px; }
+  .clock-muyu-zone .merit-label {
+    font-size: 11px;
+    margin-top: 2px;
+    letter-spacing: 0.35em;
+    text-indent: 0.35em;
+  }
   .clock-muyu-zone .fish-stage {
-    width: 240px;
-    height: 200px;
+    width: 148px;
+    height: 126px;
   }
   .clock-muyu-zone .stage-halo {
-    width: 220px;
-    height: 220px;
+    width: 140px;
+    height: 140px;
+  }
+  .clock-muyu-zone .wooden-fish {
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+  }
+  .clock-muyu-zone .tap-hint { font-size: 11px; margin-top: 2px; }
+  .clock-muyu-zone .tap-hint kbd { font-size: 10px; padding: 1px 6px; }
+  .clock-muyu-zone .merit-particle { font-size: 13px; }
+}
+
+@media (max-width: 640px) and (max-height: 720px) {
+  .clock-muyu-zone {
+    width: min(220px, 78vw);
+    padding: 8px 8px 4px;
+    margin: 2px 0 6px;
+  }
+  .clock-muyu-zone .merit-count { font-size: 24px; }
+  .clock-muyu-zone .fish-stage {
+    width: 120px;
+    height: 102px;
+  }
+  .clock-muyu-zone .stage-halo {
+    width: 112px;
+    height: 112px;
+  }
+}
+
+@media (max-width: 640px) and (max-height: 600px) {
+  .clock-muyu-zone {
+    width: min(190px, 72vw);
+    padding: 6px 6px 2px;
+  }
+  .clock-muyu-zone .merit-label { display: none; }
+  .clock-muyu-zone .tap-hint { display: none; }
+  .clock-muyu-zone .merit-count { font-size: 22px; }
+  .clock-muyu-zone .fish-stage {
+    width: 100px;
+    height: 86px;
+  }
+  .clock-muyu-zone .stage-halo {
+    width: 96px;
+    height: 96px;
   }
 }

@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课 教师端</title>
-<link rel="stylesheet" href="css/muyu.css?v=20260827n">
+<link rel="stylesheet" href="css/muyu.css?v=20260905a">
 <script src="js/role-utils.js?v=20260827t"></script>
 <script src="js/teacher-quotes.js?v=20260826b"></script>
-<script src="js/muyu.js?v=20260827n"></script>
+<script src="js/muyu.js?v=20260905a"></script>
 <script>
 (function () {
   try {
@@ -260,6 +260,8 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .clock-overlay.show { display: flex; }
 .clock-close {
@@ -2214,6 +2216,67 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
     padding: 8px 0;
   }
   .profile-stat-card .ps:last-child { border-bottom: none; }
+}
+
+/* 时钟弹窗 + 木鱼：手机端完整可见 */
+@media (max-width: 640px) {
+  .clock-overlay {
+    justify-content: flex-start;
+    padding: 12px 12px calc(12px + var(--safe-bottom, 0px));
+    gap: 0;
+  }
+  .clock-close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  .clock-greeting {
+    margin-top: 28px;
+    margin-bottom: 4px;
+    font-size: clamp(16px, 4vw, 20px);
+  }
+  .clock-time {
+    font-size: clamp(40px, 11vw, 56px);
+    letter-spacing: 2px;
+    margin-bottom: 2px;
+  }
+  .clock-date {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .clock-quote-wrap {
+    margin-bottom: 6px;
+    padding: 10px 12px 12px;
+    border-radius: 12px;
+  }
+  .clock-quote-label { margin-bottom: 6px; font-size: 10px; }
+  .clock-quote {
+    font-size: clamp(15px, 3.6vw, 18px);
+    line-height: 1.5;
+    letter-spacing: 0.06em;
+  }
+  .clock-info-grid {
+    gap: 6px;
+    margin-top: 6px;
+    width: min(420px, 100%);
+  }
+  .clock-info-item {
+    padding: 8px 6px;
+    border-radius: 12px;
+  }
+  .clock-info-item .lbl { font-size: 11px; margin-bottom: 2px; }
+  .clock-info-item .val { font-size: 14px; }
+}
+
+@media (max-width: 640px) and (max-height: 700px) {
+  .clock-greeting { margin-top: 24px; margin-bottom: 2px; }
+  .clock-date { margin-bottom: 4px; }
+  .clock-quote-wrap { padding: 8px 10px; margin-bottom: 4px; }
+  .clock-quote { font-size: 14px; line-height: 1.4; }
+  .clock-info-item { padding: 6px 4px; }
+  .clock-info-item .val { font-size: 13px; }
 }
 </style>
 </head>
