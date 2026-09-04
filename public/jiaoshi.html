@@ -4595,6 +4595,9 @@ function burstLotteryConfetti() {
     s.style.transform = "rotate(" + (Math.random() * 90) + "deg)";
     box.appendChild(s);
   }
+  try {
+    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+  } catch (_) {}
   setTimeout(() => {
     box.innerHTML = "";
     if (stage) stage.classList.remove("has-winner");
