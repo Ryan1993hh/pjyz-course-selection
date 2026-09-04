@@ -286,7 +286,8 @@
     });
   }
 
-  function showAdjustments(list) {
+  function showAdjustments(list, meta) {
+    meta = meta || {};
     var wrap = document.createElement('div');
     wrap.className = 'cqb-adj-modal';
     var items = (list || []).map(function (a) {
@@ -297,7 +298,10 @@
       }
       return '<li>跨课程：' + esc(from) + '「' + esc(a.course_name) + '」→ ' + esc(to) + '「' + esc(a.to_course_name || a.course_name) + '」（' + esc(a.amount) + '）</li>';
     }).join('');
-    wrap.innerHTML = '<div class="cqb-adj-box"><h4>一键补齐明细</h4>' +
+    var modeHint = meta.mode_text
+      ? '<p style="margin:0 0 10px;font-size:13px;color:#64748b;">' + esc(meta.mode_text) + '</p>'
+      : '';
+    wrap.innerHTML = '<div class="cqb-adj-box"><h4>一键补齐明细</h4>' + modeHint +
       (items ? '<ul>' + items + '</ul>' : '<p>本次无需调剂，各班已配齐或无可释放名额。</p>') +
       '<button type="button" class="btn btn-primary ok">知道了</button></div>';
     document.body.appendChild(wrap);
@@ -305,95 +309,20 @@
     wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
   }
 
-  function showPriorityCoursePicker() {
-    var courses = (state.courses || []).filter(function (c) {
-      return !c.selection_locked;
-    });
-    if (!courses.length && state.rows[0] && state.rows[0].courses) {
-      courses = state.rows[0].courses.filter(function (c) {
-        return !c.selection_locked;
-      }).map(function (c) {
-        return {
-          id: c.course_id,
-          name: c.course_name,
-          limit_grade6: c.base_quota,
-          limit_grade7: c.base_quota,
-          selection_locked: false
-        };
-      });
-    }
-    if (!courses.length) {
-      toast('当前年级没有可调剂课程', 'warning');
-      return;
-    }
-
-    var wrap = document.createElement('div');
-    wrap.className = 'cqb-adj-modal';
-    var items = courses.map(function (c) {
-      var base = state.grade === '七年级'
-        ? (parseInt(c.limit_grade7, 10) || 0)
-        : (parseInt(c.limit_grade6, 10) || 0);
-      // 若来自明细行，base_quota 已带上
-      if (c.base_quota != null) base = c.base_quota;
-      var id = c.id != null ? c.id : c.course_id;
-      var name = c.name || c.course_name || '';
-      return '<label class="cqb-pick-item">' +
-        '<input type="checkbox" value="' + esc(id) + '"' + (base === 2 ? ' checked' : '') + '>' +
-        '<span><div>' + esc(name) + '</div><div class="meta">基础名额 ' + esc(base) + (base === 2 ? ' · 可释放调剂' : '') + '</div></span>' +
-        '</label>';
-    }).join('');
-
-    wrap.innerHTML =
-      '<div class="cqb-adj-box">' +
-      '  <h4>选择优先调剂课程</h4>' +
-      '  <p style="margin:0;font-size:13px;color:#64748b;">系统将优先从勾选课程中完成「' + esc(state.grade) + '」班级名额补齐；不足时再使用其他课程。</p>' +
-      '  <div class="cqb-pick-list" id="cqbPickList">' + items + '</div>' +
-      '  <div style="display:flex;gap:8px;margin-bottom:4px;">' +
-      '    <button type="button" class="btn btn-outline btn-sm" id="cqbPickAll">全选</button>' +
-      '    <button type="button" class="btn btn-outline btn-sm" id="cqbPickNone">清空</button>' +
-      '  </div>' +
-      '  <div class="cqb-pick-actions">' +
-      '    <button type="button" class="btn btn-outline" id="cqbPickCancel">取消</button>' +
-      '    <button type="button" class="btn btn-primary" id="cqbPickConfirm">开始补齐</button>' +
-      '  </div>' +
-      '</div>';
-    document.body.appendChild(wrap);
-
-    wrap.querySelector('#cqbPickCancel').addEventListener('click', function () { wrap.remove(); });
-    wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
-    wrap.querySelector('#cqbPickAll').addEventListener('click', function () {
-      wrap.querySelectorAll('#cqbPickList input[type="checkbox"]').forEach(function (el) { el.checked = true; });
-    });
-    wrap.querySelector('#cqbPickNone').addEventListener('click', function () {
-      wrap.querySelectorAll('#cqbPickList input[type="checkbox"]').forEach(function (el) { el.checked = false; });
-    });
-    wrap.querySelector('#cqbPickConfirm').addEventListener('click', async function () {
-      var ids = [];
-      wrap.querySelectorAll('#cqbPickList input[type="checkbox"]:checked').forEach(function (el) {
-        var n = parseInt(el.value, 10);
-        if (!isNaN(n)) ids.push(n);
-      });
-      if (!ids.length) {
-        toast('请至少选择一门优先调剂课程', 'warning');
-        return;
-      }
-      wrap.remove();
-      await runAutoFill(ids);
-    });
-  }
-
-  async function runAutoFill(priorityIds) {
+  async function runAutoFill() {
     var btn = document.getElementById('cqbAutoFillBtn');
     if (btn) btn.disabled = true;
     try {
       var data = await apiRequest('POST', '/api/class-quota-board/auto-fill', {
-        grade: state.grade,
-        priority_course_ids: priorityIds
+        grade: state.grade
       });
       state.rows = data.rows || [];
       renderTable();
-      showAdjustments(data.adjustments || []);
-      toast('一键补齐完成', 'success');
+      showAdjustments(data.adjustments || [], {
+        mode: data.mode,
+        mode_text: data.mode_text
+      });
+      toast(data.mode_text || '一键补齐完成', 'success');
     } catch (e) {
       toast('补齐失败：' + e.message, 'error');
     } finally {
@@ -402,7 +331,14 @@
   }
 
   function onAutoFill() {
-    showPriorityCoursePicker();
+    var msg =
+      '将按「' + state.grade + '」名额状态列调配：\n' +
+      '1. 按剩余名额从多到少，优先用空余名额补缺口\n' +
+      '2. 尽量让每班至少保留 1 个余额；做不到则只补齐现有缺口\n' +
+      '3. 班级间零和调剂，不新增总名额\n\n' +
+      '确定开始？';
+    if (!confirm(msg)) return;
+    runAutoFill();
   }
 
   async function onRestore() {
