@@ -3847,18 +3847,27 @@ function shakeElement(el) {
   setTimeout(() => el.classList.remove('shake'), 500);
 }
 
-// 根据当前年级获取课程限制人数
-// 优先使用班级名额看板的班级级调剂结果
-function getCourseLimit(course) {
-  if (course && course.id != null && classQuotaOverrides && Object.prototype.hasOwnProperty.call(classQuotaOverrides, String(course.id))) {
-    const n = parseInt(classQuotaOverrides[String(course.id)], 10);
-    if (!isNaN(n)) return Math.max(0, n);
-  }
+// 全年级统一基础名额（不受班级调剂 / 锁定归零影响）
+function getBaseCourseLimit(course) {
   if (course.limit == null) return 0;
   if (typeof course.limit === 'number') return course.limit;
   if (gradeName && course.limit[gradeName] != null) return course.limit[gradeName];
   const vals = Object.values(course.limit);
   return vals.length ? vals[0] : 0;
+}
+
+// 当前班级有效可选名额（班级调剂优先；锁定课不因覆盖为 0 而隐藏内定席位）
+function getCourseLimit(course) {
+  const base = getBaseCourseLimit(course);
+  if (course && course.id != null && classQuotaOverrides && Object.prototype.hasOwnProperty.call(classQuotaOverrides, String(course.id))) {
+    const n = parseInt(classQuotaOverrides[String(course.id)], 10);
+    if (!isNaN(n)) {
+      // 锁死课程：名额看板可能把有效名额记为 0，仍按基础名额展示席位（空位=不可选择）
+      if (course.selection_locked && n <= 0 && base > 0) return base;
+      return Math.max(0, n);
+    }
+  }
+  return base;
 }
 
 async function loadClassQuotaOverrides() {
@@ -3873,12 +3882,15 @@ async function loadClassQuotaOverrides() {
     Object.keys(map).forEach(function (k) {
       classQuotaOverrides[String(k)] = parseInt(map[k], 10) || 0;
     });
-    // 同步锁死课程标记（有效名额为 0 且后台标记锁死时保持不可选）
+    // 同步锁死标记，并用明细中的有效名额（不要把锁死课强行写成 0）
     if (Array.isArray(data.courses)) {
       data.courses.forEach(function (c) {
         const course = COURSES.find(function (x) { return String(x.id) === String(c.course_id); });
         if (!course) return;
         if (c.selection_locked) course.selection_locked = true;
+        if (c.effective_quota != null) {
+          classQuotaOverrides[String(c.course_id)] = parseInt(c.effective_quota, 10) || 0;
+        }
       });
     }
     return true;
