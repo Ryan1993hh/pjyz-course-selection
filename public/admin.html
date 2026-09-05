@@ -3304,11 +3304,10 @@ th.sortable.active .sort-icon { opacity: 1; }
     padding: 0 8px;
   }
 
-  /* 课程表：隐藏非核心，冻结课程名称 */
+  /* 课程表：隐藏非核心，冻结课程名称；保留授课地点 */
   table.courses-table col:nth-child(1),
   table.courses-table col:nth-child(2),
   table.courses-table col:nth-child(4),
-  table.courses-table col:nth-child(6),
   table.courses-table col:nth-child(7),
   table.courses-table th:nth-child(1),
   table.courses-table td:nth-child(1),
@@ -3316,8 +3315,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.courses-table td:nth-child(2),
   table.courses-table th:nth-child(4),
   table.courses-table td:nth-child(4),
-  table.courses-table th:nth-child(6),
-  table.courses-table td:nth-child(6),
   table.courses-table th:nth-child(7),
   table.courses-table td:nth-child(7) {
     display: none;
@@ -3339,6 +3336,13 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   table.courses-table th:nth-child(5),
   table.courses-table td:nth-child(5) { min-width: 72px; }
+  table.courses-table th:nth-child(6),
+  table.courses-table td:nth-child(6),
+  table.courses-table td[data-field="location"] {
+    display: table-cell !important;
+    min-width: 88px;
+    max-width: 120px;
+  }
   table.courses-table th:nth-child(8),
   table.courses-table td:nth-child(8),
   table.courses-table th:nth-child(9),
@@ -3359,15 +3363,13 @@ th.sortable.active .sort-icon { opacity: 1; }
     display: none !important;
   }
 
-  /* 用户表：隐藏部分列，冻结教师名字为左侧首列 */
+  /* 用户表：隐藏部分列，冻结教师名字；保留课程名称 */
   table.usr-table th:nth-child(1),
   table.usr-table td:nth-child(1),
   table.usr-table th:nth-child(2),
   table.usr-table td:nth-child(2),
   table.usr-table th:nth-child(3),
   table.usr-table td:nth-child(3),
-  table.usr-table th:nth-child(5),
-  table.usr-table td:nth-child(5),
   table.usr-table th:nth-child(7),
   table.usr-table td:nth-child(7),
   table.usr-table th:nth-child(8),
@@ -3388,6 +3390,12 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.usr-table thead th:nth-child(4) {
     z-index: 4;
     background: #dbeafe !important;
+  }
+  table.usr-table th:nth-child(5),
+  table.usr-table td:nth-child(5) {
+    display: table-cell !important;
+    min-width: 108px;
+    max-width: 148px;
   }
   table.usr-table th:nth-child(6),
   table.usr-table td:nth-child(6) { min-width: 96px; }
@@ -3544,36 +3552,57 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行紧贴查询下方：禁选 + 状态 + 批量删除 */
+  /* 第四行紧贴查询下方：共 N 条 | 状态 + 禁选 + 批量删除（右） */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
     width: 100%;
     margin: 0;
     padding: 0;
     order: 0;
   }
-  #section-selections #selectionLockWrapMob {
+  #section-selections .sel-mob-count-slot {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  #section-selections .sel-mob-count-slot .data-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f766e;
+    white-space: nowrap;
+  }
+  #section-selections .sel-mob-actions-right {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
     flex: 1 1 auto;
     min-width: 0;
-    padding: 0;
   }
   #section-selections #selectionStatusTextMob {
-    font-size: 13px;
+    font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 42vw;
+    flex: 0 1 auto;
   }
   #section-selections #toggleSelectionBtnMob,
   #section-selections #batchDeleteBtnMob {
     flex: 0 0 auto;
-    min-height: 44px;
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  /* 工具栏整行隐藏，避免重复的禁选/删除/录课与条数 */
+  #section-selections .data-toolbar {
+    display: none !important;
   }
   #section-selections .selections-main {
     width: 100%;
@@ -3582,10 +3611,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .data-card {
     margin: 0;
     padding: 8px;
-  }
-  #section-selections .data-toolbar {
-    margin-bottom: 6px;
-    padding-bottom: 6px;
   }
   #section-selections .data-card .table-wrap {
     min-height: 40vh;
@@ -3977,12 +4002,13 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单" hidden aria-hidden="true">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
               <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
-                <div class="selection-lock-wrap" id="selectionLockWrapMob">
-                  <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
+                <span id="selMobCountSlot" class="sel-mob-count-slot"></span>
+                <div class="sel-mob-actions-right">
                   <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
+                  <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
+                  <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
+                  <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
                 </div>
-                <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
-                <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
               </div>
             </div>
           </div>
@@ -4006,7 +4032,7 @@ th.sortable.active .sort-icon { opacity: 1; }
         <div class="selections-main">
           <div class="card data-card">
             <div class="data-toolbar">
-              <div class="data-toolbar-left">
+              <div class="data-toolbar-left" id="dataToolbarCountSlot">
                 <span class="data-count" id="dataCount">共 0 条数据</span>
               </div>
               <div class="data-toolbar-right desktop-only">
@@ -8269,19 +8295,32 @@ function initShell(){
   }
 }
 
-/** 移动端：课程统计移到标题行；桌面端放回侧栏卡片 */
+/** 移动端：课程统计移到标题行；条数移到查询下一行；桌面端放回原位 */
 function placeSelectionStats() {
   var stats = document.getElementById('courseStats');
   var head = document.getElementById('selHeadStatsSlot');
   var side = document.getElementById('selSideStatsSlot');
-  if (!stats || !head || !side) return;
+  var count = document.getElementById('dataCount');
+  var mobCount = document.getElementById('selMobCountSlot');
+  var deskCount = document.getElementById('dataToolbarCountSlot');
   var mob = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
-  if (mob) {
-    if (stats.parentElement !== head) head.appendChild(stats);
-  } else if (stats.parentElement !== side) {
-    var title = side.querySelector('.card-title');
-    if (title) side.insertBefore(stats, title.nextSibling);
-    else side.appendChild(stats);
+
+  if (stats && head && side) {
+    if (mob) {
+      if (stats.parentElement !== head) head.appendChild(stats);
+    } else if (stats.parentElement !== side) {
+      var title = side.querySelector('.card-title');
+      if (title) side.insertBefore(stats, title.nextSibling);
+      else side.appendChild(stats);
+    }
+  }
+
+  if (count && mobCount && deskCount) {
+    if (mob) {
+      if (count.parentElement !== mobCount) mobCount.appendChild(count);
+    } else if (count.parentElement !== deskCount) {
+      deskCount.appendChild(count);
+    }
   }
 }
 
