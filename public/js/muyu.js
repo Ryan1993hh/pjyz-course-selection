@@ -1,19 +1,16 @@
 /**
- * 电子木鱼交互与音效（视觉参考 fish.leixf.cn）
- * 功德仅统计当天，跨日自动清零
- * 音效：优先 HTMLAudio 池（兼容移动端手势解锁）+ Web Audio 低延迟叠加
+ * 电子木鱼交互与音效
+ * 移动端策略：在用户手势同步栈内直接 new Audio().play()，避免静音解锁竞态
  */
 (function (global) {
   var MERIT_KEY = "pjyz_merit_daily";
-  var AUDIO_SRC = "/audio/muyu-tap.mp3?v=20260905c";
-  var AUDIO_POOL_SIZE = 12;
-  var MAX_PARTICLES = 14;
+  var AUDIO_FILE = "audio/muyu-tap.mp3?v=20260905d";
+  var MAX_PARTICLES = 12;
   var ANIM_MS = 140;
+  var MAX_LIVE_SOUNDS = 8;
 
   var meritCount = 0;
   var meritDate = "";
-  var audioPool = [];
-  var audioPoolIdx = 0;
   var audioCtx = null;
   var audioBuffer = null;
   var audioBufferLoading = null;
@@ -24,6 +21,20 @@
   var suppressClickUntil = 0;
   var activeAnims = [];
   var bumpTimer = null;
+  var liveSounds = [];
+  var sharedAudio = null;
+  var audioSrc = "";
+  var lastGestureTapAt = 0;
+
+  function resolveAudioSrc() {
+    if (audioSrc) return audioSrc;
+    try {
+      audioSrc = new URL("/" + AUDIO_FILE.replace(/^\//, ""), global.location.origin).href;
+    } catch (_) {
+      audioSrc = "/" + AUDIO_FILE.replace(/^\//, "");
+    }
+    return audioSrc;
+  }
 
   function todayKey() {
     var d = new Date();
@@ -75,6 +86,24 @@
     if (el) el.textContent = String(meritCount);
   }
 
+  function ensureSharedAudio() {
+    if (sharedAudio) return sharedAudio;
+    try {
+      sharedAudio = document.createElement("audio");
+      sharedAudio.src = resolveAudioSrc();
+      sharedAudio.preload = "auto";
+      sharedAudio.setAttribute("playsinline", "true");
+      sharedAudio.setAttribute("webkit-playsinline", "true");
+      sharedAudio.controls = false;
+      sharedAudio.style.cssText = "position:fixed;width:0;height:0;opacity:0;pointer-events:none;left:-9999px;";
+      (document.body || document.documentElement).appendChild(sharedAudio);
+      try { sharedAudio.load(); } catch (_) {}
+    } catch (_) {
+      sharedAudio = null;
+    }
+    return sharedAudio;
+  }
+
   function getAudioContext() {
     var AC = global.AudioContext || global.webkitAudioContext;
     if (!AC) return null;
@@ -86,7 +115,8 @@
 
   function resumeAudioContext() {
     var ctx = getAudioContext();
-    if (ctx && ctx.state === "suspended") {
+    if (!ctx) return null;
+    if (ctx.state === "suspended") {
       try {
         var p = ctx.resume();
         if (p && typeof p.catch === "function") p.catch(function () {});
@@ -95,29 +125,21 @@
     return ctx;
   }
 
-  function ensureAudioPool() {
-    if (audioPool.length) return;
-    for (var i = 0; i < AUDIO_POOL_SIZE; i++) {
-      try {
-        var audio = new Audio(AUDIO_SRC);
-        audio.preload = "auto";
-        audio.setAttribute("playsinline", "true");
-        audio.load();
-        audioPool.push(audio);
-      } catch (_) {}
-    }
-  }
-
   function loadAudioBuffer() {
     if (audioBuffer || audioBufferLoading) return;
     var ctx = getAudioContext();
     if (!ctx || typeof fetch !== "function") return;
-    audioBufferLoading = fetch(AUDIO_SRC)
+    audioBufferLoading = fetch(resolveAudioSrc())
       .then(function (r) {
-        if (!r.ok) throw new Error("audio fetch failed");
+        if (!r.ok) throw new Error("audio missing");
         return r.arrayBuffer();
       })
-      .then(function (ab) { return ctx.decodeAudioData(ab.slice(0)); })
+      .then(function (ab) {
+        return new Promise(function (resolve, reject) {
+          var ret = ctx.decodeAudioData(ab, resolve, reject);
+          if (ret && typeof ret.then === "function") ret.then(resolve, reject);
+        });
+      })
       .then(function (buf) {
         audioBuffer = buf;
         audioBufferLoading = null;
@@ -127,89 +149,93 @@
       });
   }
 
-  function unlockAudio() {
-    ensureAudioPool();
-    resumeAudioContext();
-    loadAudioBuffer();
-    if (audioUnlocked) return;
-    audioUnlocked = true;
-    // 在用户手势内解锁 Audio 元素（iOS/Android 必需）
-    for (var i = 0; i < audioPool.length; i++) {
-      (function (audio) {
-        try {
-          audio.muted = true;
-          audio.volume = 0;
-          var p = audio.play();
-          if (p && typeof p.then === "function") {
-            p.then(function () {
-              try {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = false;
-                audio.volume = 1;
-              } catch (_) {}
-            }).catch(function () {
-              try {
-                audio.muted = false;
-                audio.volume = 1;
-              } catch (_) {}
-            });
-          } else {
-            try {
-              audio.pause();
-              audio.currentTime = 0;
-              audio.muted = false;
-              audio.volume = 1;
-            } catch (_) {}
-          }
-        } catch (_) {}
-      })(audioPool[i]);
+  function pruneLiveSounds() {
+    while (liveSounds.length > MAX_LIVE_SOUNDS) {
+      var old = liveSounds.shift();
+      try {
+        old.pause();
+        old.src = "";
+        if (old.parentNode) old.parentNode.removeChild(old);
+      } catch (_) {}
     }
   }
 
-  function playHtmlAudio() {
-    ensureAudioPool();
-    if (!audioPool.length) {
+  /** 在用户手势同步调用栈内播放，兼容 iOS / Android / 微信 */
+  function playHtmlAudioNow() {
+    var src = resolveAudioSrc();
+    ensureSharedAudio();
+
+    // 优先：克隆已挂载的 audio（对 iOS 最稳）
+    if (sharedAudio) {
       try {
-        var once = new Audio(AUDIO_SRC);
-        once.play().catch(function () {});
+        var cloned = sharedAudio.cloneNode(true);
+        cloned.muted = false;
+        cloned.volume = 1;
+        cloned.currentTime = 0;
+        (document.body || document.documentElement).appendChild(cloned);
+        liveSounds.push(cloned);
+        pruneLiveSounds();
+        var p1 = cloned.play();
+        if (p1 && typeof p1.then === "function") {
+          p1.then(function () {
+            setTimeout(function () {
+              try {
+                if (cloned.parentNode) cloned.parentNode.removeChild(cloned);
+              } catch (_) {}
+            }, 1500);
+          }).catch(function () {
+            playFreshAudio(src);
+          });
+          return;
+        }
       } catch (_) {}
-      return;
     }
-    var audio = audioPool[audioPoolIdx % audioPool.length];
-    audioPoolIdx += 1;
+
+    playFreshAudio(src);
+
+    // 同步重置共享节点，便于下次克隆
+    if (sharedAudio) {
+      try {
+        sharedAudio.muted = false;
+        sharedAudio.volume = 1;
+        sharedAudio.currentTime = 0;
+        sharedAudio.play().then(function () {
+          try { sharedAudio.pause(); sharedAudio.currentTime = 0; } catch (_) {}
+        }).catch(function () {});
+      } catch (_) {}
+    }
+  }
+
+  function playFreshAudio(src) {
     try {
-      audio.muted = false;
-      audio.volume = 1;
-      // 上一段未播完则换新实例，避免连击被卡住
-      if (!audio.paused && audio.currentTime > 0.02) {
-        audio = new Audio(AUDIO_SRC);
-        audio.setAttribute("playsinline", "true");
-      } else {
-        try { audio.pause(); } catch (_) {}
-        try { audio.currentTime = 0; } catch (_) {}
-      }
-      var p = audio.play();
+      var a = new Audio(src || resolveAudioSrc());
+      a.preload = "auto";
+      a.setAttribute("playsinline", "true");
+      a.setAttribute("webkit-playsinline", "true");
+      a.muted = false;
+      a.volume = 1;
+      liveSounds.push(a);
+      pruneLiveSounds();
+      var p = a.play();
       if (p && typeof p.catch === "function") {
         p.catch(function () {
-          try {
-            var retry = new Audio(AUDIO_SRC);
-            retry.setAttribute("playsinline", "true");
-            retry.play().catch(function () {});
-          } catch (_) {}
+          // 最后兜底：再试一次共享节点
+          if (sharedAudio) {
+            try {
+              sharedAudio.muted = false;
+              sharedAudio.volume = 1;
+              sharedAudio.currentTime = 0;
+              sharedAudio.play().catch(function () {});
+            } catch (_) {}
+          }
         });
       }
-    } catch (_) {
-      try {
-        var fallback = new Audio(AUDIO_SRC);
-        fallback.play().catch(function () {});
-      } catch (__) {}
-    }
+    } catch (_) {}
   }
 
-  function playWebAudio() {
+  function playWebAudioNow() {
     var ctx = resumeAudioContext();
-    if (!ctx || !audioBuffer) return false;
+    if (!ctx || !audioBuffer || ctx.state === "suspended") return false;
     try {
       var src = ctx.createBufferSource();
       var gain = ctx.createGain();
@@ -224,12 +250,73 @@
     }
   }
 
+  function unlockAudio() {
+    ensureSharedAudio();
+    var ctx = resumeAudioContext();
+    loadAudioBuffer();
+    if (audioUnlocked) {
+      resumeAudioContext();
+      return;
+    }
+    audioUnlocked = true;
+
+    // 静音级解锁（几乎听不见），避免打开弹窗就响一声，同时满足移动端手势策略
+    if (sharedAudio) {
+      try {
+        sharedAudio.muted = false;
+        sharedAudio.volume = 0.001;
+        sharedAudio.currentTime = 0;
+        var p = sharedAudio.play();
+        if (p && typeof p.then === "function") {
+          p.then(function () {
+            try {
+              sharedAudio.pause();
+              sharedAudio.currentTime = 0;
+              sharedAudio.volume = 1;
+            } catch (_) {}
+          }).catch(function () {
+            try { sharedAudio.volume = 1; } catch (_) {}
+          });
+        } else {
+          try { sharedAudio.volume = 1; } catch (_) {}
+        }
+      } catch (_) {}
+    }
+    if (ctx) {
+      try {
+        var buf = ctx.createBuffer(1, 1, 22050);
+        var node = ctx.createBufferSource();
+        node.buffer = buf;
+        node.connect(ctx.destination);
+        node.start(0);
+      } catch (_) {}
+    }
+  }
+
   function playMuyuSound() {
-    unlockAudio();
-    // Web Audio 已就绪则用低延迟重叠播放；否则立刻用 HTMLAudio 池（原音效文件）
-    if (audioBuffer && playWebAudio()) return;
-    playHtmlAudio();
-    if (!audioBuffer) loadAudioBuffer();
+    // 手势内立刻出声：HTML Audio 为主；Web Audio 有缓冲再叠加
+    playHtmlAudioNow();
+    playWebAudioNow();
+    if (!audioUnlocked) unlockAudio();
+    else resumeAudioContext();
+    loadAudioBuffer();
+  }
+
+  function gestureTap() {
+    if (!isClockOpen()) return false;
+    var now = Date.now();
+    if (now - lastGestureTapAt < 90) return false;
+    lastGestureTapAt = now;
+    suppressClickUntil = now + 450;
+    playMuyuSound();
+    ensureTodayMerit();
+    playTapAnim();
+    meritCount += 1;
+    saveMerit();
+    updateMeritDisplay();
+    bumpMeritCount();
+    spawnMeritParticle();
+    return true;
   }
 
   function bumpMeritCount() {
@@ -256,10 +343,8 @@
     node.className = "merit-particle";
     node.textContent = "功德 +1";
     var rect = stage.getBoundingClientRect();
-    var x = rect.width * (0.32 + Math.random() * 0.36);
-    var y = rect.height * (0.22 + Math.random() * 0.24);
-    node.style.left = x + "px";
-    node.style.top = y + "px";
+    node.style.left = (rect.width * (0.32 + Math.random() * 0.36)) + "px";
+    node.style.top = (rect.height * (0.22 + Math.random() * 0.24)) + "px";
     container.appendChild(node);
     setTimeout(function () {
       if (node.parentNode) node.parentNode.removeChild(node);
@@ -272,14 +357,10 @@
       try {
         var anim = el.animate(keyframes, opts);
         activeAnims.push(anim);
-        if (activeAnims.length > 24) {
+        if (activeAnims.length > 20) {
           var old = activeAnims.shift();
           try { if (old && old.cancel) old.cancel(); } catch (_) {}
         }
-        anim.onfinish = function () {
-          var i = activeAnims.indexOf(anim);
-          if (i >= 0) activeAnims.splice(i, 1);
-        };
         return;
       } catch (_) {}
     }
@@ -313,14 +394,7 @@
 
   function tap() {
     if (!isClockOpen()) return;
-    ensureTodayMerit();
-    playMuyuSound();
-    playTapAnim();
-    meritCount += 1;
-    saveMerit();
-    updateMeritDisplay();
-    bumpMeritCount();
-    spawnMeritParticle();
+    gestureTap();
   }
 
   function onPointerDown(e) {
@@ -328,9 +402,7 @@
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    suppressClickUntil = Date.now() + 350;
-    unlockAudio();
-    tap();
+    gestureTap();
   }
 
   function onClick(e) {
@@ -341,8 +413,7 @@
     }
     e.preventDefault();
     e.stopPropagation();
-    unlockAudio();
-    tap();
+    gestureTap();
   }
 
   function onKeyDown(e) {
@@ -350,16 +421,13 @@
     if (e.repeat) return;
     if (e.code === "Space" || e.key === " ") {
       e.preventDefault();
-      unlockAudio();
-      tap();
+      gestureTap();
     }
   }
 
   function startDayWatch() {
     if (dayWatchTimer) return;
-    dayWatchTimer = setInterval(function () {
-      ensureTodayMerit();
-    }, 30000);
+    dayWatchTimer = setInterval(ensureTodayMerit, 30000);
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "visible") ensureTodayMerit();
     });
@@ -370,6 +438,12 @@
     if (!stage || stage === boundStage) return;
     boundStage = stage;
     stage.addEventListener("pointerdown", onPointerDown, { passive: false });
+    stage.addEventListener("touchstart", function (e) {
+      if (!isClockOpen()) return;
+      if (e.touches && e.touches.length > 1) return;
+      e.preventDefault();
+      gestureTap();
+    }, { passive: false });
     stage.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
   }
@@ -379,7 +453,8 @@
       initialized = true;
       loadMerit();
       updateMeritDisplay();
-      ensureAudioPool();
+      resolveAudioSrc();
+      ensureSharedAudio();
       startDayWatch();
     }
     bind();
