@@ -3410,7 +3410,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections.active {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px;
+    gap: 4px;
     align-items: stretch;
   }
   #section-selections .selections-section-header {
@@ -3429,11 +3429,11 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     width: 100%;
   }
   #section-selections .selections-title-row h2 {
-    font-size: 16px;
+    font-size: 15px;
     margin: 0;
     white-space: nowrap;
     flex: 0 1 auto;
@@ -3443,16 +3443,18 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .selections-layout {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     width: 100%;
     min-width: 0;
+    flex: 1 1 auto;
   }
   #section-selections .selections-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     width: 100%;
     min-width: 0;
+    flex: 0 0 auto;
   }
 
   /* 第1行：标题 + 统计（JS 将 #courseStats 移入 .sel-head-stats-slot） */
@@ -3463,10 +3465,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   #section-selections .sel-head-stats-slot .stats-mini {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     margin: 0;
-    padding: 4px 8px;
-    border-radius: 8px;
+    padding: 2px 6px;
+    border-radius: 6px;
     background: #f0fdfa;
     border: 1px solid #ccfbf1;
   }
@@ -3475,13 +3477,13 @@ th.sortable.active .sort-icon { opacity: 1; }
     text-align: center;
   }
   #section-selections .sel-head-stats-slot .stat-mini-value {
-    font-size: 16px;
-    line-height: 1.15;
+    font-size: 14px;
+    line-height: 1.1;
     font-weight: 700;
     color: #0f766e;
   }
   #section-selections .sel-head-stats-slot .stat-mini-label {
-    font-size: 11px;
+    font-size: 10px;
     white-space: nowrap;
     color: #64748b;
   }
@@ -3491,23 +3493,23 @@ th.sortable.active .sort-icon { opacity: 1; }
 
   #section-selections .filter-card {
     margin: 0;
-    padding: 8px;
+    padding: 6px;
   }
   #section-selections .filter-card > .card-title { display: none; }
   #section-selections .filter-vertical {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
   }
   #section-selections .filter-row {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
     align-items: flex-end;
   }
   #section-selections .filter-row-mob1 .f-item {
-    flex: 1 1 calc(25% - 6px);
+    flex: 1 1 calc(25% - 4px);
     min-width: 0;
     margin: 0;
   }
@@ -3515,32 +3517,42 @@ th.sortable.active .sort-icon { opacity: 1; }
     display: none !important;
   }
   #section-selections .filter-vertical .f-item label {
-    font-size: 12px;
-    margin-bottom: 2px;
+    font-size: 11px;
+    margin-bottom: 1px;
+    line-height: 1.2;
   }
+  /* 压缩下拉/输入高度，腾出表格空间（保持 16px 防 iOS 缩放） */
   #section-selections .filter-vertical .form-select,
   #section-selections .filter-vertical .form-input {
     width: 100%;
-    min-height: 44px;
-    padding: 6px;
+    height: 32px;
+    min-height: 32px !important;
+    max-height: 32px;
+    padding: 2px 6px;
     font-size: 16px !important;
+    line-height: 1.2;
+    border-radius: 6px;
   }
   /* 第三行：未选、内定、重置、查询 */
   #section-selections .filter-row-actions,
   #section-selections .sel-mob-btns {
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-wrap: nowrap;
+    gap: 4px;
     width: 100%;
   }
   #section-selections .filter-row-actions .btn,
   #section-selections .sel-mob-btns .btn {
-    flex: 1 1 calc(25% - 6px);
-    min-width: calc(22% - 6px);
-    min-height: 44px;
-    padding: 0 4px;
-    font-size: 13px;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 32px;
+    min-height: 32px !important;
+    max-height: 32px;
+    padding: 0 2px;
+    font-size: 12px;
+    border-radius: 6px;
+    line-height: 1.2;
   }
   #section-selections .mob-filter-extra {
     display: inline-flex !important;
@@ -3552,25 +3564,26 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行紧贴查询下方：共 N 条 | 状态 + 禁选 + 批量删除（右） */
+  /* 第四行：共 N 条 | 状态 + 禁选 + 批量删除（右） */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: 4px;
     width: 100%;
     margin: 0;
     padding: 0;
     order: 0;
+    min-height: 0;
   }
   #section-selections .sel-mob-count-slot {
     flex: 0 1 auto;
     min-width: 0;
   }
   #section-selections .sel-mob-count-slot .data-count {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: #0f766e;
     white-space: nowrap;
@@ -3581,24 +3594,28 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 4px;
     flex: 1 1 auto;
     min-width: 0;
   }
   #section-selections #selectionStatusTextMob {
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 42vw;
+    max-width: 36vw;
     flex: 0 1 auto;
   }
   #section-selections #toggleSelectionBtnMob,
   #section-selections #batchDeleteBtnMob {
     flex: 0 0 auto;
-    min-height: 40px;
-    padding: 0 8px;
-    font-size: 12px;
+    height: 30px;
+    min-height: 30px !important;
+    max-height: 30px;
+    padding: 0 6px;
+    font-size: 11px;
+    border-radius: 6px;
+    line-height: 1.2;
   }
   /* 工具栏整行隐藏，避免重复的禁选/删除/录课与条数 */
   #section-selections .data-toolbar {
@@ -3607,13 +3624,51 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .selections-main {
     width: 100%;
     min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
   #section-selections .data-card {
     margin: 0;
-    padding: 8px;
+    padding: 6px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
+  /* 表格区域尽量占满剩余视口，多显示学生行 */
   #section-selections .data-card .table-wrap {
-    min-height: 40vh;
+    flex: 1 1 auto;
+    min-height: min(62vh, calc(100dvh - 250px));
+    max-height: none;
+  }
+  #section-selections .data-card .pagination {
+    margin-top: 4px;
+    padding: 2px 0;
+    gap: 4px;
+  }
+  #section-selections .data-card .pagination .btn,
+  #section-selections .data-card .pagination button {
+    min-height: 28px !important;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  #section-selections table.sel-table th,
+  #section-selections table.sel-table td {
+    padding: 6px 6px !important;
+    font-size: 14px !important;
+    line-height: 1.25;
+  }
+  #section-selections table.sel-table .btn-sm {
+    min-height: 28px !important;
+    height: 28px;
+    padding: 0 6px;
+    font-size: 12px !important;
+  }
+  #section-selections table.sel-table .course-link {
+    font-size: 13px !important;
   }
 
   /* ========== 3. 课程看板 ========== */
