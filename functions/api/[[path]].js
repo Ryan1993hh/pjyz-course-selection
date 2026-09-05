@@ -2909,6 +2909,11 @@ async function handleClassQuotaAutoFill(db, request) {
   const grade = String(body.grade || '').trim();
   if (grade !== '六年级' && grade !== '七年级') return json({ error: '年级无效' }, 400);
 
+  const preferCourseIds = Array.isArray(body.prefer_course_ids)
+    ? body.prefer_course_ids.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
+    : [];
+  const preferSet = new Set(preferCourseIds);
+
   const ctx = await loadQuotaBoardContext(db, grade);
   const working = {};
   quotaBoardClassNums().forEach((cn) => {
@@ -2945,15 +2950,26 @@ async function handleClassQuotaAutoFill(db, request) {
     return eff - 1 >= pre;
   }
 
+  function shuffleInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+
   function pickDonorCourse(cn, rows) {
-    const list = unlockedCourses().slice().sort((a, b) => {
-      const spareA = working[cn][String(a.id)];
-      const spareB = working[cn][String(b.id)];
-      if (spareA !== spareB) return spareB - spareA;
-      return Number(a.id) - Number(b.id);
-    });
-    for (let i = 0; i < list.length; i++) {
-      if (canDonateCourse(cn, list[i], rows)) return list[i];
+    const unlocked = unlockedCourses();
+    const preferred = unlocked.filter((c) => preferSet.has(Number(c.id)) && canDonateCourse(cn, c, rows));
+    if (preferred.length) {
+      return shuffleInPlace(preferred.slice())[0];
+    }
+    // 勾选课程在该班无可捐出时，再从其余未锁死课程中随机取
+    const others = unlocked.filter((c) => !preferSet.has(Number(c.id)) && canDonateCourse(cn, c, rows));
+    if (others.length) {
+      return shuffleInPlace(others.slice())[0];
     }
     return null;
   }
@@ -2965,7 +2981,10 @@ async function handleClassQuotaAutoFill(db, request) {
       const hit = list.find((c) => Number(c.id) === Number(preferCourseId));
       if (hit) return hit;
     }
-    return list.slice().sort((a, b) => Number(a.id) - Number(b.id))[0];
+    // 接收侧优先落到优先调剂课程（随机），否则随机未锁死课程
+    const preferredRecv = list.filter((c) => preferSet.has(Number(c.id)));
+    if (preferredRecv.length) return shuffleInPlace(preferredRecv.slice())[0];
+    return shuffleInPlace(list.slice())[0];
   }
 
   const rows0 = snapshotRows();
@@ -3066,13 +3085,20 @@ async function handleClassQuotaAutoFill(db, request) {
   const leaveOneMiss = canLeaveOneEach
     ? rowsAfter.filter((r) => r.gap > -1)
     : [];
+  const preferNames = unlockedCourses()
+    .filter((c) => preferSet.has(Number(c.id)))
+    .map((c) => c.name);
+  const preferHint = preferNames.length
+    ? '；优先随机调剂：' + preferNames.join('、')
+    : '；未指定优先课程，从未锁死课程中随机调剂';
   return json({
     success: true,
     grade,
+    prefer_course_ids: preferCourseIds,
     mode: canLeaveOneEach ? 'leave_one' : 'fill_deficit',
-    mode_text: canLeaveOneEach
+    mode_text: (canLeaveOneEach
       ? '总名额充足：尽量让每班至少保留 1 个余额'
-      : '总名额不足保留每班 1 余额：仅按剩余优先补齐现有缺口',
+      : '总名额不足保留每班 1 余额：仅按剩余优先补齐现有缺口') + preferHint,
     summary: {
       short_before: shortBefore,
       surplus_before: surplusBefore,

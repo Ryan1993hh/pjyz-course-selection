@@ -68,6 +68,15 @@
       '.cqb-adj-box .ok{margin-top:12px;width:100%;}' +
       '.cqb-adj-summary{margin:0 0 12px;padding:10px 12px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;font-size:13px;line-height:1.55;color:#0f766e;}' +
       '.cqb-adj-summary strong{font-weight:700;color:#115e59;}' +
+      '.cqb-pick-hint{margin:0 0 10px;font-size:13px;color:#64748b;line-height:1.55;}' +
+      '.cqb-pick-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;}' +
+      '.cqb-pick-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:42vh;overflow:auto;padding:4px 2px 8px;}' +
+      '.cqb-pick-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:13px;line-height:1.4;color:#334155;}' +
+      '.cqb-pick-item:has(input:checked){border-color:#5eead4;background:#f0fdfa;}' +
+      '.cqb-pick-item input{margin-top:2px;flex:0 0 auto;}' +
+      '.cqb-pick-item.locked{opacity:.55;cursor:not-allowed;}' +
+      '.cqb-pick-foot{display:flex;gap:8px;margin-top:12px;}' +
+      '.cqb-pick-foot .btn{flex:1;}' +
       '@media (max-width:640px){' +
       '.cqb-toolbar{gap:6px;padding:0 0 10px;}' +
       '.cqb-toolbar .btn{min-height:44px;height:auto;padding:0 10px;font-size:13px;flex:1 1 calc(33.333% - 6px);}' +
@@ -86,6 +95,8 @@
       '.cqb-expand{width:36px;height:36px;min-width:36px;}' +
       '.cqb-detail{font-size:14px;min-width:520px;}' +
       '.cqb-act button{min-height:36px;height:36px;padding:0 10px;font-size:13px;}' +
+      '.cqb-pick-list{grid-template-columns:1fr;max-height:48vh;}' +
+      '.cqb-pick-item{font-size:15px;min-height:44px;}' +
       '}';
     document.head.appendChild(style);
   }
@@ -357,12 +368,13 @@
     wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
   }
 
-  async function runAutoFill() {
+  async function runAutoFill(preferCourseIds) {
     var btn = document.getElementById('cqbAutoFillBtn');
     if (btn) btn.disabled = true;
     try {
       var data = await apiRequest('POST', '/api/class-quota-board/auto-fill', {
-        grade: state.grade
+        grade: state.grade,
+        prefer_course_ids: preferCourseIds || []
       });
       state.rows = data.rows || [];
       renderTable();
@@ -391,14 +403,73 @@
           return state.grade + '(' + x.cn + ')班余' + x.surplus;
         }).join('、') + (preview.surplusList.length > 6 ? '…' : '')
       : '无';
-    var msg =
-      '将按「' + state.grade + '」名额状态列调配：\n' +
-      '· 缺口班 ' + preview.shortList.length + ' 个：' + shortHint + '\n' +
-      '· 剩余班 ' + preview.surplusList.length + ' 个：' + surplusHint + '\n\n' +
-      '规则：优先同课程调剂；剩余多的班先出；尽量每班留 1 余额；零和、不新增总名额。\n\n' +
-      '确定开始？';
-    if (!confirm(msg)) return;
-    runAutoFill();
+
+    var courses = (state.courses || []).slice().sort(function (a, b) {
+      return String(a.name || '').localeCompare(String(b.name || ''), 'zh');
+    });
+    var unlocked = courses.filter(function (c) { return !c.selection_locked; });
+    if (!unlocked.length) {
+      toast('当前无可调剂课程（均已锁死）', 'error');
+      return;
+    }
+
+    var wrap = document.createElement('div');
+    wrap.className = 'cqb-adj-modal';
+    var courseItems = courses.map(function (c) {
+      var locked = !!c.selection_locked;
+      return '<label class="cqb-pick-item' + (locked ? ' locked' : '') + '">' +
+        '<input type="checkbox" name="cqbPreferCourse" value="' + esc(c.id) + '"' +
+        (locked ? ' disabled' : ' checked') + '>' +
+        '<span>' + esc(c.name) + (locked ? '（已锁死）' : '') + '</span>' +
+        '</label>';
+    }).join('');
+
+    wrap.innerHTML =
+      '<div class="cqb-adj-box" style="max-width:640px;">' +
+      '<h4>一键名额补齐 · 选择优先调剂课程</h4>' +
+      '<p class="cqb-pick-hint">' +
+      '年级「' + esc(state.grade) + '」：缺口班 ' + preview.shortList.length + ' 个（' + esc(shortHint) + '）；' +
+      '剩余班 ' + preview.surplusList.length + ' 个（' + esc(surplusHint) + '）。<br>' +
+      '勾选后系统将<strong>优先从这些课程中随机调剂</strong>名额，补齐年级内班级缺口；勾选课程不足时再使用其他未锁死课程。零和调剂，不新增总名额。' +
+      '</p>' +
+      '<div class="cqb-pick-actions">' +
+      '<button type="button" class="btn btn-outline btn-sm" data-act="all">全选可调</button>' +
+      '<button type="button" class="btn btn-outline btn-sm" data-act="none">清空</button>' +
+      '</div>' +
+      '<div class="cqb-pick-list">' + courseItems + '</div>' +
+      '<div class="cqb-pick-foot">' +
+      '<button type="button" class="btn btn-outline cancel">取消</button>' +
+      '<button type="button" class="btn btn-primary confirm">开始补齐</button>' +
+      '</div></div>';
+
+    document.body.appendChild(wrap);
+
+    function close() { wrap.remove(); }
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
+    wrap.querySelector('.cancel').addEventListener('click', close);
+    wrap.querySelector('[data-act="all"]').addEventListener('click', function () {
+      wrap.querySelectorAll('input[name="cqbPreferCourse"]:not(:disabled)').forEach(function (el) {
+        el.checked = true;
+      });
+    });
+    wrap.querySelector('[data-act="none"]').addEventListener('click', function () {
+      wrap.querySelectorAll('input[name="cqbPreferCourse"]').forEach(function (el) {
+        el.checked = false;
+      });
+    });
+    wrap.querySelector('.confirm').addEventListener('click', function () {
+      var ids = [];
+      wrap.querySelectorAll('input[name="cqbPreferCourse"]:checked').forEach(function (el) {
+        var n = parseInt(el.value, 10);
+        if (n) ids.push(n);
+      });
+      if (!ids.length) {
+        toast('请至少勾选一门优先调剂课程', 'error');
+        return;
+      }
+      close();
+      runAutoFill(ids);
+    });
   }
 
   async function onRestore() {
