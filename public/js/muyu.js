@@ -171,7 +171,7 @@
         var cloned = sharedAudio.cloneNode(true);
         cloned.muted = false;
         cloned.volume = 1;
-        cloned.currentTime = 0;
+        try { cloned.currentTime = 0; } catch (_) {}
         (document.body || document.documentElement).appendChild(cloned);
         liveSounds.push(cloned);
         pruneLiveSounds();
@@ -186,24 +186,14 @@
           }).catch(function () {
             playFreshAudio(src);
           });
-          return;
+          return true;
         }
+        return true;
       } catch (_) {}
     }
 
     playFreshAudio(src);
-
-    // 同步重置共享节点，便于下次克隆
-    if (sharedAudio) {
-      try {
-        sharedAudio.muted = false;
-        sharedAudio.volume = 1;
-        sharedAudio.currentTime = 0;
-        sharedAudio.play().then(function () {
-          try { sharedAudio.pause(); sharedAudio.currentTime = 0; } catch (_) {}
-        }).catch(function () {});
-      } catch (_) {}
-    }
+    return true;
   }
 
   function playFreshAudio(src) {
@@ -219,7 +209,6 @@
       var p = a.play();
       if (p && typeof p.catch === "function") {
         p.catch(function () {
-          // 最后兜底：再试一次共享节点
           if (sharedAudio) {
             try {
               sharedAudio.muted = false;
@@ -294,9 +283,10 @@
   }
 
   function playMuyuSound() {
-    // 手势内立刻出声：HTML Audio 为主；Web Audio 有缓冲再叠加
-    playHtmlAudioNow();
-    playWebAudioNow();
+    // 移动端始终走 HTMLAudio（最稳）；桌面优先 WebAudio
+    var touchLike = ("ontouchstart" in global) || (global.navigator && global.navigator.maxTouchPoints > 0);
+    if (touchLike) playHtmlAudioNow();
+    else if (!playWebAudioNow()) playHtmlAudioNow();
     if (!audioUnlocked) unlockAudio();
     else resumeAudioContext();
     loadAudioBuffer();
