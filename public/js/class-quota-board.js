@@ -391,6 +391,33 @@
     }
   }
 
+  function courseQuotaForGrade(course) {
+    if (state.grade === '七年级') return parseInt(course.limit_grade7, 10) || 0;
+    return parseInt(course.limit_grade6, 10) || 0;
+  }
+
+  /** 各班有效名额最小值；无明细时回退基础名额 */
+  function minClassQuota(course) {
+    var minQ = Infinity;
+    var cid = Number(course.id);
+    (state.rows || []).forEach(function (row) {
+      (row.courses || []).forEach(function (d) {
+        if (Number(d.course_id) !== cid) return;
+        var q = parseInt(d.effective_quota, 10);
+        if (!Number.isFinite(q)) q = 0;
+        if (q < minQ) minQ = q;
+      });
+    });
+    if (minQ === Infinity) minQ = courseQuotaForGrade(course);
+    return minQ;
+  }
+
+  /** ≥2 默认勾选，名额仅 1（或更少）默认不勾选 */
+  function shouldPreferCourseByDefault(course) {
+    if (course.selection_locked) return false;
+    return minClassQuota(course) >= 2;
+  }
+
   function onAutoFill() {
     var preview = previewBoardState(state.rows);
     var shortHint = preview.shortList.length
@@ -417,10 +444,14 @@
     wrap.className = 'cqb-adj-modal';
     var courseItems = courses.map(function (c) {
       var locked = !!c.selection_locked;
+      var prefer = !locked && shouldPreferCourseByDefault(c);
+      var quotaHint = minClassQuota(c);
       return '<label class="cqb-pick-item' + (locked ? ' locked' : '') + '">' +
         '<input type="checkbox" name="cqbPreferCourse" value="' + esc(c.id) + '"' +
-        (locked ? ' disabled' : ' checked') + '>' +
-        '<span>' + esc(c.name) + (locked ? '（已锁死）' : '') + '</span>' +
+        (locked ? ' disabled' : (prefer ? ' checked' : '')) + '>' +
+        '<span>' + esc(c.name) +
+        (locked ? '（已锁死）' : '（各班名额≥' + esc(quotaHint) + '）') +
+        '</span>' +
         '</label>';
     }).join('');
 
@@ -430,10 +461,12 @@
       '<p class="cqb-pick-hint">' +
       '年级「' + esc(state.grade) + '」：缺口班 ' + preview.shortList.length + ' 个（' + esc(shortHint) + '）；' +
       '剩余班 ' + preview.surplusList.length + ' 个（' + esc(surplusHint) + '）。<br>' +
-      '勾选后系统将<strong>优先从这些课程中随机调剂</strong>名额，补齐年级内班级缺口；勾选课程不足时再使用其他未锁死课程。零和调剂，不新增总名额。' +
+      '默认已勾选<strong>各班名额 ≥ 2</strong>的课程；名额仅 1 的课程默认不勾选。' +
+      '系统将<strong>优先从勾选课程中随机调剂</strong>，补齐年级内班级缺口；不足时再使用其他未锁死课程。零和调剂，不新增总名额。' +
       '</p>' +
       '<div class="cqb-pick-actions">' +
       '<button type="button" class="btn btn-outline btn-sm" data-act="all">全选可调</button>' +
+      '<button type="button" class="btn btn-outline btn-sm" data-act="ge2">仅选≥2</button>' +
       '<button type="button" class="btn btn-outline btn-sm" data-act="none">清空</button>' +
       '</div>' +
       '<div class="cqb-pick-list">' + courseItems + '</div>' +
@@ -450,6 +483,12 @@
     wrap.querySelector('[data-act="all"]').addEventListener('click', function () {
       wrap.querySelectorAll('input[name="cqbPreferCourse"]:not(:disabled)').forEach(function (el) {
         el.checked = true;
+      });
+    });
+    wrap.querySelector('[data-act="ge2"]').addEventListener('click', function () {
+      wrap.querySelectorAll('input[name="cqbPreferCourse"]:not(:disabled)').forEach(function (el) {
+        var course = courses.find(function (c) { return String(c.id) === String(el.value); });
+        el.checked = !!(course && shouldPreferCourseByDefault(course));
       });
     });
     wrap.querySelector('[data-act="none"]').addEventListener('click', function () {
