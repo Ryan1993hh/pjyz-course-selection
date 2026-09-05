@@ -35,17 +35,20 @@
   }
 
   function ensureStyles() {
-    if (document.getElementById('cqbStyle')) return;
-    var style = document.createElement('style');
-    style.id = 'cqbStyle';
+    var style = document.getElementById('cqbStyle');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'cqbStyle';
+      document.head.appendChild(style);
+    }
     style.textContent =
       '.cqb-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:4px 0 14px;}' +
       '.cqb-grade-label{font-size:13px;font-weight:600;color:#334155;display:inline-flex;align-items:center;gap:8px;}' +
       '.cqb-grade-label select{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;}' +
       '.cqb-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px;}' +
       '.cqb-table{width:100%;border-collapse:collapse;font-size:13px;}' +
-      '.cqb-table th,.cqb-table td{padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap;}' +
-      '.cqb-table th{background:#f0fdfa;color:#0f766e;font-weight:700;position:sticky;top:0;z-index:1;}' +
+      '.cqb-table > thead > tr > th,.cqb-table > tbody > tr:not(.cqb-detail-row) > td{padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap;}' +
+      '.cqb-table > thead > tr > th{background:#f0fdfa;color:#0f766e;font-weight:700;position:sticky;top:0;z-index:1;}' +
       '.cqb-table td.class-name{text-align:left;font-weight:600;}' +
       '.cqb-empty{padding:28px!important;color:#94a3b8;}' +
       '.cqb-status{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;}' +
@@ -54,10 +57,11 @@
       '.cqb-status.surplus{background:#e2e8f0;color:#475569;}' +
       '.cqb-expand{border:1px solid #cbd5e1;background:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;}' +
       '.cqb-size-input{width:64px;height:30px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;font-weight:600;}' +
-      '.cqb-detail-row td{background:#f8fafc;padding:0!important;}' +
+      '.cqb-detail-row > td{background:#f8fafc;padding:0!important;white-space:normal!important;text-align:left!important;}' +
       '.cqb-detail{width:100%;border-collapse:collapse;font-size:12px;}' +
       '.cqb-detail th,.cqb-detail td{padding:8px;border-bottom:1px solid #e2e8f0;}' +
       '.cqb-detail th{background:#ecfeff;position:static;}' +
+      '.cqb-detail-cards{display:none;}' +
       '.cqb-act{display:inline-flex;gap:4px;}' +
       '.cqb-act button{height:28px;padding:0 8px;border-radius:6px;border:1px solid #99f6e4;background:#fff;color:#0f766e;font-size:11px;font-weight:700;cursor:pointer;}' +
       '.cqb-act button:disabled{opacity:.45;cursor:not-allowed;}' +
@@ -82,23 +86,45 @@
       '.cqb-toolbar .btn{min-height:44px;height:auto;padding:0 10px;font-size:13px;flex:1 1 calc(33.333% - 6px);}' +
       '.cqb-grade-label{font-size:14px;width:100%;}' +
       '.cqb-grade-label select{min-height:44px;font-size:16px;}' +
-      '.cqb-table-wrap{margin:0 -10px;width:calc(100% + 20px);border-radius:0;border-left:none;border-right:none;-webkit-overflow-scrolling:touch;}' +
-      '.cqb-table{font-size:16px;width:max-content;min-width:100%;}' +
-      '.cqb-table th,.cqb-table td{padding:10px 8px;font-size:16px;}' +
-      '.cqb-table th:nth-child(4),.cqb-table td:nth-child(4),' +
-      '.cqb-table th:nth-child(5),.cqb-table td:nth-child(5),' +
-      '.cqb-table th:nth-child(6),.cqb-table td:nth-child(6){display:none;}' +
-      '.cqb-table th:nth-child(2),.cqb-table td:nth-child(2){min-width:108px;}' +
-      '.cqb-table th:nth-child(3),.cqb-table td:nth-child(3){min-width:72px;}' +
-      '.cqb-table th:nth-child(7),.cqb-table td:nth-child(7){min-width:88px;}' +
+      '.cqb-table-wrap{margin:0 -10px;width:calc(100% + 20px);border-radius:0;border-left:none;border-right:none;-webkit-overflow-scrolling:touch;overflow-x:auto;}' +
+      '.cqb-table{font-size:16px;width:100%;min-width:0;table-layout:auto;}' +
+      '.cqb-table > thead > tr > th,.cqb-table > tbody > tr:not(.cqb-detail-row) > td{padding:10px 8px;font-size:16px;}' +
+      /* 仅隐藏主表列，勿影响展开明细 */
+      '.cqb-table > thead > tr > th:nth-child(4),' +
+      '.cqb-table > thead > tr > th:nth-child(5),' +
+      '.cqb-table > thead > tr > th:nth-child(6),' +
+      '.cqb-table > tbody > tr:not(.cqb-detail-row) > td:nth-child(4),' +
+      '.cqb-table > tbody > tr:not(.cqb-detail-row) > td:nth-child(5),' +
+      '.cqb-table > tbody > tr:not(.cqb-detail-row) > td:nth-child(6){display:none;}' +
+      '.cqb-table > thead > tr > th:nth-child(2),' +
+      '.cqb-table > tbody > tr:not(.cqb-detail-row) > td:nth-child(2){min-width:96px;}' +
+      '.cqb-table > thead > tr > th:nth-child(3),' +
+      '.cqb-table > tbody > tr:not(.cqb-detail-row) > td:nth-child(3){min-width:64px;}' +
+      '.cqb-table > thead > tr > th:nth-child(7),' +
+      '.cqb-table > tbody > tr:not(.cqb-detail-row) > td:nth-child(7){min-width:72px;}' +
       '.cqb-status{font-size:13px;}' +
       '.cqb-expand{width:36px;height:36px;min-width:36px;}' +
-      '.cqb-detail{font-size:14px;min-width:520px;}' +
-      '.cqb-act button{min-height:36px;height:36px;padding:0 10px;font-size:13px;}' +
+      /* 展开行：全宽卡片列表，显示课程名额加减 */
+      '.cqb-table > tbody > tr.cqb-detail-row > td{' +
+      'display:table-cell!important;padding:8px!important;white-space:normal!important;' +
+      'width:100%;max-width:100vw;box-sizing:border-box;}' +
+      '.cqb-detail{display:none!important;}' +
+      '.cqb-detail-cards{display:flex;flex-direction:column;gap:8px;width:100%;max-width:100%;}' +
+      '.cqb-detail-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;}' +
+      '.cqb-dc-name{font-size:15px;font-weight:700;color:#0f766e;line-height:1.3;word-break:break-word;}' +
+      '.cqb-dc-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:#475569;}' +
+      '.cqb-dc-chip{display:inline-block;padding:2px 8px;border-radius:999px;background:#f1f5f9;border:1px solid #e2e8f0;}' +
+      '.cqb-dc-chip.warn{background:#ffedd5;border-color:#fdba74;color:#9a3412;}' +
+      '.cqb-dc-chip.lock{background:#fee2e2;border-color:#fecaca;color:#b91c1c;}' +
+      '.cqb-detail-card .cqb-act{width:100%;display:flex;gap:8px;}' +
+      '.cqb-detail-card .cqb-act button{flex:1;min-height:40px;height:40px;padding:0 10px;font-size:14px;}' +
       '.cqb-pick-list{grid-template-columns:1fr;max-height:48vh;}' +
       '.cqb-pick-item{font-size:15px;min-height:44px;}' +
       '}';
-    document.head.appendChild(style);
+  }
+
+  function isMobileCqb() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches);
   }
 
   function ensureMount() {
@@ -213,7 +239,9 @@
         '<td>' + statusHtml(row) + '</td>' +
         '</tr>';
       if (open) {
-        html += '<tr class="cqb-detail-row"><td colspan="8">' + renderDetail(row) + '</td></tr>';
+        // 移动端主表隐藏了 3 列，colspan 用可见列数，避免展开行被压扁看不见
+        var span = isMobileCqb() ? 5 : 8;
+        html += '<tr class="cqb-detail-row"><td colspan="' + span + '">' + renderDetail(row) + '</td></tr>';
       }
     });
     tbody.innerHTML = html;
@@ -221,25 +249,46 @@
   }
 
   function renderDetail(row) {
-    var h = '<table class="cqb-detail"><thead><tr>' +
+    var cards = '<div class="cqb-detail-cards">';
+    var table = '<table class="cqb-detail"><thead><tr>' +
       '<th>课程名</th><th>基础名额</th><th>有效名额</th><th>内定人数</th><th>是否锁死</th><th>普通可用名额</th><th>操作</th>' +
       '</tr></thead><tbody>';
     (row.courses || []).forEach(function (c) {
       var locked = !!c.selection_locked;
-      h += '<tr>' +
+      var act =
+        '<div class="cqb-act">' +
+        '<button type="button" data-act="plus" data-class="' + esc(row.class_number) + '" data-course="' + esc(c.course_id) + '"' + (locked ? ' disabled' : '') + '>+1名额</button>' +
+        '<button type="button" data-act="minus" data-class="' + esc(row.class_number) + '" data-course="' + esc(c.course_id) + '"' + (locked ? ' disabled' : '') + '>-1名额</button>' +
+        '</div>';
+      table += '<tr>' +
         '<td>' + esc(c.course_name) + (c.has_override ? ' <span style="color:#b45309;font-size:11px;">(已调剂)</span>' : '') + '</td>' +
         '<td>' + esc(c.base_quota) + '</td>' +
         '<td>' + esc(c.effective_quota) + '</td>' +
         '<td>' + esc(c.preenroll_count) + '</td>' +
         '<td>' + (locked ? '是' : '否') + '</td>' +
         '<td>' + esc(c.ordinary_available) + '</td>' +
-        '<td><div class="cqb-act">' +
-        '<button type="button" data-act="plus" data-class="' + esc(row.class_number) + '" data-course="' + esc(c.course_id) + '"' + (locked ? ' disabled' : '') + '>+1名额</button>' +
-        '<button type="button" data-act="minus" data-class="' + esc(row.class_number) + '" data-course="' + esc(c.course_id) + '"' + (locked ? ' disabled' : '') + '>-1名额</button>' +
-        '</div></td></tr>';
+        '<td>' + act + '</td></tr>';
+      cards +=
+        '<div class="cqb-detail-card">' +
+        '<div class="cqb-dc-name">' + esc(c.course_name) +
+        (c.has_override ? ' <span class="cqb-dc-chip warn">已调剂</span>' : '') +
+        (locked ? ' <span class="cqb-dc-chip lock">锁死</span>' : '') +
+        '</div>' +
+        '<div class="cqb-dc-meta">' +
+        '<span class="cqb-dc-chip">基础 ' + esc(c.base_quota) + '</span>' +
+        '<span class="cqb-dc-chip">有效 ' + esc(c.effective_quota) + '</span>' +
+        '<span class="cqb-dc-chip">内定 ' + esc(c.preenroll_count) + '</span>' +
+        '<span class="cqb-dc-chip">可用 ' + esc(c.ordinary_available) + '</span>' +
+        '</div>' +
+        act +
+        '</div>';
     });
-    h += '</tbody></table>';
-    return h;
+    table += '</tbody></table>';
+    cards += '</div>';
+    if (!(row.courses || []).length) {
+      return '<div class="cqb-empty" style="padding:16px!important;">暂无课程名额明细</div>';
+    }
+    return cards + table;
   }
 
   function bindTableEvents(tbody) {
