@@ -28,6 +28,18 @@
 
   function resolveAudioSrc() {
     if (audioSrc) return audioSrc;
+    // 1) 内嵌 data URI（不依赖网络/路径，移动端最稳）
+    if (global.MUYU_TAP_DATA_URI) {
+      audioSrc = String(global.MUYU_TAP_DATA_URI);
+      return audioSrc;
+    }
+    // 2) 页面预置 audio 节点
+    var preset = document.getElementById("muyuTapAudio");
+    if (preset && preset.getAttribute("src")) {
+      audioSrc = preset.src || preset.getAttribute("src");
+      return audioSrc;
+    }
+    // 3) 静态文件兜底
     try {
       audioSrc = new URL("/" + AUDIO_FILE.replace(/^\//, ""), global.location.origin).href;
     } catch (_) {
@@ -89,14 +101,21 @@
   function ensureSharedAudio() {
     if (sharedAudio) return sharedAudio;
     try {
-      sharedAudio = document.createElement("audio");
+      // 优先使用页面预置节点
+      sharedAudio = document.getElementById("muyuTapAudio");
+      if (!sharedAudio) {
+        sharedAudio = document.createElement("audio");
+        sharedAudio.id = "muyuTapAudioRuntime";
+        sharedAudio.controls = false;
+        sharedAudio.style.cssText = "position:fixed;width:0;height:0;opacity:0;pointer-events:none;left:-9999px;";
+        (document.body || document.documentElement).appendChild(sharedAudio);
+      }
       sharedAudio.src = resolveAudioSrc();
       sharedAudio.preload = "auto";
       sharedAudio.setAttribute("playsinline", "true");
       sharedAudio.setAttribute("webkit-playsinline", "true");
-      sharedAudio.controls = false;
-      sharedAudio.style.cssText = "position:fixed;width:0;height:0;opacity:0;pointer-events:none;left:-9999px;";
-      (document.body || document.documentElement).appendChild(sharedAudio);
+      sharedAudio.muted = false;
+      sharedAudio.volume = 1;
       try { sharedAudio.load(); } catch (_) {}
     } catch (_) {
       sharedAudio = null;
@@ -128,18 +147,36 @@
   function loadAudioBuffer() {
     if (audioBuffer || audioBufferLoading) return;
     var ctx = getAudioContext();
-    if (!ctx || typeof fetch !== "function") return;
-    audioBufferLoading = fetch(resolveAudioSrc())
+    if (!ctx) return;
+
+    function decodeAb(ab) {
+      return new Promise(function (resolve, reject) {
+        var ret = ctx.decodeAudioData(ab, resolve, reject);
+        if (ret && typeof ret.then === "function") ret.then(resolve, reject);
+      });
+    }
+
+    // data URI 优先本地解码
+    var src = resolveAudioSrc();
+    if (src.indexOf("data:audio") === 0) {
+      audioBufferLoading = fetch(src)
+        .then(function (r) { return r.arrayBuffer(); })
+        .then(decodeAb)
+        .then(function (buf) {
+          audioBuffer = buf;
+          audioBufferLoading = null;
+        })
+        .catch(function () { audioBufferLoading = null; });
+      return;
+    }
+
+    if (typeof fetch !== "function") return;
+    audioBufferLoading = fetch(src)
       .then(function (r) {
         if (!r.ok) throw new Error("audio missing");
         return r.arrayBuffer();
       })
-      .then(function (ab) {
-        return new Promise(function (resolve, reject) {
-          var ret = ctx.decodeAudioData(ab, resolve, reject);
-          if (ret && typeof ret.then === "function") ret.then(resolve, reject);
-        });
-      })
+      .then(decodeAb)
       .then(function (buf) {
         audioBuffer = buf;
         audioBufferLoading = null;
