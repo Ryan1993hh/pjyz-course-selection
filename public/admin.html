@@ -1605,6 +1605,7 @@ table.courses-table td[data-field="description"] {
 }
 .mob-only { display: none !important; }
 .txt-short { display: none; }
+.mob-filter-extra { display: none !important; }
 .stats-mini {
   display: flex;
   gap: 12px;
@@ -3288,13 +3289,13 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.usr-table th,
   table.usr-table td {
     padding: 10px 8px !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
     line-height: 1.35;
   }
   table.courses-table .course-name,
   table.sel-table .course-link,
   .limit-badge, .req-tag {
-    font-size: 14px !important;
+    font-size: 15px !important;
   }
   table.sel-table .btn-sm {
     min-height: 36px;
@@ -3391,120 +3392,161 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.usr-table th:nth-child(6),
   table.usr-table td:nth-child(6) { min-width: 96px; }
 
-  /* ========== 2. 选课数据看板 ========== */
-  #section-selections .selections-layout,
-  #section-selections .selections-sidebar,
-  #section-selections .selections-section-header,
-  #section-selections .selections-header-main,
-  #section-selections .selections-title-row {
-    display: contents;
+  /* ========== 2. 选课数据看板（仅 active 时显示，避免按钮泄漏到其它页） ========== */
+  #section-selections:not(.active) {
+    display: none !important;
   }
-  #section-selections {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "sel-title sel-stats"
-      "sel-filter sel-filter"
-      "sel-ops sel-ops"
-      "sel-main sel-main";
+  .section:not(.active) {
+    display: none !important;
+  }
+  #section-selections.active {
+    display: flex !important;
+    flex-direction: column !important;
     gap: 8px;
-    align-items: center;
+    align-items: stretch;
   }
-  #section-selections .selections-title-row h2,
-  #section-selections .selections-section-header h2 {
-    grid-area: sel-title;
+  #section-selections .selections-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+  #section-selections .selections-header-main {
+    width: 100%;
+  }
+  #section-selections .selections-title-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  #section-selections .selections-title-row h2 {
     font-size: 16px;
     margin: 0;
     white-space: nowrap;
-    align-self: center;
+    flex: 0 1 auto;
   }
   #section-selections .selections-section-header .desc { display: none; }
-  #section-selections .stats-card {
-    grid-area: sel-stats;
+
+  #section-selections .selections-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+  #section-selections .selections-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* 第1行：标题 + 统计（JS 将 #courseStats 移入 .sel-head-stats-slot） */
+  #section-selections .sel-head-stats-slot {
+    margin-left: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  #section-selections .sel-head-stats-slot .stats-mini {
+    display: flex;
+    gap: 12px;
     margin: 0;
     padding: 4px 8px;
-    box-shadow: none;
-    border: 1px solid #ccfbf1;
+    border-radius: 8px;
     background: #f0fdfa;
-    display: flex;
-    align-items: center;
-    gap: 0;
+    border: 1px solid #ccfbf1;
   }
-  #section-selections .stats-card .card-title { display: none; }
-  #section-selections .stats-mini {
-    display: flex;
-    gap: 10px;
-    margin: 0;
-    width: auto;
-  }
-  #section-selections .stat-mini-item {
+  #section-selections .sel-head-stats-slot .stat-mini-item {
     padding: 0;
-    min-width: 0;
     text-align: center;
   }
-  #section-selections .stat-mini-value {
+  #section-selections .sel-head-stats-slot .stat-mini-value {
     font-size: 16px;
-    line-height: 1.1;
+    line-height: 1.15;
+    font-weight: 700;
+    color: #0f766e;
   }
-  #section-selections .stat-mini-label {
-    font-size: 10px;
+  #section-selections .sel-head-stats-slot .stat-mini-label {
+    font-size: 11px;
     white-space: nowrap;
+    color: #64748b;
   }
+  #section-selections #selSideStatsSlot {
+    display: none !important;
+  }
+
   #section-selections .filter-card {
-    grid-area: sel-filter;
     margin: 0;
     padding: 8px;
   }
   #section-selections .filter-card > .card-title { display: none; }
   #section-selections .filter-vertical {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #section-selections .filter-row {
+    display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: 6px;
     align-items: flex-end;
   }
-  #section-selections .filter-row {
-    display: contents;
-  }
-  #section-selections .filter-vertical .f-item {
-    order: 1;
+  #section-selections .filter-row-mob1 .f-item {
     flex: 1 1 calc(25% - 6px);
     min-width: 0;
     margin: 0;
   }
+  #section-selections .desktop-filter-actions {
+    display: none !important;
+  }
   #section-selections .filter-vertical .f-item label {
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 2px;
   }
   #section-selections .filter-vertical .form-select,
   #section-selections .filter-vertical .form-input {
     width: 100%;
-    min-height: 40px;
-    padding: 4px 4px;
-    font-size: 13px !important;
+    min-height: 44px;
+    padding: 6px;
+    font-size: 16px !important;
   }
-  #section-selections #filterStudent {
-    font-size: 13px !important;
+  /* 第三行：未选、内定、重置、查询 */
+  #section-selections .filter-row-actions,
+  #section-selections .sel-mob-btns {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
   }
-  #section-selections #unselectedBtn { order: 2; }
-  #section-selections #preEnrollListBtn { order: 3; }
-  #section-selections #resetFilterBtn { order: 4; }
-  #section-selections #queryBtn { order: 5; }
-  #section-selections .filter-vertical .btn {
+  #section-selections .filter-row-actions .btn,
+  #section-selections .sel-mob-btns .btn {
     flex: 1 1 calc(25% - 6px);
-    min-width: 0;
-    min-height: 40px;
+    min-width: calc(22% - 6px);
+    min-height: 44px;
     padding: 0 4px;
-    font-size: 12px;
+    font-size: 13px;
   }
+  #section-selections .mob-filter-extra {
+    display: inline-flex !important;
+  }
+  /* 第四行：禁选 + 状态 + 批量删除 */
   #section-selections #selectionsTitleActionsMob {
-    grid-area: sel-ops;
     display: flex !important;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     width: 100%;
     margin: 0;
+    order: 3;
   }
   #section-selections #selectionLockWrapMob {
     display: flex;
@@ -3515,8 +3557,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     padding: 0;
   }
   #section-selections #selectionStatusTextMob {
-    font-size: 12px;
-    max-width: none;
+    font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3524,10 +3565,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections #toggleSelectionBtnMob,
   #section-selections #batchDeleteBtnMob {
     flex: 0 0 auto;
-    min-height: 40px;
+    min-height: 44px;
   }
   #section-selections .selections-main {
-    grid-area: sel-main;
+    width: 100%;
     min-width: 0;
   }
   #section-selections .data-card {
@@ -3852,15 +3893,7 @@ th.sortable.active .sort-icon { opacity: 1; }
         <div class="selections-header-main">
           <div class="selections-title-row">
             <h2>选课数据看板</h2>
-            <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
-              <!-- 移动端操作行由 CSS 重组；此处保留禁选状态节点 -->
-              <div class="selection-lock-wrap" id="selectionLockWrapMob">
-                <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
-                <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
-              </div>
-              <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
-              <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
-            </div>
+            <div id="selHeadStatsSlot" class="sel-head-stats-slot"></div>
           </div>
           <p class="desc">按年级 / 班级 / 课程筛选，支持批量操作与 Excel 导出</p>
         </div>
@@ -3893,25 +3926,27 @@ th.sortable.active .sort-icon { opacity: 1; }
                     <option value="">全部</option>
                   </select>
                 </div>
-              </div>
-              <div class="filter-row filter-row-mob2">
-                <div class="f-item">
+                <div class="f-item filter-student-item">
                   <label>学生姓名</label>
                   <input type="text" class="form-input" id="filterStudent" placeholder="输入学生姓名">
                 </div>
+              </div>
+              <div class="filter-row filter-row-mob2 desktop-filter-actions">
                 <button type="button" class="btn btn-primary btn-block" id="queryBtn">🔍 查询</button>
                 <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
               </div>
-              <div class="filter-row filter-row-actions">
-                <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
+              <div class="filter-row filter-row-actions sel-mob-btns">
                 <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 <span class="txt-full">未选课学生</span><span class="txt-short">未选</span></button>
+                <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
+                <button type="button" class="btn btn-outline btn-block mob-filter-extra" id="resetFilterBtnMob"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
+                <button type="button" class="btn btn-primary btn-block mob-filter-extra" id="queryBtnMob">🔍 查询</button>
                 <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
                 <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
             </div>
           </div>
 
-          <div class="card stats-card">
+          <div class="card stats-card" id="selSideStatsSlot">
             <div class="card-title">课程统计</div>
             <div class="stats-mini" id="courseStats">
               <div class="stat-mini-item">
@@ -3923,6 +3958,15 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <span class="stat-mini-label">涉及课程</span>
               </div>
             </div>
+          </div>
+
+          <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
+            <div class="selection-lock-wrap" id="selectionLockWrapMob">
+              <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
+              <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
+            <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
           </div>
         </div>
 
@@ -6602,9 +6646,11 @@ async function exportSelections(){
     if (el) el.addEventListener(event, handler);
   }
   safeBind('queryBtn', 'click', querySelections);
+  safeBind('queryBtnMob', 'click', querySelections);
   safeBind('exportBtn', 'click', exportSelections);
   safeBind('exportBtnMob', 'click', exportSelections);
   safeBind('resetFilterBtn', 'click', resetFilterSelections);
+  safeBind('resetFilterBtnMob', 'click', resetFilterSelections);
   safeBind('batchDeleteBtn', 'click', batchDeleteSelections);
   safeBind('batchDeleteBtnMob', 'click', batchDeleteSelections);
   safeBind('toggleSelectionBtn', 'click', toggleSelectionLock);
@@ -8181,6 +8227,30 @@ function initShell(){
 
   setupUpload();
   loadSelectionStatusUI();
+  placeSelectionStats();
+  if (window.matchMedia) {
+    try {
+      window.matchMedia('(max-width: 640px)').addEventListener('change', placeSelectionStats);
+    } catch (_) {
+      window.addEventListener('resize', placeSelectionStats);
+    }
+  }
+}
+
+/** 移动端：课程统计移到标题行；桌面端放回侧栏卡片 */
+function placeSelectionStats() {
+  var stats = document.getElementById('courseStats');
+  var head = document.getElementById('selHeadStatsSlot');
+  var side = document.getElementById('selSideStatsSlot');
+  if (!stats || !head || !side) return;
+  var mob = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+  if (mob) {
+    if (stats.parentElement !== head) head.appendChild(stats);
+  } else if (stats.parentElement !== side) {
+    var title = side.querySelector('.card-title');
+    if (title) side.insertBefore(stats, title.nextSibling);
+    else side.appendChild(stats);
+  }
 }
 
 function initAll(){
