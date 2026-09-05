@@ -1669,6 +1669,12 @@ table.courses-table td[data-field="description"] {
   gap: 10px;
   flex-wrap: wrap;
 }
+.board-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .board-schedule-status {
   font-size: 13px;
   font-weight: 600;
@@ -3167,10 +3173,11 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   .section-header h2 { font-size: 17px; }
   .section-header .desc { display: none; }
-  .card-title { font-size: 16px; margin-bottom: 8px; }
+  .card-title { font-size: 15px; margin-bottom: 8px; }
   .course-list-title .card-title-right > span[style] { display: none; }
+  .mob-hide-640 { display: none !important; }
 
-  /* 按钮组：缩小 + 换行，优先一行 */
+  /* 按钮组：缩小 + 换行 */
   .txt-full { display: none !important; }
   .txt-short { display: inline !important; }
   .btn,
@@ -3183,10 +3190,11 @@ th.sortable.active .sort-icon { opacity: 1; }
   .action-bar .btn,
   .selections-title-actions .btn,
   .filter-row-actions .btn,
-  .bd-head-actions .btn {
+  .bd-head-actions .btn,
+  .board-header-actions .btn {
     height: auto;
     min-height: var(--touch-min);
-    padding: 0 10px;
+    padding: 0 8px;
     font-size: 13px;
     letter-spacing: 0;
     gap: 4px;
@@ -3198,12 +3206,6 @@ th.sortable.active .sort-icon { opacity: 1; }
   .hours-panel-actions,
   .data-toolbar-right,
   .action-bar,
-  .selections-title-actions,
-  .filter-row-actions,
-  .filter-actions,
-  .selection-toolbar,
-  .board-toolbar,
-  .bd-summary-bar,
   .user-toolbar {
     display: flex !important;
     flex-direction: row !important;
@@ -3212,24 +3214,12 @@ th.sortable.active .sort-icon { opacity: 1; }
     gap: 6px;
     width: 100%;
   }
-  .filter-actions .btn,
-  .selection-toolbar .btn,
-  .board-toolbar .btn,
   .section-header-actions .btn,
   .action-bar .btn {
     flex: 1 1 calc(33.333% - 6px);
-    min-width: calc(33.333% - 6px);
-    max-width: 100%;
+    min-width: 0;
   }
   .action-bar .btn { flex: 1 1 100%; }
-  .selections-title-actions .btn { flex: 1 1 calc(50% - 4px); min-width: 0; }
-  .data-toolbar {
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-  }
-  .data-toolbar-left { width: 100%; }
   .user-toolbar .search-input {
     flex: 1 1 100%;
     min-width: 0;
@@ -3237,26 +3227,41 @@ th.sortable.active .sort-icon { opacity: 1; }
     min-height: var(--touch-min);
   }
   .user-toolbar .stat-info { font-size: 13px; width: 100%; }
+  .form-input, .form-select {
+    font-size: 16px !important;
+    min-height: var(--touch-min);
+  }
 
-  /* 顶部课程模块：两列紧凑 */
-  .course-top-bar { gap: 6px; }
-  .course-section-head { padding: 4px 2px; }
+  /* ========== 1. 课程管理 ========== */
+  .course-top-bar {
+    grid-template-columns: auto 1fr;
+    gap: 6px;
+    align-items: center;
+  }
+  .course-section-head { padding: 0 2px; }
+  .course-section-head h2 { font-size: 16px; }
   .course-section-head .desc { display: none; }
   .course-top-modules {
+    display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
+  #manageClassesBtn,
+  #courseUploadPanel {
+    display: none !important;
+  }
+  #showCoursesListBtn { order: 1; }
+  #openClassQuotaBoardBtn { order: 2; }
   .course-mod-card {
-    min-height: 52px;
+    min-height: 48px;
     padding: 8px;
-    border-radius: 10px;
+    border-radius: 12px;
   }
   .course-mod-card .mod-desc { display: none; }
   .course-mod-card .mod-title { font-size: 13px; }
-  .course-mod-upload .upload-area { padding: 8px; }
-  .course-mod-upload .hint { display: none; }
+  .course-mod-card .mod-ico { width: 28px; height: 28px; font-size: 14px; }
 
-  /* 表格：横向滚动 + 压缩 + 隐藏非核心列 */
+  /* 表格横滑 + 冻结课程名称 */
   .table-wrap,
   .hours-table-wrap,
   .bd-table-wrap {
@@ -3281,17 +3286,15 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.sel-table th,
   table.sel-table td,
   table.usr-table th,
-  table.usr-table td,
-  th, td {
+  table.usr-table td {
     padding: 10px 8px !important;
-    font-size: 16px !important;
+    font-size: 15px !important;
     line-height: 1.35;
   }
   table.courses-table .course-name,
-  table.courses-table td[data-field="description"],
   table.sel-table .course-link,
   .limit-badge, .req-tag {
-    font-size: 15px !important;
+    font-size: 14px !important;
   }
   table.sel-table .btn-sm {
     min-height: 36px;
@@ -3300,7 +3303,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     padding: 0 8px;
   }
 
-  /* 课程表：保留名称、老师、名额、操作 */
+  /* 课程表：隐藏非核心，冻结课程名称 */
   table.courses-table col:nth-child(1),
   table.courses-table col:nth-child(2),
   table.courses-table col:nth-child(4),
@@ -3319,7 +3322,20 @@ th.sortable.active .sort-icon { opacity: 1; }
     display: none;
   }
   table.courses-table th:nth-child(3),
-  table.courses-table td:nth-child(3) { min-width: 112px; }
+  table.courses-table td:nth-child(3),
+  table.courses-table td[data-field="name"] {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 108px;
+    max-width: 132px;
+    background: #e8f4fc !important;
+    box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
+  }
+  table.courses-table thead th:nth-child(3) {
+    z-index: 4;
+    background: #dbeafe !important;
+  }
   table.courses-table th:nth-child(5),
   table.courses-table td:nth-child(5) { min-width: 72px; }
   table.courses-table th:nth-child(8),
@@ -3342,9 +3358,11 @@ th.sortable.active .sort-icon { opacity: 1; }
     display: none !important;
   }
 
-  /* 用户表：保留账号、姓名、班级、角色、操作 */
+  /* 用户表：隐藏部分列，冻结教师名字为左侧首列 */
   table.usr-table th:nth-child(1),
   table.usr-table td:nth-child(1),
+  table.usr-table th:nth-child(2),
+  table.usr-table td:nth-child(2),
   table.usr-table th:nth-child(3),
   table.usr-table td:nth-child(3),
   table.usr-table th:nth-child(5),
@@ -3357,40 +3375,326 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.usr-table td:nth-child(10) {
     display: none !important;
   }
-  table.usr-table th:nth-child(2),
-  table.usr-table td:nth-child(2) { min-width: 88px; }
   table.usr-table th:nth-child(4),
-  table.usr-table td:nth-child(4) { min-width: 72px; }
+  table.usr-table td:nth-child(4) {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 84px;
+    background: #e8f4fc !important;
+    box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
+  }
+  table.usr-table thead th:nth-child(4) {
+    z-index: 4;
+    background: #dbeafe !important;
+  }
   table.usr-table th:nth-child(6),
   table.usr-table td:nth-child(6) { min-width: 96px; }
 
-  /* 看板 KPI / 侧栏更紧凑 */
-  .board-kpis {
-    grid-template-columns: repeat(3, 1fr);
+  /* ========== 2. 选课数据看板 ========== */
+  #section-selections .selections-layout,
+  #section-selections .selections-sidebar,
+  #section-selections .selections-section-header,
+  #section-selections .selections-header-main,
+  #section-selections .selections-title-row {
+    display: contents;
+  }
+  #section-selections {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "sel-title sel-stats"
+      "sel-filter sel-filter"
+      "sel-ops sel-ops"
+      "sel-main sel-main";
+    gap: 8px;
+    align-items: center;
+  }
+  #section-selections .selections-title-row h2,
+  #section-selections .selections-section-header h2 {
+    grid-area: sel-title;
+    font-size: 16px;
+    margin: 0;
+    white-space: nowrap;
+    align-self: center;
+  }
+  #section-selections .selections-section-header .desc { display: none; }
+  #section-selections .stats-card {
+    grid-area: sel-stats;
+    margin: 0;
+    padding: 4px 8px;
+    box-shadow: none;
+    border: 1px solid #ccfbf1;
+    background: #f0fdfa;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  #section-selections .stats-card .card-title { display: none; }
+  #section-selections .stats-mini {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    width: auto;
+  }
+  #section-selections .stat-mini-item {
+    padding: 0;
+    min-width: 0;
+    text-align: center;
+  }
+  #section-selections .stat-mini-value {
+    font-size: 16px;
+    line-height: 1.1;
+  }
+  #section-selections .stat-mini-label {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  #section-selections .filter-card {
+    grid-area: sel-filter;
+    margin: 0;
+    padding: 8px;
+  }
+  #section-selections .filter-card > .card-title { display: none; }
+  #section-selections .filter-vertical {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-end;
+  }
+  #section-selections .filter-row {
+    display: contents;
+  }
+  #section-selections .filter-vertical .f-item {
+    order: 1;
+    flex: 1 1 calc(25% - 6px);
+    min-width: 0;
+    margin: 0;
+  }
+  #section-selections .filter-vertical .f-item label {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  #section-selections .filter-vertical .form-select,
+  #section-selections .filter-vertical .form-input {
+    width: 100%;
+    min-height: 40px;
+    padding: 4px 4px;
+    font-size: 13px !important;
+  }
+  #section-selections #filterStudent {
+    font-size: 13px !important;
+  }
+  #section-selections #unselectedBtn { order: 2; }
+  #section-selections #preEnrollListBtn { order: 3; }
+  #section-selections #resetFilterBtn { order: 4; }
+  #section-selections #queryBtn { order: 5; }
+  #section-selections .filter-vertical .btn {
+    flex: 1 1 calc(25% - 6px);
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+  #section-selections #selectionsTitleActionsMob {
+    grid-area: sel-ops;
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+  }
+  #section-selections #selectionLockWrapMob {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+  }
+  #section-selections #selectionStatusTextMob {
+    font-size: 12px;
+    max-width: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #section-selections #toggleSelectionBtnMob,
+  #section-selections #batchDeleteBtnMob {
+    flex: 0 0 auto;
+    min-height: 40px;
+  }
+  #section-selections .selections-main {
+    grid-area: sel-main;
+    min-width: 0;
+  }
+  #section-selections .data-card {
+    margin: 0;
+    padding: 8px;
+  }
+  #section-selections .data-toolbar {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+  }
+  #section-selections .data-card .table-wrap {
+    min-height: 40vh;
+  }
+
+  /* ========== 3. 课程看板 ========== */
+  #section-board .section-header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
     gap: 6px;
     margin-bottom: 8px;
   }
-  .board-kpi { padding: 10px 6px; }
-  .board-kpi .k-n { font-size: 18px; }
-  .board-kpi .k-l { font-size: 12px; }
-  .board-side { max-height: 220px; }
-  #section-board .section-header > div:last-child {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    width: 100%;
-    align-items: center;
-  }
-  .board-schedule-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
+  #section-board .section-header > div:first-child {
     flex: 1 1 auto;
+    min-width: 0;
   }
-  .form-input, .form-select {
-    font-size: 16px !important;
-    min-height: var(--touch-min);
+  #section-board .section-header h2 {
+    font-size: 16px;
+    margin: 0;
+    white-space: nowrap;
+  }
+  #section-board .board-header-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+  #section-board .board-schedule-wrap {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+  #section-board .board-schedule-status {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  #section-board .board-header-actions .btn {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+  #section-board .board-kpis {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  #section-board .board-kpi {
+    padding: 6px 2px;
+    border-radius: 8px;
+    min-width: 0;
+  }
+  #section-board .board-kpi .k-n {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+  #section-board .board-kpi .k-l {
+    font-size: 9px;
+    line-height: 1.15;
+    margin-top: 2px;
+  }
+  #section-board .board-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #section-board .board-side {
+    width: 100%;
+    max-height: none;
+    min-height: 0;
+  }
+  #section-board .board-side-head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+  }
+  #section-board .board-side-head .form-input {
+    flex: 1 1 55%;
+    min-width: 0;
+    width: auto;
+    min-height: 40px;
+    font-size: 14px !important;
+  }
+  #section-board .board-side-head .form-select {
+    flex: 1 1 38%;
+    min-width: 0;
+    width: auto;
+    min-height: 40px;
+    font-size: 13px !important;
+  }
+  #section-board .board-side-meta {
+    flex: 1 1 100%;
+    font-size: 11px;
+    margin: 0;
+  }
+  #section-board .board-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    max-height: none;
+    overflow: visible;
+    padding: 8px;
+  }
+  #section-board .board-card {
+    padding: 8px;
+    gap: 4px;
+    min-width: 0;
+  }
+  #section-board .board-card-name {
+    font-size: 13px;
+  }
+  #section-board .board-card-meta {
+    font-size: 11px;
+  }
+  #section-board .board-chip {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+  #section-board .board-main {
+    max-height: none;
+    min-height: 0;
+  }
+  #section-board .hours-panel-head {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  #section-board .hours-panel-head h3 {
+    font-size: 15px;
+    margin: 0;
+    white-space: nowrap;
+  }
+  #section-board .hours-panel-actions {
+    width: auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  #section-board .hours-panel-actions .btn {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 }
 </style>
@@ -3456,14 +3760,14 @@ th.sortable.active .sort-icon { opacity: 1; }
           <button type="button" class="course-mod-card" id="openClassQuotaBoardBtn">
             <span class="mod-ico" aria-hidden="true">📊</span>
             <span class="mod-body">
-              <span class="mod-title">班级名额看板</span>
+              <span class="mod-title"><span class="txt-full">班级名额看板</span><span class="txt-short">名额看板</span></span>
               <span class="mod-desc">按班调剂名额</span>
             </span>
           </button>
           <button type="button" class="course-mod-card is-active" id="showCoursesListBtn">
             <span class="mod-ico" aria-hidden="true">📚</span>
             <span class="mod-body">
-              <span class="mod-title">拓展课程管理</span>
+              <span class="mod-title"><span class="txt-full">拓展课程管理</span><span class="txt-short">拓展课程</span></span>
               <span class="mod-desc">编辑课程与锁定</span>
             </span>
           </button>
@@ -3548,12 +3852,14 @@ th.sortable.active .sort-icon { opacity: 1; }
         <div class="selections-header-main">
           <div class="selections-title-row">
             <h2>选课数据看板</h2>
-            <div class="selections-title-actions mob-only">
-              <div class="selection-lock-wrap">
+            <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
+              <!-- 移动端操作行由 CSS 重组；此处保留禁选状态节点 -->
+              <div class="selection-lock-wrap" id="selectionLockWrapMob">
                 <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
                 <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
               </div>
-              <button type="button" class="btn btn-success btn-sm" id="exportBtnMob">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
+              <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
+              <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
             </div>
           </div>
           <p class="desc">按年级 / 班级 / 课程筛选，支持批量操作与 Excel 导出</p>
@@ -3599,9 +3905,8 @@ th.sortable.active .sort-icon { opacity: 1; }
               <div class="filter-row filter-row-actions">
                 <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
                 <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 <span class="txt-full">未选课学生</span><span class="txt-short">未选</span></button>
-                <button type="button" class="btn btn-outline btn-block mob-only" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
-                <button type="button" class="btn btn-danger btn-block mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
-                <button type="button" class="btn btn-primary btn-block mob-only" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
+                <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
+                <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
             </div>
           </div>
@@ -3670,10 +3975,10 @@ th.sortable.active .sort-icon { opacity: 1; }
           <h2>课程看板</h2>
           <p class="desc">默认显示上课记录；点击左侧课程卡片可查看该课程签到与考核详情</p>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;">
+        <div class="board-header-actions">
           <div class="board-schedule-wrap">
-            <button type="button" class="btn btn-warning" id="boardSuspendBtn"><span class="txt-full">今日停课</span><span class="txt-short">停课</span></button>
             <span class="board-schedule-status" id="boardScheduleStatus">停课状态</span>
+            <button type="button" class="btn btn-warning" id="boardSuspendBtn"><span class="txt-full">今日停课</span><span class="txt-short">停课</span></button>
           </div>
           <button type="button" class="btn btn-outline" id="boardRefreshBtn">🔄 <span class="txt-full">刷新</span><span class="txt-short">刷新</span></button>
         </div>
