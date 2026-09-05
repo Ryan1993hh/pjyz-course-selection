@@ -3537,16 +3537,24 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-filter-extra {
     display: inline-flex !important;
   }
-  /* 第四行：禁选 + 状态 + 批量删除 */
+  /* 移动端隐藏：提前录课 / 导入名单 / 导出 Excel */
+  #section-selections #preEnrollBtnMob,
+  #section-selections #importRosterBtnMob,
+  #section-selections #exportBtnMob,
+  #section-selections .mob-hide-640 {
+    display: none !important;
+  }
+  /* 第四行紧贴查询下方：禁选 + 状态 + 批量删除 */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     margin: 0;
-    order: 3;
+    padding: 0;
+    order: 0;
   }
   #section-selections #selectionLockWrapMob {
     display: flex;
@@ -3657,8 +3665,11 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   #section-board .board-side {
     width: 100%;
+    display: flex;
+    flex-direction: column;
     max-height: none;
     min-height: 0;
+    overflow: hidden;
   }
   #section-board .board-side-head {
     flex-direction: row;
@@ -3666,6 +3677,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     align-items: center;
     gap: 6px;
     padding: 8px;
+    flex-shrink: 0;
   }
   #section-board .board-side-head .form-input {
     flex: 1 1 55%;
@@ -3686,24 +3698,45 @@ th.sortable.active .sort-icon { opacity: 1; }
     font-size: 11px;
     margin: 0;
   }
+  /* 课程状态卡片：固定三行两列（6 张可见），其余纵向滑动 */
   #section-board .board-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 100px;
     gap: 6px;
-    max-height: none;
-    overflow: visible;
+    max-height: calc(100px * 3 + 6px * 2);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     padding: 8px;
+    flex: 0 0 auto;
+  }
+  #section-board .board-list .board-empty {
+    grid-column: 1 / -1;
+    min-height: 120px;
   }
   #section-board .board-card {
     padding: 8px;
     gap: 4px;
     min-width: 0;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    box-sizing: border-box;
   }
   #section-board .board-card-name {
     font-size: 13px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   #section-board .board-card-meta {
     font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   #section-board .board-chip {
     font-size: 10px;
@@ -3940,8 +3973,16 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
                 <button type="button" class="btn btn-outline btn-block mob-filter-extra" id="resetFilterBtnMob"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
                 <button type="button" class="btn btn-primary btn-block mob-filter-extra" id="queryBtnMob">🔍 查询</button>
-                <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="导入全校六、七年级学生名单">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
-                <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
+                <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="导入全校六、七年级学生名单" hidden aria-hidden="true">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
+                <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单" hidden aria-hidden="true">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
+              </div>
+              <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
+                <div class="selection-lock-wrap" id="selectionLockWrapMob">
+                  <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
+                  <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
+                <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
               </div>
             </div>
           </div>
@@ -3958,15 +3999,6 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <span class="stat-mini-label">涉及课程</span>
               </div>
             </div>
-          </div>
-
-          <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
-            <div class="selection-lock-wrap" id="selectionLockWrapMob">
-              <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
-              <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
-            </div>
-            <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
-            <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
           </div>
         </div>
 
