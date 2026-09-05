@@ -184,6 +184,9 @@
     if (window.MuyuFish && typeof window.MuyuFish.init === 'function') {
       window.MuyuFish.init();
     }
+    if (window.MuyuFish && typeof window.MuyuFish.unlock === 'function') {
+      window.MuyuFish.unlock();
+    }
     overlay.classList.add('show');
     updateClockQuote();
     refreshClockAbnormalCount();

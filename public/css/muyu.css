@@ -188,69 +188,56 @@
   background-position: 92.788462% 85.275819%;
 }
 
-/* 手机端：缩小木鱼，保证弹窗内完整可见 */
+/* 手机端：木鱼区域放大并参与铺满弹窗 */
 @media (max-width: 640px) {
   .clock-muyu-zone {
-    width: min(260px, 84vw);
-    margin: 4px 0 8px;
-    padding: 10px 10px 6px;
-    border-radius: 16px;
+    width: min(92vw, 360px);
+    margin: 8px 0;
+    padding: 14px 14px 10px;
+    border-radius: 18px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 180px;
   }
-  .clock-muyu-zone .merit-display { margin-bottom: 2px; }
-  .clock-muyu-zone .merit-count { font-size: 28px; }
+  .clock-muyu-zone .merit-display { margin-bottom: 6px; }
+  .clock-muyu-zone .merit-count { font-size: clamp(32px, 9vw, 44px); }
   .clock-muyu-zone .merit-label {
-    font-size: 11px;
-    margin-top: 2px;
-    letter-spacing: 0.35em;
-    text-indent: 0.35em;
+    font-size: 13px;
+    margin-top: 4px;
+    letter-spacing: 0.4em;
+    text-indent: 0.4em;
   }
   .clock-muyu-zone .fish-stage {
-    width: 148px;
-    height: 126px;
+    width: min(72vw, 240px);
+    height: min(60vw, 200px);
   }
   .clock-muyu-zone .stage-halo {
-    width: 140px;
-    height: 140px;
+    width: min(70vw, 230px);
+    height: min(70vw, 230px);
   }
   .clock-muyu-zone .wooden-fish {
-    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5));
   }
-  .clock-muyu-zone .tap-hint { font-size: 11px; margin-top: 2px; }
-  .clock-muyu-zone .tap-hint kbd { font-size: 10px; padding: 1px 6px; }
-  .clock-muyu-zone .merit-particle { font-size: 13px; }
+  .clock-muyu-zone .tap-hint { font-size: 12px; margin-top: 6px; }
+  .clock-muyu-zone .tap-hint kbd { font-size: 11px; padding: 2px 6px; }
+  .clock-muyu-zone .merit-particle { font-size: 14px; }
 }
 
-@media (max-width: 640px) and (max-height: 720px) {
+@media (max-width: 640px) and (max-height: 640px) {
   .clock-muyu-zone {
-    width: min(220px, 78vw);
-    padding: 8px 8px 4px;
-    margin: 2px 0 6px;
+    min-height: 140px;
+    padding: 10px;
+    margin: 4px 0;
   }
-  .clock-muyu-zone .merit-count { font-size: 24px; }
+  .clock-muyu-zone .merit-count { font-size: 28px; }
   .clock-muyu-zone .fish-stage {
-    width: 120px;
-    height: 102px;
+    width: min(52vw, 180px);
+    height: min(44vw, 150px);
   }
   .clock-muyu-zone .stage-halo {
-    width: 112px;
-    height: 112px;
-  }
-}
-
-@media (max-width: 640px) and (max-height: 600px) {
-  .clock-muyu-zone {
-    width: min(190px, 72vw);
-    padding: 6px 6px 2px;
-  }
-  .clock-muyu-zone .merit-label { display: none; }
-  .clock-muyu-zone .tap-hint { display: none; }
-  .clock-muyu-zone .merit-count { font-size: 22px; }
-  .clock-muyu-zone .fish-stage {
-    width: 100px;
-    height: 86px;
-  }
-  .clock-muyu-zone .stage-halo {
-    width: 96px;
-    height: 96px;
+    width: min(50vw, 170px);
+    height: min(50vw, 170px);
   }
 }

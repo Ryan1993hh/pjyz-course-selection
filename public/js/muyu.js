@@ -1,12 +1,12 @@
 /**
  * 电子木鱼交互与音效（视觉参考 fish.leixf.cn）
  * 功德仅统计当天，跨日自动清零
- * 快速连击：Web Audio 重叠播放 + WAAPI 动效，与点击同步
+ * 音效：优先 HTMLAudio 池（兼容移动端手势解锁）+ Web Audio 低延迟叠加
  */
 (function (global) {
   var MERIT_KEY = "pjyz_merit_daily";
-  var AUDIO_SRC = "audio/muyu-tap.mp3?v=20260826b";
-  var AUDIO_POOL_SIZE = 16;
+  var AUDIO_SRC = "/audio/muyu-tap.mp3?v=20260905c";
+  var AUDIO_POOL_SIZE = 12;
   var MAX_PARTICLES = 14;
   var ANIM_MS = 140;
 
@@ -17,6 +17,7 @@
   var audioCtx = null;
   var audioBuffer = null;
   var audioBufferLoading = null;
+  var audioUnlocked = false;
   var dayWatchTimer = null;
   var initialized = false;
   var boundStage = null;
@@ -77,35 +78,46 @@
   function getAudioContext() {
     var AC = global.AudioContext || global.webkitAudioContext;
     if (!AC) return null;
-    if (!audioCtx) audioCtx = new AC();
+    if (!audioCtx) {
+      try { audioCtx = new AC(); } catch (_) { return null; }
+    }
     return audioCtx;
   }
 
   function resumeAudioContext() {
     var ctx = getAudioContext();
     if (ctx && ctx.state === "suspended") {
-      try { ctx.resume(); } catch (_) {}
+      try {
+        var p = ctx.resume();
+        if (p && typeof p.catch === "function") p.catch(function () {});
+      } catch (_) {}
     }
     return ctx;
   }
 
-  function preloadTapAudio() {
-    if (!audioPool.length) {
-      for (var i = 0; i < AUDIO_POOL_SIZE; i++) {
-        try {
-          var audio = new Audio(AUDIO_SRC);
-          audio.preload = "auto";
-          audio.load();
-          audioPool.push(audio);
-        } catch (_) {}
-      }
+  function ensureAudioPool() {
+    if (audioPool.length) return;
+    for (var i = 0; i < AUDIO_POOL_SIZE; i++) {
+      try {
+        var audio = new Audio(AUDIO_SRC);
+        audio.preload = "auto";
+        audio.setAttribute("playsinline", "true");
+        audio.load();
+        audioPool.push(audio);
+      } catch (_) {}
     }
+  }
+
+  function loadAudioBuffer() {
     if (audioBuffer || audioBufferLoading) return;
     var ctx = getAudioContext();
     if (!ctx || typeof fetch !== "function") return;
     audioBufferLoading = fetch(AUDIO_SRC)
-      .then(function (r) { return r.arrayBuffer(); })
-      .then(function (ab) { return ctx.decodeAudioData(ab); })
+      .then(function (r) {
+        if (!r.ok) throw new Error("audio fetch failed");
+        return r.arrayBuffer();
+      })
+      .then(function (ab) { return ctx.decodeAudioData(ab.slice(0)); })
       .then(function (buf) {
         audioBuffer = buf;
         audioBufferLoading = null;
@@ -115,31 +127,109 @@
       });
   }
 
-  function playHtmlAudioFallback() {
-    if (!audioPool.length) preloadTapAudio();
-    if (!audioPool.length) return;
+  function unlockAudio() {
+    ensureAudioPool();
+    resumeAudioContext();
+    loadAudioBuffer();
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    // 在用户手势内解锁 Audio 元素（iOS/Android 必需）
+    for (var i = 0; i < audioPool.length; i++) {
+      (function (audio) {
+        try {
+          audio.muted = true;
+          audio.volume = 0;
+          var p = audio.play();
+          if (p && typeof p.then === "function") {
+            p.then(function () {
+              try {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = false;
+                audio.volume = 1;
+              } catch (_) {}
+            }).catch(function () {
+              try {
+                audio.muted = false;
+                audio.volume = 1;
+              } catch (_) {}
+            });
+          } else {
+            try {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.muted = false;
+              audio.volume = 1;
+            } catch (_) {}
+          }
+        } catch (_) {}
+      })(audioPool[i]);
+    }
+  }
+
+  function playHtmlAudio() {
+    ensureAudioPool();
+    if (!audioPool.length) {
+      try {
+        var once = new Audio(AUDIO_SRC);
+        once.play().catch(function () {});
+      } catch (_) {}
+      return;
+    }
     var audio = audioPool[audioPoolIdx % audioPool.length];
     audioPoolIdx += 1;
     try {
-      audio.currentTime = 0;
+      audio.muted = false;
+      audio.volume = 1;
+      // 上一段未播完则换新实例，避免连击被卡住
+      if (!audio.paused && audio.currentTime > 0.02) {
+        audio = new Audio(AUDIO_SRC);
+        audio.setAttribute("playsinline", "true");
+      } else {
+        try { audio.pause(); } catch (_) {}
+        try { audio.currentTime = 0; } catch (_) {}
+      }
       var p = audio.play();
-      if (p && typeof p.catch === "function") p.catch(function () {});
-    } catch (_) {}
+      if (p && typeof p.catch === "function") {
+        p.catch(function () {
+          try {
+            var retry = new Audio(AUDIO_SRC);
+            retry.setAttribute("playsinline", "true");
+            retry.play().catch(function () {});
+          } catch (_) {}
+        });
+      }
+    } catch (_) {
+      try {
+        var fallback = new Audio(AUDIO_SRC);
+        fallback.play().catch(function () {});
+      } catch (__) {}
+    }
+  }
+
+  function playWebAudio() {
+    var ctx = resumeAudioContext();
+    if (!ctx || !audioBuffer) return false;
+    try {
+      var src = ctx.createBufferSource();
+      var gain = ctx.createGain();
+      gain.gain.value = 1;
+      src.buffer = audioBuffer;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(0);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function playMuyuSound() {
-    var ctx = resumeAudioContext();
-    if (ctx && audioBuffer) {
-      try {
-        var src = ctx.createBufferSource();
-        src.buffer = audioBuffer;
-        src.connect(ctx.destination);
-        src.start(0);
-        return;
-      } catch (_) {}
-    }
-    playHtmlAudioFallback();
-    if (!audioBuffer) preloadTapAudio();
+    unlockAudio();
+    // Web Audio 已就绪则用低延迟重叠播放；否则立刻用 HTMLAudio 池（原音效文件）
+    if (audioBuffer && playWebAudio()) return;
+    playHtmlAudio();
+    if (!audioBuffer) loadAudioBuffer();
   }
 
   function bumpMeritCount() {
@@ -193,7 +283,6 @@
         return;
       } catch (_) {}
     }
-    // 无 WAAPI 时退回 class 动画
     el.classList.remove("strike");
     void el.offsetWidth;
     el.classList.add("strike");
@@ -225,7 +314,6 @@
   function tap() {
     if (!isClockOpen()) return;
     ensureTodayMerit();
-    // 音效与动效同步、立即响应，再更新计数
     playMuyuSound();
     playTapAnim();
     meritCount += 1;
@@ -241,7 +329,7 @@
     e.preventDefault();
     e.stopPropagation();
     suppressClickUntil = Date.now() + 350;
-    resumeAudioContext();
+    unlockAudio();
     tap();
   }
 
@@ -253,7 +341,7 @@
     }
     e.preventDefault();
     e.stopPropagation();
-    resumeAudioContext();
+    unlockAudio();
     tap();
   }
 
@@ -262,7 +350,7 @@
     if (e.repeat) return;
     if (e.code === "Space" || e.key === " ") {
       e.preventDefault();
-      resumeAudioContext();
+      unlockAudio();
       tap();
     }
   }
@@ -291,7 +379,7 @@
       initialized = true;
       loadMerit();
       updateMeritDisplay();
-      preloadTapAudio();
+      ensureAudioPool();
       startDayWatch();
     }
     bind();
@@ -299,6 +387,7 @@
 
   global.MuyuFish = {
     init: init,
+    unlock: unlockAudio,
     tap: tap,
     getMerit: function () { return meritCount; }
   };
