@@ -5194,10 +5194,17 @@ function buildExportWorkbook(selections, unselectedRecords) {
 }
 
 function buildExportFilename(cls) {
-  const date = new Date();
-  const dateStr = date.getFullYear() + String(date.getMonth() + 1).padStart(2, '0') + String(date.getDate()).padStart(2, '0');
-  const safeClass = cls.replace(/[\\/:*?"<>|]/g, '_');
-  return '浦江一中拓展课选课数据_' + safeClass + '_' + dateStr + '.xlsx';
+  // 文件名：六年级（3）班 拓展课名单.xlsx（优先用年级+班号生成全角括号格式）
+  var label = '';
+  if (gradeName && classNumber) {
+    label = String(gradeName) + '（' + String(classNumber) + '）班';
+  } else {
+    label = String(cls || '未填写班级')
+      .replace(/\(/g, '（')
+      .replace(/\)/g, '）');
+  }
+  var safe = label.replace(/[\\/:*?"<>|]/g, '_');
+  return safe + ' 拓展课名单.xlsx';
 }
 
 async function exportExcel() {
