@@ -4989,7 +4989,7 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     }
   }
 
-  async function ensureCourseData(courseName, row, payload) {
+  async function ensureCourseData(courseName, row, payload, teacherByCourse) {
     const incoming = payload || { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
     const syncAt = row && row.synced_at ? String(row.synced_at) : '';
     if (courseData[courseName]) {
@@ -5014,18 +5014,17 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
       }
       return;
     }
-    const course = await db.prepare('SELECT teacher FROM courses WHERE name = ?').bind(courseName).first();
     courseData[courseName] = {
       course_name: courseName,
-      teacher_name: (row && row.teacher_name) || (course && course.teacher) || '',
+      teacher_name: (row && row.teacher_name) || (teacherByCourse && teacherByCourse.get(courseName)) || '',
       payload: incoming,
       synced_at: syncAt
     };
   }
 
   const selRes = await db.prepare(
-    'SELECT id, student_name, course_name, grade, class_name, gender FROM selections'
-  ).all();
+    'SELECT id, student_name, course_name, grade, class_name, gender FROM selections WHERE grade = ? OR class_name LIKE ?'
+  ).bind(grade, '%' + grade + '%').all();
   const selRows = filterSelectionsForBanzhurenClass(selRes.results || [], grade, className, rosterMap);
   const selByNameCourse = new Map();
   for (const row of selRows) {
@@ -5034,12 +5033,22 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     if (name && course) selByNameCourse.set(name + '\0' + course, row);
   }
 
-  const classroomRes = await db.prepare('SELECT * FROM teacher_classroom').all();
+  const coursesRes = await db.prepare('SELECT name, teacher FROM courses').all();
+  const teacherByCourse = new Map();
+  (coursesRes.results || []).forEach((c) => {
+    if (c && c.name) teacherByCourse.set(String(c.name), c.teacher || '');
+  });
+
+  const classroomRes = await db.prepare(
+    'SELECT course_name, teacher_name, synced_at, payload FROM teacher_classroom'
+  ).all();
+  const classroomByName = new Map();
   for (const row of (classroomRes.results || [])) {
     const courseName = String(row.course_name || '').trim();
     if (!courseName) continue;
+    classroomByName.set(courseName, row);
     const payload = mergeTeacherClassroomPayloadRow(row);
-    await ensureCourseData(courseName, row, payload);
+    await ensureCourseData(courseName, row, payload, teacherByCourse);
 
     if (!payloadHasCheckinActivity(payload)) continue;
 
@@ -5072,12 +5081,12 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     }
     linkStudentCourse(name, course, row.gender);
     if (!courseData[course]) {
-      const tcRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(course).first();
+      const tcRow = classroomByName.get(course) || null;
       let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
       if (tcRow && tcRow.payload) {
         try { payload = JSON.parse(tcRow.payload); } catch (_) {}
       }
-      await ensureCourseData(course, tcRow, payload);
+      await ensureCourseData(course, tcRow, payload, teacherByCourse);
     }
   }
 

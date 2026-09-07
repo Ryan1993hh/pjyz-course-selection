@@ -941,8 +941,8 @@
     window.addEventListener('pjyz-xuanke-ready', kickBackground, { once: true });
     setTimeout(kickBackground, 2500);
 
-    setInterval(pollSelectionSync, 60000);
-    setInterval(ensureLeaveDayFresh, 60000);
+    setInterval(pollSelectionSync, 90000);
+    setInterval(ensureLeaveDayFresh, 120000);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         ensureLeaveDayFresh();
@@ -956,10 +956,7 @@
         }
       }
     });
-    // 停留在数据看板时更频繁刷新签到表格（静默，不闪烁）
-    setInterval(function () {
-      if (bzState.tab === 'dashboard' && getToken()) loadDashboard({ silent: true });
-    }, 60000);
+    // 看板仅在 selection-data-sync 检测到变更时刷新，避免每分钟全量扫 teacher_classroom payload
 
     var logoutBtn = document.getElementById('bzProfileLogout');
     if (logoutBtn) {

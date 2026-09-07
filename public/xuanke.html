@@ -6039,7 +6039,7 @@ document.addEventListener('keydown', e => {
     window.dispatchEvent(new Event('pjyz-xuanke-ready'));
   } catch (_) {}
 
-  setInterval(loadSelectionStatus, 30000);
+  setInterval(loadSelectionStatus, 120000);
 
   // 定时检测后台选课数据变更（管理员删除/修改后自动同步）
   setInterval(async function() {
@@ -6060,7 +6060,7 @@ document.addEventListener('keydown', e => {
     } catch (e) {
       console.warn('selection data sync poll:', e.message);
     }
-  }, 30000);
+  }, 90000);
 })();
 
 // ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
@@ -6220,6 +6220,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260907a"></script>
+<script src="js/banzhuren-portal.js?v=20260907b"></script>
 </body>
 </html>

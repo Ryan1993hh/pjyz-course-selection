@@ -5138,19 +5138,12 @@ async function initApp() {
         return applySelectionDataRevisionChange();
       }
     }).catch(() => {});
-    refreshUserProfile().then(function(user) {
-      var bound = user && user.course_name ? String(user.course_name).trim() : "";
-      if (bound !== (state.courseName || "")) {
-        return loadAssignedCourse();
-      }
-      return refreshNumericHoursTotal()
-        .then(() => { renderProfile(); });
-    }).catch(() => {});
+    // 仅本地日期切换时刷新签到；资料/课时改为变更时再拉，降低 D1 轮询
     if (ensureDailyCheckinState()) {
       renderCheckin();
       updateDateLine();
     }
-  }, 60000);
+  }, 120000);
 }
 
 if (getToken()) {
