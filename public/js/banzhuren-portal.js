@@ -941,8 +941,8 @@
     window.addEventListener('pjyz-xuanke-ready', kickBackground, { once: true });
     setTimeout(kickBackground, 2500);
 
-    setInterval(pollSelectionSync, 10000);
-    setInterval(ensureLeaveDayFresh, 30000);
+    setInterval(pollSelectionSync, 60000);
+    setInterval(ensureLeaveDayFresh, 60000);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         ensureLeaveDayFresh();
@@ -959,7 +959,7 @@
     // 停留在数据看板时更频繁刷新签到表格（静默，不闪烁）
     setInterval(function () {
       if (bzState.tab === 'dashboard' && getToken()) loadDashboard({ silent: true });
-    }, 10000);
+    }, 60000);
 
     var logoutBtn = document.getElementById('bzProfileLogout');
     if (logoutBtn) {

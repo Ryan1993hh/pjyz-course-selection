@@ -498,21 +498,14 @@ async function handleSelectionDataSyncGet(db, request) {
 }
 
 async function getBanzhurenClassroomSyncToken(db, grade, className) {
-  const rosterMap = new Map();
-  const roster = await getBanzhurenClassRoster(db, grade, className);
-  roster.forEach((r) => {
-    const name = String(r.student_name || '').trim();
-    if (name) rosterMap.set(name, r);
-  });
-
-  const classroomRes = await db.prepare('SELECT course_name, synced_at, session_count, payload FROM teacher_classroom').all();
+  // 仅用 synced_at/session_count 做变更指纹，避免每次轮询读取巨大 payload
+  const classroomRes = await db.prepare(
+    'SELECT course_name, synced_at, session_count FROM teacher_classroom'
+  ).all();
   const parts = [];
   for (const row of (classroomRes.results || [])) {
     const courseName = String(row.course_name || '').trim();
     if (!courseName) continue;
-    let payload = {};
-    try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) {}
-    if (!payloadHasCheckinActivity(payload)) continue;
     parts.push(courseName + ':' + String(row.synced_at || '') + ':' + String(row.session_count || 0));
   }
   parts.sort();
@@ -1493,7 +1486,7 @@ async function removeSelectionsForStudent(db, grade, className, studentName, opt
 }
 
 async function cleanupDuplicateSelections(db) {
-  const all = await db.prepare('SELECT * FROM selections ORDER BY id ASC').all();
+  const all = await db.prepare('SELECT id, grade, class_name, student_name, course_id, course_name, is_locked, selected_at FROM selections ORDER BY id ASC').all();
   const keepByKey = new Map();
   const toDelete = [];
 
@@ -1510,46 +1503,82 @@ async function cleanupDuplicateSelections(db) {
     }
   }
 
+  const delStmts = [];
   for (const row of toDelete) {
     if (row.course_id) {
-      await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(row.course_id).run();
+      delStmts.push(db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(row.course_id));
     }
-    await db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id).run();
+    delStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
   }
+  if (delStmts.length) await runD1Batch(db, delStmts);
   return toDelete.length;
 }
 
-/** 管理员查选课：将教师端已上报但选课表缺失的学生补写入 selections */
-async function syncMissingSelectionsFromClassroom(db, courseFilter) {
+const SYNC_CLASSROOM_THROTTLE_KEY = 'sync_classroom_at';
+const SYNC_CLASSROOM_THROTTLE_MS = 15 * 60 * 1000;
+
+/** 管理员查选课：将教师端已上报但选课表缺失的学生补写入 selections（批量、可节流） */
+async function syncMissingSelectionsFromClassroom(db, courseFilter, opts) {
+  opts = opts || {};
+  const force = !!opts.force;
+  const filter = String(courseFilter || '').trim();
+
+  // 全量补全默认 15 分钟最多一次，避免每次查询都扫库把 D1 免费配额打爆
+  if (!force && !filter) {
+    try {
+      const row = await db.prepare('SELECT value FROM system_settings WHERE key = ?')
+        .bind(SYNC_CLASSROOM_THROTTLE_KEY).first();
+      const last = row ? Date.parse(String(row.value || '')) : NaN;
+      if (Number.isFinite(last) && (Date.now() - last) < SYNC_CLASSROOM_THROTTLE_MS) {
+        return { skipped: true, inserted: 0 };
+      }
+    } catch (_) {}
+  }
+
   let classroomRows = [];
-  if (courseFilter) {
+  if (filter) {
     const row = await db.prepare('SELECT course_name, payload FROM teacher_classroom WHERE course_name = ?')
-      .bind(courseFilter).first();
+      .bind(filter).first();
     if (row) classroomRows = [row];
   } else {
     const res = await db.prepare('SELECT course_name, payload FROM teacher_classroom').all();
     classroomRows = res.results || [];
   }
+  if (!classroomRows.length) return { skipped: false, inserted: 0 };
 
+  const existRes = await db.prepare('SELECT student_name, course_name FROM selections').all();
+  const existSet = new Set();
+  (existRes.results || []).forEach((r) => {
+    const sn = String(r.student_name || '').trim();
+    const cn = String(r.course_name || '').trim();
+    if (sn && cn) existSet.add(sn + '\0' + cn);
+  });
+
+  const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
+  const courseIdByName = new Map();
+  (coursesRes.results || []).forEach((c) => {
+    if (c && c.name) courseIdByName.set(String(c.name), c.id);
+  });
+
+  const insertStmts = [];
+  const nowIso = new Date().toISOString();
   for (const row of classroomRows) {
     let payload = {};
     try { payload = row.payload ? JSON.parse(row.payload) : {}; } catch (_) { continue; }
     const students = Array.isArray(payload.students) ? payload.students : [];
     if (!students.length) continue;
-
-    const courseRow = await db.prepare('SELECT id FROM courses WHERE name = ?').bind(row.course_name).first();
-    const courseId = courseRow ? courseRow.id : null;
+    const courseName = String(row.course_name || '').trim();
+    if (!courseName) continue;
+    const courseId = courseIdByName.has(courseName) ? courseIdByName.get(courseName) : null;
 
     for (const s of students) {
       const studentName = String((s && s.student_name) || '').trim();
       if (!studentName) continue;
-      const existing = await db.prepare(
-        'SELECT id FROM selections WHERE student_name = ? AND course_name = ?'
-      ).bind(studentName, row.course_name).first();
-      if (existing) continue;
-
+      const key = studentName + '\0' + courseName;
+      if (existSet.has(key)) continue;
+      existSet.add(key);
       const parsed = parseGradeClassFields(s.grade, s.class_name);
-      await db.prepare(
+      insertStmts.push(db.prepare(
         `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
          VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
       ).bind(
@@ -1558,11 +1587,22 @@ async function syncMissingSelectionsFromClassroom(db, courseFilter) {
         studentName,
         String(s.gender || ''),
         courseId,
-        row.course_name,
-        new Date().toISOString()
-      ).run();
+        courseName,
+        nowIso
+      ));
     }
   }
+
+  if (insertStmts.length) await runD1Batch(db, insertStmts);
+
+  if (!filter) {
+    try {
+      await db.prepare(
+        'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+      ).bind(SYNC_CLASSROOM_THROTTLE_KEY, new Date().toISOString()).run();
+    } catch (_) {}
+  }
+  return { skipped: false, inserted: insertStmts.length };
 }
 
 async function handleSelectionsGet(db, request, url) {
@@ -1603,10 +1643,11 @@ async function handleSelectionsGet(db, request, url) {
   sql += ' ORDER BY id ASC';
   const syncClassroom = isAdmin && !lockedOnly && url.searchParams.get('sync') === '1';
   if (syncClassroom) {
-    await syncMissingSelectionsFromClassroom(db, course || '');
+    const forceSync = url.searchParams.get('force') === '1';
+    await syncMissingSelectionsFromClassroom(db, course || '', { force: forceSync });
   }
   const results = await db.prepare(sql).bind(...params).all();
-  if (!lockedOnly && syncClassroom) await cleanupDuplicateSelections(db);
+  // 不再每次 sync 后全表去重（读+删极耗配额）；列表侧已有 dedupeSelectionRows
   let list = lockedOnly ? sortSelectionsByClass(results.results || []) : dedupeSelectionRows(results.results);
   if (cls) {
     const want = parseGradeClassFields(grade, cls);

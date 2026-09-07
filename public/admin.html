@@ -6046,8 +6046,9 @@ async function querySelections(opts){
     selectionsData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     renderSelections();
     if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
-    // 后台静默补全，不拖慢本次表格显示
-    if (!silent) {
+    // 后台静默补全：同一浏览器会话最多一次，避免反复 sync 打爆 D1 配额
+    if (!silent && !window.__pjyzClassroomSyncedOnce) {
+      window.__pjyzClassroomSyncedOnce = true;
       request('GET', '/api/selections?' + (qs ? (qs + '&') : '') + 'sync=1').then(function(syncData){
         var next = sortSelectionsByClassClient(Array.isArray(syncData) ? syncData : (syncData.selections || []));
         if (currentViewMode !== 'selections') return;
