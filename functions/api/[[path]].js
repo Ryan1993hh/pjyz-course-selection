@@ -566,6 +566,24 @@ function json(data, status = 200) {
   });
 }
 
+function isD1QuotaError(err) {
+  const msg = String((err && err.message) || err || '');
+  return /D1.*(?:exceeded|limit)|row read limit|free tier daily/i.test(msg);
+}
+
+/** 未捕获异常统一返回 JSON，避免 Cloudflare 1101 把 HTML 错误页吐给前端 */
+function apiUnhandledError(err) {
+  console.error('Unhandled API error:', err);
+  if (isD1QuotaError(err)) {
+    return json({
+      error: '数据库今日读取配额已用尽，请等到明天（UTC 零点后）再试，或升级 Cloudflare D1 套餐。现有数据均已保留，未丢失。',
+      code: 'D1_QUOTA_EXCEEDED'
+    }, 503);
+  }
+  const msg = String((err && err.message) || err || '未知错误').slice(0, 240);
+  return json({ error: '服务暂时异常：' + msg }, 500);
+}
+
 // ---- Token (Web Crypto API) - 支持多角色 ----
 async function createToken(userId, roles) {
   const expiry = Date.now() + 8 * 60 * 60 * 1000;
@@ -5615,17 +5633,18 @@ async function handleTeacherClassroomList(db, request) {
   ).all();
   const courses = coursesRes.results || [];
 
-  const classRes = await db.prepare('SELECT * FROM teacher_classroom ORDER BY synced_at DESC').all();
+  // 列表不拉 payload / 不构建课时矩阵，避免与 /api/course-hours 重复扫库、快速耗尽 D1 免费读配额
+  const classRes = await db.prepare(
+    `SELECT course_name, course_id, teacher_name, checkin_day, checkin_done,
+            student_count, present_count, absent_count, abnormal_count, pending_count,
+            flower_total, exam_done_count, session_count, synced_at
+     FROM teacher_classroom ORDER BY synced_at DESC`
+  ).all();
   const classroomMap = {};
   (classRes.results || []).forEach((row) => {
     classroomMap[row.course_name] = row;
   });
 
-  const hoursMatrix = await buildCourseHoursMatrix(db);
-  const hoursByCourse = {};
-  (hoursMatrix.rows || []).forEach((row) => {
-    hoursByCourse[row.course_name] = Number(row.numeric_total) || 0;
-  });
   const boundTeachers = await getBoundTeacherNameMap(db);
 
   const today = new Date();
@@ -5641,6 +5660,7 @@ async function handleTeacherClassroomList(db, request) {
       else if (synced.checkin_day === todayKey) todayStatus = '进行中';
       else todayStatus = '待签到';
     }
+    const hoursHint = synced ? (Number(synced.session_count) || 0) : 0;
     return {
       course_id: String(c.id),
       course_name: c.name,
@@ -5650,8 +5670,8 @@ async function handleTeacherClassroomList(db, request) {
       selected_count: c.selected_count || 0,
       synced: !!synced,
       today_status: todayStatus,
-      total_classes: hoursByCourse[c.name] != null ? hoursByCourse[c.name] : 0,
-      numeric_hours_total: hoursByCourse[c.name] != null ? hoursByCourse[c.name] : 0,
+      total_classes: hoursHint,
+      numeric_hours_total: hoursHint,
       student_count: synced ? synced.student_count : (c.selected_count || 0),
       present_count: synced ? synced.present_count : 0,
       absent_count: synced ? synced.absent_count : 0,
@@ -5673,6 +5693,7 @@ async function handleTeacherClassroomList(db, request) {
     let todayStatus = '待签到';
     if (synced.checkin_day === todayKey && synced.checkin_done) todayStatus = '今日已完成';
     else if (synced.checkin_day === todayKey) todayStatus = '进行中';
+    const hoursHint = Number(synced.session_count) || 0;
     items.push({
       course_id: synced.course_id || '',
       course_name: name,
@@ -5682,8 +5703,8 @@ async function handleTeacherClassroomList(db, request) {
       selected_count: synced.student_count || 0,
       synced: true,
       today_status: todayStatus,
-      total_classes: hoursByCourse[name] != null ? hoursByCourse[name] : 0,
-      numeric_hours_total: hoursByCourse[name] != null ? hoursByCourse[name] : 0,
+      total_classes: hoursHint,
+      numeric_hours_total: hoursHint,
       student_count: synced.student_count || 0,
       present_count: synced.present_count || 0,
       absent_count: synced.absent_count || 0,
@@ -5894,6 +5915,7 @@ async function buildCourseHoursMatrix(db) {
   ).all();
   const courses = coursesRes.results || [];
 
+  // 仅取矩阵所需列，避免 SELECT * 拖入无关字段
   const classRes = await db.prepare('SELECT course_name, teacher_name, payload FROM teacher_classroom').all();
   const classroomMap = {};
   const dateSet = new Set();
@@ -6072,6 +6094,14 @@ async function handleCourseHoursPut(db, request) {
 // =======================================================
 
 export async function onRequest(context) {
+  try {
+    return await onRequestImpl(context);
+  } catch (e) {
+    return apiUnhandledError(e);
+  }
+}
+
+async function onRequestImpl(context) {
   const request = context.request;
   const url = new URL(request.url);
   const path = url.pathname;

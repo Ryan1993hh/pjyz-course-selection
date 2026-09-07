@@ -4365,9 +4365,24 @@ async function request(method, url, body, isForm){
   }
   if (!res.ok){
     const txt = await res.text().catch(()=> '');
-    throw new Error(txt || ('请求失败 (' + res.status + ')'));
+    throw new Error(friendlyApiErrorText(txt, res.status));
   }
   return await res.blob();
+}
+
+/** 把 Cloudflare HTML / D1 配额等错误转成可读短文案 */
+function friendlyApiErrorText(raw, status) {
+  var txt = String(raw || '');
+  if (/row read limit|exceeded D1|free tier daily/i.test(txt)) {
+    return '数据库今日读取配额已用尽，请明天再试或升级 Cloudflare D1。数据未丢失。';
+  }
+  if (/cf-error-details|cf-error-code|<!DOCTYPE html/i.test(txt)) {
+    if (/1101/.test(txt)) return '服务端异常（Cloudflare 1101），请稍后刷新重试。数据未丢失。';
+    return '服务暂时不可用（' + (status || '?') + '），请稍后刷新。数据未丢失。';
+  }
+  var compact = txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (compact.length > 180) compact = compact.slice(0, 180) + '…';
+  return compact || ('请求失败 (' + (status || '?') + ')');
 }
 
 /* ============ Toast ============ */
@@ -4660,9 +4675,33 @@ async function loadCourseBoard() {
     loadBoardScheduleUI();
     showBoardHoursView();
     await loadCourseHoursPanel();
+    syncBoardHoursFromMatrix();
   } catch (e) {
-    if (grid) grid.innerHTML = '<div class="board-empty">加载失败：' + escHtml(e.message) + '</div>';
+    if (grid) grid.innerHTML = '<div class="board-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+    toast(friendlyApiErrorText(e.message), 'error');
   }
+}
+
+/** 用课时矩阵精确值回填左侧卡片与 KPI 累计课时（不改动数据库） */
+function syncBoardHoursFromMatrix() {
+  var rows = (courseHoursState.data && courseHoursState.data.rows) || [];
+  if (!rows.length || !(boardState.items || []).length) return;
+  var map = {};
+  rows.forEach(function (r) {
+    map[r.course_name] = Number(r.numeric_total) || 0;
+  });
+  var total = 0;
+  boardState.items.forEach(function (item) {
+    if (map[item.course_name] != null) {
+      item.numeric_hours_total = map[item.course_name];
+      item.total_classes = map[item.course_name];
+    }
+    total += Number(item.numeric_hours_total != null ? item.numeric_hours_total : item.total_classes) || 0;
+  });
+  if (!boardState.overview) boardState.overview = {};
+  boardState.overview.total_classes = total;
+  renderBoardKpis();
+  renderBoardGrid();
 }
 
 function formatClassCompactBoard(s) {
@@ -5302,7 +5341,7 @@ async function loadCourseHoursPanel() {
     renderCourseHoursTable();
     if (boardState.selectedCourse) highlightCourseHoursRow(boardState.selectedCourse);
   } catch (e) {
-    wrap.innerHTML = '<div class="bd-empty">加载失败：' + escHtml(e.message) + '</div>';
+    wrap.innerHTML = '<div class="bd-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
   }
 }
 
