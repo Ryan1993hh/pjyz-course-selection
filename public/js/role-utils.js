@@ -303,6 +303,95 @@
     return mapped;
   }
 
+  function injectDbHealthStyles() {
+    if (document.getElementById('pjyz-db-health-style')) return;
+    var style = document.createElement('style');
+    style.id = 'pjyz-db-health-style';
+    style.textContent =
+      '#pjyzDbHealthBanner{display:none;position:sticky;top:0;z-index:14000;margin:0;padding:10px 14px;' +
+      'background:#fff7ed;border-bottom:1px solid #fdba74;color:#9a3412;font-size:13px;line-height:1.55;}' +
+      '#pjyzDbHealthBanner.show{display:block;}' +
+      '#pjyzDbHealthBanner strong{font-weight:800;}' +
+      '#pjyzDbHealthBanner .pjyz-db-actions{margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;}' +
+      '#pjyzDbHealthBanner button{border:1px solid #f97316;background:#fff;color:#c2410c;border-radius:8px;' +
+      'padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;}' +
+      '#pjyzDbHealthBanner button:hover{background:#ffedd5;}' +
+      '@media (max-width:640px){#pjyzDbHealthBanner{font-size:12px;padding:8px 10px;}}';
+    document.head.appendChild(style);
+  }
+
+  function ensureDbHealthBannerEl() {
+    injectDbHealthStyles();
+    var el = document.getElementById('pjyzDbHealthBanner');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'pjyzDbHealthBanner';
+    el.setAttribute('role', 'alert');
+    var host = document.body;
+    if (host.firstChild) host.insertBefore(el, host.firstChild);
+    else host.appendChild(el);
+    return el;
+  }
+
+  function hideDbHealthBanner() {
+    var el = document.getElementById('pjyzDbHealthBanner');
+    if (el) el.classList.remove('show');
+  }
+
+  function showDbHealthBanner(payload) {
+    var el = ensureDbHealthBannerEl();
+    var msg = (payload && payload.message) ||
+      '数据库今日读取配额已用尽。请明天再试，或升级 Cloudflare D1。数据未丢失。';
+    el.innerHTML =
+      '<strong>系统提示：</strong>' + msg +
+      '<div class="pjyz-db-actions">' +
+      '<button type="button" data-act="retry">重新检测</button>' +
+      '<button type="button" data-act="dismiss">知道了</button>' +
+      '</div>';
+    el.classList.add('show');
+    var retryBtn = el.querySelector('[data-act="retry"]');
+    var dismissBtn = el.querySelector('[data-act="dismiss"]');
+    if (retryBtn) retryBtn.onclick = function () { checkDbHealthBanner({ force: true }); };
+    if (dismissBtn) dismissBtn.onclick = hideDbHealthBanner;
+  }
+
+  function apiBaseForHealth() {
+    try {
+      if (typeof global.apiBase === 'function') return global.apiBase();
+    } catch (_) {}
+    return '';
+  }
+
+  async function checkDbHealthBanner(opts) {
+    opts = opts || {};
+    try {
+      var res = await fetch(apiBaseForHealth() + '/api/health', { method: 'GET', cache: 'no-store' });
+      var data = {};
+      try { data = await res.json(); } catch (_) { data = {}; }
+      var msg = String((data && (data.message || data.error)) || '');
+      var quota = (data && data.code === 'D1_QUOTA_EXCEEDED') ||
+        /row read limit|exceeded D1|free tier daily|读取配额/i.test(msg);
+      if (!res.ok && quota) {
+        showDbHealthBanner(data);
+        return false;
+      }
+      if (opts.force) hideDbHealthBanner();
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  function autoCheckDbHealth() {
+    // 登录页也检测，避免一进系统就看到空白/HTML 错误
+    var run = function () { checkDbHealthBanner(); };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run);
+    } else {
+      run();
+    }
+  }
+
   global.PjyzRole = {
     ROLE_PAGES: ROLE_PAGES,
     ROLE_LABELS: ROLE_LABELS,
@@ -320,6 +409,10 @@
     prefetchPage: prefetchPage,
     prefetchRolePages: prefetchRolePages,
     prefetchAllRolePages: prefetchAllRolePages,
-    navigateToPage: navigateToPage
+    navigateToPage: navigateToPage,
+    checkDbHealthBanner: checkDbHealthBanner,
+    hideDbHealthBanner: hideDbHealthBanner
   };
+
+  autoCheckDbHealth();
 })(window);

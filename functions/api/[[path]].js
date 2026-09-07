@@ -646,8 +646,17 @@ async function handleHealth(db) {
   try {
     const result = await db.prepare('SELECT COUNT(*) as count FROM users').first();
     return json({ status: 'ok', database: 'D1', users: result.count, time: new Date().toISOString() });
-  } catch(e) {
-    return json({ status: 'error', message: e.message }, 500);
+  } catch (e) {
+    const msg = String((e && e.message) || e || '');
+    if (/D1.*(?:exceeded|limit)|row read limit|free tier daily/i.test(msg)) {
+      return json({
+        status: 'error',
+        code: 'D1_QUOTA_EXCEEDED',
+        message: '数据库今日读取配额已用尽。请等到明天（UTC 零点后，约北京时间早上 8 点）再试，或在 Cloudflare 升级 D1 付费计划。现有数据均已保留。',
+        detail: msg
+      }, 503);
+    }
+    return json({ status: 'error', message: msg }, 500);
   }
 }
 
