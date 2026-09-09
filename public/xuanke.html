@@ -6066,66 +6066,65 @@ document.addEventListener('keydown', e => {
   }
 
   try {
-    // 1) 同步：仅用课程缓存立刻出表（不先读本地选课草稿，避免多端不一致闪屏）
+    // 1) 同步：课程缓存立刻出表
     hydrateCoursesFromCache();
     applyBanzhurenClassPreset();
     if (COURSES.length) paintNow();
 
-    // 2) 网络：课程、开关、同步版本、名额并行拉取
+    // 2) 网络：课程与开关并行；资料同步后再恢复本班已选学生
     var sync = { revision: 0 };
     var networkReady = Promise.all([
       loadCoursesFromServer(),
       loadSelectionStatus(),
-      fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; }),
-      loadClassQuotaOverrides().catch(function () {})
+      fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; })
     ]);
 
-    setTimeout(function () { syncUserProfile().catch(function () {}); }, 0);
-
     await networkReady;
+    // 等资料回填年级班级，再拉名额与选课，确保课程格子能显示已选姓名
+    await syncUserProfile().catch(function () {});
     applyBanzhurenClassPreset();
+    await loadClassQuotaOverrides();
     syncCourseSlots();
     if (!painted || COURSES.length) paintNow();
 
-    // 3) 一次拉取本班选课（去掉「先探测是否为空」的重复请求）
-    var restored = false;
+    var serverEmpty = true;
     if (getToken() && gradeName && classNumber) {
-      restored = await restoreSelectionsFromServer();
-      if (restored) {
-        clearLocalSelectionDraft();
-        finalizeCourseSlotsAfterPreEnroll();
-        syncCourseSlots();
-        var uploadTextCol = document.getElementById('uploadTextCol');
-        if (uploadTextCol && students.length > 0) {
-          uploadTextCol.innerHTML =
-            '<span class="title">✓ ' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
-            '<span class="file-info">📋 共 ' + students.length + ' 名学生（数据库）</span>';
-        }
-      } else {
-        var loaded = false;
-        try { loaded = loadStateFromStorage(); } catch (_) { loaded = false; }
-        if (loaded && students.length > 0 && studentListSource === 'upload') {
-          var uploadCol = document.getElementById('uploadTextCol');
-          if (uploadCol) {
-            uploadCol.innerHTML =
-              '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
-              '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
-          }
-          await applyPreEnrollments({ skipReset: true, skipRender: true });
-          finalizeCourseSlotsAfterPreEnroll();
-          syncCourseSlots();
-        } else {
-          if (loaded) clearLocalSelectionDraft();
-          await applyServerSelectionSync({ silent: true });
-        }
+      try {
+        serverEmpty = await isServerClassSelectionEmpty();
+      } catch (_) {
+        serverEmpty = true;
       }
-    } else if (getToken()) {
+    }
+
+    if (!serverEmpty) {
+      // 数据库已有本班选课 → 以库为准，课程格子显示已选学生姓名
+      clearLocalSelectionDraft();
       await applyServerSelectionSync({ silent: true });
+      var uploadTextCol = document.getElementById('uploadTextCol');
+      if (uploadTextCol && students.length > 0) {
+        uploadTextCol.innerHTML =
+          '<span class="title">✓ ' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
+          '<span class="file-info">📋 共 ' + students.length + ' 名学生（数据库）</span>';
+      }
+    } else {
+      var loaded = false;
+      try { loaded = loadStateFromStorage(); } catch (_) { loaded = false; }
+      if (loaded && students.length > 0 && studentListSource === 'upload') {
+        var uploadCol = document.getElementById('uploadTextCol');
+        if (uploadCol) {
+          uploadCol.innerHTML =
+            '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
+            '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
+        }
+        await applyPreEnrollments({ skipReset: true });
+      } else {
+        if (loaded) clearLocalSelectionDraft();
+        await applyServerSelectionSync({ silent: true });
+      }
     }
 
     saveState(sync.revision);
     paintNow();
-    // 门户刷新不阻塞选课页可交互
     notifyPortalRoster();
   } catch (e) {
     console.error('[initBootstrap] init failed:', e);
