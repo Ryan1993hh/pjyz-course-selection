@@ -4699,6 +4699,125 @@ function mergeClassroomHistory(clientHist, serverHist) {
   return Array.from(map.values()).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
 }
 
+/** 扩展日期集合：同时包含原始串与归一化 YYYY-MM-DD，便于匹配历史记录 */
+function expandHiddenDateSet(dates) {
+  const set = new Set();
+  (dates || []).forEach((d) => {
+    const raw = String(d || '').trim();
+    if (!raw) return;
+    set.add(raw);
+    const norm = normalizeDateKey(raw);
+    if (norm) set.add(norm);
+  });
+  return set;
+}
+
+function isDateInHiddenSet(dateKey, hiddenSet) {
+  if (!hiddenSet || !hiddenSet.size) return false;
+  const raw = String(dateKey || '').trim();
+  if (!raw) return false;
+  if (hiddenSet.has(raw)) return true;
+  const norm = normalizeDateKey(raw);
+  return !!(norm && hiddenSet.has(norm));
+}
+
+/** 从教师课堂 payload 中剔除已删除（隐藏）的签到日 */
+function stripClassroomPayloadHiddenDates(payload, hiddenDates) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const hidden = hiddenDates instanceof Set ? hiddenDates : expandHiddenDateSet(hiddenDates);
+  if (!hidden.size) return payload;
+
+  const history = Array.isArray(payload.history) ? payload.history : [];
+  const nextHistory = history.filter((h) => !isDateInHiddenSet((h && h.date) || '', hidden));
+  if (nextHistory.length !== history.length) {
+    payload.history = nextHistory;
+  }
+
+  if (isDateInHiddenSet(payload.checkinDay || '', hidden)) {
+    payload.checkinDay = '';
+    payload.checkinDone = false;
+    payload.checkin = {};
+  }
+  return payload;
+}
+
+/** 管理员删除课时日期列时，同步清除各课程签到 history，供教师端/班主任端一致失效 */
+async function purgeTeacherClassroomHistoryDates(db, dates) {
+  const hidden = expandHiddenDateSet(dates);
+  if (!hidden.size) return 0;
+
+  const res = await db.prepare('SELECT course_name, payload FROM teacher_classroom').all();
+  let matrixTotals = null;
+  try {
+    const matrix = await buildCourseHoursMatrix(db);
+    matrixTotals = {};
+    (matrix.rows || []).forEach((r) => {
+      matrixTotals[String(r.course_name || '').trim()] = Number(r.numeric_total) || 0;
+    });
+  } catch (_) {
+    matrixTotals = null;
+  }
+
+  let updated = 0;
+  for (const row of (res.results || [])) {
+    const courseName = String(row.course_name || '').trim();
+    if (!courseName) continue;
+    let payload = null;
+    try { payload = row.payload ? JSON.parse(row.payload) : null; } catch (_) { payload = null; }
+    if (!payload || typeof payload !== 'object') continue;
+
+    const beforeHistLen = Array.isArray(payload.history) ? payload.history.length : 0;
+    const beforeDay = String(payload.checkinDay || '');
+    stripClassroomPayloadHiddenDates(payload, hidden);
+    const afterHistLen = Array.isArray(payload.history) ? payload.history.length : 0;
+    const afterDay = String(payload.checkinDay || '');
+    if (beforeHistLen === afterHistLen && beforeDay === afterDay) continue;
+
+    const summary = summarizeClassroomPayload(payload);
+    const numericHoursTotal = (matrixTotals && matrixTotals[courseName] != null)
+      ? matrixTotals[courseName]
+      : summary.total_classes;
+    summary.total_classes = numericHoursTotal;
+    if (payload.teacher && typeof payload.teacher === 'object') {
+      payload.teacher.totalClasses = numericHoursTotal;
+    }
+
+    await db.prepare(
+      `UPDATE teacher_classroom SET
+        total_classes = ?,
+        checkin_day = ?,
+        checkin_done = ?,
+        student_count = ?,
+        present_count = ?,
+        absent_count = ?,
+        abnormal_count = ?,
+        pending_count = ?,
+        flower_total = ?,
+        exam_done_count = ?,
+        session_count = ?,
+        payload = ?,
+        synced_at = datetime('now')
+      WHERE course_name = ?`
+    ).bind(
+      numericHoursTotal,
+      summary.checkin_day,
+      summary.checkin_done,
+      summary.student_count,
+      summary.present_count,
+      summary.absent_count,
+      summary.abnormal_count,
+      summary.pending_count,
+      summary.flower_total,
+      summary.exam_done_count,
+      summary.session_count,
+      JSON.stringify(payload),
+      courseName
+    ).run();
+    updated++;
+  }
+  return updated;
+}
+
 function mergeTeacherClassroomPayloadRow(row) {
   let payload = { students: [], history: [], checkin: {}, checkinDay: '', checkinDone: false };
   if (row && row.payload) {
@@ -4826,14 +4945,14 @@ function historyEntryHasClassStudent(checkin, classNames, idToName) {
   return false;
 }
 
-function buildBanzhurenSessionMap(courseData, coursesToScan, classStudentNames, grade, className, rosterMap, selRows) {
+function buildBanzhurenSessionMap(courseData, coursesToScan, classStudentNames, grade, className, rosterMap, selRows, hiddenDates) {
   const classNames = new Set(classStudentNames);
   const sessionMap = new Map();
   // 班主任看板重置：不展示这两天的历史签到列，从之后重新开始记录
-  const excludedDates = new Set(['2026-08-27', '2026-08-28']);
+  const excludedDates = expandHiddenDateSet(['2026-08-27', '2026-08-28'].concat(hiddenDates || []));
 
   function addDate(date, label, updatedAt) {
-    if (!date || excludedDates.has(date)) return;
+    if (!date || isDateInHiddenSet(date, excludedDates)) return;
     const prev = sessionMap.get(date);
     if (!prev || (updatedAt || 0) > (prev.updatedAt || 0)) {
       sessionMap.set(date, {
@@ -5264,6 +5383,14 @@ async function handleBanzhurenClassDashboard(db, request) {
   const classStudentNames = finalRoster
     .map((r) => String(r.student_name || '').trim())
     .filter(Boolean);
+  const hiddenDates = await getHiddenCourseHourDates(db);
+  const hiddenDateSet = expandHiddenDateSet(hiddenDates);
+  // 后台已删除的课时日期：内存中剔除，避免班级考核看板仍显示/累计
+  Object.keys(courseData || {}).forEach((cn) => {
+    if (courseData[cn] && courseData[cn].payload) {
+      stripClassroomPayloadHiddenDates(courseData[cn].payload, hiddenDateSet);
+    }
+  });
   const sessionMap = buildBanzhurenSessionMap(
     courseData,
     coursesToScan,
@@ -5271,7 +5398,8 @@ async function handleBanzhurenClassDashboard(db, request) {
     grade,
     className,
     rosterMapForSessions,
-    selRows
+    selRows,
+    hiddenDates
   );
 
   const sessions = Array.from(sessionMap.values())
@@ -5648,6 +5776,9 @@ async function handleTeacherClassroomPut(db, request) {
   const existingRow = await db.prepare('SELECT * FROM teacher_classroom WHERE course_name = ?').bind(courseName).first();
   const existingPayload = mergeTeacherClassroomPayloadRow(existingRow || {});
   body.history = mergeClassroomHistory(body.history, existingPayload.history);
+  // 已删除的课时日期禁止写回 history（防止教师本地缓存把后台删除的签到日复活）
+  const hiddenDateSet = expandHiddenDateSet(await getHiddenCourseHourDates(db));
+  stripClassroomPayloadHiddenDates(body, hiddenDateSet);
 
   const courseId = String(body.course_id || body.courseId || '');
   let teacherName = String(
@@ -5705,6 +5836,8 @@ async function handleTeacherClassroomPut(db, request) {
       totalClasses: summary.total_classes
     }
   };
+  stripClassroomPayloadHiddenDates(payload, hiddenDateSet);
+  Object.assign(summary, summarizeClassroomPayload(payload));
 
   if (auth.user.roles.includes('admin') && body.total_classes != null) {
     const n = Math.max(0, Number(body.total_classes) || 0);
@@ -5934,6 +6067,8 @@ async function handleTeacherClassroomDetail(db, request, courseName) {
       names.has(String(l.student_name || '').trim())
     );
     applyLeavesToPayloadCheckin(payload, courseLeaves, getTodayDateKey());
+    // 对教师端隐藏已删除课时日期的签到记录
+    stripClassroomPayloadHiddenDates(payload, await getHiddenCourseHourDates(db));
   }
 
   return json({
@@ -6219,6 +6354,12 @@ async function handleCourseHoursPut(db, request) {
   if (deleteDates.length || addDates.length) {
     await setHiddenCourseHourDates(db, hidden);
     await setExtraCourseHourDates(db, extra);
+  }
+
+  // 删除日期列时同步清除教师课堂签到 history，班主任班级考核看板与教师端考核看板一并失效
+  if (deleteDates.length) {
+    await purgeTeacherClassroomHistoryDates(db, deleteDates);
+    await bumpSelectionDataRevision(db);
   }
 
   return json({ success: true, count, deleted_dates: deleteDates, added_dates: addDates });
