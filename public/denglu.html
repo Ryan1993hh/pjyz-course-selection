@@ -815,7 +815,6 @@
 
   async function redirectAfterLogin(user) {
     var redirectUrl = resolveRedirectUrl(user);
-    setLoginBtnLabel('正在准备页面...');
     try {
       if (window.PjyzRole && typeof PjyzRole.warmRoleBootstrap === 'function') {
         await PjyzRole.warmRoleBootstrap({
@@ -979,7 +978,6 @@
       try { userObj = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) { userObj = null; }
       try {
         if (window.PjyzRole && typeof PjyzRole.warmRoleBootstrap === 'function') {
-          setLoginBtnLabel('正在准备页面...');
           await PjyzRole.warmRoleBootstrap({
             user: userObj,
             page: sessionRedirectTarget,
