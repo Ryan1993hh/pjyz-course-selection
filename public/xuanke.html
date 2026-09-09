@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-<title>浦江一中拓展课·班主�?/title>
+<title>浦江一中拓展课·班主任</title>
 <link rel="stylesheet" href="css/muyu.css?v=20260905e">
 <script src="js/role-utils.js?v=20260909g"></script>
 <script src="js/teacher-quotes.js?v=20260827d"></script>
 <script src="js/muyu-audio-data.js?v=20260905e"></script>
 <script src="js/muyu.js?v=20260905e"></script>
-<!-- 预连接：提前完成 DNS + TCP + TLS，加�?CDN 资源获取 -->
+<!-- 预连接：提前完成 DNS + TCP + TLS，加速 CDN 资源获取 -->
 <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -19,7 +19,7 @@
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link rel="dns-prefetch" href="https://unpkg.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-<!-- SheetJS：按需懒加载（上传/导出时才拉取，避免首屏抢带宽�?-->
+<!-- SheetJS：按需懒加载（上传/导出时才拉取，避免首屏抢带宽） -->
 <script>
 var XLSX_CDN_LIST = [
   'https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
@@ -89,17 +89,17 @@ function loadXlsxLibrary() {
   --shadow: 0 4px 12px rgba(13, 148, 136, 0.08);
   --shadow-lg: 0 10px 30px rgba(13, 148, 136, 0.15);
   --radius: 12px;
-  /* ===== 表格整体基础色：浅灰�?#E3F2FD ===== */
+  /* ===== 表格整体基础色：浅灰蓝 #E3F2FD ===== */
   --tbl-base: #E3F2FD;
   /* ===== 表格列底色（浅灰蓝同色系微差，统一蓝灰调）===== */
-  --col-1: rgba(100, 116, 139, 0.10);   /* 序号 - 冷灰�?*/
-  --col-2: rgba(59, 130, 246, 0.10);    /* 课程名称 - 柔天�?*/
-  --col-3: rgba(37, 99, 235, 0.08);     /* 授课老师 - 柔靛�?*/
-  --col-4: rgba(14, 165, 233, 0.08);    /* 授课地点 - 柔青�?*/
-  --col-5: rgba(14, 116, 144, 0.08);    /* 报名要求 - 柔青�?*/
+  --col-1: rgba(100, 116, 139, 0.10);   /* 序号 - 冷灰蓝 */
+  --col-2: rgba(59, 130, 246, 0.10);    /* 课程名称 - 柔天蓝 */
+  --col-3: rgba(37, 99, 235, 0.08);     /* 授课老师 - 柔靛蓝 */
+  --col-4: rgba(14, 165, 233, 0.08);    /* 授课地点 - 柔青蓝 */
+  --col-5: rgba(14, 116, 144, 0.08);    /* 报名要求 - 柔青灰 */
   --col-6: rgba(79, 70, 229, 0.08);     /* 限制人数 - 柔靛青紫 */
   --col-7: rgba(148, 163, 184, 0.05);   /* 学生姓名 - 极淡蓝灰 */
-  /* hover 态加深（�?2 倍） */
+  /* hover 态加深（约 2 倍） */
   --col-1-h: rgba(100, 116, 139, 0.20);
   --col-2-h: rgba(59, 130, 246, 0.20);
   --col-3-h: rgba(37, 99, 235, 0.18);
@@ -164,7 +164,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ===== 顶部标题�?�?居中标题 + 渐变流动动效 ===== */
+/* ===== 顶部标题栏 — 居中标题 + 渐变流动动效 ===== */
 .header {
   color: white;
   padding: 14px 24px;
@@ -282,7 +282,7 @@ body {
   text-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.3);
   padding-left: 4px;
 }
-/* ===== 右侧操作�?+ Reset 按钮 ===== */
+/* ===== 右侧操作区 + Reset 按钮 ===== */
 .header-actions {
   position: relative;
   z-index: 5;
@@ -334,7 +334,7 @@ body {
 }
 .btn-reset:hover .btn-reset-icon { transform: rotate(-180deg); }
 
-/* ===== 用户信息�?+ 退出按�?===== */
+/* ===== 用户信息区 + 退出按钮 ===== */
 .user-info {
   display: inline-flex;
   align-items: center;
@@ -424,7 +424,7 @@ body {
   display: inline-block;
 }
 
-/* 重置确认弹窗：使�?lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
+/* 重置确认弹窗：使用 lottery-modal 相同的玻璃风格，但保持独立类避免污染 */
 .reset-confirm-mask {
   position: fixed; inset: 0; z-index: 200;
   background: rgba(15, 23, 42, 0.75);
@@ -560,8 +560,8 @@ body {
 .btn-lottery:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(234, 88, 12, 0.45); filter: brightness(1.05); }
 .btn-lottery:active { transform: translateY(0); }
 
-/* 学生姓名表头：flex 布局，标签居�?+ 抽签按钮右浮 */
-.th-students { /* th 通用样式已定义，此处仅覆�?padding */ }
+/* 学生姓名表头：flex 布局，标签居中 + 抽签按钮右浮 */
+.th-students { /* th 通用样式已定义，此处仅覆写 padding */ }
 .th-students-inner {
   display: flex;
   align-items: center;
@@ -587,10 +587,10 @@ body {
   margin-bottom: 12px;
 }
 
-/* ===== 控制条：单行合并 上传/Step1 �?Step2 �?统计�?===== */
+/* ===== 控制条：单行合并 上传/Step1 → Step2 → 统计卡 ===== */
 .control-bar {
   display: grid;
-  /* 上传宽度 = 年级(1fr) + 班级(1fr)，之后箭头→年级→班级→提示�?统计�?*/
+  /* 上传宽度 = 年级(1fr) + 班级(1fr)，之后箭头→年级→班级→提示→3统计卡 */
   grid-template-columns: repeat(2, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr)) minmax(0, max-content) auto auto auto auto;
   gap: 12px;
   align-items: stretch;
@@ -665,7 +665,7 @@ body {
   gap: 4px;
 }
 
-/* ===== 信息统计�?===== */
+/* ===== 信息统计栏 ===== */
 .stats-bar { display: contents; }
 .stat-input {
   display: flex;
@@ -822,7 +822,7 @@ body {
 }
 table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--tbl-base); table-layout: fixed; }
 
-/* —�?表头：浅蓝磨砂玻�?+ 居中大字�?—�?*/
+/* —— 表头：浅蓝磨砂玻璃 + 居中大字号 —— */
 th {
   background: linear-gradient(135deg, rgba(100, 181, 246, 0.55) 0%, rgba(66, 165, 245, 0.50) 50%, rgba(100, 181, 246, 0.55) 100%);
   backdrop-filter: blur(14px) saturate(160%);
@@ -842,15 +842,15 @@ th {
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
 }
 /* 表头各列底部色条（浅灰蓝同色系，强化列身份） */
-th:nth-child(1) { border-bottom-color: #546E7A; }   /* 序号 - 钢蓝�?*/
+th:nth-child(1) { border-bottom-color: #546E7A; }   /* 序号 - 钢蓝灰 */
 th:nth-child(2) { border-bottom-color: #1976D2; }   /* 课程 - 天蓝 */
 th:nth-child(3) { border-bottom-color: #3949AB; }   /* 老师 - 靛蓝 */
 th:nth-child(4) { border-bottom-color: #0288D1; }   /* 地点 - 青蓝 */
-th:nth-child(5) { border-bottom-color: #00838F; }   /* 要求 - 青灰�?*/
-th:nth-child(6) { border-bottom-color: #5C6BC0; }   /* 名额 - 靛青�?*/
-th:nth-child(7) { border-bottom-color: #455A64; }   /* 学生 - 深钢�?*/
+th:nth-child(5) { border-bottom-color: #00838F; }   /* 要求 - 青灰蓝 */
+th:nth-child(6) { border-bottom-color: #5C6BC0; }   /* 名额 - 靛青紫 */
+th:nth-child(7) { border-bottom-color: #455A64; }   /* 学生 - 深钢蓝 */
 
-/* —�?单元格基础 —�?*/
+/* —— 单元格基础 —— */
 td {
   padding: 8px 8px;
   border-top: 1px solid #BBDEFB;
@@ -863,7 +863,7 @@ td {
 }
 tbody tr { transition: background 0.18s ease; }
 
-/* —�?列底色（极浅，≤8%）—�?*/
+/* —— 列底色（极浅，≤8%）—— */
 td:nth-child(1) { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
 td:nth-child(2) { background-color: var(--col-2); text-align: left; }
 td:nth-child(3) { background-color: var(--col-3); text-align: left; }
@@ -872,7 +872,7 @@ td:nth-child(5) { background-color: var(--col-5); text-align: left; }
 td:nth-child(6) { background-color: var(--col-6); text-align: left; }
 td:nth-child(7) { background-color: var(--col-7); text-align: left; }
 
-/* —�?�?hover：各列同步加深，保持列身�?—�?*/
+/* —— 行 hover：各列同步加深，保持列身份 —— */
 tbody tr:hover td:nth-child(1) { background-color: var(--col-1-h); }
 tbody tr:hover td:nth-child(2) { background-color: var(--col-2-h); }
 tbody tr:hover td:nth-child(3) { background-color: var(--col-3-h); }
@@ -881,11 +881,11 @@ tbody tr:hover td:nth-child(5) { background-color: var(--col-5-h); }
 tbody tr:hover td:nth-child(6) { background-color: var(--col-6-h); }
 tbody tr:hover td:nth-child(7) { background-color: var(--col-7-h); }
 
-/* —�?0 名额行整体弱�?—�?*/
+/* —— 0 名额行整体弱化 —— */
 tr.no-quota td { opacity: 0.5; }
 tr.no-quota:hover td { opacity: 0.7; }
 
-/* ===== 单元格内统一行容器（确保图标+文字对齐、不换行�?==== */
+/* ===== 单元格内统一行容器（确保图标+文字对齐、不换行）===== */
 .cell-inner {
   display: inline-flex;
   align-items: center;
@@ -1024,7 +1024,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
 }
 .slot.filled::after { content: ""; }
-.slot.filled:hover::after { content: " �?; }
+.slot.filled:hover::after { content: " ✕"; }
 .slot.filled.locked-seat {
   background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
   border-color: #f97316;
@@ -1072,7 +1072,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 }
 .slot.filled { animation: pop 0.25s ease; }
 
-/* ===== 空状�?===== */
+/* ===== 空状态 ===== */
 .empty-state {
   text-align: center;
   padding: 40px;
@@ -1184,7 +1184,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 }
 .modal-search input:focus { border-color: var(--primary); }
 
-/* 8 �?× 7 �?的名字网�?*/
+/* 8 列 × 7 行 的名字网格 */
 .name-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -1283,8 +1283,8 @@ tr.no-quota:hover td { opacity: 0.7; }
 .toast.success { background: var(--success); }
 .toast.warning { background: var(--warning); }
 
-/* ===== 响应式（平板�?==== */
-/* ===== CDN 加载状态横�?===== */
+/* ===== 响应式（平板）===== */
+/* ===== CDN 加载状态横幅 ===== */
 .load-banner {
   display: none;
   align-items: center;
@@ -1381,7 +1381,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   transition: background 0.2s, transform 0.15s;
 }
 .lottery-close:hover { background: rgba(255,255,255,0.38); transform: rotate(90deg); }
-/* 抽签内容容器：内嵌原抽签系统的深色渐变背景，可滚�?*/
+/* 抽签内容容器：内嵌原抽签系统的深色渐变背景，可滚动 */
 .lottery-content {
   flex: 1;
   position: relative;
@@ -1394,7 +1394,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   flex-direction: column;
   align-items: center;
   padding: 20px 16px 32px;
-  /* 覆盖主页�?CSS 变量，避�?--text 冲突（主页面 --text 为深色） */
+  /* 覆盖主页面 CSS 变量，避免 --text 冲突（主页面 --text 为深色） */
   --glass: rgba(255,255,255,0.18);
   --glass-border: rgba(255,255,255,0.35);
   --text: #ffffff;
@@ -1404,7 +1404,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 .lottery-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
 .lottery-content::-webkit-scrollbar-track { background: transparent; }
 
-/* 抽签系统主容�?*/
+/* 抽签系统主容器 */
 .lottery-content .app {
   position: relative;
   z-index: 1;
@@ -1415,7 +1415,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   gap: 22px;
 }
 
-/* 标题区（�?.header 改名 .lot-header，避免与主页面顶部标题栏冲突�?*/
+/* 标题区（原 .header 改名 .lot-header，避免与主页面顶部标题栏冲突） */
 .lottery-content .lot-header {
   text-align: center;
   padding: 16px 0 4px;
@@ -1484,7 +1484,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* 毛玻璃卡片（�?.card 改名 .lot-card，避免与主页面卡片冲突） */
+/* 毛玻璃卡片（原 .card 改名 .lot-card，避免与主页面卡片冲突） */
 .lottery-content .lot-card {
   background: var(--glass);
   backdrop-filter: blur(16px);
@@ -1866,7 +1866,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   letter-spacing: 1px;
 }
 
-/* 选人抽签弹层（在 lottery-content 内嵌�?*/
+/* 选人抽签弹层（在 lottery-content 内嵌） */
 .lottery-content .picker-mask {
   position: absolute;
   inset: 0;
@@ -1995,7 +1995,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   letter-spacing: 1px;
 }
 
-/* 抽签系统响应�?*/
+/* 抽签系统响应式 */
 @media (max-width: 640px) {
   .lottery-content .name-list { grid-template-columns: 1fr 1fr; }
   .lottery-content .result-grid { grid-template-columns: 1fr 1fr; }
@@ -2011,7 +2011,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   .lottery-content .picker-body { grid-template-columns: 1fr; }
 }
 
-/* ===== 课程简�?Tooltip（悬�?0.5s 显示�?==== */
+/* ===== 课程简介 Tooltip（悬停 0.5s 显示）===== */
 .course-tip {
   position: fixed;
   z-index: 9999;
@@ -2055,7 +2055,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
 }
 .course-tip-cat.cat-体育健康 { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); }
-.course-tip-cat.cat-艺术技�?{ background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
+.course-tip-cat.cat-艺术技艺 { background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
 .course-tip-cat.cat-人文社科 { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
 
 .course-tip-title {
@@ -2112,7 +2112,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 .course-tip-body::-webkit-scrollbar { width: 6px; }
 .course-tip-body::-webkit-scrollbar-thumb { background: #99f6e4; border-radius: 3px; }
 
-/* ===== 响应式（平板/窄屏�?===== */
+/* ===== 响应式（平板/窄屏） ===== */
 @media (max-width: 900px) {
   .control-bar {
     grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -2129,7 +2129,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   body { padding: 12px; }
   .desktop-only { display: none !important; }
   .mob-only { display: inline !important; }
-  /* 顶栏一行：logo + 标题 + 角色 + 重置 + 退�?*/
+  /* 顶栏一行：logo + 标题 + 角色 + 重置 + 退出 */
   .header {
     display: flex;
     flex-wrap: nowrap;
@@ -2192,7 +2192,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   .btn-logout span:not(.btn-logout-icon) { display: none; }
   .btn-lottery { padding: 0 10px; font-size: 11px; height: 32px; }
   .card { padding: 10px; }
-  /* 控制条：上传+年级+班级 一行；统计三卡 一�?*/
+  /* 控制条：上传+年级+班级 一行；统计三卡 一行 */
   .control-bar {
     grid-template-columns: 1.15fr 1fr 1fr;
     grid-template-rows: auto auto auto;
@@ -2278,7 +2278,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   .reset-confirm-title { font-size: 15.5px; }
 }
 
-/* ===== 移动端自适应（小屏微调，继承 768px 布局�?===== */
+/* ===== 移动端自适应（小屏微调，继承 768px 布局） ===== */
 @media (max-width: 480px) {
   body { padding: 8px; padding-bottom: calc(8px + var(--safe-bottom)); }
   .header-brand .header-title h1 { font-size: clamp(10px, 3vw, 13px); letter-spacing: 0.5px; }
@@ -2311,7 +2311,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   .lottery-content .name-list { grid-template-columns: 1fr; }
 }
 
-/* ===== 班主任用户端：顶部导航与多页�?===== */
+/* ===== 班主任用户端：顶部导航与多页面 ===== */
 .bz-panel { display: none; }
 .bz-panel.active { display: block; animation: fadeIn 0.25s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -2369,7 +2369,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   padding: 0;
 }
 
-/* 桌面端：隐藏下方导航，改�?header-actions 内显�?*/
+/* 桌面端：隐藏下方导航，改在 header-actions 内显示 */
 .bz-subnav--desktop {
   display: none;
 }
@@ -2556,7 +2556,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .bz-dash-table th, .bz-dash-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
 .bz-dash-table th { background: rgba(13,148,136,0.08); font-weight: 600; }
-/* 班级考勤看板 �?与后台「课程看板」hours-table 同款样式 */
+/* 班级考勤看板 — 与后台「课程看板」hours-table 同款样式 */
 #bz-panel-dashboard.active {
   display: flex;
   flex-direction: column;
@@ -2803,11 +2803,11 @@ tr.no-quota:hover td { opacity: 0.7; }
 </head>
 <body>
 
-<!-- 顶部标题�?-->
+<!-- 顶部标题栏 -->
 <div class="header">
   <div class="header-brand">
     <div class="header-logo">
-      <img class="logo-img" src="images/logo.png" alt="浦江一中校�?>
+      <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
       <div class="logo-text">
         <span class="cn">上海市闵行区浦江第一中学</span>
         <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
@@ -2815,11 +2815,11 @@ tr.no-quota:hover td { opacity: 0.7; }
     </div>
   </div>
   <button type="button" class="header-title-btn" id="headerTitleBtn" title="点击查看全屏时钟">
-    <h1><span class="desktop-only">浦江一中拓展课·班主�?/span><span class="mob-only">拓展课·班主任</span></h1>
+    <h1><span class="desktop-only">浦江一中拓展课·班主任</span><span class="mob-only">拓展课·班主任</span></h1>
     <small id="dateLine">班级选课</small>
   </button>
   <div class="header-actions">
-    <nav class="bz-subnav bz-subnav--desktop" aria-label="班主任导�?>
+    <nav class="bz-subnav bz-subnav--desktop" aria-label="班主任导航">
       <button type="button" class="bz-tab-btn active" data-bz-tab="selection">
         <span class="bz-tab-ico">📚</span><span class="bz-tab-txt">班级选课</span>
       </button>
@@ -2837,7 +2837,7 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
 </div>
 
-<nav class="bz-subnav bz-subnav--mobile" aria-label="班主任导�?>
+<nav class="bz-subnav bz-subnav--mobile" aria-label="班主任导航">
   <button type="button" class="bz-tab-btn active" data-bz-tab="selection">
     <span class="bz-tab-ico">📚</span><span class="bz-tab-txt">班级选课</span>
   </button>
@@ -2854,20 +2854,20 @@ tr.no-quota:hover td { opacity: 0.7; }
 
 <audio id="muyuTapAudio" src="/audio/muyu-tap.mp3?v=20260905e" preload="auto" playsinline webkit-playsinline></audio>
 <div class="clock-overlay" id="clockOverlay">
-  <button type="button" class="clock-close" id="clockClose" aria-label="关闭">�?/button>
-  <div class="clock-greeting" id="clockGreeting">老师，您�?/div>
+  <button type="button" class="clock-close" id="clockClose" aria-label="关闭">✕</button>
+  <div class="clock-greeting" id="clockGreeting">老师，您好</div>
   <div class="clock-time" id="clockTime">00:00:00</div>
   <div class="clock-date" id="clockDate"></div>
   <div class="clock-quote-wrap" id="clockQuoteWrap">
     <div class="clock-quote-label">今日寄语</div>
-    <p class="clock-quote" id="clockQuote">愿每一堂课都值得回味�?/p>
+    <p class="clock-quote" id="clockQuote">愿每一堂课都值得回味。</p>
   </div>
   <div class="clock-muyu-zone" id="clockMuyuZone">
     <div class="merit-display" role="status" aria-live="polite">
       <div class="merit-count" id="meritCount">0</div>
       <div class="merit-label">功德</div>
     </div>
-    <div class="fish-stage" id="fishStage" role="button" aria-label="点击敲木�?>
+    <div class="fish-stage" id="fishStage" role="button" aria-label="点击敲木鱼">
       <div class="stage-halo" aria-hidden="true"></div>
       <div class="fish-assembly">
         <div class="wooden-fish spr spr-muyu" id="woodenFish" aria-hidden="true"></div>
@@ -2875,11 +2875,11 @@ tr.no-quota:hover td { opacity: 0.7; }
       </div>
       <div class="particles-container" id="meritParticles" aria-hidden="true"></div>
     </div>
-    <div class="tap-hint"><kbd>空格</kbd> �?👆 点击敲击木鱼</div>
+    <div class="tap-hint"><kbd>空格</kbd> 或 👆 点击敲击木鱼</div>
   </div>
   <div class="clock-info-grid">
-    <div class="clock-info-item"><div class="lbl">负责班级</div><div class="val" id="clockClass">�?/div></div>
-    <div class="clock-info-item"><div class="lbl">班主�?/div><div class="val" id="clockTeacher">�?/div></div>
+    <div class="clock-info-item"><div class="lbl">负责班级</div><div class="val" id="clockClass">—</div></div>
+    <div class="clock-info-item"><div class="lbl">班主任</div><div class="val" id="clockTeacher">—</div></div>
     <div class="clock-info-item"><div class="lbl">班级人数</div><div class="val" id="clockStudents">0</div></div>
     <div class="clock-info-item"><div class="lbl">异常人数</div><div class="val" id="clockAbnormal">0</div></div>
   </div>
@@ -2889,23 +2889,23 @@ tr.no-quota:hover td { opacity: 0.7; }
 <!-- 选课页面 -->
 <section class="bz-panel active" id="bz-panel-selection">
 
-<!-- 统一控制条：Step1 上传 �?Step2 年级/班级 �?统计�?-->
+<!-- 统一控制条：Step1 上传 → Step2 年级/班级 → 统计卡 -->
 <div class="card">
   <div class="control-bar">
-    <!-- Step 1：上传模块（�?2 列，宽度 = 年级 + 班级�?-->
-    <div class="upload-area" id="uploadArea" title="点击或拖拽上传学生名�?Excel">
+    <!-- Step 1：上传模块（跨 2 列，宽度 = 年级 + 班级） -->
+    <div class="upload-area" id="uploadArea" title="点击或拖拽上传学生名单 Excel">
       <span class="icon">📁</span>
       <div class="text-col" id="uploadTextCol">
-        <span class="title"><span class="desktop-only">点击或拖拽上传学生名�?/span><span class="mob-only">点击上传学生名单</span></span>
-        <span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列�?/span>
+        <span class="title"><span class="desktop-only">点击或拖拽上传学生名单</span><span class="mob-only">点击上传学生名单</span></span>
+        <span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列）</span>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
     </div>
 
-    <!-- 步骤箭头 1�? -->
-    <span class="step-arrow" title="第二�?>👉</span>
+    <!-- 步骤箭头 1→2 -->
+    <span class="step-arrow" title="第二步">👉</span>
 
-    <!-- 信息统计栏（stats-bar �?display: contents 将子元素平铺�?grid�?-->
+    <!-- 信息统计栏（stats-bar 用 display: contents 将子元素平铺进 grid） -->
     <div class="stats-bar" id="statsCard"></div>
   </div>
 </div>
@@ -2913,29 +2913,29 @@ tr.no-quota:hover td { opacity: 0.7; }
 <!-- 课程选课表格 -->
 <div class="card">
   <div class="table-wrap" id="tableWrap">
-    <div style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">课程加载中�?/div>
+    <div style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">课程加载中…</div>
   </div>
 </div>
 
-<!-- 课程简�?Tooltip（全局复用，按需定位显示�?-->
+<!-- 课程简介 Tooltip（全局复用，按需定位显示） -->
 <div class="course-tip" id="courseTip" role="tooltip">
   <div class="course-tip-head">
     <span class="course-tip-cat" id="courseTipCat"></span>
     <span class="course-tip-title" id="courseTipTitle"></span>
   </div>
   <div class="course-tip-meta">
-    <span><i class="ico">👨‍�?/i><b id="courseTipTeacher"></b></span>
+    <span><i class="ico">👨‍🏫</i><b id="courseTipTeacher"></b></span>
     <span><i class="ico">📍</i><b id="courseTipLocation"></b></span>
     <span><i class="ico">👥</i><b id="courseTipLimit"></b></span>
-    <span id="courseTipReqWrap"><i class="ico">�?/i><b id="courseTipReq"></b></span>
+    <span id="courseTipReqWrap"><i class="ico">⚠</i><b id="courseTipReq"></b></span>
   </div>
   <div class="course-tip-body" id="courseTipBody"></div>
 </div>
 
-<!-- 底部操作�?-->
+<!-- 底部操作栏 -->
 <div class="card export-bar">
   <button class="btn-export" id="exportBtn" disabled>
-    <span>�?/span> 保存并导�?Excel
+    <span>⬇</span> 保存并导出 Excel
   </button>
 </div>
 
@@ -2945,16 +2945,16 @@ tr.no-quota:hover td { opacity: 0.7; }
 <section class="bz-panel" id="bz-panel-leave">
   <div class="bz-card">
     <div class="bz-card-title">请假报备 <span id="bzLeaveDate" style="font-weight:400;font-size:12px;color:var(--muted)"></span></div>
-    <p class="bz-subtitle" id="bzLeaveHint">加载中�?/p>
+    <p class="bz-subtitle" id="bzLeaveHint">加载中…</p>
     <div class="bz-leave-actions">
-      <span class="bz-selected" id="bzLeaveSelected">已选：�?/span>
+      <span class="bz-selected" id="bzLeaveSelected">已选：—</span>
       <button type="button" class="bz-btn-sick" id="bzLeaveSickBtn">🤒 病假</button>
       <button type="button" class="bz-btn-personal" id="bzLeavePersonalBtn">📋 事假</button>
     </div>
     <div class="bz-student-grid" id="bzLeaveGrid"></div>
   </div>
   <div class="bz-card">
-    <div class="bz-card-title">今日已报�?/div>
+    <div class="bz-card-title">今日已报备</div>
     <div class="bz-leave-list" id="bzLeaveList"></div>
   </div>
 </section>
@@ -2972,13 +2972,13 @@ tr.no-quota:hover td { opacity: 0.7; }
 <!-- 用户信息 -->
 <section class="bz-panel" id="bz-panel-profile">
   <div class="bz-profile-banner">
-    <div class="bz-profile-name" id="bzProfileName">班主�?/div>
-    <div class="bz-profile-role" id="bzProfileRole">拓展�?· 班主�?/div>
+    <div class="bz-profile-name" id="bzProfileName">班主任</div>
+    <div class="bz-profile-role" id="bzProfileRole">拓展课 · 班主任</div>
   </div>
   <div class="bz-profile-stats">
     <div class="bz-profile-stat"><div class="n" id="bzProfileCount">0</div><div class="l">班级人数</div></div>
-    <div class="bz-profile-stat"><div class="n" id="bzProfileClass">�?/div><div class="l">负责班级</div></div>
-    <div class="bz-profile-stat"><div class="n" id="bzProfileAccount">�?/div><div class="l">登录账号</div></div>
+    <div class="bz-profile-stat"><div class="n" id="bzProfileClass">—</div><div class="l">负责班级</div></div>
+    <div class="bz-profile-stat"><div class="n" id="bzProfileAccount">—</div><div class="l">登录账号</div></div>
   </div>
   <div class="bz-profile-section">数据管理</div>
   <div class="bz-profile-group">
@@ -2988,7 +2988,7 @@ tr.no-quota:hover td { opacity: 0.7; }
         <div class="pi-label">导出班级名单</div>
         <div class="pi-value">班级学生信息 · .xlsx</div>
       </div>
-      <span class="pi-chevron">�?/span>
+      <span class="pi-chevron">›</span>
     </div>
     <div class="bz-profile-item clickable" id="bzExportSelectionsRow">
       <div class="pi-ico">📗</div>
@@ -2996,7 +2996,7 @@ tr.no-quota:hover td { opacity: 0.7; }
         <div class="pi-label">导出选课名单</div>
         <div class="pi-value">班级 / 学号 / 姓名 / 性别 / 选课 · .xlsx</div>
       </div>
-      <span class="pi-chevron">�?/span>
+      <span class="pi-chevron">›</span>
     </div>
   </div>
   <div class="bz-profile-section">界面外观</div>
@@ -3005,7 +3005,7 @@ tr.no-quota:hover td { opacity: 0.7; }
     <div class="bz-profile-group" style="margin-bottom:0;">
       <div class="skin-grid" id="skinGrid">
         <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
-        <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗�?/div></button>
+        <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
         <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
         <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
         <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
@@ -3021,8 +3021,8 @@ tr.no-quota:hover td { opacity: 0.7; }
       <input type="password" class="form-input" id="bzCurrentPass" readonly>
       <button type="button" class="bz-pass-toggle" id="bzToggleCurrentPass" style="margin-top:6px;">显示</button>
     </div>
-    <div class="form-group"><label>新密�?/label><input type="password" class="form-input" id="bzNewPass" placeholder="至少 4 �?></div>
-    <div class="form-group"><label>确认新密�?/label><input type="password" class="form-input" id="bzConfirmPass"></div>
+    <div class="form-group"><label>新密码</label><input type="password" class="form-input" id="bzNewPass" placeholder="至少 4 位"></div>
+    <div class="form-group"><label>确认新密码</label><input type="password" class="form-input" id="bzConfirmPass"></div>
     <button type="button" class="btn-export" id="bzUpdatePassBtn" style="width:100%;margin:0;">更新密码</button>
   </div>
   <div class="bz-profile-section">账号</div>
@@ -3031,11 +3031,11 @@ tr.no-quota:hover td { opacity: 0.7; }
       <div class="pi-ico">👤</div>
       <div class="pi-body">
         <div class="pi-label">当前登录</div>
-        <div class="pi-value" id="bzProfileAccountHint">�?/div>
+        <div class="pi-value" id="bzProfileAccountHint">—</div>
       </div>
     </div>
     <div class="bz-profile-item bz-profile-logout-wrap">
-      <button type="button" class="bz-profile-logout" id="bzProfileLogout">退出登�?/button>
+      <button type="button" class="bz-profile-logout" id="bzProfileLogout">退出登录</button>
     </div>
   </div>
 </section>
@@ -3045,11 +3045,11 @@ tr.no-quota:hover td { opacity: 0.7; }
 <div class="modal-overlay" id="bzPersonalLeaveModal" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:420px">
     <div class="modal-header">
-      <div><h3>事假原因</h3><div class="count" id="bzPersonalLeaveStudent">学生：�?/div></div>
+      <div><h3>事假原因</h3><div class="count" id="bzPersonalLeaveStudent">学生：—</div></div>
       <button type="button" class="modal-close" id="bzPersonalLeaveClose" aria-label="关闭">×</button>
     </div>
     <div class="modal-body">
-      <textarea class="bz-leave-reason-input" id="bzPersonalLeaveNote" placeholder="请填写事假原因（必填�? rows="3"></textarea>
+      <textarea class="bz-leave-reason-input" id="bzPersonalLeaveNote" placeholder="请填写事假原因（必填）" rows="3"></textarea>
       <button type="button" class="btn-export" id="bzPersonalLeaveSubmit" style="width:100%;margin-top:12px;">确认报备事假</button>
     </div>
   </div>
@@ -3067,7 +3067,7 @@ tr.no-quota:hover td { opacity: 0.7; }
     </div>
     <div class="modal-body">
       <div class="modal-search">
-        <input type="text" id="searchInput" placeholder="搜索学生姓名�?>
+        <input type="text" id="searchInput" placeholder="搜索学生姓名…">
       </div>
       <div class="name-grid" id="nameGrid"></div>
     </div>
@@ -3088,35 +3088,35 @@ tr.no-quota:hover td { opacity: 0.7; }
       <div class="app">
         <!-- 标题 -->
         <div class="lot-header">
-          <h1>浦江一中抽签系�?/h1>
+          <h1>浦江一中抽签系统</h1>
           <div class="sub">公平 · 随机 · 有趣</div>
         </div>
 
         <!-- Tab 切换 -->
         <div class="tabs">
-          <button class="tab-btn active" data-tab="tab1">方式一：名额抽�?/button>
+          <button class="tab-btn active" data-tab="tab1">方式一：名额抽取</button>
           <button class="tab-btn" data-tab="tab2">方式二：先后排序</button>
         </div>
 
-        <!-- 面板�?-->
+        <!-- 面板区 -->
         <div class="panels">
-          <!-- ===== 方式一：名额抽�?===== -->
+          <!-- ===== 方式一：名额抽取 ===== -->
           <div class="panel active" id="tab1">
             <div class="lot-card">
               <div class="field">
-                <label>待抽签总人�?/label>
+                <label>待抽签总人数</label>
                 <div class="field-row">
-                  <input type="number" id="m1_total" min="1" max="500" placeholder="请输入总人数，�?30" />
+                  <input type="number" id="m1_total" min="1" max="500" placeholder="请输入总人数，如 30" />
                   <button class="btn-pick" id="m1_pickBtn" type="button">👤 选人抽签</button>
                 </div>
               </div>
               <div class="name-list" id="m1_names"></div>
               <div class="field" style="margin-top:16px;">
                 <label>抽取数量</label>
-                <input type="number" id="m1_pick" min="1" placeholder="请输入抽取数量，�?5" />
+                <input type="number" id="m1_pick" min="1" placeholder="请输入抽取数量，如 5" />
               </div>
               <div class="btn-row">
-                <button class="btn btn-primary" id="m1_start">开始抽�?/button>
+                <button class="btn btn-primary" id="m1_start">开始抽签</button>
                 <button class="btn btn-secondary" id="m1_reset">重置</button>
               </div>
               <div class="msg" id="m1_msg"></div>
@@ -3124,7 +3124,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 
             <!-- 抽签动画舞台 -->
             <div class="draw-stage lot-card" id="m1_stage">
-              <div style="margin-bottom:12px;color:var(--text-dim);font-size:14px;letter-spacing:2px;">正在抽取中�?/div>
+              <div style="margin-bottom:12px;color:var(--text-dim);font-size:14px;letter-spacing:2px;">正在抽取中…</div>
               <div class="roller spinning" id="m1_roller">?</div>
             </div>
 
@@ -3143,13 +3143,13 @@ tr.no-quota:hover td { opacity: 0.7; }
               <div class="field">
                 <label>参与人数</label>
                 <div class="field-row">
-                  <input type="number" id="m2_total" min="1" max="500" placeholder="请输入参与人数，�?7" />
+                  <input type="number" id="m2_total" min="1" max="500" placeholder="请输入参与人数，如 7" />
                   <button class="btn-pick" id="m2_pickBtn" type="button">👤 选人抽签</button>
                 </div>
               </div>
               <div class="name-list" id="m2_names"></div>
               <div class="btn-row">
-                <button class="btn btn-primary" id="m2_start">开始抽�?/button>
+                <button class="btn btn-primary" id="m2_start">开始抽签</button>
                 <button class="btn btn-secondary" id="m2_reset">重置</button>
               </div>
               <div class="msg" id="m2_msg"></div>
@@ -3157,7 +3157,7 @@ tr.no-quota:hover td { opacity: 0.7; }
 
             <!-- 抽签动画舞台 -->
             <div class="draw-stage lot-card" id="m2_stage">
-              <div style="margin-bottom:12px;color:var(--text-dim);font-size:14px;letter-spacing:2px;">正在洗牌中�?/div>
+              <div style="margin-bottom:12px;color:var(--text-dim);font-size:14px;letter-spacing:2px;">正在洗牌中…</div>
               <div class="shuffle-deck" id="m2_deck"></div>
             </div>
 
@@ -3172,15 +3172,15 @@ tr.no-quota:hover td { opacity: 0.7; }
         </div>
 
         <!-- 页脚 -->
-        <div class="footer">浦江一�?· 技术赋能教�?· 仅供校内活动使用</div>
+        <div class="footer">浦江一中 · 技术赋能教育 · 仅供校内活动使用</div>
       </div>
 
-      <!-- 选人抽签弹层（在 lottery-content 内部覆盖�?-->
+      <!-- 选人抽签弹层（在 lottery-content 内部覆盖） -->
       <div class="picker-mask" id="pickerMask">
         <div class="picker-box">
           <div class="picker-head">
             <h4 id="pickerTitle">从上传名单中选择参与抽签人员</h4>
-            <span class="picker-count" id="pickerCount">已�?0 �?/span>
+            <span class="picker-count" id="pickerCount">已选 0 人</span>
           </div>
           <div class="picker-body" id="pickerBody"></div>
           <div class="picker-foot">
@@ -3193,26 +3193,26 @@ tr.no-quota:hover td { opacity: 0.7; }
   </div>
 </div>
 
-<!-- 重置确认弹窗（自定义，避免使用浏览器原生 confirm，可访问�?视觉一致性更好） -->
+<!-- 重置确认弹窗（自定义，避免使用浏览器原生 confirm，可访问性/视觉一致性更好） -->
 <div class="reset-confirm-mask" id="resetConfirmMask" role="dialog" aria-modal="true" aria-labelledby="resetConfirmTitle" aria-describedby="resetConfirmDesc" tabindex="-1">
   <div class="reset-confirm-box" role="document">
     <div class="reset-confirm-head">
       <div class="reset-confirm-icon" aria-hidden="true">!</div>
       <div class="reset-confirm-texts">
-        <h3 class="reset-confirm-title" id="resetConfirmTitle">确认要重置所有数据吗�?/h3>
+        <h3 class="reset-confirm-title" id="resetConfirmTitle">确认要重置所有数据吗？</h3>
         <div class="reset-confirm-desc" id="resetConfirmDesc">
           此操作不可撤销，将清除全部用户修改并恢复到初始页面状态：
           <ul class="reset-confirm-list">
-            <li>清除已上传的学生名单、年�?/ 班级信息</li>
-            <li>清除所有课程已选学生记�?/li>
-            <li>清除浏览器本地存储的持久化数�?/li>
+            <li>清除已上传的学生名单、年级 / 班级信息</li>
+            <li>清除所有课程已选学生记录</li>
+            <li>清除浏览器本地存储的持久化数据</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="reset-confirm-actions">
-      <button type="button" class="reset-btn cancel" id="resetCancelBtn" aria-label="取消，关闭此对话�?>取消</button>
-      <button type="button" class="reset-btn danger" id="resetConfirmBtn" aria-label="确认重置，所有数据将被清�?>确认重置</button>
+      <button type="button" class="reset-btn cancel" id="resetCancelBtn" aria-label="取消，关闭此对话框">取消</button>
+      <button type="button" class="reset-btn danger" id="resetConfirmBtn" aria-label="确认重置，所有数据将被清除">确认重置</button>
     </div>
   </div>
 </div>
@@ -3227,7 +3227,7 @@ tr.no-quota:hover td { opacity: 0.7; }
       <button type="button" class="modal-close" id="passModalClose" aria-label="关闭">×</button>
     </div>
     <div class="modal-body">
-      <p class="pass-hint">可查看当前密码；修改后将同步到后台用户管理。若登录时勾选了「记住密码」，本地保存的密码也会一并更新�?/p>
+      <p class="pass-hint">可查看当前密码；修改后将同步到后台用户管理。若登录时勾选了「记住密码」，本地保存的密码也会一并更新。</p>
       <div class="pass-form-group">
         <label for="passAccountUsername">登录账号</label>
         <input type="text" class="pass-form-input" id="passAccountUsername" readonly>
@@ -3235,17 +3235,17 @@ tr.no-quota:hover td { opacity: 0.7; }
       <div class="pass-form-group">
         <label for="passCurrentView">当前密码</label>
         <div class="pass-form-row">
-          <input type="password" class="pass-form-input" id="passCurrentView" readonly placeholder="加载中�?>
+          <input type="password" class="pass-form-input" id="passCurrentView" readonly placeholder="加载中…">
           <button type="button" class="pass-toggle-btn" id="passToggleCurrentBtn">显示</button>
         </div>
       </div>
       <div class="pass-form-group">
-        <label for="passNewInput">新密�?/label>
-        <input type="password" class="pass-form-input" id="passNewInput" placeholder="至少 4 �? autocomplete="new-password">
+        <label for="passNewInput">新密码</label>
+        <input type="password" class="pass-form-input" id="passNewInput" placeholder="至少 4 位" autocomplete="new-password">
       </div>
       <div class="pass-form-group">
-        <label for="passConfirmInput">确认新密�?/label>
-        <input type="password" class="pass-form-input" id="passConfirmInput" placeholder="再次输入新密�? autocomplete="new-password">
+        <label for="passConfirmInput">确认新密码</label>
+        <input type="password" class="pass-form-input" id="passConfirmInput" placeholder="再次输入新密码" autocomplete="new-password">
       </div>
       <div class="pass-modal-actions">
         <button type="button" class="reset-btn cancel" id="passModalCancelBtn">取消</button>
@@ -3265,20 +3265,20 @@ tr.no-quota:hover td { opacity: 0.7; }
 let COURSES = [];
 var COURSES_CACHE_KEY = 'pjyz_courses_cache_v1';
 
-// �?API 返回的课程数据转换为选课页面的格�?
+// 将 API 返回的课程数据转换为选课页面的格式
 function convertCourseFromAPI(apiCourse) {
   const limit6 = parseInt(apiCourse.limit_grade6, 10) || 0;
   const limit7 = parseInt(apiCourse.limit_grade7, 10) || 0;
   const totalLimit = limit6 + limit7;
   return {
     id: apiCourse.id,
-    category: apiCourse.category || '体育健康�?,
+    category: apiCourse.category || '体育健康类',
     name: apiCourse.name || '',
     teacher: apiCourse.teacher || '',
     location: apiCourse.location || '',
     requirement: apiCourse.requirement || '',
     description: apiCourse.description || '',
-    limit: { '六年�?: limit6, '七年�?: limit7 },
+    limit: { '六年级': limit6, '七年级': limit7 },
     selection_locked: apiCourse.selection_locked === true || apiCourse.selection_locked === 1 || apiCourse.selection_locked === '1',
     students: Array(totalLimit).fill(null)
   };
@@ -3304,7 +3304,7 @@ function saveCoursesCache(rawCourses) {
   } catch (_) {}
 }
 
-/** 用本地课程缓存立即灌�?COURSES，首屏无需等待网络 */
+/** 用本地课程缓存立即灌入 COURSES，首屏无需等待网络 */
 function hydrateCoursesFromCache() {
   try {
     const raw = localStorage.getItem(COURSES_CACHE_KEY);
@@ -3364,18 +3364,18 @@ async function loadCoursesFromServer() {
 }
 
 // ====================================================================
-// PersistentStorage �?页面状态持久化 + 重置 + 单元测试
-// 说明�?
-//  - 仅持久化用户修改过的动态部分（学生、年�?班级、每门课已选名单）
-//  - 课程静态数据（id/name/teacher/location/requirement/limit/description/category�?
-//    从后台管理系统数据库动态加载，保证与管理员上传的课程保持一�?
-//  - 持久化层独立于页面状态，不依赖任�?UI 模块
+// PersistentStorage — 页面状态持久化 + 重置 + 单元测试
+// 说明：
+//  - 仅持久化用户修改过的动态部分（学生、年级/班级、每门课已选名单）
+//  - 课程静态数据（id/name/teacher/location/requirement/limit/description/category）
+//    从后台管理系统数据库动态加载，保证与管理员上传的课程保持一致
+//  - 持久化层独立于页面状态，不依赖任何 UI 模块
 // ====================================================================
 const PersistentStorage = (function () {
   const KEY = 'pjyz_course_selection_state_v1';
   const VERSION = 2;
 
-  // ---- 存储底层：try/catch + 可访问性检�?----
+  // ---- 存储底层：try/catch + 可访问性检测 ----
   function isAvailable() {
     try {
       if (!window.localStorage) return false;
@@ -3388,7 +3388,7 @@ const PersistentStorage = (function () {
     }
   }
 
-  // 抽取需要持久化的“动态状态”快�?
+  // 抽取需要持久化的“动态状态”快照
   function _snapshot() {
     return {
       v: VERSION,
@@ -3399,7 +3399,7 @@ const PersistentStorage = (function () {
       gradeName: gradeName,
       classNumber: classNumber,
       className: className,
-      // 只持久化 {id, students}，其他字段来�?COURSES 常量
+      // 只持久化 {id, students}，其他字段来自 COURSES 常量
       courses: COURSES.map(function (c) {
         return { id: c.id, students: c.students.slice() };
       }),
@@ -3417,7 +3417,7 @@ const PersistentStorage = (function () {
       localStorage.setItem(KEY, JSON.stringify(payload));
       return { ok: true };
     } catch (e) {
-      // 配额超限 / 序列化异�?
+      // 配额超限 / 序列化异常
       console.error('[PersistentStorage] save failed:', e);
       try {
         if (typeof window.showToast === 'function') {
@@ -3449,11 +3449,11 @@ const PersistentStorage = (function () {
     }
   }
 
-  // 将加载结果应用到全局状态（不直接操�?DOM，只改内存状态）
+  // 将加载结果应用到全局状态（不直接操作 DOM，只改内存状态）
   function applyData(data) {
     if (!data) return false;
     try {
-      // 恢复基本状�?
+      // 恢复基本状态
       if (Array.isArray(data.students)) students = data.students.slice();
       if (data.studentGenders && typeof data.studentGenders === 'object') {
         studentGenders = Object.assign({}, data.studentGenders);
@@ -3478,19 +3478,19 @@ const PersistentStorage = (function () {
         window.__pjyzDataRevision = data.dataRevision;
       }
 
-      // 恢复已选学生（只改 students 槽位；limit/结构�?COURSES 同步�?
+      // 恢复已选学生（只改 students 槽位；limit/结构从 COURSES 同步）
       if (Array.isArray(data.courses)) {
         data.courses.forEach(function (snap) {
           if (!snap || typeof snap.id !== 'number') return;
           const course = COURSES.find(function (c) { return c.id === snap.id; });
           if (!course) return;
           if (Array.isArray(snap.students)) {
-            // 按持久化结果重写，长度以存储为准（之�?syncCourseSlots 会按年级修正�?
+            // 按持久化结果重写，长度以存储为准（之后 syncCourseSlots 会按年级修正）
             course.students = snap.students.slice();
           }
         });
       }
-      // 年级存在 �?同步各课程槽位数（保�?limit 配置正确�?
+      // 年级存在 → 同步各课程槽位数（保证 limit 配置正确）
       if (gradeName) {
         try { syncCourseSlots(); } catch (_) { /* 忽略 */ }
       }
@@ -3531,7 +3531,7 @@ const PersistentStorage = (function () {
   };
 })();
 
-// ---- 便捷包装：持久化 + 上报结果（给 UI 调用�?---
+// ---- 便捷包装：持久化 + 上报结果（给 UI 调用）----
 function saveState(revision) {
   if (typeof revision === 'number') {
     serverDataRevision = revision;
@@ -3567,8 +3567,8 @@ function clearLocalSelectionDraft() {
   var uploadTextCol = document.getElementById('uploadTextCol');
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
-      '<span class="title">上传名单 �?选择年级班级 �?选课 �?导出结果</span>' +
-      '<span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列�?/span>';
+      '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
+      '<span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列）</span>';
   }
 }
 
@@ -3589,10 +3589,10 @@ async function isServerClassSelectionEmpty() {
   try {
     var qs = new URLSearchParams();
     qs.set('grade', gradeName);
-    qs.set('class_name', classNumber + '�?);
+    qs.set('class_name', classNumber + '班');
     var uq = new URLSearchParams();
     uq.set('grade', gradeName);
-    uq.set('class', classNumber + '�?);
+    uq.set('class', classNumber + '班');
     var pair = await Promise.all([
       apiRequest('GET', '/api/selections?' + qs.toString()),
       apiRequest('GET', '/api/unselected-students?' + uq.toString())
@@ -3633,8 +3633,8 @@ async function applyServerSelectionSync(opts) {
 
 // ====================================================================
 // 单元测试：持久化与重置（浏览器控制台执行 `window.PjyzTests.run()` 可手动触发）
-// 特点�?
-//  - 不污染正�?localStorage 键（使用独立测试键）
+// 特点：
+//  - 不污染正式 localStorage 键（使用独立测试键）
 //  - 输出通过/失败 + 断言
 // ====================================================================
 window.PjyzTests = (function () {
@@ -3671,10 +3671,10 @@ window.PjyzTests = (function () {
     var sb = makeSandbox();
     try {
       fn();
-      console.log('%c�?PASS : ' + name, 'color:#16a34a;font-weight:600;');
+      console.log('%c✔ PASS : ' + name, 'color:#16a34a;font-weight:600;');
       return true;
     } catch (e) {
-      console.error('%c�?FAIL : ' + name, 'color:#dc2626;font-weight:700;', e && e.message ? e.message : e);
+      console.error('%c✘ FAIL : ' + name, 'color:#dc2626;font-weight:700;', e && e.message ? e.message : e);
       return false;
     } finally {
       sb.restore();
@@ -3682,31 +3682,31 @@ window.PjyzTests = (function () {
   }
 
   function run() {
-    console.group('%c浦江一中拓展课选课 �?持久�?重置 单元测试', 'color:#2563eb;font-weight:700;font-size:14px;');
+    console.group('%c浦江一中拓展课选课 — 持久化/重置 单元测试', 'color:#2563eb;font-weight:700;font-size:14px;');
     var t0 = performance.now();
     var pass = 0, total = 0;
 
     total++;
     if (runCase('1. Storage: isAvailable 不为 undefined', function () {
-      assert(typeof PersistentStorage.isAvailable === 'function', 'isAvailable 必须是函�?);
-      assert(typeof PersistentStorage.save === 'function', 'save 必须是函�?);
-      assert(typeof PersistentStorage.load === 'function', 'load 必须是函�?);
-      assert(typeof PersistentStorage.clear === 'function', 'clear 必须是函�?);
-      assert(typeof PersistentStorage.applyData === 'function', 'applyData 必须是函�?);
+      assert(typeof PersistentStorage.isAvailable === 'function', 'isAvailable 必须是函数');
+      assert(typeof PersistentStorage.save === 'function', 'save 必须是函数');
+      assert(typeof PersistentStorage.load === 'function', 'load 必须是函数');
+      assert(typeof PersistentStorage.clear === 'function', 'clear 必须是函数');
+      assert(typeof PersistentStorage.applyData === 'function', 'applyData 必须是函数');
     })) pass++;
 
     total++;
-    if (runCase('2. 序列�?反序列化：写�?�?读回 �?字段匹配', function () {
+    if (runCase('2. 序列化/反序列化：写入 → 读回 → 字段匹配', function () {
       // 先把测试键写进去
       students = ['张三', '李四', '王五'];
-      gradeName = '六年�?;
+      gradeName = '六年级';
       classNumber = '3';
-      className = '六年�?3)�?;
+      className = '六年级(3)班';
       fileName = 'test.xlsx';
       COURSES.find(function (c) { return c.id === 1; }).students = ['张三'];
       COURSES.find(function (c) { return c.id === 2; }).students = [null, '李四'];
 
-      // 复用 PersistentStorage 的序列化结构，但使用测试�?
+      // 复用 PersistentStorage 的序列化结构，但使用测试键
       var payload = {
         v: PersistentStorage.VERSION,
         t: Date.now(),
@@ -3722,24 +3722,24 @@ window.PjyzTests = (function () {
       var raw = localStorage.getItem(TEST_KEY);
       assert(!!raw, '原始数据应当存在');
       var parsed = JSON.parse(raw);
-      assert(parsed.v === PersistentStorage.VERSION, '版本号匹�?);
+      assert(parsed.v === PersistentStorage.VERSION, '版本号匹配');
       assert(Array.isArray(parsed.students) && parsed.students.length === 3, '学生数组长度=3');
-      assert(parsed.fileName === 'test.xlsx', '文件名正�?);
-      assert(parsed.gradeName === '六年�?, '年级正确');
+      assert(parsed.fileName === 'test.xlsx', '文件名正确');
+      assert(parsed.gradeName === '六年级', '年级正确');
       var c8 = parsed.courses.find(function (x) { return x.id === 2; });
-      assert(Array.isArray(c8.students) && c8.students[1] === '李四', '课程2的已选正�?);
+      assert(Array.isArray(c8.students) && c8.students[1] === '李四', '课程2的已选正确');
     })) pass++;
 
     total++;
-    if (runCase('3. applyData：能正确把快照写回全局状�?, function () {
+    if (runCase('3. applyData：能正确把快照写回全局状态', function () {
       var snap = {
         v: PersistentStorage.VERSION,
         t: Date.now(),
         students: ['测试A', '测试B'],
         fileName: 'snap.xlsx',
-        gradeName: '七年�?,
+        gradeName: '七年级',
         classNumber: '5',
-        className: '七年�?5)�?,
+        className: '七年级(5)班',
         courses: [
           { id: 1, students: ['测试A'] },
           { id: 2, students: ['测试B', null] },
@@ -3748,26 +3748,26 @@ window.PjyzTests = (function () {
       };
       var ok = PersistentStorage.applyData(snap);
       assert(ok === true, 'applyData 返回 true');
-      assert(students.length === 2 && students[0] === '测试A', 'students 已恢�?);
-      assert(fileName === 'snap.xlsx', 'fileName 已恢�?);
-      assert(gradeName === '七年�? && className === '七年�?5)�?, '年级班级已恢�?);
+      assert(students.length === 2 && students[0] === '测试A', 'students 已恢复');
+      assert(fileName === 'snap.xlsx', 'fileName 已恢复');
+      assert(gradeName === '七年级' && className === '七年级(5)班', '年级班级已恢复');
       assert(COURSES.find(function (c) { return c.id === 1; }).students[0] === '测试A', '课程1的已选已恢复');
       assert(COURSES.find(function (c) { return c.id === 2; }).students[0] === '测试B', '课程2的已选已恢复');
     })) pass++;
 
     total++;
-    if (runCase('4. clear：能移除存储�?, function () {
+    if (runCase('4. clear：能移除存储键', function () {
       localStorage.setItem(TEST_KEY, JSON.stringify({ v: 1 }));
       assert(!!localStorage.getItem(TEST_KEY), '写入成功');
-      // �?PersistentStorage.clear 的逻辑但指向测试键
+      // 用 PersistentStorage.clear 的逻辑但指向测试键
       localStorage.removeItem(TEST_KEY);
       assert(!localStorage.getItem(TEST_KEY), '清除成功');
     })) pass++;
 
     total++;
-    if (runCase('5. 异常处理：JSON 损坏�?load 会失败并清理', function () {
+    if (runCase('5. 异常处理：JSON 损坏时 load 会失败并清理', function () {
       localStorage.setItem(TEST_KEY, '{ this is not valid json ');
-      // 模拟 load 的工作流，只是用测试�?
+      // 模拟 load 的工作流，只是用测试键
       try {
         var raw = localStorage.getItem(TEST_KEY);
         JSON.parse(raw);
@@ -3775,7 +3775,7 @@ window.PjyzTests = (function () {
       } catch (e) {
         localStorage.removeItem(TEST_KEY); // load 会清
       }
-      assert(!localStorage.getItem(TEST_KEY), '损坏数据应已被清�?);
+      assert(!localStorage.getItem(TEST_KEY), '损坏数据应已被清理');
     })) pass++;
 
     total++;
@@ -3788,24 +3788,24 @@ window.PjyzTests = (function () {
     })) pass++;
 
     total++;
-    if (runCase('7. resetState() 把状态重置回初始默认（空�?, function () {
+    if (runCase('7. resetState() 把状态重置回初始默认（空）', function () {
       // 先设一些假数据
       students = ['干扰1', '干扰2'];
-      gradeName = '六年�?; classNumber = '1'; className = '六年�?1)�?;
+      gradeName = '六年级'; classNumber = '1'; className = '六年级(1)班';
       fileName = 'xxx.xlsx';
       COURSES.find(function (c) { return c.id === 3; }).students = ['干扰1'];
       // 调全局 resetState
-      resetState(true); // 静默（不�?toast，不触发 UI�?
-      assert(students.length === 0, 'students 已清�?);
-      assert(gradeName === '' && classNumber === '' && className === '', '年级班级已清�?);
-      assert(fileName === '', 'fileName 已清�?);
+      resetState(true); // 静默（不弹 toast，不触发 UI）
+      assert(students.length === 0, 'students 已清空');
+      assert(gradeName === '' && classNumber === '' && className === '', '年级班级已清空');
+      assert(fileName === '', 'fileName 已清空');
       var c3 = COURSES.find(function (c) { return c.id === 3; });
       var hasSelection = c3.students.some(function (s) { return !!s; });
       assert(!hasSelection, '课程已选已清空');
     })) pass++;
 
     var t1 = performance.now();
-    console.log('%c完成�? + pass + ' / ' + total + ' 项通过（耗时 ' + (t1 - t0).toFixed(2) + 'ms�?,
+    console.log('%c完成：' + pass + ' / ' + total + ' 项通过（耗时 ' + (t1 - t0).toFixed(2) + 'ms）',
       pass === total ? 'color:#16a34a;font-weight:700;' : 'color:#dc2626;font-weight:700;');
     console.groupEnd();
     return pass === total;
@@ -3817,12 +3817,12 @@ window.PjyzTests = (function () {
 // ====================================================================
 // 重置：回到初始默认状态（= 用户首次打开页面的状态）
 //  - 清空 students / gradeName / classNumber / className / fileName
-//  - 清空所有课程已选槽位，并按 limit 重建�?null 数组
-//  - 清空 localStorage 持久�?
-//  - silent=true 时不触发 UI / 不显示提示（供自测用�?
+//  - 清空所有课程已选槽位，并按 limit 重建为 null 数组
+//  - 清空 localStorage 持久化
+//  - silent=true 时不触发 UI / 不显示提示（供自测用）
 // ====================================================================
 function resetState(silent) {
-  // 1. 清空全局状�?
+  // 1. 清空全局状态
   students = [];
   studentGenders = {};
   gradeName = '';
@@ -3835,7 +3835,7 @@ function resetState(silent) {
   rosterReadyTip = false;
   classSelectUnlocked = false;
 
-  // 2. 重置所有课程的 students 为初始空槽（�?limit 初始化）
+  // 2. 重置所有课程的 students 为初始空槽（按 limit 初始化）
   COURSES.forEach(function (c) {
     var limit;
     if (c.limit == null) {
@@ -3849,7 +3849,7 @@ function resetState(silent) {
     c.students = Array(Math.max(0, limit)).fill(null);
   });
 
-  // 3. 清空持久化存�?
+  // 3. 清空持久化存储
   PersistentStorage.clear();
 
   if (silent) return;
@@ -3861,34 +3861,34 @@ function resetState(silent) {
   var uploadTextCol = document.getElementById('uploadTextCol');
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
-      '<span class="title">上传名单 �?选择年级班级 �?选课 �?导出结果</span>' +
-      '<span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列�?/span>';
+      '<span class="title">上传名单 → 选择年级班级 → 选课 → 导出结果</span>' +
+      '<span class="hint">支持 .xlsx / .xls，需含「姓名」列（可用英文名；建议含「性别」列）</span>';
   }
 
-  // 6. 关闭可能打开�?modal / lottery
+  // 6. 关闭可能打开的 modal / lottery
   try { closeModal(); } catch (_) { /* 忽略 */ }
   try { closeLottery(); } catch (_) { /* 忽略 */ }
 
-  // 7. 重渲�?UI
+  // 7. 重渲染 UI
   renderAll();
 }
 
-// ===== 页面状�?=====
-let students = [];          // 学生姓名数组（去重后�?
-let studentGenders = {};    // 姓名 �?性别（男/女）
+// ===== 页面状态 =====
+let students = [];          // 学生姓名数组（去重后）
+let studentGenders = {};    // 姓名 → 性别（男/女）
 let rosterReadyTip = false; // 后台已录入本班名单时显示提示
-let studentListSource = ''; // upload | roster | local | server �?名单来源优先级：upload > roster/local/server
+let studentListSource = ''; // upload | roster | local | server — 名单来源优先级：upload > roster/local/server
 let gradeName = '';         // 年级名称（六年级 / 七年级）
-let classNumber = '';       // 班级序号（如 "3"�?
-let className = '';         // 组合后的班级名称（如 "六年�?3)�?�?
+let classNumber = '';       // 班级序号（如 "3"）
+let className = '';         // 组合后的班级名称（如 "六年级(3)班"）
 let banzhurenClassBound = false; // 管理员已为班主任绑定年级班级
-let classSelectUnlocked = false; // 点击「重选班级」后允许改�?
-let classQuotaOverrides = {}; // courseId -> 有效名额（班级级调剂�?
+let classSelectUnlocked = false; // 点击「重选班级」后允许改选
+let classQuotaOverrides = {}; // courseId -> 有效名额（班级级调剂）
 let fileName = '';           // 上传的文件名
-let lockedStudentNames = new Set(); // 提前录课锁定学生（不可退�?改选）
-let currentSelect = null;   // 当前正在选课的位�?{ courseId, slotIndex }
-let selectionEnabled = true; // 全局选课开关（后台控制�?
-let serverDataRevision = 0;  // 后台选课数据版本号（管理员删�?变更时递增�?
+let lockedStudentNames = new Set(); // 提前录课锁定学生（不可退出/改选）
+let currentSelect = null;   // 当前正在选课的位置 { courseId, slotIndex }
+let selectionEnabled = true; // 全局选课开关（后台控制）
+let serverDataRevision = 0;  // 后台选课数据版本号（管理员删除/变更时递增）
 
 // ===== DOM 引用 =====
 const uploadArea = document.getElementById('uploadArea');
@@ -3913,7 +3913,7 @@ function showToast(msg, type = '') {
   showToast._t = setTimeout(() => { toast.className = 'toast ' + type; }, 2500);
 }
 
-// 获取所有已被选课的学生姓名集�?
+// 获取所有已被选课的学生姓名集合
 function getAssignedNames() {
   const set = new Set();
   COURSES.forEach(c => c.students.forEach(n => { if (n) set.add(n); }));
@@ -3922,8 +3922,8 @@ function getAssignedNames() {
 
 function normalizeGender(val) {
   const v = String(val || '').trim().toLowerCase();
-  if (v === '�? || v === 'm' || v === 'male' || v === '男生' || v === '男�?) return '�?;
-  if (v === '�? || v === 'f' || v === 'female' || v === '女生' || v === '女�?) return '�?;
+  if (v === '男' || v === 'm' || v === 'male' || v === '男生' || v === '男性') return '男';
+  if (v === '女' || v === 'f' || v === 'female' || v === '女生' || v === '女性') return '女';
   return '';
 }
 
@@ -3934,11 +3934,11 @@ function getStudentGender(name) {
 function parseCourseGenderRestriction(requirement) {
   const req = String(requirement || '').trim();
   if (!req) return null;
-  if (/最好|优先|倾向|尽量|希望|�?.test(req)) return null;
-  if (/只收女生|只限女生|仅限女生|限女生|女生限|只招女生|招收女生|仅限�?.test(req)) return 'female';
-  if (/只收男生|只限男生|仅限男生|限男生|男生限|只招男生|招收男生|仅限�?.test(req)) return 'male';
-  if (/�?.test(req) && /只|限|仅|招|�?.test(req) && !/�?.test(req)) return 'female';
-  if (/�?.test(req) && /只|限|仅|招|�?.test(req) && !/�?.test(req)) return 'male';
+  if (/最好|优先|倾向|尽量|希望|宜/.test(req)) return null;
+  if (/只收女生|只限女生|仅限女生|限女生|女生限|只招女生|招收女生|仅限女/.test(req)) return 'female';
+  if (/只收男生|只限男生|仅限男生|限男生|男生限|只招男生|招收男生|仅限男/.test(req)) return 'male';
+  if (/女/.test(req) && /只|限|仅|招|收/.test(req) && !/男/.test(req)) return 'female';
+  if (/男/.test(req) && /只|限|仅|招|收/.test(req) && !/女/.test(req)) return 'male';
   return null;
 }
 
@@ -3947,10 +3947,10 @@ function canStudentSelectCourse(studentName, course) {
   if (!restriction) return { ok: true };
   const gender = getStudentGender(studentName);
   if (!gender) return { ok: true };
-  if (restriction === 'female' && gender !== '�?) {
+  if (restriction === 'female' && gender !== '女') {
     return { ok: false, msg: '该课程仅限女生选课' };
   }
-  if (restriction === 'male' && gender !== '�?) {
+  if (restriction === 'male' && gender !== '男') {
     return { ok: false, msg: '该课程仅限男生选课' };
   }
   return { ok: true };
@@ -3964,7 +3964,7 @@ function shakeElement(el) {
   setTimeout(() => el.classList.remove('shake'), 500);
 }
 
-// 全年级统一基础名额（不受班级调�?/ 锁定归零影响�?
+// 全年级统一基础名额（不受班级调剂 / 锁定归零影响）
 function getBaseCourseLimit(course) {
   if (course.limit == null) return 0;
   if (typeof course.limit === 'number') return course.limit;
@@ -3973,13 +3973,13 @@ function getBaseCourseLimit(course) {
   return vals.length ? vals[0] : 0;
 }
 
-// 当前班级有效可选名额（班级调剂优先；锁定课不因覆盖�?0 而隐藏内定席位）
+// 当前班级有效可选名额（班级调剂优先；锁定课不因覆盖为 0 而隐藏内定席位）
 function getCourseLimit(course) {
   const base = getBaseCourseLimit(course);
   if (course && course.id != null && classQuotaOverrides && Object.prototype.hasOwnProperty.call(classQuotaOverrides, String(course.id))) {
     const n = parseInt(classQuotaOverrides[String(course.id)], 10);
     if (!isNaN(n)) {
-      // 锁死课程：名额看板可能把有效名额记为 0，仍按基础名额展示席位（空�?不可选择�?
+      // 锁死课程：名额看板可能把有效名额记为 0，仍按基础名额展示席位（空位=不可选择）
       if (course.selection_locked && n <= 0 && base > 0) return base;
       return Math.max(0, n);
     }
@@ -3999,7 +3999,7 @@ async function loadClassQuotaOverrides() {
     Object.keys(map).forEach(function (k) {
       classQuotaOverrides[String(k)] = parseInt(map[k], 10) || 0;
     });
-    // 同步锁死标记，并用明细中的有效名额（不要把锁死课强行写成 0�?
+    // 同步锁死标记，并用明细中的有效名额（不要把锁死课强行写成 0）
     if (Array.isArray(data.courses)) {
       data.courses.forEach(function (c) {
         const course = COURSES.find(function (x) { return String(x.id) === String(c.course_id); });
@@ -4018,7 +4018,7 @@ async function loadClassQuotaOverrides() {
 }
 
 // 根据当前年级同步各课程的 students 数组长度
-// 已选学生（含后台写入）一律保留；名额只决定额外空位数量，不裁剪已有名�?
+// 已选学生（含后台写入）一律保留；名额只决定额外空位数量，不裁剪已有名单
 function syncCourseSlots() {
   COURSES.forEach(c => {
     const limit = getCourseLimit(c);
@@ -4041,18 +4041,18 @@ function buildClassKey(grade, classNum) {
   grade = String(grade || '').trim();
   classNum = String(classNum || '').trim();
   if (!grade || !classNum) return '';
-  return grade + classNum + '�?;
+  return grade + classNum + '班';
 }
 
 function extractClassKeyFromRow(row) {
   const rowGrade = String((row && row.grade) || '').trim();
   const rowClass = String((row && row.class_name) || '').trim();
   if (rowClass) {
-    let m = rowClass.match(/^(六年级|七年�?\s*[\(（]?(\d+)[\)）]?\s*�?/);
+    let m = rowClass.match(/^(六年级|七年级)\s*[\(（]?(\d+)[\)）]?\s*班$/);
     if (m) return buildClassKey(m[1], m[2]);
-    m = rowClass.match(/^([六七])(?:年级)?\s*[\(（]?(\d+)[\)）]?\s*�?/);
-    if (m) return buildClassKey(m[1] === '�? ? '六年�? : '七年�?, m[2]);
-    m = rowClass.match(/^[\(（]?(\d+)[\)）]?\s*�?/);
+    m = rowClass.match(/^([六七])(?:年级)?\s*[\(（]?(\d+)[\)）]?\s*班$/);
+    if (m) return buildClassKey(m[1] === '六' ? '六年级' : '七年级', m[2]);
+    m = rowClass.match(/^[\(（]?(\d+)[\)）]?\s*班$/);
     if (m && rowGrade) return buildClassKey(rowGrade, m[1]);
   }
   if (rowGrade && rowClass) {
@@ -4067,7 +4067,7 @@ function selectionRowMatchesCurrentClass(row) {
   var want = buildClassKey(gradeName, classNumber);
   var got = extractClassKeyFromRow(row);
   if (got && want && got === want) return true;
-  // 宽松兜底：同年级且班号一�?
+  // 宽松兜底：同年级且班号一致
   var raw = String((row && row.class_name) || '') + String((row && row.grade) || '');
   var num = raw.match(/(\d+)/);
   var gOk = !row.grade || String(row.grade).indexOf(gradeName.replace('年级', '')) >= 0 || String(row.grade) === gradeName;
@@ -4114,14 +4114,14 @@ function finalizeCourseSlotsAfterPreEnroll() {
   });
 }
 
-// 统计已选人�?
+// 统计已选人数
 function countSelected() {
   let n = 0;
   COURSES.forEach(c => c.students.forEach(s => { if (s) n++; }));
   return n;
 }
 
-// 转义 HTML，防止学生名中含有特殊字�?
+// 转义 HTML，防止学生名中含有特殊字符
 function esc(str) {
   return String(str).replace(/[&<>"']/g, ch => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -4141,14 +4141,14 @@ function renderStats() {
   const classLocked = isClassSelectLocked();
   const lockAttr = classLocked ? ' disabled' : (!gradeName ? ' disabled' : '');
   const lockCls = classLocked ? ' is-locked' : '';
-  // 直接输出子节点（父容�?statsCard 本身就是 .stats-bar �?display: contents，平铺到控制�?grid�?
+  // 直接输出子节点（父容器 statsCard 本身就是 .stats-bar 且 display: contents，平铺到控制条 grid）
   statsCard.innerHTML = `
       <div class="stat-input stat-input-class stat-grade${lockCls}">
         <label>年级</label>
         <select id="gradeSelect"${classLocked ? ' disabled' : ''}>
           <option value="">请选择</option>
-          <option value="六年�? ${gradeName === '六年�? ? 'selected' : ''}>六年�?/option>
-          <option value="七年�? ${gradeName === '七年�? ? 'selected' : ''}>七年�?/option>
+          <option value="六年级" ${gradeName === '六年级' ? 'selected' : ''}>六年级</option>
+          <option value="七年级" ${gradeName === '七年级' ? 'selected' : ''}>七年级</option>
         </select>
       </div>
       <div class="stat-input stat-input-class stat-class${lockCls}">
@@ -4159,8 +4159,8 @@ function renderStats() {
             ${buildClassOptions()}
           </select>
           ${banzhurenClassBound ? `
-          <button type="button" class="stat-reselect-btn${classSelectUnlocked ? ' is-unlocked' : ''}" id="reselectClassBtn" title="${classSelectUnlocked ? '已可修改年级班级' : '解锁后可改选其他班�?}">
-            ${classSelectUnlocked ? '已解�? : '重选班�?}
+          <button type="button" class="stat-reselect-btn${classSelectUnlocked ? ' is-unlocked' : ''}" id="reselectClassBtn" title="${classSelectUnlocked ? '已可修改年级班级' : '解锁后可改选其他班级'}">
+            ${classSelectUnlocked ? '已解锁' : '重选班级'}
           </button>` : ''}
         </div>
       </div>
@@ -4169,22 +4169,22 @@ function renderStats() {
         <span>已录入学生信息，可直接选课</span>
       </div>
       <div class="stat-card stat-total">
-        <div class="label">总人�?/div>
+        <div class="label">总人数</div>
         <div class="value">${total}</div>
       </div>
       <div class="stat-card stat-selected selected">
-        <div class="label">已选人�?/div>
+        <div class="label">已选人数</div>
         <div class="value">${selected}</div>
       </div>
       <div class="stat-card stat-unselected unselected">
-        <div class="label">未选人�?/div>
+        <div class="label">未选人数</div>
         <div class="value">${unselected}</div>
       </div>
-      <button type="button" class="stat-reset-btn" id="resetBtn" aria-label="重置所有数�? title="重置所有数据，恢复初始状�? accesskey="r">
-        <span class="stat-reset-icon" aria-hidden="true">�?/span>
+      <button type="button" class="stat-reset-btn" id="resetBtn" aria-label="重置所有数据" title="重置所有数据，恢复初始状态" accesskey="r">
+        <span class="stat-reset-icon" aria-hidden="true">↻</span>
         <span>重置</span>
       </button>`;
-  // 绑定年级、班级下拉联�?
+  // 绑定年级、班级下拉联动
   const gradeSelect = document.getElementById('gradeSelect');
   const classSelect = document.getElementById('classSelect');
   const reselectBtn = document.getElementById('reselectClassBtn');
@@ -4196,7 +4196,7 @@ function renderStats() {
       }
       classSelectUnlocked = true;
       renderAll();
-      showToast('已解锁，可重新选择年级和班�?, 'success');
+      showToast('已解锁，可重新选择年级和班级', 'success');
     });
   }
   if (gradeSelect) {
@@ -4252,12 +4252,12 @@ function buildClassOptions() {
   let html = '';
   for (let i = 1; i <= count; i++) {
     const v = String(i);
-    html += `<option value="${v}" ${classNumber === v ? 'selected' : ''}>${v}�?/option>`;
+    html += `<option value="${v}" ${classNumber === v ? 'selected' : ''}>${v}班</option>`;
   }
   return html;
 }
 
-// 组合班级名称，如 "六年�?3)�?
+// 组合班级名称，如 "六年级(3)班"
 function updateClassName() {
   if (gradeName && classNumber) {
     className = `${gradeName}(${classNumber})班`;
@@ -4266,15 +4266,15 @@ function updateClassName() {
   }
 }
 
-// 班主任账号：从用户资料同步预填年级班�?
+// 班主任账号：从用户资料同步预填年级班级
 function parseClassNameToGradeAndNumber(classStr) {
   const s = String(classStr || '').trim();
   if (!s) return { grade: '', classNum: '' };
-  let m = s.match(/^(六年级|七年�?\s*[\(（](\d+)[\)）]�?/);
+  let m = s.match(/^(六年级|七年级)\s*[\(（](\d+)[\)）]班$/);
   if (m) return { grade: m[1], classNum: m[2] };
-  m = s.match(/^(六年级|七年�?\s*(\d+)\s*�?/);
+  m = s.match(/^(六年级|七年级)\s*(\d+)\s*班$/);
   if (m) return { grade: m[1], classNum: m[2] };
-  m = s.match(/^[\(（](\d+)[\)）]�?/);
+  m = s.match(/^[\(（](\d+)[\)）]班$/);
   if (m) return { grade: '', classNum: m[1] };
   return { grade: '', classNum: '' };
 }
@@ -4314,8 +4314,8 @@ function applyBanzhurenClassPreset() {
   }
 }
 
-/** 从后台全校名单按当前年级班级加载学生；有数据时显示「已录入…」动效提�?
- *  优先级：班主任自行上�?upload) > 后台录入名单(roster)
+/** 从后台全校名单按当前年级班级加载学生；有数据时显示「已录入…」动效提示
+ *  优先级：班主任自行上传(upload) > 后台录入名单(roster)
  */
 async function loadSchoolRosterForClass(opts) {
   opts = opts || {};
@@ -4335,7 +4335,7 @@ async function loadSchoolRosterForClass(opts) {
   try {
     const uq = new URLSearchParams();
     uq.set('grade', gradeName);
-    uq.set('class', classNumber + '�?);
+    uq.set('class', classNumber + '班');
     const udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
     const unselected = ((udata && udata.unselected) || []).filter(selectionRowMatchesCurrentClass);
     if (!unselected.length && !opts.force) {
@@ -4350,7 +4350,7 @@ async function loadSchoolRosterForClass(opts) {
     const qs = new URLSearchParams();
     qs.set('grade', gradeName);
     qs.set('class_num', classNumber);
-    qs.set('class', gradeName + '(' + classNumber + ')�?);
+    qs.set('class', gradeName + '(' + classNumber + ')班');
     const data = await apiRequest('GET', '/api/school-students?' + qs.toString());
     const list = (data && data.students) || [];
     if (!list.length) {
@@ -4374,17 +4374,17 @@ async function loadSchoolRosterForClass(opts) {
         students = unique;
         studentGenders = Object.assign({}, studentGenders, genders);
         studentListSource = 'roster';
-        fileName = '已录入学生信�?;
+        fileName = '已录入学生信息';
         const uploadTextCol = document.getElementById('uploadTextCol');
         if (uploadTextCol) {
           uploadTextCol.innerHTML =
-            '<span class="title">�?' + esc(fileName) + '</span>' +
-            '<span class="file-info">📋 �?' + unique.length + ' 名学生（后台已录入）</span>';
+            '<span class="title">✓ ' + esc(fileName) + '</span>' +
+            '<span class="file-info">📋 共 ' + unique.length + ' 名学生（后台已录入）</span>';
         }
       }
     }
 
-    // 仅当实际使用后台录入名单时显示动效提�?
+    // 仅当实际使用后台录入名单时显示动效提示
     rosterReadyTip = studentListSource === 'roster' && students.length > 0;
     return rosterReadyTip;
   } catch (e) {
@@ -4459,22 +4459,22 @@ function renderTable() {
     const limit = getCourseLimit(c);
     const baseLimit = getBaseCourseLimit(c);
     const filledCount = (c.students || []).filter(Boolean).length;
-    // 仅「本年级基础名额�?0 且无内定/已选」才算不开放；锁定课即使覆盖名额为 0 也要展示内定席位
+    // 仅「本年级基础名额为 0 且无内定/已选」才算不开放；锁定课即使覆盖名额为 0 也要展示内定席位
     const closedForGrade = baseLimit === 0 && filledCount === 0;
     const courseLocked = !!c.selection_locked;
     html += `
       <tr${closedForGrade ? ' class="no-quota"' : ''}>
         <td>${i + 1}</td>
         <td><span class="course-name" data-course-id="${c.id}" style="cursor:help;" title="">${esc(c.name)}</span></td>
-        <td><span class="cell-inner"><span class="ico">👨‍�?/span><span class="teacher-cell">${esc(c.teacher || '')}</span></span></td>
+        <td><span class="cell-inner"><span class="ico">👨‍🏫</span><span class="teacher-cell">${esc(c.teacher || '')}</span></span></td>
         <td><span class="cell-inner"><span class="ico">📍</span><span class="location-cell">${esc(c.location || '')}</span></span></td>
-        <td>${c.requirement ? `<span class="req-tag"><span class="ico">�?/span>${esc(c.requirement)}</span>` : ''}</td>
+        <td>${c.requirement ? `<span class="req-tag"><span class="ico">⚠</span>${esc(c.requirement)}</span>` : ''}</td>
         <td>${closedForGrade
           ? '<span class="limit-badge zero"><span class="ico">🚫</span>本年级无名额</span>'
-          : `<span class="limit-badge"><span class="ico">👥</span>${Math.max(limit, filledCount)} �?/span>`}</td>
+          : `<span class="limit-badge"><span class="ico">👥</span>${Math.max(limit, filledCount)} 人</span>`}</td>
         <td>`;
     if (closedForGrade) {
-      html += `<span class="slot disabled">本年级不开�?/span>`;
+      html += `<span class="slot disabled">本年级不开放</span>`;
     } else {
       const needClassSel = !gradeName || !classNumber;
       const slots = Array.isArray(c.students) ? c.students.slice() : [];
@@ -4485,7 +4485,7 @@ function renderTable() {
           const locked = lockedStudentNames.has(name);
           const lockedCls = locked ? ' locked-seat' : '';
           const latinCls = isLatinHeavyName(name) ? ' is-latin' : '';
-          const tip = locked ? '该生已被确定，不可修�? : ('点击取消 · ' + name);
+          const tip = locked ? '该生已被确定，不可修改' : ('点击取消 · ' + name);
           html += `<span class="slot filled${lockedCls}${latinCls}" data-course="${c.id}" data-slot="${idx}" data-locked="${locked ? '1' : '0'}" title="${esc(tip)}">${esc(name)}</span>`;
         } else {
           const lockedCls = (needClassSel || courseLocked) ? ' locked' : '';
@@ -4514,12 +4514,12 @@ function updateExportButtonState() {
   if (!selectionEnabled) {
     exportBtn.disabled = true;
     exportBtn.classList.add('locked');
-    exportBtn.innerHTML = '<span>�?/span> 当前状态禁止选课';
+    exportBtn.innerHTML = '<span>⛔</span> 当前状态禁止选课';
     return;
   }
   exportBtn.classList.remove('locked');
   exportBtn.disabled = students.length === 0;
-  exportBtn.innerHTML = '<span>�?/span> 保存并导�?Excel';
+  exportBtn.innerHTML = '<span>⬇</span> 保存并导出 Excel';
 }
 
 async function loadSelectionStatus() {
@@ -4537,7 +4537,7 @@ function renderAll() {
   renderStats();
   renderTable();
   updateExportButtonState();
-  // 状态可能发生变�?�?写入持久化（localStorage 写入通常 <1ms，失败有兜底不影�?UI�?
+  // 状态可能发生变化 → 写入持久化（localStorage 写入通常 <1ms，失败有兜底不影响 UI）
   try { saveState(); } catch (e) { console.error('saveState failed in renderAll', e); }
 }
 
@@ -4545,7 +4545,7 @@ function renderAll() {
 function showLockedFloatTip(anchorEl, text) {
   const tip = document.createElement('div');
   tip.className = 'locked-float-tip';
-  tip.textContent = text || '该生已被确定，不可修�?;
+  tip.textContent = text || '该生已被确定，不可修改';
   document.body.appendChild(tip);
   const rect = anchorEl && anchorEl.getBoundingClientRect
     ? anchorEl.getBoundingClientRect()
@@ -4564,15 +4564,15 @@ function onSlotClick(e) {
 
   // 提前录课锁定：不可退出，漂浮提示
   if (currentName && lockedStudentNames.has(currentName)) {
-    showLockedFloatTip(e.currentTarget, '该生已被确定，不可修�?);
+    showLockedFloatTip(e.currentTarget, '该生已被确定，不可修改');
     return;
   }
 
-  // 已�?�?取消选课
+  // 已选 → 取消选课
   if (currentName) {
     course.students[slotIndex] = null;
     renderAll();
-    showToast(`已取�?${currentName} �?${course.name}`, 'warning');
+    showToast(`已取消 ${currentName} 的 ${course.name}`, 'warning');
     return;
   }
 
@@ -4583,7 +4583,7 @@ function onSlotClick(e) {
     return;
   }
 
-  // 前置条件检查：必须先选择年级和班�?
+  // 前置条件检查：必须先选择年级和班级
   const gSel = document.getElementById('gradeSelect');
   const cSel = document.getElementById('classSelect');
   const currentGrade = (gSel && gSel.value) ? gSel.value : (gradeName || '');
@@ -4594,11 +4594,11 @@ function onSlotClick(e) {
     return;
   }
 
-  // 同步状态变�?
+  // 同步状态变量
   if (currentGrade) gradeName = currentGrade;
   if (currentClass) classNumber = currentClass;
 
-  // 空白 �?打开选课面板
+  // 空白 → 打开选课面板
   currentSelect = { courseId, slotIndex };
   openModal(course);
 }
@@ -4629,10 +4629,10 @@ function renderNameGrid(filter) {
   }
   // 统计可用人数
   const availableCount = students.filter(s => !assigned.has(s)).length;
-  modalCount.textContent = `�?${students.length} �?· 可�?${availableCount} �?· 已�?${students.length - availableCount} 人`;
+  modalCount.textContent = `共 ${students.length} 人 · 可选 ${availableCount} 人 · 已选 ${students.length - availableCount} 人`;
 
   if (list.length === 0) {
-    nameGrid.innerHTML = `<div class="no-students">${students.length === 0 ? '请先上传学生名单' : '没有匹配的学�?}</div>`;
+    nameGrid.innerHTML = `<div class="no-students">${students.length === 0 ? '请先上传学生名单' : '没有匹配的学生'}</div>`;
     return;
   }
   nameGrid.innerHTML = list.map(name => {
@@ -4643,9 +4643,9 @@ function renderNameGrid(filter) {
     const genderTag = g ? `<span class="gender-tag">${esc(g)}</span>` : '';
     const latinCls = isLatinHeavyName(name) ? ' is-latin' : '';
     let title = esc(name);
-    if (isLocked) title = '该生已被确定，不可修�?;
-    else if (isAssigned) title = '已选其他课�?;
-    const extra = isLocked ? ' 🔒' : (isAssigned ? ' �? : '');
+    if (isLocked) title = '该生已被确定，不可修改';
+    else if (isAssigned) title = '已选其他课程';
+    const extra = isLocked ? ' 🔒' : (isAssigned ? ' ✓' : '');
     return `<div class="name-card${latinCls} ${disabled ? 'disabled' : ''}${isLocked ? ' locked-pre' : ''}" data-name="${esc(name)}" data-locked="${isLocked ? '1' : '0'}" title="${title}">${esc(name)}${genderTag}${extra}</div>`;
   }).join('');
   nameGrid.querySelectorAll('.name-card:not(.disabled)').forEach(card => {
@@ -4653,17 +4653,17 @@ function renderNameGrid(filter) {
   });
   nameGrid.querySelectorAll('.name-card.locked-pre').forEach(card => {
     card.addEventListener('click', function(e) {
-      showLockedFloatTip(e.currentTarget, '该生已被确定，不可修�?);
+      showLockedFloatTip(e.currentTarget, '该生已被确定，不可修改');
     });
   });
 }
 
-// 名字点击 �?填入名额
+// 名字点击 → 填入名额
 function onNameClick(e) {
   const name = e.currentTarget.dataset.name;
   if (!currentSelect) return;
   if (lockedStudentNames.has(name)) {
-    showLockedFloatTip(e.currentTarget, '该生已被确定，不可修�?);
+    showLockedFloatTip(e.currentTarget, '该生已被确定，不可修改');
     return;
   }
   const course = COURSES.find(c => c.id === currentSelect.courseId);
@@ -4684,7 +4684,7 @@ function onNameClick(e) {
 function ensureXLSX() {
   if (typeof XLSX !== 'undefined') return true;
   if (typeof loadXlsxLibrary === 'function') loadXlsxLibrary();
-  showToast('Excel 处理库正在加载中，请稍后再试�?, 'warning');
+  showToast('Excel 处理库正在加载中，请稍后再试…', 'warning');
   return false;
 }
 
@@ -4694,7 +4694,7 @@ async function ensureXLSXReady() {
     showToast('Excel 处理库不可用', 'error');
     return false;
   }
-  showToast('正在加载 Excel 组件�?, 'warning');
+  showToast('正在加载 Excel 组件…', 'warning');
   var ok = await loadXlsxLibrary();
   if (!ok || typeof XLSX === 'undefined') {
     showToast('Excel 处理库加载失败，请检查网络后重试', 'error');
@@ -4720,7 +4720,7 @@ function normalizeImportedStudentName(raw) {
   let s = String(raw).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
   if (!s) return '';
   s = s.replace(/\s+/g, ' ');
-  // 纯序�?
+  // 纯序号
   if (/^\d{1,8}$/.test(s)) return '';
   // 误入表头
   if (/^(姓名|名字|学生姓名|英文名|english\s*name|student\s*name|full\s*name|name)$/i.test(s)) return '';
@@ -4759,17 +4759,17 @@ function findStudentNameColumns(headerRow) {
   for (let i = 0; i < norms.length; i++) {
     const n = norms[i];
     if (
-      n === '英文�? || n === '英文姓名' || n === '外文�? ||
+      n === '英文名' || n === '英文姓名' || n === '外文名' ||
       n === 'englishname' || n === 'engname' ||
       n === 'studentname' || n === 'fullname' || n === 'name'
     ) {
       if (englishIdx < 0 && i !== nameIdx) englishIdx = i;
     }
   }
-  // 「Name」单独作为主姓名�?
+  // 「Name」单独作为主姓名列
   if (nameIdx < 0) {
     for (let i = 0; i < norms.length; i++) {
-      if (norms[i] === 'name' || norms[i] === 'studentname' || norms[i] === 'fullname' || norms[i] === 'englishname' || norms[i] === '英文�?) {
+      if (norms[i] === 'name' || norms[i] === 'studentname' || norms[i] === 'fullname' || norms[i] === 'englishname' || norms[i] === '英文名') {
         nameIdx = i;
         break;
       }
@@ -4783,7 +4783,7 @@ async function handleFile(file) {
   if (!file) return;
   if (!(await ensureXLSXReady())) return;
   if (!/\.(xlsx|xls)$/i.test(file.name)) {
-    showToast('请上�?.xlsx �?.xls 格式的文�?, 'error');
+    showToast('请上传 .xlsx 或 .xls 格式的文件', 'error');
     return;
   }
   fileName = file.name;
@@ -4805,7 +4805,7 @@ async function handleFile(file) {
       const englishIdx = cols.englishIdx;
       let headerFound = cols.headerFound;
       if (!headerFound) {
-        // 未找到姓名列 �?退而求其次使用第一列非纯数字列
+        // 未找到姓名列 → 退而求其次使用第一列非纯数字列
         nameIdx = 0;
         for (let c = 0; c < header.length; c++) {
           const sample = normalizeImportedStudentName(rows[Math.min(1, rows.length - 1)][c]);
@@ -4821,7 +4821,7 @@ async function handleFile(file) {
       const looksLikeHeader = /姓名|名字|name|英文/i.test(firstPrimary + firstEnglish);
       const startRow = looksLikeHeader ? 1 : 0;
 
-      // 提取学生姓名（中文名优先；空则回退英文名列�?
+      // 提取学生姓名（中文名优先；空则回退英文名列）
       const names = [];
       const genders = {};
       for (let i = startRow; i < rows.length; i++) {
@@ -4829,7 +4829,7 @@ async function handleFile(file) {
         let name = '';
         if (nameIdx >= 0) name = normalizeImportedStudentName(row[nameIdx]);
         if (!name && englishIdx >= 0) name = normalizeImportedStudentName(row[englishIdx]);
-        // 同一格可能写成「中文名/英文名」或「中文名（English）�?
+        // 同一格可能写成「中文名/英文名」或「中文名（English）」
         if (!name && nameIdx >= 0) {
           const raw = String(row[nameIdx] == null ? '' : row[nameIdx]).trim();
           const m = raw.match(/[A-Za-z][A-Za-z0-9·•．.\-'’\s]{1,40}/);
@@ -4852,7 +4852,7 @@ async function handleFile(file) {
         unique.push(n);
       });
       if (unique.length === 0) {
-        showToast('未读取到任何学生姓名（支持中文名与英文名�?, 'error');
+        showToast('未读取到任何学生姓名（支持中文名与英文名）', 'error');
         return;
       }
       // 重置选课状态；班主任上传名单优先于后台录入
@@ -4869,17 +4869,17 @@ async function handleFile(file) {
         classNumber = '';
         className = '';
       }
-      // 显示文件信息：替换上传模块的 text-col 为成功状�?
+      // 显示文件信息：替换上传模块的 text-col 为成功状态
       const uploadTextCol = document.getElementById('uploadTextCol');
       if (uploadTextCol) {
         uploadTextCol.innerHTML = `
-          <span class="title">�?${esc(fileName)}</span>
-          <span class="file-info">📋 �?${unique.length} 名学生（本班上传�?/span>`;
+          <span class="title">✓ ${esc(fileName)}</span>
+          <span class="file-info">📋 共 ${unique.length} 名学生（本班上传）</span>`;
       }
       renderAll();
       refreshPreEnrollments().then(function(n) {
         if (!headerFound) {
-          showToast(`未找�?姓名"列，已自动识别姓名列（共 ${unique.length} 人，含英文名）` + (n ? '，已同步内定学生 ' + n + ' �? : ''), 'warning');
+          showToast(`未找到"姓名"列，已自动识别姓名列（共 ${unique.length} 人，含英文名）` + (n ? '，已同步内定学生 ' + n + ' 人' : ''), 'warning');
         } else if (n > 0) {
           showToast(`成功读取 ${unique.length} 名学生（支持英文名），已同步内定学生 ${n} 人`, 'success');
         } else {
@@ -4887,7 +4887,7 @@ async function handleFile(file) {
         }
       }).catch(function() {
         if (!headerFound) {
-          showToast(`未找�?姓名"列，已自动识别姓名列（共 ${unique.length} 人）`, 'warning');
+          showToast(`未找到"姓名"列，已自动识别姓名列（共 ${unique.length} 人）`, 'warning');
         } else {
           showToast(`成功读取 ${unique.length} 名学生（支持中英文姓名）`, 'success');
         }
@@ -4895,7 +4895,7 @@ async function handleFile(file) {
       return;
     } catch (err) {
       console.error(err);
-      showToast('读取 Excel 失败�? + err.message, 'error');
+      showToast('读取 Excel 失败：' + err.message, 'error');
     }
   };
   reader.onerror = () => showToast('文件读取失败', 'error');
@@ -4921,7 +4921,7 @@ async function refreshPreEnrollments() {
   return applyPreEnrollments({ skipReset: true });
 }
 
-/** 识别管理员提前录课学生，按当前班级自动占位并锁定（可超出课程名额；一人一课以内定为准�?*/
+/** 识别管理员提前录课学生，按当前班级自动占位并锁定（可超出课程名额；一人一课以内定为准） */
 var _lockedSelectionsCache = { revision: -1, key: '', rows: null, inflight: null };
 
 function invalidateLockedSelectionsCache() {
@@ -4945,8 +4945,8 @@ async function fetchLockedSelectionsCached() {
       qs.set('locked', '1');
       if (gradeName) qs.set('grade', gradeName);
       if (classNumber) {
-        qs.set('class', String(classNumber) + '�?);
-        qs.set('class_name', String(classNumber) + '�?);
+        qs.set('class', String(classNumber) + '班');
+        qs.set('class_name', String(classNumber) + '班');
       }
       var data = await apiRequest('GET', '/api/selections?' + qs.toString());
       var rows = (data && data.selections) || [];
@@ -4986,7 +4986,7 @@ async function applyPreEnrollments(opts) {
     return 0;
   }
 
-  // 同一学生多条内定时只保留一条（优先匹配当前班级�?
+  // 同一学生多条内定时只保留一条（优先匹配当前班级）
   const byName = new Map();
   lockedRows.forEach(function(row) {
     const name = String(row.student_name || '').trim();
@@ -5020,7 +5020,7 @@ async function applyPreEnrollments(opts) {
     const course = findCourseForSelectionRow(row);
     if (!course) return;
 
-    // 内定优先：先从其他课程移除，再放入目标课�?
+    // 内定优先：先从其他课程移除，再放入目标课程
     removeStudentFromAllCourses(name);
 
     if (course.students.indexOf(name) === -1) {
@@ -5044,7 +5044,7 @@ async function applyPreEnrollments(opts) {
   return placed;
 }
 
-/** 从后台恢复本班选课：把数据库中该班每门课的全部已选学生写入课程格�?*/
+/** 从后台恢复本班选课：把数据库中该班每门课的全部已选学生写入课程格子 */
 async function restoreSelectionsFromServer() {
   if (!getToken() || !COURSES.length) return false;
   if (!gradeName || !classNumber) {
@@ -5076,10 +5076,10 @@ async function restoreSelectionsFromServer() {
     const qs = new URLSearchParams();
     qs.set('grade', gradeName);
     qs.set('class', String(classNumber));
-    qs.set('class_name', String(classNumber) + '�?);
+    qs.set('class_name', String(classNumber) + '班');
     const uq = new URLSearchParams();
     uq.set('grade', gradeName);
-    uq.set('class', String(classNumber) + '�?);
+    uq.set('class', String(classNumber) + '班');
     const hasBoot = !!(rows.length || unselected.length);
     if (hasBoot) {
       // 已有登录预热数据：先用本地秒开，网络刷新不阻塞首屏
@@ -5089,7 +5089,7 @@ async function restoreSelectionsFromServer() {
       ]).then(function (pair) {
         try { sessionStorage.removeItem('pjyz_xuanke_boot_v1'); } catch (_) {}
         if (!pair || (!pair[0] && !pair[1])) return;
-        // 后台静默刷新：有明显差异时再走一次完整恢�?
+        // 后台静默刷新：有明显差异时再走一次完整恢复
         try {
           var netRows = pair[0] ? (Array.isArray(pair[0]) ? pair[0] : (pair[0].selections || [])) : [];
           var netUn = pair[1] ? ((pair[1].unselected) || []) : [];
@@ -5152,7 +5152,7 @@ async function restoreSelectionsFromServer() {
   if (studentListSource !== 'upload') studentListSource = 'server';
   fileName = fileName || '已从服务器恢复本班选课';
 
-  // 清空课程格子后按数据库名单重新灌入（可超出名额，全部显示�?
+  // 清空课程格子后按数据库名单重新灌入（可超出名额，全部显示）
   COURSES.forEach(function(c) {
     c.students = [];
   });
@@ -5179,7 +5179,7 @@ async function restoreSelectionsFromServer() {
     if (!name) return;
     var course = findCourseForSelectionRow(row);
     if (!course) {
-      console.warn('restoreSelectionsFromServer: 未匹配课�?, row.course_name, row.course_id);
+      console.warn('restoreSelectionsFromServer: 未匹配课程', row.course_name, row.course_id);
       return;
     }
     if (course.students.indexOf(name) === -1) course.students.push(name);
@@ -5188,7 +5188,7 @@ async function restoreSelectionsFromServer() {
     if (g) studentGenders[name] = g;
   });
 
-  // 再补一次内定（全校 locked 接口），确保管理员新加的内定也落�?
+  // 再补一次内定（全校 locked 接口），确保管理员新加的内定也落位
   await applyPreEnrollments({ skipReset: true, skipRender: true });
   finalizeCourseSlotsAfterPreEnroll();
   syncCourseSlots();
@@ -5196,8 +5196,8 @@ async function restoreSelectionsFromServer() {
   var uploadTextCol = document.getElementById('uploadTextCol');
   if (uploadTextCol) {
     uploadTextCol.innerHTML =
-      '<span class="title">�?' + esc(fileName) + '</span>' +
-      '<span class="file-info">📋 �?' + students.length + ' 名学生（与后台选课数据同步�?/span>';
+      '<span class="title">✓ ' + esc(fileName) + '</span>' +
+      '<span class="file-info">📋 共 ' + students.length + ' 名学生（与后台选课数据同步）</span>';
   }
   return students.length > 0 || byStudent.size > 0;
 }
@@ -5233,7 +5233,7 @@ async function apiRequest(method, url, body){
   try {
     res = await fetch(apiBase() + url, opts);
   } catch(e){
-    throw new Error('网络请求失败，请检查后端服务是否启�?);
+    throw new Error('网络请求失败，请检查后端服务是否启动');
   }
   if (res.status === 401 && url !== '/api/login'){
     try {
@@ -5242,7 +5242,7 @@ async function apiRequest(method, url, body){
       localStorage.removeItem('pjyz_user');
     } catch (_) {}
     window.location.href = 'denglu';
-    throw new Error('登录已过期，请重新登�?);
+    throw new Error('登录已过期，请重新登录');
   }
   var ct = res.headers.get('content-type') || '';
   if (ct.indexOf('application/json') !== -1){
@@ -5257,8 +5257,8 @@ async function apiRequest(method, url, body){
   return await res.text();
 }
 
-// ===== 同步并导�?Excel =====
-/** 一人一课：内定(锁定)课程优先；同一学生多门课时只保留内�?第一�?*/
+// ===== 同步并导出 Excel =====
+/** 一人一课：内定(锁定)课程优先；同一学生多门课时只保留内定/第一条 */
 function buildSelectionsForSave(grade, cls) {
   const byName = new Map();
   COURSES.forEach(function(c) {
@@ -5324,22 +5324,22 @@ function buildExportWorkbook(selections, unselectedRecords) {
 }
 
 function buildExportFilename(cls) {
-  // 文件名：六年级（3）班 拓展课名�?xlsx（优先用年级+班号生成全角括号格式�?
+  // 文件名：六年级（3）班 拓展课名单.xlsx（优先用年级+班号生成全角括号格式）
   var label = '';
   if (gradeName && classNumber) {
-    label = String(gradeName) + '�? + String(classNumber) + '）班';
+    label = String(gradeName) + '（' + String(classNumber) + '）班';
   } else {
-    label = String(cls || '未填写班�?)
-      .replace(/\(/g, '�?)
-      .replace(/\)/g, '�?);
+    label = String(cls || '未填写班级')
+      .replace(/\(/g, '（')
+      .replace(/\)/g, '）');
   }
   var safe = label.replace(/[\\/:*?"<>|]/g, '_');
-  return safe + ' 拓展课名�?xlsx';
+  return safe + ' 拓展课名单.xlsx';
 }
 
 async function exportExcel() {
   if (!selectionEnabled) {
-    showToast('当前状态禁止选课，无法保�?, 'error');
+    showToast('当前状态禁止选课，无法保存', 'error');
     return;
   }
   if (!(await ensureXLSXReady())) return;
@@ -5348,12 +5348,12 @@ async function exportExcel() {
     return;
   }
   if (!gradeName || !classNumber) {
-    showToast('请先选择年级和班�?, 'error');
+    showToast('请先选择年级和班级', 'error');
     return;
   }
   updateClassName();
   
-  const cls = className.trim() || '未填写班�?;
+  const cls = className.trim() || '未填写班级';
   const grade = gradeName || '';
 
   if (!lockedStudentNames.size) {
@@ -5369,7 +5369,7 @@ async function exportExcel() {
   });
   
   if (selections.length === 0 && unselectedList.length === 0) {
-    showToast('暂无学生数据，无法导�?, 'warning');
+    showToast('暂无学生数据，无法导出', 'warning');
     return;
   }
   
@@ -5387,7 +5387,7 @@ async function exportExcel() {
   const btn = document.getElementById('exportBtn');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>�?/span> 正在保存并导�?..';
+    btn.innerHTML = '<span>⏳</span> 正在保存并导出...';
     
     try {
       XLSX.writeFile(wb, filename);
@@ -5403,7 +5403,7 @@ async function exportExcel() {
 
       const savedCount = (result && result.count) || selections.length;
       const uCount = (result && result.unselected_count) || unselectedList.length;
-      showToast('保存成功！已导出 ' + totalExported + ' 条记录（�?' + uCount + ' 条未选课�?, 'success');
+      showToast('保存成功！已导出 ' + totalExported + ' 条记录（含 ' + uCount + ' 条未选课）', 'success');
 
       if (result && result.revision) {
         serverDataRevision = result.revision;
@@ -5416,7 +5416,7 @@ async function exportExcel() {
       }
     } catch(e) {
       console.error('保存失败:', e);
-      showToast('保存失败�? + e.message, 'error');
+      showToast('保存失败：' + e.message, 'error');
     } finally {
       updateExportButtonState();
     }
@@ -5424,7 +5424,7 @@ async function exportExcel() {
 }
 
 // ===== 事件绑定 =====
-// 上传区点�?�?触发文件选择
+// 上传区点击 → 触发文件选择
 uploadArea.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => {
   if (e.target.files[0]) handleFile(e.target.files[0]);
@@ -5463,9 +5463,9 @@ document.addEventListener('keydown', e => {
 // 导出按钮
 exportBtn.addEventListener('click', exportExcel);
 
-// ===== 抽签弹窗（内嵌抽签系统，无需 iframe / 外部文件�?=====
-// 抽签按钮现在�?renderTable() 生成�?thead 内，会随表格重渲染而重建�?
-// �?用事件委托绑定到 document，避免每�?renderTable 后重新绑�?
+// ===== 抽签弹窗（内嵌抽签系统，无需 iframe / 外部文件） =====
+// 抽签按钮现在在 renderTable() 生成的 thead 内，会随表格重渲染而重建。
+// → 用事件委托绑定到 document，避免每次 renderTable 后重新绑。
 const lotteryModal = document.getElementById('lotteryModal');
 const lotteryClose = document.getElementById('lotteryClose');
 const lotteryContent = document.getElementById('lotteryContent');
@@ -5475,7 +5475,7 @@ function openLottery() {
 }
 function closeLottery() {
   lotteryModal.classList.remove('active');
-  // 关闭弹窗时也关闭可能打开的选人弹层（直接操�?DOM，不依赖 IIFE 内的 closePicker�?
+  // 关闭弹窗时也关闭可能打开的选人弹层（直接操作 DOM，不依赖 IIFE 内的 closePicker）
   var pm = document.getElementById('pickerMask');
   if (pm) pm.classList.remove('show');
 }
@@ -5488,7 +5488,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && lotteryModal.classList.contains('active')) closeLottery();
 });
 
-// ===== 抽签系统核心逻辑（内嵌，作用�?#lotteryContent 内） =====
+// ===== 抽签系统核心逻辑（内嵌，作用于 #lotteryContent 内） =====
 // 通过闭包访问主页面的 students 数组（用户上传表格后去重的学生姓名列表）
 (function () {
   'use strict';
@@ -5520,12 +5520,12 @@ document.addEventListener('keydown', e => {
     return new Promise(function (resolve) { setTimeout(resolve, ms); });
   }
 
-  // 读取主页�?students 数组（上传名单去重后的学生姓名列表）
+  // 读取主页面 students 数组（上传名单去重后的学生姓名列表）
   function getUploadedStudents() {
     return Array.isArray(students) ? students.slice() : [];
   }
 
-  /* ---------- Tab 切换（作用域限定在抽签弹窗内�?---------- */
+  /* ---------- Tab 切换（作用域限定在抽签弹窗内） ---------- */
   var tabBtns = lotteryContent.querySelectorAll('.tab-btn');
   var panels = lotteryContent.querySelectorAll('.panel');
   tabBtns.forEach(function (btn) {
@@ -5539,7 +5539,7 @@ document.addEventListener('keydown', e => {
   });
 
   /* ============================================================
-   *  方式一：名额抽�?
+   *  方式一：名额抽取
    * ============================================================ */
   var m1_total  = document.getElementById('m1_total');
   var m1_names  = document.getElementById('m1_names');
@@ -5556,7 +5556,7 @@ document.addEventListener('keydown', e => {
   var m1_data = [];
   var m1_busy = false;
 
-  // �?选人抽签"填充名单：把选中的姓名写�?m1_data，并刷新 m1_names 显示
+  // 由"选人抽签"填充名单：把选中的姓名写入 m1_data，并刷新 m1_names 显示
   function applyPickedNamesToM1(names) {
     m1_data = names.map(function (n, i) { return { num: i + 1, name: n }; });
     m1_names.innerHTML = '';
@@ -5565,7 +5565,7 @@ document.addEventListener('keydown', e => {
       item.className = 'name-item';
       item.innerHTML =
         '<span class="num">' + d.num + '</span>' +
-        '<input type="text" data-idx="' + (d.num - 1) + '" value="' + (d.name || '') + '" placeholder="名字（选填�? />';
+        '<input type="text" data-idx="' + (d.num - 1) + '" value="' + (d.name || '') + '" placeholder="名字（选填）" />';
       m1_names.appendChild(item);
     });
     m1_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
@@ -5574,7 +5574,7 @@ document.addEventListener('keydown', e => {
         m1_data[idx].name = inp.value.trim();
       });
     });
-    // 自动填入总人�?
+    // 自动填入总人数
     m1_total.value = m1_data.length;
   }
 
@@ -5588,18 +5588,18 @@ document.addEventListener('keydown', e => {
     m1_names.innerHTML = '';
     var val = m1_total.value.trim();
     if (!isPositiveInt(val)) {
-      if (val !== '') showMsg(m1_msg, '请输入有效的正整�?, 'error');
+      if (val !== '') showMsg(m1_msg, '请输入有效的正整数', 'error');
       return;
     }
     var n = parseInt(val, 10);
-    if (n > 500) { showMsg(m1_msg, '总人数最�?500 �?, 'error'); return; }
+    if (n > 500) { showMsg(m1_msg, '总人数最多 500 人', 'error'); return; }
     for (var i = 1; i <= n; i++) {
       m1_data.push({ num: i, name: '' });
       var item = document.createElement('div');
       item.className = 'name-item';
       item.innerHTML =
         '<span class="num">' + i + '</span>' +
-        '<input type="text" data-idx="' + (i - 1) + '" placeholder="名字（选填�? />';
+        '<input type="text" data-idx="' + (i - 1) + '" placeholder="名字（选填）" />';
       m1_names.appendChild(item);
     }
     m1_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
@@ -5615,7 +5615,7 @@ document.addEventListener('keydown', e => {
     hideMsg(m1_msg);
 
     if (!isPositiveInt(m1_total.value)) {
-      showMsg(m1_msg, '请先输入有效的总人�?, 'error'); return;
+      showMsg(m1_msg, '请先输入有效的总人数', 'error'); return;
     }
     if (m1_data.length === 0) {
       showMsg(m1_msg, '请先生成序号列表', 'error'); return;
@@ -5626,7 +5626,7 @@ document.addEventListener('keydown', e => {
     var total = m1_data.length;
     var pickN = parseInt(m1_pick.value, 10);
     if (pickN > total) {
-      showMsg(m1_msg, '抽取数量不能超过总人数（' + total + '�?, 'error'); return;
+      showMsg(m1_msg, '抽取数量不能超过总人数（' + total + '）', 'error'); return;
     }
 
     m1_busy = true;
@@ -5635,7 +5635,7 @@ document.addEventListener('keydown', e => {
     m1_stage.classList.add('show');
 
     var displayPool = m1_data.map(function (d) {
-      return d.name || ('�?' + d.num);
+      return d.name || ('号 ' + d.num);
     });
 
     var winners = pickRandom(m1_data, pickN);
@@ -5660,7 +5660,7 @@ document.addEventListener('keydown', e => {
 
     function revealResults() {
       m1_roller.classList.remove('spinning');
-      m1_roller.textContent = '�?;
+      m1_roller.textContent = '✓';
 
       setTimeout(function () {
         m1_stage.classList.remove('show');
@@ -5670,7 +5670,7 @@ document.addEventListener('keydown', e => {
           var card = document.createElement('div');
           card.className = 'result-card';
           card.style.animationDelay = (i * 0.12) + 's';
-          var display = w.name || ('�?' + w.num);
+          var display = w.name || ('号 ' + w.num);
           var badge = w.name ? '#' + w.num : w.num;
           card.innerHTML =
             '<div class="badge">' + badge + '</div>' +
@@ -5702,11 +5702,11 @@ document.addEventListener('keydown', e => {
 
   m1_pickBtn.addEventListener('click', function () {
     openPicker(function (names) {
-      // 选人完成后：把姓名填入方式一，并自动确认总人�?
+      // 选人完成后：把姓名填入方式一，并自动确认总人数
       applyPickedNamesToM1(names);
       hideMsg(m1_msg);
       if (names.length > 0) {
-        showMsg(m1_msg, '已�?' + names.length + ' 人，请输入抽取数量后开始抽�?, 'info');
+        showMsg(m1_msg, '已选 ' + names.length + ' 人，请输入抽取数量后开始抽签', 'info');
       }
     });
   });
@@ -5736,7 +5736,7 @@ document.addEventListener('keydown', e => {
       item.className = 'name-item';
       item.innerHTML =
         '<span class="num">' + d.num + '</span>' +
-        '<input type="text" data-idx="' + (d.num - 1) + '" value="' + (d.name || '') + '" placeholder="选手' + d.num + '（选填�? />';
+        '<input type="text" data-idx="' + (d.num - 1) + '" value="' + (d.name || '') + '" placeholder="选手' + d.num + '（选填）" />';
       m2_names.appendChild(item);
     });
     m2_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
@@ -5757,18 +5757,18 @@ document.addEventListener('keydown', e => {
     m2_names.innerHTML = '';
     var val = m2_total.value.trim();
     if (!isPositiveInt(val)) {
-      if (val !== '') showMsg(m2_msg, '请输入有效的正整�?, 'error');
+      if (val !== '') showMsg(m2_msg, '请输入有效的正整数', 'error');
       return;
     }
     var n = parseInt(val, 10);
-    if (n > 500) { showMsg(m2_msg, '参与人数最�?500 �?, 'error'); return; }
+    if (n > 500) { showMsg(m2_msg, '参与人数最多 500 人', 'error'); return; }
     for (var i = 1; i <= n; i++) {
       m2_data.push({ num: i, name: '' });
       var item = document.createElement('div');
       item.className = 'name-item';
       item.innerHTML =
         '<span class="num">' + i + '</span>' +
-        '<input type="text" data-idx="' + (i - 1) + '" placeholder="选手' + i + '（选填�? />';
+        '<input type="text" data-idx="' + (i - 1) + '" placeholder="选手' + i + '（选填）" />';
       m2_names.appendChild(item);
     }
     m2_names.querySelectorAll('input[type="text"]').forEach(function (inp) {
@@ -5784,7 +5784,7 @@ document.addEventListener('keydown', e => {
     hideMsg(m2_msg);
 
     if (!isPositiveInt(m2_total.value)) {
-      showMsg(m2_msg, '请先输入有效的参与人�?, 'error'); return;
+      showMsg(m2_msg, '请先输入有效的参与人数', 'error'); return;
     }
     if (m2_data.length === 0) {
       showMsg(m2_msg, '请先生成选手列表', 'error'); return;
@@ -5804,7 +5804,7 @@ document.addEventListener('keydown', e => {
     displayPool.forEach(function (txt, i) {
       var c = document.createElement('div');
       c.className = 'shuffle-card shuffling';
-      c.textContent = txt.length > 12 ? txt.slice(0, 11) + '�? : txt;
+      c.textContent = txt.length > 12 ? txt.slice(0, 11) + '…' : txt;
       c.style.animationDelay = (i * 0.05) + 's';
       m2_deck.appendChild(c);
       cards.push(c);
@@ -5817,7 +5817,7 @@ document.addEventListener('keydown', e => {
       var shuffledDisplay = shuffle(displayPool);
       cards.forEach(function (c, i) {
         var txt = shuffledDisplay[i];
-        c.textContent = txt.length > 12 ? txt.slice(0, 11) + '�? : txt;
+        c.textContent = txt.length > 12 ? txt.slice(0, 11) + '…' : txt;
         c.classList.remove('shuffling');
         void c.offsetWidth;
         c.classList.add('shuffling');
@@ -5829,7 +5829,7 @@ document.addEventListener('keydown', e => {
     m2_deck.innerHTML = '';
     var reveal = document.createElement('div');
     reveal.style.cssText = 'font-size:24px;font-weight:800;color:#fff;animation:rollerPulse 0.3s linear infinite;';
-    reveal.textContent = '揭晓中�?;
+    reveal.textContent = '揭晓中…';
     m2_deck.appendChild(reveal);
 
     await delay(700);
@@ -5880,13 +5880,13 @@ document.addEventListener('keydown', e => {
       applyPickedNamesToM2(names);
       hideMsg(m2_msg);
       if (names.length > 0) {
-        showMsg(m2_msg, '已�?' + names.length + ' 人，可直接开始抽�?, 'info');
+        showMsg(m2_msg, '已选 ' + names.length + ' 人，可直接开始抽签', 'info');
       }
     });
   });
 
   /* ============================================================
-   *  选人抽签弹层（共享：方式一/方式二都调用 openPicker�?
+   *  选人抽签弹层（共享：方式一/方式二都调用 openPicker）
    * ============================================================ */
   var pickerMask    = document.getElementById('pickerMask');
   var pickerTitle   = document.getElementById('pickerTitle');
@@ -5895,12 +5895,12 @@ document.addEventListener('keydown', e => {
   var pickerCancel  = document.getElementById('pickerCancel');
   var pickerConfirm = document.getElementById('pickerConfirm');
 
-  var pickerSelected = new Set();   // 当前已选姓名集�?
+  var pickerSelected = new Set();   // 当前已选姓名集合
   var pickerCallback = null;        // 选人完成后的回调
 
   function openPicker(onConfirm) {
     var allList = getUploadedStudents();
-    // 过滤掉已在选课表格中被确认选课的学生（主页�?getAssignedNames 返回的集合）
+    // 过滤掉已在选课表格中被确认选课的学生（主页面 getAssignedNames 返回的集合）
     var assigned = (typeof getAssignedNames === 'function') ? getAssignedNames() : new Set();
     var list = allList.filter(function (name) { return !assigned.has(name); });
 
@@ -5910,12 +5910,12 @@ document.addEventListener('keydown', e => {
 
     if (allList.length === 0) {
       pickerBody.innerHTML =
-        '<div class="picker-empty">尚未上传学生名单<br>请先在主页面通过"点击或拖拽上传学生名�?Excel"上传表格</div>';
+        '<div class="picker-empty">尚未上传学生名单<br>请先在主页面通过"点击或拖拽上传学生名单 Excel"上传表格</div>';
       pickerConfirm.disabled = true;
     } else if (list.length === 0) {
-      // 名单已上传，但所有人都在选课表格中被确认选课�?
+      // 名单已上传，但所有人都在选课表格中被确认选课了
       pickerBody.innerHTML =
-        '<div class="picker-empty">上传名单中的所有学生已选课<br>无可参与抽签的人�?/div>';
+        '<div class="picker-empty">上传名单中的所有学生已选课<br>无可参与抽签的人员</div>';
       pickerConfirm.disabled = true;
     } else {
       pickerConfirm.disabled = false;
@@ -5942,7 +5942,7 @@ document.addEventListener('keydown', e => {
         } else {
           pickerSelected.add(name);
           chip.classList.add('selected');
-          chip.querySelector('.chip-dot').textContent = '�?;
+          chip.querySelector('.chip-dot').textContent = '✓';
         }
         updatePickerCount();
       });
@@ -5951,7 +5951,7 @@ document.addEventListener('keydown', e => {
   }
 
   function updatePickerCount() {
-    pickerCount.textContent = '已�?' + pickerSelected.size + ' �?;
+    pickerCount.textContent = '已选 ' + pickerSelected.size + ' 人';
   }
 
   function closePicker() {
@@ -5966,7 +5966,7 @@ document.addEventListener('keydown', e => {
   });
   pickerConfirm.addEventListener('click', function () {
     if (pickerSelected.size === 0) {
-      // 没选任何人不触发回�?
+      // 没选任何人不触发回调
       closePicker();
       return;
     }
@@ -5975,7 +5975,7 @@ document.addEventListener('keydown', e => {
     closePicker();
     if (typeof cb === 'function') cb(names);
   });
-  // 选人弹层内的 ESC：阻止冒泡到 document �?ESC（否则会关闭整个抽签弹窗�?
+  // 选人弹层内的 ESC：阻止冒泡到 document 的 ESC（否则会关闭整个抽签弹窗）
   pickerMask.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       e.stopPropagation();
@@ -6019,7 +6019,7 @@ document.addEventListener('keydown', e => {
     }
     lastFocused = document.activeElement;
     mask.classList.add('active');
-    // 焦点移到“取消”（安全默认�?
+    // 焦点移到“取消”（安全默认）
     setTimeout(function () {
       try { cancelBtn.focus(); } catch (_) { /* 忽略 */ }
     }, 0);
@@ -6035,12 +6035,12 @@ document.addEventListener('keydown', e => {
       resetState(false);
     } catch (e) {
       console.error('reset failed', e);
-      showToast('重置执行失败�? + (e && e.message ? e.message : e), 'error');
+      showToast('重置执行失败：' + (e && e.message ? e.message : e), 'error');
       return;
     }
     closeConfirm();
-    // 成功视觉反馈：Toast + 简短抖�?
-    showToast('�?已重置所有数据，页面已恢复到初始状�?, 'success');
+    // 成功视觉反馈：Toast + 简短抖动
+    showToast('✅ 已重置所有数据，页面已恢复到初始状态', 'success');
     try {
       var header = document.querySelector('.header');
       if (header) {
@@ -6066,14 +6066,14 @@ document.addEventListener('keydown', e => {
       if (e.target === mask) closeConfirm();
     });
   }
-  // 键盘：ESC 关闭 / Enter=确认(当焦点在确认按钮上默�? / Tab 焦点闭环
+  // 键盘：ESC 关闭 / Enter=确认(当焦点在确认按钮上默认) / Tab 焦点闭环
   document.addEventListener('keydown', function (e) {
     if (!mask || !mask.classList.contains('active')) return;
     if (e.key === 'Escape') {
       e.preventDefault();
       closeConfirm();
     } else if (e.key === 'Tab') {
-      // 简单焦点闭环：在两个按钮之间循�?
+      // 简单焦点闭环：在两个按钮之间循环
       var focusables = [cancelBtn, confirmBtn].filter(Boolean);
       if (focusables.length === 0) return;
       var first = focusables[0], last = focusables[focusables.length - 1];
@@ -6087,7 +6087,7 @@ document.addEventListener('keydown', e => {
   });
 })();
 
-// ===== 初始化：课程先出表；有库内班级数据则跳过本地草稿，直接从数据库恢�?=====
+// ===== 初始化：课程先出表；有库内班级数据则跳过本地草稿，直接从数据库恢复 =====
 (async function initBootstrap() {
   var painted = false;
   function paintNow() {
@@ -6110,12 +6110,12 @@ document.addEventListener('keydown', e => {
   }
 
   try {
-    // 1) 同步：课程缓存立刻出�?
+    // 1) 同步：课程缓存立刻出表
     hydrateCoursesFromCache();
     applyBanzhurenClassPreset();
     if (COURSES.length) paintNow();
 
-    // 2) 网络：课程与开关并行；资料同步后再恢复本班已选学�?
+    // 2) 网络：课程与开关并行；资料同步后再恢复本班已选学生
     var sync = { revision: 0 };
     var networkReady = Promise.all([
       loadCoursesFromServer(),
@@ -6124,7 +6124,7 @@ document.addEventListener('keydown', e => {
     ]);
 
     await networkReady;
-    // 等资料回填年级班级，再拉名额与选课，确保课程格子能显示已选姓�?
+    // 等资料回填年级班级，再拉名额与选课，确保课程格子能显示已选姓名
     await syncUserProfile().catch(function () {});
     applyBanzhurenClassPreset();
     await loadClassQuotaOverrides();
@@ -6141,14 +6141,14 @@ document.addEventListener('keydown', e => {
     }
 
     if (!serverEmpty) {
-      // 数据库已有本班选课 �?以库为准，课程格子显示已选学生姓�?
+      // 数据库已有本班选课 → 以库为准，课程格子显示已选学生姓名
       clearLocalSelectionDraft();
       await applyServerSelectionSync({ silent: true });
       var uploadTextCol = document.getElementById('uploadTextCol');
       if (uploadTextCol && students.length > 0) {
         uploadTextCol.innerHTML =
-          '<span class="title">�?' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
-          '<span class="file-info">📋 �?' + students.length + ' 名学生（数据库）</span>';
+          '<span class="title">✓ ' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
+          '<span class="file-info">📋 共 ' + students.length + ' 名学生（数据库）</span>';
       }
     } else {
       var loaded = false;
@@ -6157,8 +6157,8 @@ document.addEventListener('keydown', e => {
         var uploadCol = document.getElementById('uploadTextCol');
         if (uploadCol) {
           uploadCol.innerHTML =
-            '<span class="title">�?' + esc(fileName || '已加载本地保存的名单') + '</span>' +
-            '<span class="file-info">📋 �?' + students.length + ' 名学�?/span>';
+            '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
+            '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
         }
         await applyPreEnrollments({ skipReset: true });
       } else {
@@ -6176,7 +6176,7 @@ document.addEventListener('keydown', e => {
   }
 
   if (COURSES.length === 0) {
-    showToast('暂无课程数据，请联系管理员上传课�?, 'warning');
+    showToast('暂无课程数据，请联系管理员上传课程', 'warning');
   }
 
   try {
@@ -6209,7 +6209,7 @@ document.addEventListener('keydown', e => {
   }, 90000);
 })();
 
-// ===== 课程简�?Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
+// ===== 课程简介 Tooltip 事件（hover 500ms 显示，移开隐藏；边缘自动换向）=====
 (function () {
   const tip      = document.getElementById('courseTip');
   const tipCat   = document.getElementById('courseTipCat');
@@ -6261,7 +6261,7 @@ document.addEventListener('keydown', e => {
     tip.style.top        = '0px';
 
     requestAnimationFrame(() => {
-      // 定位：目标右下优先；超出右边界则放在目标左下；超出下边界则放在目标正�?
+      // 定位：目标右下优先；超出右边界则放在目标左下；超出下边界则放在目标正上
       const rect = el.getBoundingClientRect();
       const tipW = tip.offsetWidth;
       const tipH = tip.offsetHeight;
@@ -6274,7 +6274,7 @@ document.addEventListener('keydown', e => {
       // 右溢出：改为左侧
       if (left + tipW + MARGIN > window.innerWidth) {
         left = rect.left - tipW - GAP;
-        // 左侧也超出则左对�?
+        // 左侧也超出则左对齐
         if (left < MARGIN) left = MARGIN;
       }
       // 下溢出：上移
@@ -6300,7 +6300,7 @@ document.addEventListener('keydown', e => {
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
   }
 
-  // 事件委托：绑定到 tableWrap 容器（课程名在表格内�?
+  // 事件委托：绑定到 tableWrap 容器（课程名在表格内）
   const wrap = document.getElementById('tableWrap');
   wrap.addEventListener('mouseover', function (e) {
     const target = e.target.closest('.course-name[data-course-id]');
@@ -6313,7 +6313,7 @@ document.addEventListener('keydown', e => {
   });
   wrap.addEventListener('mouseout', function (e) {
     const to = e.relatedTarget;
-    // 若进�?tip 本身则不隐藏
+    // 若进入 tip 本身则不隐藏
     if (to && (to === tip || tip.contains(to))) return;
     const fromTarget = e.target.closest('.course-name[data-course-id]');
     if (!fromTarget) return;
@@ -6324,27 +6324,27 @@ document.addEventListener('keydown', e => {
     }, 120);
   });
 
-  // 鼠标进入 tooltip 则保持显示（方便选中文字�?
+  // 鼠标进入 tooltip 则保持显示（方便选中文字）
   tip.addEventListener('mouseenter', function () { clearTimers(); });
   tip.addEventListener('mouseleave', function () {
     clearTimers();
     hideTimer = setTimeout(hideTip, 120);
   });
 
-  // 滚动时关�?
+  // 滚动时关闭
   document.addEventListener('scroll', function () { clearTimers(); hideTip(); }, true);
   // ESC 关闭
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { clearTimers(); hideTip(); } });
 })();
 
-// ===== XLSX 库加载状态联动（静默�?====
+// ===== XLSX 库加载状态联动（静默）=====
 (function () {
   document.addEventListener('xlsx-failed', function () {
     showToast('Excel 处理库加载失败，请检查网络或刷新页面重试', 'error');
   });
 })();
 
-// ===== 角色切换 + 退出登�?=====
+// ===== 角色切换 + 退出登录 =====
 (function userInfoFeature() {
   if (window.PjyzRole) {
     PjyzRole.enforcePageAccess();

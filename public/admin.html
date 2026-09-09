@@ -27,21 +27,21 @@
   --shadow: 0 4px 12px rgba(13, 148, 136, 0.08);
   --shadow-lg: 0 10px 30px rgba(13, 148, 136, 0.15);
   --radius: 12px;
-  /* ===== 表格整体基础色：浅灰�?#E3F2FD ===== */
+  /* ===== 表格整体基础色：浅灰蓝 #E3F2FD ===== */
   --tbl-base: #E3F2FD;
   --tbl-border: #BBDEFB;
   /* ===== 表格列底色（浅灰蓝同色系微差，统一蓝灰调）===== */
-  --col-1: rgba(100, 116, 139, 0.10);   /* 序号 - 冷灰�?*/
-  --col-2: rgba(59, 130, 246, 0.10);    /* 课程类别/年级 - 柔天�?*/
-  --col-3: rgba(37, 99, 235, 0.08);     /* 课程名称/班级 - 柔靛�?*/
-  --col-4: rgba(14, 165, 233, 0.08);    /* 简�?学生 - 柔青�?*/
-  --col-5: rgba(14, 116, 144, 0.08);    /* 老师/要求 - 柔青�?*/
+  --col-1: rgba(100, 116, 139, 0.10);   /* 序号 - 冷灰蓝 */
+  --col-2: rgba(59, 130, 246, 0.10);    /* 课程类别/年级 - 柔天蓝 */
+  --col-3: rgba(37, 99, 235, 0.08);     /* 课程名称/班级 - 柔靛蓝 */
+  --col-4: rgba(14, 165, 233, 0.08);    /* 简介/学生 - 柔青蓝 */
+  --col-5: rgba(14, 116, 144, 0.08);    /* 老师/要求 - 柔青灰 */
   --col-6: rgba(79, 70, 229, 0.08);     /* 地点/密码 - 柔靛青紫 */
   --col-7: rgba(148, 163, 184, 0.05);   /* 要求/角色 - 极淡蓝灰 */
-  --col-8: rgba(99, 102, 241, 0.08);    /* 六年级名�?- 柔紫 */
-  --col-9: rgba(79, 70, 229, 0.10);     /* 七年级名�?- 柔深�?*/
-  --col-10: rgba(148, 163, 184, 0.05);  /* 操作�?- 极淡蓝灰 */
-  /* hover 态加深（�?2 倍） */
+  --col-8: rgba(99, 102, 241, 0.08);    /* 六年级名额 - 柔紫 */
+  --col-9: rgba(79, 70, 229, 0.10);     /* 七年级名额 - 柔深紫 */
+  --col-10: rgba(148, 163, 184, 0.05);  /* 操作列 - 极淡蓝灰 */
+  /* hover 态加深（约 2 倍） */
   --col-1-h: rgba(100, 116, 139, 0.20);
   --col-2-h: rgba(59, 130, 246, 0.20);
   --col-3-h: rgba(37, 99, 235, 0.18);
@@ -79,7 +79,7 @@ body {
   flex-direction: column;
 }
 
-/* ===== 顶部标题�?�?左中右三栏布局 ===== */
+/* ===== 顶部标题栏 — 左中右三栏布局 ===== */
 .header {
   color: white;
   padding: 12px 20px;
@@ -164,7 +164,7 @@ body {
   letter-spacing: 0.5px;
   color: white;
 }
-/* 居中标题 �?绝对定位确保真正居中 */
+/* 居中标题 — 绝对定位确保真正居中 */
 .header-title {
   position: absolute;
   left: 50%;
@@ -183,7 +183,7 @@ body {
   text-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.3);
   white-space: nowrap;
 }
-/* ===== 右侧操作区：导航 + 管理�?+ 退�?===== */
+/* ===== 右侧操作区：导航 + 管理员 + 退出 ===== */
 .header-actions {
   position: relative;
   z-index: 5;
@@ -244,7 +244,7 @@ body {
   min-height: 0;
 }
 
-/* ===== 顶部导航栏（集成在header右侧�?==== */
+/* ===== 顶部导航栏（集成在header右侧）===== */
 .top-nav {
   display: flex;
   align-items: center;
@@ -352,7 +352,7 @@ body {
   box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 2px 8px rgba(249,115,22,0.45);
 }
 
-/* ===== 侧边栏样式保留但不使�?===== */
+/* ===== 侧边栏样式保留但不使用 ===== */
 .sidebar { display: none; }
 .sidebar-title {
   font-size: 13px;
@@ -441,7 +441,7 @@ body {
   padding: 0;
 }
 
-/* ===== 课程管理：标�?+ 四模块同一行（等高、可爱风�?==== */
+/* ===== 课程管理：标题 + 四模块同一行（等高、可爱风）===== */
 .course-top-bar {
   display: grid;
   grid-template-columns: minmax(128px, 168px) minmax(0, 1fr);
@@ -709,7 +709,7 @@ button.course-mod-card {
   margin-left: auto;
 }
 
-/* ===== 表格单元格自动换�?===== */
+/* ===== 表格单元格自动换行 ===== */
 table.courses-table td[data-field="name"],
 table.courses-table td[data-field="description"] {
   white-space: normal;
@@ -1339,7 +1339,7 @@ table.courses-table td[data-field="description"] {
   margin-left: auto;
 }
 
-/* ===== 表格单元格自动换�?===== */
+/* ===== 表格单元格自动换行 ===== */
 table.courses-table td[data-field="name"],
 table.courses-table td[data-field="description"] {
   white-space: normal;
@@ -1466,7 +1466,7 @@ table.courses-table td[data-field="description"] {
 .btn-sm { height: 30px; padding: 0 12px; font-size: 12px; border-radius: 8px; }
 .btn-block { width: 100%; }
 
-/* ===== 表单元素（参照页 input/select 风格�?==== */
+/* ===== 表单元素（参照页 input/select 风格）===== */
 .form-input,
 .form-select,
 .form-textarea {
@@ -1520,7 +1520,7 @@ table.courses-table td[data-field="description"] {
 }
 .form-row > * { flex: 1; min-width: 160px; }
 
-/* ===== 上传区（参照�?upload-area 风格�?==== */
+/* ===== 上传区（参照页 upload-area 风格）===== */
 .upload-area {
   border: 2px dashed var(--primary-light);
   border-radius: var(--radius);
@@ -1564,7 +1564,7 @@ table.courses-table td[data-field="description"] {
   min-height: 30px;
 }
 
-/* ===== 筛选栏（参照页 stat-input 风格�?==== */
+/* ===== 筛选栏（参照页 stat-input 风格）===== */
 .filter-bar {
   display: flex;
   gap: 12px;
@@ -1922,7 +1922,7 @@ table.courses-table td[data-field="description"] {
   cursor: pointer;
 }
 
-/* ===== 操作按钮�?===== */
+/* ===== 操作按钮行 ===== */
 .action-bar {
   display: flex;
   gap: 10px;
@@ -1933,7 +1933,7 @@ table.courses-table td[data-field="description"] {
 }
 .action-bar.left { justify-content: flex-start; margin-top: 0; border: none; padding: 0 0 12px; }
 
-/* ===== 表格（严格参照页风格：浅灰蓝基础 + 列独立底�?+ 磨砂玻璃表头�?==== */
+/* ===== 表格（严格参照页风格：浅灰蓝基础 + 列独立底色 + 磨砂玻璃表头）===== */
 .table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -1953,7 +1953,7 @@ table {
   background: var(--tbl-base);
   table-layout: fixed;
 }
-/* —�?表头：浅蓝磨砂玻�?+ 居中大字�?—�?*/
+/* —— 表头：浅蓝磨砂玻璃 + 居中大字号 —— */
 th {
   background: linear-gradient(135deg, rgba(100, 181, 246, 0.55) 0%, rgba(66, 165, 245, 0.50) 50%, rgba(100, 181, 246, 0.55) 100%);
   backdrop-filter: blur(14px) saturate(160%);
@@ -1974,25 +1974,25 @@ th {
 }
 th:last-child { border-right: none; }
 /* 表头各列底部色条（浅灰蓝同色系，强化列身份） */
-/* 课程�?10 �?*/
-table.courses-table th:nth-child(1) { border-bottom-color: #546E7A; }   /* 序号 - 钢蓝�?*/
+/* 课程表 10 列 */
+table.courses-table th:nth-child(1) { border-bottom-color: #546E7A; }   /* 序号 - 钢蓝灰 */
 table.courses-table th:nth-child(2) { border-bottom-color: #43A047; }   /* 类别 - 翠绿 */
 table.courses-table th:nth-child(3) { border-bottom-color: #1976D2; }   /* 课程 - 天蓝 */
-table.courses-table th:nth-child(4) { border-bottom-color: #7B1FA2; }   /* 简�?- 紫蓝 */
+table.courses-table th:nth-child(4) { border-bottom-color: #7B1FA2; }   /* 简介 - 紫蓝 */
 table.courses-table th:nth-child(5) { border-bottom-color: #3949AB; }   /* 老师 - 靛蓝 */
 table.courses-table th:nth-child(6) { border-bottom-color: #0288D1; }   /* 地点 - 青蓝 */
-table.courses-table th:nth-child(7) { border-bottom-color: #00838F; }   /* 要求 - 青灰�?*/
-table.courses-table th:nth-child(8) { border-bottom-color: #5C6BC0; }   /* 六年级名�?- 靛青�?*/
-table.courses-table th:nth-child(9) { border-bottom-color: #5C6BC0; }   /* 七年级名�?- 靛青�?*/
-table.courses-table th:nth-child(10){ border-bottom-color: #455A64; }   /* 操作 - 深钢�?*/
-/* 选课�?6 �?- 优化对齐与显�?*/
+table.courses-table th:nth-child(7) { border-bottom-color: #00838F; }   /* 要求 - 青灰蓝 */
+table.courses-table th:nth-child(8) { border-bottom-color: #5C6BC0; }   /* 六年级名额 - 靛青紫 */
+table.courses-table th:nth-child(9) { border-bottom-color: #5C6BC0; }   /* 七年级名额 - 靛青紫 */
+table.courses-table th:nth-child(10){ border-bottom-color: #455A64; }   /* 操作 - 深钢蓝 */
+/* 选课表 6 列 - 优化对齐与显示 */
 table.sel-table th:nth-child(1) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(2) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(3) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(4) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(5) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(6) { border-bottom-color: #94a3b8; }
-/* 用户�?11 �?*/
+/* 用户表 11 列 */
 table.usr-table {
   width: 100%;
   table-layout: auto;
@@ -2010,7 +2010,7 @@ table.usr-table th:nth-child(9) { border-bottom-color: #2E7D32; min-width: 88px;
 table.usr-table th:nth-child(10){ border-bottom-color: #37474F; width: 72px; }
 table.usr-table th:nth-child(11){ border-bottom-color: #455A64; min-width: 148px; }
 
-/* —�?单元格基础 —�?*/
+/* —— 单元格基础 —— */
 td {
   padding: 8px 8px;
   border-top: 1px solid #BBDEFB;
@@ -2023,8 +2023,8 @@ td {
 }
 tbody tr { transition: background 0.18s ease; }
 
-/* —�?列底色（极浅，≤8%）与 hover 加深—�?*/
-/* 课程�?10 �?*/
+/* —— 列底色（极浅，≤8%）与 hover 加深—— */
+/* 课程表 10 列 */
 table.courses-table td.seq                        { background-color: var(--col-1);  text-align: center; color: var(--muted); font-weight: 600; }
 table.courses-table td[data-field="category"]     { background-color: var(--col-2);  text-align: center; }
 table.courses-table td[data-field="name"]         { background-color: var(--col-3);  text-align: left; }
@@ -2048,7 +2048,7 @@ table.courses-table tbody tr:hover td[data-field="limit_grade6"] { background-co
 table.courses-table tbody tr:hover td[data-field="limit_grade7"] { background-color: var(--col-9-h); }
 table.courses-table tbody tr:hover td.row-actions                { background-color: var(--col-10-h); }
 
-/* ===== 选课�?- 现代化设�?===== */
+/* ===== 选课表 - 现代化设计 ===== */
 table.sel-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -2111,7 +2111,7 @@ table.sel-table thead th:nth-child(7) {
   text-align: center;
 }
 
-/* 单元格基础样式 - 统一横向分隔�?*/
+/* 单元格基础样式 - 统一横向分隔线 */
 table.sel-table td {
   background-color: #ffffff;
   padding: 11px 10px;
@@ -2125,7 +2125,7 @@ table.sel-table td {
   box-sizing: border-box;
   text-align: center;
 }
-/* 复选框�?*/
+/* 复选框列 */
 table.sel-table td:nth-child(1) {
   text-align: center;
   padding: 10px 8px;
@@ -2136,7 +2136,7 @@ table.sel-table td:nth-child(1) input[type="checkbox"] {
   cursor: pointer;
   accent-color: var(--primary);
 }
-/* 序号�?*/
+/* 序号列 */
 table.sel-table td.seq {
   text-align: center;
   color: #94a3b8;
@@ -2150,14 +2150,14 @@ table.sel-table td:nth-child(3) {
   font-weight: 600;
   white-space: nowrap;
 }
-/* 学生姓名�?*/
+/* 学生姓名列 */
 table.sel-table td:nth-child(4) {
   text-align: center;
   color: #1e293b;
   font-weight: 600;
   white-space: nowrap;
 }
-/* 性别�?*/
+/* 性别列 */
 table.sel-table td:nth-child(5) {
   text-align: center;
   color: #64748b;
@@ -2174,7 +2174,7 @@ table.sel-table td:nth-child(6) {
   text-overflow: clip;
   word-break: break-word;
 }
-/* 操作列：编辑/删除居中对齐在「操作」下方；内定在删除右侧，不参与居�?*/
+/* 操作列：编辑/删除居中对齐在「操作」下方；内定在删除右侧，不参与居中 */
 table.sel-table td.row-actions {
   text-align: center;
   vertical-align: middle;
@@ -2232,7 +2232,7 @@ table.sel-table td.row-actions .internal-tag {
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 
-/* 斑马�?*/
+/* 斑马纹 */
 table.sel-table tbody tr:nth-child(even) td {
   background-color: #fafbfc;
 }
@@ -2280,7 +2280,7 @@ table.sel-table td:nth-child(6) .course-link:hover {
   color: #fff;
 }
 
-/* 空数�?*/
+/* 空数据 */
 table.sel-table td.empty {
   text-align: center;
   padding: 40px 20px;
@@ -2290,7 +2290,7 @@ table.sel-table td.empty {
   background: #fff;
 }
 
-/* 未选课学生�?- 淡蓝色阴影效�?*/
+/* 未选课学生行 - 淡蓝色阴影效果 */
 table.sel-table tbody tr.unselected-row td {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
   box-shadow: inset 3px 0 0 0 #3b82f6;
@@ -2307,7 +2307,7 @@ table.sel-table tbody tr.pre-enroll-row td {
   box-shadow: inset 3px 0 0 0 #f97316;
 }
 
-/* 用户�?11 �?*/
+/* 用户表 11 列 */
 table.usr-table td.seq         { background-color: var(--col-1); text-align: center; color: var(--muted); font-weight: 600; }
 table.usr-table td:nth-child(2){ background-color: var(--col-2); text-align: left; }
 table.usr-table td.pwd-cell    { background-color: var(--col-3); cursor: pointer; text-align: left; letter-spacing: 2px; }
@@ -2367,7 +2367,7 @@ td.empty {
 
 td.pwd-cell:hover { outline: 1.5px dashed var(--primary-light); outline-offset: -3px; border-radius: 4px; }
 
-/* ===== 课程名称底色模块（严格参照页 course-name 风格�?==== */
+/* ===== 课程名称底色模块（严格参照页 course-name 风格）===== */
 .course-name {
   display: inline-block;
   font-weight: 700;
@@ -2504,14 +2504,14 @@ table.sel-table .course-link {
   border: 1px solid #fcd34d;
 }
 
-/* ===== 通用动画关键�?===== */
+/* ===== 通用动画关键帧 ===== */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn {
   from { transform: scale(0.8); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
 
-/* ===== 空状�?===== */
+/* ===== 空状态 ===== */
 .empty-state {
   text-align: center;
   padding: 40px;
@@ -2520,7 +2520,7 @@ table.sel-table .course-link {
 }
 .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
 
-/* ===== 登录覆盖�?===== */
+/* ===== 登录覆盖层 ===== */
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -2586,7 +2586,7 @@ table.sel-table .course-link {
   min-height: 20px;
 }
 
-/* ===== 弹窗（参照页 modal / reset-confirm 风格�?==== */
+/* ===== 弹窗（参照页 modal / reset-confirm 风格）===== */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -2650,7 +2650,7 @@ table.sel-table .course-link {
   border-top: 1px solid var(--border);
 }
 
-/* ===== 导出按钮（参照页 btn-export 风格�?==== */
+/* ===== 导出按钮（参照页 btn-export 风格）===== */
 .export-bar { display: flex; justify-content: center; padding: 6px; }
 .btn-export {
   display: inline-flex;
@@ -2965,7 +2965,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   color: #dc2626;
 }
 
-/* ===== 响应�?===== */
+/* ===== 响应式 ===== */
 @media (max-width: 1200px) {
   table.courses-table td[data-field="description"] { font-size: 12px; }
   .course-name { font-size: 12px; padding: 3px 6px; }
@@ -3410,7 +3410,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     padding: 0 8px;
   }
 
-  /* 课程表：隐藏非核心，冻结课程名称；保留授课地�?*/
+  /* 课程表：隐藏非核心，冻结课程名称；保留授课地点 */
   table.courses-table col:nth-child(1),
   table.courses-table col:nth-child(2),
   table.courses-table col:nth-child(4),
@@ -3454,7 +3454,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.courses-table th:nth-child(9),
   table.courses-table td:nth-child(9) { min-width: 64px; }
 
-  /* 选课表：保留班级、姓名、课程、操�?*/
+  /* 选课表：保留班级、姓名、课程、操作 */
   table.sel-table {
     --sel-col-w: 88px;
     --sel-col-w-class: 108px;
@@ -3469,7 +3469,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     display: none !important;
   }
 
-  /* 用户表：隐藏部分列，冻结教师名字；保留课程名�?*/
+  /* 用户表：隐藏部分列，冻结教师名字；保留课程名称 */
   table.usr-table th:nth-child(1),
   table.usr-table td:nth-child(1),
   table.usr-table th:nth-child(2),
@@ -3506,7 +3506,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.usr-table th:nth-child(6),
   table.usr-table td:nth-child(6) { min-width: 96px; }
 
-  /* ========== 2. 选课数据看板（仅 active 时显示，避免按钮泄漏到其它页�?========== */
+  /* ========== 2. 选课数据看板（仅 active 时显示，避免按钮泄漏到其它页） ========== */
   #section-selections:not(.active) {
     display: none !important;
   }
@@ -3563,7 +3563,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex: 0 0 auto;
   }
 
-  /* �?行：标题 + 统计（JS �?#courseStats 移入 .sel-head-stats-slot�?*/
+  /* 第1行：标题 + 统计（JS 将 #courseStats 移入 .sel-head-stats-slot） */
   #section-selections .sel-head-stats-slot {
     margin-left: auto;
     flex: 0 1 auto;
@@ -3627,7 +3627,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     margin-bottom: 1px;
     line-height: 1.2;
   }
-  /* 压缩下拉/输入高度，腾出表格空间（保持 16px �?iOS 缩放�?*/
+  /* 压缩下拉/输入高度，腾出表格空间（保持 16px 防 iOS 缩放） */
   #section-selections .filter-vertical .form-select,
   #section-selections .filter-vertical .form-input {
     width: 100%;
@@ -3639,7 +3639,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     line-height: 1.2;
     border-radius: 6px;
   }
-  /* 第三行：未选、内定、重置、查�?*/
+  /* 第三行：未选、内定、重置、查询 */
   #section-selections .filter-row-actions,
   #section-selections .sel-mob-btns {
     display: flex !important;
@@ -3670,7 +3670,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行：�?N �?| 状�?+ 禁�?+ 批量删除（右�?*/
+  /* 第四行：共 N 条 | 状态 + 禁选 + 批量删除（右） */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
@@ -3723,7 +3723,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     border-radius: 6px;
     line-height: 1.2;
   }
-  /* 工具栏整行隐藏，避免重复的禁�?删除/录课与条�?*/
+  /* 工具栏整行隐藏，避免重复的禁选/删除/录课与条数 */
   #section-selections .data-toolbar {
     display: none !important;
   }
@@ -3743,7 +3743,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex-direction: column;
     min-height: 0;
   }
-  /* 表格区域尽量占满剩余视口，多显示学生�?*/
+  /* 表格区域尽量占满剩余视口，多显示学生行 */
   #section-selections .data-card .table-wrap {
     flex: 1 1 auto;
     min-height: min(62vh, calc(100dvh - 250px));
@@ -3884,7 +3884,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     font-size: 11px;
     margin: 0;
   }
-  /* 课程状态卡片：固定三行两列�? 张可见），其余纵向滑�?*/
+  /* 课程状态卡片：固定三行两列（6 张可见），其余纵向滑动 */
   #section-board .board-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -3961,11 +3961,11 @@ th.sortable.active .sort-icon { opacity: 1; }
 </head>
 <body>
 
-<!-- ===== 顶部标题�?===== -->
+<!-- ===== 顶部标题栏 ===== -->
 <div class="header">
   <div class="header-brand">
     <div class="header-logo">
-      <img class="logo-img" src="images/logo.png" alt="浦江一中校�?>
+      <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
       <div class="logo-text">
         <span class="cn">上海市闵行区浦江第一中学</span>
         <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
@@ -3987,11 +3987,11 @@ th.sortable.active .sort-icon { opacity: 1; }
       <div id="roleSwitcher"></div>
       <div class="admin-info">
         <div class="avatar" id="adminAvatar">A</div>
-        <span id="adminName">管理�?/span>
+        <span id="adminName">管理员</span>
       </div>
-      <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登�?>
-        <span class="btn-logout-icon" aria-hidden="true">�?/span>
-        <span>退�?/span>
+      <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
+        <span class="btn-logout-icon" aria-hidden="true">→</span>
+        <span>退出</span>
       </button>
     </div>
   </div>
@@ -4002,7 +4002,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   <!-- ===== 主内容区 ===== -->
   <main class="main">
 
-    <!-- ===== 模块一：课程管�?===== -->
+    <!-- ===== 模块一：课程管理 ===== -->
     <section class="section" id="section-courses">
       <div class="course-top-bar">
         <div class="course-section-head">
@@ -4017,10 +4017,10 @@ th.sortable.active .sort-icon { opacity: 1; }
                   <div class="mod-title">上传课程文件</div>
                   <button type="button" class="mod-tpl" id="downloadCourseTemplateBtn" title="下载空白课程导入模板">📥 模板</button>
                 </div>
-                <div class="upload-area" id="uploadArea" title="点击或拖拽上�?csv / xlsx / xls / docx 文件">
-                  <span class="icon">�?/span>
+                <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
+                  <span class="icon">↑</span>
                   <div class="text-col">
-                    <span class="title">点击或拖拽上�?/span>
+                    <span class="title">点击或拖拽上传</span>
                     <span class="hint">csv / xlsx / xls / docx</span>
                   </div>
                 </div>
@@ -4032,7 +4032,7 @@ th.sortable.active .sort-icon { opacity: 1; }
               <span class="mod-ico" aria-hidden="true">📚</span>
               <span class="mod-body">
                 <span class="mod-title"><span class="txt-full">拓展课程管理</span><span class="txt-short">拓展课程</span></span>
-                <span class="mod-desc">编辑课程与锁�?/span>
+                <span class="mod-desc">编辑课程与锁定</span>
               </span>
             </button>
             <button type="button" class="course-mod-card course-mod-nav" id="openClassQuotaBoardBtn">
@@ -4051,8 +4051,8 @@ th.sortable.active .sort-icon { opacity: 1; }
         <div class="card-title course-list-title">
           <span>课程列表</span>
           <span class="card-title-right">
-            <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;margin-right:12px;">支持点击单元格行内编�?/span>
-            <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ <span class="txt-full">新增一�?/span><span class="txt-short">新增</span></button>
+            <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;margin-right:12px;">支持点击单元格行内编辑</span>
+            <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">+ <span class="txt-full">新增一行</span><span class="txt-short">新增</span></button>
           </span>
         </div>
         <div class="table-wrap">
@@ -4074,12 +4074,12 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <th>序号</th>
                 <th>课程类别</th>
                 <th>课程名称</th>
-                <th>课程简�?/th>
+                <th>课程简介</th>
                 <th>授课老师</th>
                 <th>授课地点</th>
                 <th>报名要求</th>
-                <th><span class="txt-full">六年级名�?/span><span class="txt-short">六·额</span></th>
-                <th><span class="txt-full">七年级名�?/span><span class="txt-short">七·额</span></th>
+                <th><span class="txt-full">六年级名额</span><span class="txt-short">六·额</span></th>
+                <th><span class="txt-full">七年级名额</span><span class="txt-short">七·额</span></th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -4087,16 +4087,16 @@ th.sortable.active .sort-icon { opacity: 1; }
           </table>
         </div>
         <div class="action-bar">
-          <button type="button" class="btn btn-primary" id="saveCoursesBtn">�?<span class="txt-full">确认保存全部课程</span><span class="txt-short">保存</span></button>
+          <button type="button" class="btn btn-primary" id="saveCoursesBtn">✓ <span class="txt-full">确认保存全部课程</span><span class="txt-short">保存</span></button>
         </div>
       </div>
 
-      <!-- 班级名额看板（与课程列表互斥显示�?-->
+      <!-- 班级名额看板（与课程列表互斥显示） -->
       <div class="card course-list-card" id="classQuotaBoardPanel" style="display:none;" hidden>
         <div class="card-title course-list-title">
           <span>班级名额看板</span>
           <span class="card-title-right">
-            <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;">按年级独立运�?· 不改全年级统一基础名额</span>
+            <span style="font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;">按年级独立运算 · 不改全年级统一基础名额</span>
           </span>
         </div>
         <div id="classQuotaBoardMount"></div>
@@ -4111,12 +4111,12 @@ th.sortable.active .sort-icon { opacity: 1; }
             <h2>选课数据看板</h2>
             <div id="selHeadStatsSlot" class="sel-head-stats-slot"></div>
           </div>
-          <p class="desc">按年�?/ 班级 / 课程筛选，支持批量操作�?Excel 导出</p>
+          <p class="desc">按年级 / 班级 / 课程筛选，支持批量操作与 Excel 导出</p>
         </div>
       </div>
 
       <div class="selections-layout">
-        <!-- 左侧筛选面�?-->
+        <!-- 左侧筛选面板 -->
         <div class="selections-sidebar">
           <div class="card filter-card">
             <div class="card-title">精准查找</div>
@@ -4126,8 +4126,8 @@ th.sortable.active .sort-icon { opacity: 1; }
                   <label>年级</label>
                   <select class="form-select" id="filterGrade">
                     <option value="">全部</option>
-                    <option value="六年�?>六年�?/option>
-                    <option value="七年�?>七年�?/option>
+                    <option value="六年级">六年级</option>
+                    <option value="七年级">七年级</option>
                   </select>
                 </div>
                 <div class="f-item">
@@ -4149,23 +4149,23 @@ th.sortable.active .sort-icon { opacity: 1; }
               </div>
               <div class="filter-row filter-row-mob2 desktop-filter-actions">
                 <button type="button" class="btn btn-primary btn-block" id="queryBtn">🔍 查询</button>
-                <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn"><span class="txt-full">重置筛�?/span><span class="txt-short">重置</span></button>
+                <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
               </div>
               <div class="filter-row filter-row-actions sel-mob-btns">
-                <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 <span class="txt-full">未选课学生</span><span class="txt-short">未�?/span></button>
+                <button type="button" class="btn btn-outline btn-block" id="unselectedBtn" title="查看未选课学生">📋 <span class="txt-full">未选课学生</span><span class="txt-short">未选</span></button>
                 <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
-                <button type="button" class="btn btn-outline btn-block mob-filter-extra" id="resetFilterBtnMob"><span class="txt-full">重置筛�?/span><span class="txt-short">重置</span></button>
+                <button type="button" class="btn btn-outline btn-block mob-filter-extra" id="resetFilterBtnMob"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
                 <button type="button" class="btn btn-primary btn-block mob-filter-extra" id="queryBtnMob">🔍 查询</button>
                 <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="导入全校六、七年级学生名单" hidden aria-hidden="true">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
-                <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名�? hidden aria-hidden="true">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
+                <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单" hidden aria-hidden="true">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
               <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
                 <span id="selMobCountSlot" class="sel-mob-count-slot"></span>
                 <div class="sel-mob-actions-right">
-                  <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状�?/span>
-                  <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁�?/span></button>
+                  <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
+                  <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
                   <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
-                  <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">�?<span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
+                  <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
                 </div>
               </div>
             </div>
@@ -4176,7 +4176,7 @@ th.sortable.active .sort-icon { opacity: 1; }
             <div class="stats-mini" id="courseStats">
               <div class="stat-mini-item">
                 <span class="stat-mini-value" id="statTotal">0</span>
-                <span class="stat-mini-label">总选课�?/span>
+                <span class="stat-mini-label">总选课数</span>
               </div>
               <div class="stat-mini-item">
                 <span class="stat-mini-value" id="statCourseCount">0</span>
@@ -4191,31 +4191,31 @@ th.sortable.active .sort-icon { opacity: 1; }
           <div class="card data-card">
             <div class="data-toolbar">
               <div class="data-toolbar-left" id="dataToolbarCountSlot">
-                <span class="data-count" id="dataCount">�?0 条数�?/span>
+                <span class="data-count" id="dataCount">共 0 条数据</span>
               </div>
               <div class="data-toolbar-right desktop-only">
                 <div class="selection-lock-wrap">
                   <button type="button" class="btn btn-warning" id="toggleSelectionBtn">🚫 禁止选课</button>
-                  <span class="selection-status-text open" id="selectionStatusText">当前状态为选课状�?/span>
+                  <span class="selection-status-text open" id="selectionStatusText">当前状态为选课状态</span>
                 </div>
                 <button type="button" class="btn btn-danger" id="batchDeleteBtn">🗑 批量删除</button>
-                <button type="button" class="btn btn-primary" id="preEnrollBtn" title="上传已确定选课的学生名�?>📌 提前录课</button>
+                <button type="button" class="btn btn-primary" id="preEnrollBtn" title="上传已确定选课的学生名单">📌 提前录课</button>
                 <input type="file" id="preEnrollFile" accept=".xlsx,.xls" style="display:none">
                 <button type="button" class="btn btn-outline" id="importRosterBtn" title="导入全校六、七年级学生名单">📥 导入学生名单</button>
                 <input type="file" id="importRosterFile" accept=".xlsx,.xls,.csv" style="display:none">
-                <button type="button" class="btn btn-success" id="exportBtn">�?导出 Excel</button>
+                <button type="button" class="btn btn-success" id="exportBtn">⬇ 导出 Excel</button>
               </div>
             </div>
             <div class="table-wrap">
               <table class="sel-table" id="selectionsTable">
                 <thead>
                   <tr>
-                    <th><input type="checkbox" id="selectAll" title="全�?></th>
+                    <th><input type="checkbox" id="selectAll" title="全选"></th>
                     <th>序号</th>
                     <th>班级</th>
                     <th>学生姓名</th>
                     <th>性别</th>
-                    <th>所选课�?/th>
+                    <th>所选课程</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -4228,7 +4228,7 @@ th.sortable.active .sort-icon { opacity: 1; }
       </div>
     </section>
 
-    <!-- ===== 模块：课程看�?===== -->
+    <!-- ===== 模块：课程看板 ===== -->
     <section class="section active" id="section-board">
       <div class="section-header">
         <div>
@@ -4237,7 +4237,7 @@ th.sortable.active .sort-icon { opacity: 1; }
         </div>
         <div class="board-header-actions">
           <div class="board-schedule-wrap">
-            <span class="board-schedule-status" id="boardScheduleStatus">停课状�?/span>
+            <span class="board-schedule-status" id="boardScheduleStatus">停课状态</span>
             <button type="button" class="btn btn-warning" id="boardSuspendBtn"><span class="txt-full">今日停课</span><span class="txt-short">停课</span></button>
           </div>
           <button type="button" class="btn btn-outline" id="boardRefreshBtn">🔄 <span class="txt-full">刷新</span><span class="txt-short">刷新</span></button>
@@ -4245,32 +4245,32 @@ th.sortable.active .sort-icon { opacity: 1; }
       </div>
 
       <div class="board-kpis" id="boardKpis">
-        <div class="board-kpi clickable" id="boardKpiCoursesBtn" title="滚动至上课记�?><div class="k-n" id="boardKpiCourses">0</div><div class="k-l">开课课�?/div></div>
-        <div class="board-kpi ok"><div class="k-n" id="boardKpiDone">0</div><div class="k-l">今日已完�?/div></div>
-        <div class="board-kpi warn"><div class="k-n" id="boardKpiDoing">0</div><div class="k-l">今日进行�?/div></div>
+        <div class="board-kpi clickable" id="boardKpiCoursesBtn" title="滚动至上课记录"><div class="k-n" id="boardKpiCourses">0</div><div class="k-l">开课课程</div></div>
+        <div class="board-kpi ok"><div class="k-n" id="boardKpiDone">0</div><div class="k-l">今日已完成</div></div>
+        <div class="board-kpi warn"><div class="k-n" id="boardKpiDoing">0</div><div class="k-l">今日进行中</div></div>
         <div class="board-kpi"><div class="k-n" id="boardKpiHours">0</div><div class="k-l">累计课时</div></div>
         <div class="board-kpi bad"><div class="k-n" id="boardKpiAbsent">0</div><div class="k-l">今日旷课合计</div></div>
-        <div class="board-kpi soft"><div class="k-n" id="boardKpiSynced">0</div><div class="k-l">已上报课�?/div></div>
+        <div class="board-kpi soft"><div class="k-n" id="boardKpiSynced">0</div><div class="k-l">已上报课程</div></div>
       </div>
 
       <div class="board-layout">
         <aside class="board-side">
           <div class="board-side-head">
-            <input type="text" class="form-input" id="boardSearch" placeholder="搜索课程 / 教师 / 地点�?>
+            <input type="text" class="form-input" id="boardSearch" placeholder="搜索课程 / 教师 / 地点…">
             <select class="form-select" id="boardStatusFilter">
-              <option value="">全部状�?/option>
-              <option value="今日已完�?>今日已完�?/option>
-              <option value="进行�?>进行�?/option>
-              <option value="待签�?>待签�?/option>
-              <option value="未上�?>未上�?/option>
+              <option value="">全部状态</option>
+              <option value="今日已完成">今日已完成</option>
+              <option value="进行中">进行中</option>
+              <option value="待签到">待签到</option>
+              <option value="未上报">未上报</option>
             </select>
             <div class="board-side-meta">
-              <span id="boardListHint">�?0 门课�?/span>
+              <span id="boardListHint">共 0 门课程</span>
               <span id="boardTodayHint"></span>
             </div>
           </div>
           <div class="board-list" id="boardGrid">
-            <div class="board-empty">加载中�?/div>
+            <div class="board-empty">加载中…</div>
           </div>
         </aside>
 
@@ -4281,26 +4281,26 @@ th.sortable.active .sort-icon { opacity: 1; }
               <h3 id="courseHoursTitle">上课记录</h3>
               <div class="hours-panel-actions">
                 <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddDateBtn" style="display:none">+ <span class="txt-full">新增日期</span><span class="txt-short">日期</span></button>
-                <button type="button" class="btn btn-outline btn-sm" id="courseHoursEditBtn">�?<span class="txt-full">编辑</span><span class="txt-short">编辑</span></button>
-                <button type="button" class="btn btn-success btn-sm" id="courseHoursExportBtn">�?<span class="txt-full">导出表格</span><span class="txt-short">导出</span></button>
+                <button type="button" class="btn btn-outline btn-sm" id="courseHoursEditBtn">✎ <span class="txt-full">编辑</span><span class="txt-short">编辑</span></button>
+                <button type="button" class="btn btn-success btn-sm" id="courseHoursExportBtn">⬇ <span class="txt-full">导出表格</span><span class="txt-short">导出</span></button>
               </div>
             </div>
             <div class="hours-panel-body">
               <div class="hours-table-wrap" id="courseHoursTableWrap">
-                <div class="bd-empty">加载中�?/div>
+                <div class="bd-empty">加载中…</div>
               </div>
             </div>
           </div>
 
-          <!-- 单课详情（点击左侧课程卡片后显示�?-->
+          <!-- 单课详情（点击左侧课程卡片后显示） -->
           <div id="boardDetailView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
             <div class="board-detail-head">
               <div>
                 <div class="bd-title" id="bdTitle">请选择左侧课程</div>
-                <div class="bd-sub" id="bdSub">点击左侧课程卡片，在此查看课堂数�?/div>
+                <div class="bd-sub" id="bdSub">点击左侧课程卡片，在此查看课堂数据</div>
               </div>
               <div class="bd-head-actions">
-                <button type="button" class="btn btn-outline btn-sm" id="boardBackHoursBtn">�?返回上课记录</button>
+                <button type="button" class="btn btn-outline btn-sm" id="boardBackHoursBtn">← 返回上课记录</button>
               </div>
             </div>
             <div class="board-detail-tabs">
@@ -4310,7 +4310,7 @@ th.sortable.active .sort-icon { opacity: 1; }
               <button type="button" class="bd-tab" data-bd-tab="grade">综合考核</button>
             </div>
             <div class="board-detail-body" id="boardDetailBody">
-              <div class="bd-empty">请从左侧选择一门课程查看详�?/div>
+              <div class="bd-empty">请从左侧选择一门课程查看详情</div>
             </div>
           </div>
         </div>
@@ -4322,35 +4322,35 @@ th.sortable.active .sort-icon { opacity: 1; }
       <div class="section-header">
         <div>
           <h2>用户管理</h2>
-          <p class="desc">管理教师与管理员账号，支持批量导入用户数�?/p>
+          <p class="desc">管理教师与管理员账号，支持批量导入用户数据</p>
         </div>
         <div class="section-header-actions">
           <button type="button" class="btn btn-outline" id="consistencyCheckBtn">🔍 <span class="txt-full">数据校验</span><span class="txt-short">校验</span></button>
           <button type="button" class="btn btn-outline" id="importHistoryBtn">📋 <span class="txt-full">导入历史</span><span class="txt-short">历史</span></button>
-          <button type="button" class="btn btn-outline" id="importUserBtn">�?<span class="txt-full">导入用户</span><span class="txt-short">导入</span></button>
+          <button type="button" class="btn btn-outline" id="importUserBtn">⬆ <span class="txt-full">导入用户</span><span class="txt-short">导入</span></button>
           <button type="button" class="btn btn-primary" id="addUserBtn">+ <span class="txt-full">添加用户</span><span class="txt-short">添加</span></button>
         </div>
       </div>
 
       <div class="card">
         <div class="user-toolbar">
-          <input type="text" class="form-input search-input" id="userSearchInput" placeholder="🔍 搜索账号、姓名、班级、邮箱或手机�?..">
+          <input type="text" class="form-input search-input" id="userSearchInput" placeholder="🔍 搜索账号、姓名、班级、邮箱或手机号...">
           <span class="stat-info" id="userStatInfo"></span>
         </div>
         <div class="table-wrap">
           <table class="usr-table" id="usersTable">
             <thead>
               <tr>
-                <th class="sortable" data-sort="index">序号<span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="username">账号<span class="sort-icon">�?/span></th>
+                <th class="sortable" data-sort="index">序号<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="username">账号<span class="sort-icon">⇅</span></th>
                 <th>密码</th>
-                <th class="sortable" data-sort="teacher_name">教师名字<span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="course_name">课程名称<span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="class_name">班级<span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="email">邮箱<span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="phone">手机�?span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="role">角色<span class="sort-icon">�?/span></th>
-                <th class="sortable" data-sort="status">状�?span class="sort-icon">�?/span></th>
+                <th class="sortable" data-sort="teacher_name">教师名字<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="course_name">课程名称<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="class_name">班级<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="email">邮箱<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="phone">手机号<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="role">角色<span class="sort-icon">⇅</span></th>
+                <th class="sortable" data-sort="status">状态<span class="sort-icon">⇅</span></th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -4364,11 +4364,11 @@ th.sortable.active .sort-icon { opacity: 1; }
   </main>
 </div>
 
-<!-- ===== 登录覆盖�?===== -->
+<!-- ===== 登录覆盖层 ===== -->
 <div class="login-overlay" id="loginOverlay">
   <div class="login-card">
     <div class="login-head">
-      <div class="login-logo"><img src="images/logo.png" alt="浦江一中校�?></div>
+      <div class="login-logo"><img src="images/logo.png" alt="浦江一中校徽"></div>
       <h3>浦江一中拓展课 · 管理后台</h3>
       <p>请输入管理员账号密码</p>
     </div>
@@ -4379,9 +4379,9 @@ th.sortable.active .sort-icon { opacity: 1; }
     </div>
     <div class="form-group">
       <label>密码</label>
-      <input type="password" id="loginPass" class="form-input" autocomplete="current-password" placeholder="请输入密�?>
+      <input type="password" id="loginPass" class="form-input" autocomplete="current-password" placeholder="请输入密码">
     </div>
-    <button type="button" class="btn btn-primary btn-block" id="loginBtn" style="height:44px; font-size:14px; letter-spacing: 4px; border-radius:10px;">�?�?/button>
+    <button type="button" class="btn btn-primary btn-block" id="loginBtn" style="height:44px; font-size:14px; letter-spacing: 4px; border-radius:10px;">登 录</button>
   </div>
 </div>
 
@@ -4390,7 +4390,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   <div class="modal" id="modalShell">
     <div class="modal-header">
       <h3 id="modalTitle">提示</h3>
-      <button type="button" class="modal-close" onclick="closeModal()" title="关闭">�?/button>
+      <button type="button" class="modal-close" onclick="closeModal()" title="关闭">✕</button>
     </div>
     <div class="modal-body" id="modalBox"></div>
   </div>
@@ -4410,7 +4410,7 @@ function clearToken(){
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem('pjyz_token');
   localStorage.removeItem('pjyz_user');
-  // 保留 pjyz_active_role / pjyz_last_page，下次登录回到最近页�?
+  // 保留 pjyz_active_role / pjyz_last_page，下次登录回到最近页面
   localStorage.removeItem('pjyz_login_role');
 }
 
@@ -4430,9 +4430,9 @@ function handleAuthError(){
 }
 
 /**
- * 通用请求函数，自动带 token �?JSON header
- * isForm=true 时不设置 Content-Type（用�?FormData 上传�?
- * 返回 JSON 数据；若�?blob（Excel）则返回 Blob
+ * 通用请求函数，自动带 token 与 JSON header
+ * isForm=true 时不设置 Content-Type（用于 FormData 上传）
+ * 返回 JSON 数据；若为 blob（Excel）则返回 Blob
  */
 async function request(method, url, body, isForm){
   const headers = {};
@@ -4447,11 +4447,11 @@ async function request(method, url, body, isForm){
   try {
     res = await fetch(apiBase() + url, opts);
   } catch(e){
-    throw new Error('网络请求失败，请检查后端服务是否启�?);
+    throw new Error('网络请求失败，请检查后端服务是否启动');
   }
   if (res.status === 401 && url !== '/api/login'){
     handleAuthError();
-    throw new Error('登录已过期，请重新登�?);
+    throw new Error('登录已过期，请重新登录');
   }
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')){
@@ -4473,18 +4473,18 @@ async function request(method, url, body, isForm){
   return await res.blob();
 }
 
-/** �?Cloudflare HTML / D1 配额等错误转成可读短文案 */
+/** 把 Cloudflare HTML / D1 配额等错误转成可读短文案 */
 function friendlyApiErrorText(raw, status) {
   var txt = String(raw || '');
   if (/row read limit|exceeded D1|free tier daily/i.test(txt)) {
-    return '数据库今日读取配额已用尽，请明天再试或升�?Cloudflare D1。数据未丢失�?;
+    return '数据库今日读取配额已用尽，请明天再试或升级 Cloudflare D1。数据未丢失。';
   }
   if (/cf-error-details|cf-error-code|<!DOCTYPE html/i.test(txt)) {
-    if (/1101/.test(txt)) return '服务端异常（Cloudflare 1101），请稍后刷新重试。数据未丢失�?;
-    return '服务暂时不可用（' + (status || '?') + '），请稍后刷新。数据未丢失�?;
+    if (/1101/.test(txt)) return '服务端异常（Cloudflare 1101），请稍后刷新重试。数据未丢失。';
+    return '服务暂时不可用（' + (status || '?') + '），请稍后刷新。数据未丢失。';
   }
   var compact = txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  if (compact.length > 180) compact = compact.slice(0, 180) + '�?;
+  if (compact.length > 180) compact = compact.slice(0, 180) + '…';
   return compact || ('请求失败 (' + (status || '?') + ')');
 }
 
@@ -4524,7 +4524,7 @@ async function doLogin(){
   msgEl.textContent = '';
   if (!username || !password){ msgEl.textContent = '请输入账号和密码'; return; }
   const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = '登录�?..';
+  btn.disabled = true; btn.textContent = '登录中...';
   try {
     const data = await request('POST', '/api/login', { username, password });
     if (data.success && data.token){
@@ -4547,11 +4547,11 @@ async function doLogin(){
   } catch(e){
     msgEl.textContent = e.message;
   } finally {
-    btn.disabled = false; btn.textContent = '�?�?;
+    btn.disabled = false; btn.textContent = '登 录';
   }
 }
 
-/* ============ 退出登�?============ */
+/* ============ 退出登录 ============ */
 (function bindEvents(){
   function safeBind(id, event, handler){
     const el = document.getElementById(id);
@@ -4599,13 +4599,13 @@ var COURSE_HOURS_DATE_COLS = 18;
 
 function boardStatusLabel(st) {
   var map = {
-    none: { l: '未签�?, c: 'bd-status-warn' },
-    present: { l: '已签�?, c: 'bd-status-ok' },
+    none: { l: '未签到', c: 'bd-status-warn' },
+    present: { l: '已签到', c: 'bd-status-ok' },
     absent: { l: '旷课', c: 'bd-status-bad' },
     sick: { l: '病假', c: 'bd-status-warn' },
     late: { l: '迟到', c: 'bd-status-warn' }
   };
-  var o = map[st] || { l: st || '�?, c: '' };
+  var o = map[st] || { l: st || '—', c: '' };
   return '<span class="' + o.c + '">' + escHtml(o.l) + '</span>';
 }
 
@@ -4656,9 +4656,9 @@ function recalcBoardSummaryFromPayload() {
 }
 
 function boardBadgeClass(status) {
-  if (status === '今日已完�?) return 'done';
-  if (status === '进行�?) return 'doing';
-  if (status === '待签�?) return 'wait';
+  if (status === '今日已完成') return 'done';
+  if (status === '进行中') return 'doing';
+  if (status === '待签到') return 'wait';
   return 'none';
 }
 
@@ -4687,7 +4687,7 @@ function getFilteredBoardItems() {
     var hay = [item.course_name, item.teacher_name, item.location, item.category].join(' ').toLowerCase();
     return hay.indexOf(q) > -1;
   });
-  // 已上报课程优先，方便管理员先看到有数据的�?
+  // 已上报课程优先，方便管理员先看到有数据的课
   list.sort(function(a, b) {
     var as = a.synced ? 0 : 1;
     var bs = b.synced ? 0 : 1;
@@ -4703,12 +4703,12 @@ function getFilteredBoardItems() {
 function renderBoardGrid() {
   var list = getFilteredBoardItems();
   var grid = document.getElementById('boardGrid');
-  document.getElementById('boardListHint').textContent = '�?' + list.length + ' �?;
+  document.getElementById('boardListHint').textContent = '共 ' + list.length + ' 门';
   var todayEl = document.getElementById('boardTodayHint');
   if (todayEl) todayEl.textContent = boardState.today ? ('今日 ' + boardState.today) : '';
 
   if (!list.length) {
-    grid.innerHTML = '<div class="board-empty">暂无匹配课程<br>教师端完成签到后会自动上�?/div>';
+    grid.innerHTML = '<div class="board-empty">暂无匹配课程<br>教师端完成签到后会自动上报</div>';
     return;
   }
 
@@ -4720,7 +4720,7 @@ function renderBoardGrid() {
         '<span class="board-badge ' + boardBadgeClass(item.today_status) + '">' + escHtml(item.today_status) + '</span>' +
       '</div>' +
       '<div class="board-card-meta">' +
-        escHtml(item.teacher_name || '�?) +
+        escHtml(item.teacher_name || '—') +
         (item.location ? (' · ' + escHtml(item.location)) : '') +
       '</div>' +
       '<div class="board-card-foot">' +
@@ -4764,9 +4764,9 @@ function escHtml(s) {
 
 function showBoardPlaceholder() {
   document.getElementById('bdTitle').textContent = '请选择左侧课程';
-  document.getElementById('bdSub').textContent = '点击左侧课程卡片，在此查看课堂数�?;
+  document.getElementById('bdSub').textContent = '点击左侧课程卡片，在此查看课堂数据';
   document.getElementById('boardDetailBody').innerHTML =
-    '<div class="bd-empty">请从左侧选择一门课程查看详�?/div>';
+    '<div class="bd-empty">请从左侧选择一门课程查看详情</div>';
 }
 
 async function loadCourseBoard() {
@@ -4790,7 +4790,7 @@ async function loadCourseBoard() {
   } catch (_) {}
 
   if (grid && !(boardState.items && boardState.items.length)) {
-    grid.innerHTML = '<div class="board-empty">加载中�?/div>';
+    grid.innerHTML = '<div class="board-empty">加载中…</div>';
   }
 
   try {
@@ -4820,7 +4820,7 @@ async function loadCourseBoard() {
     syncBoardHoursFromMatrix();
   } catch (e) {
     if (grid && !(boardState.items && boardState.items.length)) {
-      grid.innerHTML = '<div class="board-empty">加载失败�? + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+      grid.innerHTML = '<div class="board-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
     }
     toast(friendlyApiErrorText(e.message), 'error');
   }
@@ -4851,12 +4851,12 @@ function syncBoardHoursFromMatrix() {
 function formatClassCompactBoard(s) {
   var g = String((s && s.grade) || '').trim();
   var c = String((s && s.class_name) || '').trim();
-  if (g && c) return g + (c.indexOf('�?) > -1 ? c : (c + '�?));
-  return c || g || '�?;
+  if (g && c) return g + (c.indexOf('班') > -1 ? c : (c + '班'));
+  return c || g || '—';
 }
 
 function statusLabelBoard(st) {
-  return ({ none: '未签�?, present: '已签�?, absent: '旷课', late: '迟到', sick: '病假' })[st] || (st || '�?);
+  return ({ none: '未签到', present: '已签到', absent: '旷课', late: '迟到', sick: '病假' })[st] || (st || '—');
 }
 
 function statusClassBoard(st) {
@@ -4905,7 +4905,7 @@ function normalizeBoardDetailPayload(data) {
       var v = boardLookupKeyed(src, s);
       if (v !== undefined) out[String(s.stableId || s.id)] = v;
     });
-    // 保留未能匹配的旧键，避免丢数�?
+    // 保留未能匹配的旧键，避免丢数据
     Object.keys(src).forEach(function(k) {
       if (out[k] == null) out[k] = src[k];
     });
@@ -4944,7 +4944,7 @@ function renderBoardDetail() {
   var listItem = (boardState.items || []).find(function(i) { return i.course_name === boardState.selectedCourse; }) || {};
 
   if (!d.synced) {
-    body.innerHTML = '<div class="bd-empty">该课程教师端尚未上报课堂数据�?br>教师完成签到后数据将自动同步到此处�?/div>';
+    body.innerHTML = '<div class="bd-empty">该课程教师端尚未上报课堂数据。<br>教师完成签到后数据将自动同步到此处。</div>';
     return;
   }
 
@@ -4959,25 +4959,25 @@ function renderBoardDetail() {
     body.innerHTML =
       '<div class="bd-summary-bar">' +
         '<div class="bd-rate-card">' +
-          '<div class="bd-rate-title">今日到课�?/div>' +
+          '<div class="bd-rate-title">今日到课率</div>' +
           '<div class="board-progress"><i style="width:' + rate + '%"></i></div>' +
-          '<div class="board-progress-label"><span>已签�?/ 学生</span><span>' + rate + '%�? +
-            (summary.present_count || 0) + '/' + (summary.student_count || 0) + '�?/span></div>' +
+          '<div class="board-progress-label"><span>已签到 / 学生</span><span>' + rate + '%（' +
+            (summary.present_count || 0) + '/' + (summary.student_count || 0) + '）</span></div>' +
         '</div>' +
         '<div class="bd-info-card">' +
-          '<div class="bd-info-row"><span class="k">签到日期</span><span>' + escHtml(summary.checkin_day || '�?) + '</span></div>' +
-          '<div class="bd-info-row"><span class="k">签到状�?/span><span>' + (summary.checkin_done ? '已完�? : '未完�?) + '</span></div>' +
-          '<div class="bd-info-row"><span class="k">最近同�?/span><span>' + escHtml(summary.synced_at || '�?) + '</span></div>' +
-          '<div class="bd-info-row"><span class="k">签到场次</span><span>' + (summary.session_count || 0) + ' �?/span></div>' +
+          '<div class="bd-info-row"><span class="k">签到日期</span><span>' + escHtml(summary.checkin_day || '—') + '</span></div>' +
+          '<div class="bd-info-row"><span class="k">签到状态</span><span>' + (summary.checkin_done ? '已完成' : '未完成') + '</span></div>' +
+          '<div class="bd-info-row"><span class="k">最近同步</span><span>' + escHtml(summary.synced_at || '—') + '</span></div>' +
+          '<div class="bd-info-row"><span class="k">签到场次</span><span>' + (summary.session_count || 0) + ' 次</span></div>' +
         '</div>' +
       '</div>' +
       '<div class="bd-overview-grid">' +
         '<div class="bd-ov"><div class="n">' + totalClasses + '</div><div class="l">累计课时</div></div>' +
         '<div class="bd-ov"><div class="n">' + (summary.student_count || 0) + '</div><div class="l">学生人数</div></div>' +
-        '<div class="bd-ov"><div class="n">' + (summary.present_count || 0) + '</div><div class="l">今日已签�?/div></div>' +
+        '<div class="bd-ov"><div class="n">' + (summary.present_count || 0) + '</div><div class="l">今日已签到</div></div>' +
         '<div class="bd-ov"><div class="n">' + (summary.absent_count || 0) + '</div><div class="l">今日旷课</div></div>' +
         '<div class="bd-ov"><div class="n">' + (summary.flower_total || 0) + '</div><div class="l">小红花总数</div></div>' +
-        '<div class="bd-ov"><div class="n">' + (summary.exam_done_count || 0) + '</div><div class="l">已评星人�?/div></div>' +
+        '<div class="bd-ov"><div class="n">' + (summary.exam_done_count || 0) + '</div><div class="l">已评星人数</div></div>' +
       '</div>';
     return;
   }
@@ -4988,7 +4988,7 @@ function renderBoardDetail() {
       return;
     }
     body.innerHTML = '<div class="bd-table-wrap"><table class="bd-table"><thead><tr>' +
-      '<th>序号</th><th>班级</th><th>姓名</th><th>状�?/th></tr></thead><tbody>' +
+      '<th>序号</th><th>班级</th><th>姓名</th><th>状态</th></tr></thead><tbody>' +
       students.map(function(s, i) {
         var st = boardLookupKeyed(checkin, s);
         if (st == null) st = 'none';
@@ -5011,7 +5011,7 @@ function renderBoardDetail() {
     var rows = students.map(function(s, i) {
       var cells = sessions.map(function(sess) {
         var st = boardLookupKeyed(sess.checkin || {}, s);
-        if (st == null || st === '') return '<td class="cell-empty">�?/td>';
+        if (st == null || st === '') return '<td class="cell-empty">—</td>';
         return '<td>' + boardStatusLabel(st) + '</td>';
       }).join('');
       return '<tr><td>' + (i + 1) + '</td><td>' + escHtml(formatClassCompactBoard(s)) +
@@ -5055,13 +5055,13 @@ function renderBoardDetail() {
     }).sort(function(a, b) { return b.total - a.total; });
     var n = gradeRows.length;
     gradeRows.forEach(function(r, i) {
-      if (n === 0 || (r.total === 0 && r.checkins === 0)) r.grade = '�?;
+      if (n === 0 || (r.total === 0 && r.checkins === 0)) r.grade = '—';
       else if (i < Math.ceil(n * 0.6)) r.grade = 'A';
       else if (i < Math.ceil(n * 0.9)) r.grade = 'B';
       else r.grade = 'C';
     });
     body.innerHTML = '<div class="bd-table-wrap"><table class="bd-table"><thead><tr>' +
-      '<th>序号</th><th>班级</th><th>姓名</th><th>签到</th><th>旷课</th><th>小红�?/th><th>期末</th><th>总分</th><th>等第</th>' +
+      '<th>序号</th><th>班级</th><th>姓名</th><th>签到</th><th>旷课</th><th>小红花</th><th>期末</th><th>总分</th><th>等第</th>' +
       '</tr></thead><tbody>' +
       gradeRows.map(function(r) {
         return '<tr><td>' + r.idx + '</td><td>' + escHtml(formatClassCompactBoard(r.s)) +
@@ -5111,13 +5111,13 @@ function getCourseHoursDisplayDates(allDates) {
 function formatHoursDateLabel(dateStr) {
   var s = String(dateStr || '').trim();
   var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (m) return parseInt(m[2], 10) + '�? + parseInt(m[3], 10) + '�?;
+  if (m) return parseInt(m[2], 10) + '月' + parseInt(m[3], 10) + '日';
   return s;
 }
 
 async function removeCourseHoursDateColumn(dateKey) {
   if (!dateKey) return;
-  if (!confirm('确定删除该日期列�? + dateKey + '」吗？删除后将立即同步，刷新页面也不会再显示�?)) return;
+  if (!confirm('确定删除该日期列「' + dateKey + '」吗？删除后将立即同步，刷新页面也不会再显示。')) return;
   try {
     await request('PUT', '/api/course-hours', { updates: [], delete_dates: [dateKey] });
     if (courseHoursState.data) {
@@ -5134,15 +5134,15 @@ async function removeCourseHoursDateColumn(dateKey) {
       if (key.split('\0')[1] === dateKey) delete courseHoursState.pending[key];
     });
     renderCourseHoursTable();
-    if (typeof toast === 'function') toast('已删除日期列并同�?, 'success');
+    if (typeof toast === 'function') toast('已删除日期列并同步', 'success');
   } catch (e) {
-    if (typeof toast === 'function') toast('删除失败�? + e.message, 'error');
-    else alert('删除失败�? + e.message);
+    if (typeof toast === 'function') toast('删除失败：' + e.message, 'error');
+    else alert('删除失败：' + e.message);
   }
 }
 
 async function addCourseHoursDateColumn() {
-  var raw = prompt('请输入要新增的日期（格式：YYYY-MM-DD，例�?2026-08-25�?, boardState.today || '');
+  var raw = prompt('请输入要新增的日期（格式：YYYY-MM-DD，例如 2026-08-25）', boardState.today || '');
   if (raw == null) return;
   var dateKey = normalizeCourseHourDateKey(raw);
   if (!dateKey) {
@@ -5151,12 +5151,12 @@ async function addCourseHoursDateColumn() {
   }
   var existing = getCourseHoursDisplayDates((courseHoursState.data && courseHoursState.data.dates) || []);
   if (existing.some(function(d) { return d && d.key === dateKey; })) {
-    if (typeof toast === 'function') toast('该日期列已存�?, 'warning');
+    if (typeof toast === 'function') toast('该日期列已存在', 'warning');
     return;
   }
   var filled = existing.filter(Boolean).length;
   if (filled >= COURSE_HOURS_DATE_COLS) {
-    if (typeof toast === 'function') toast('日期列已满（最�?8列），请先删除旧日期', 'warning');
+    if (typeof toast === 'function') toast('日期列已满（最多18列），请先删除旧日期', 'warning');
     return;
   }
   try {
@@ -5173,10 +5173,10 @@ async function addCourseHoursDateColumn() {
     });
     courseHoursState.deletedDates = (courseHoursState.deletedDates || []).filter(function(d) { return d !== dateKey; });
     renderCourseHoursTable();
-    if (typeof toast === 'function') toast('已新增日期列并同�?, 'success');
+    if (typeof toast === 'function') toast('已新增日期列并同步', 'success');
   } catch (e) {
-    if (typeof toast === 'function') toast('新增失败�? + e.message, 'error');
-    else alert('新增失败�? + e.message);
+    if (typeof toast === 'function') toast('新增失败：' + e.message, 'error');
+    else alert('新增失败：' + e.message);
   }
 }
 
@@ -5231,7 +5231,7 @@ async function renameCourseHoursDateColumn(oldKey, newRaw) {
     renderCourseHoursTable();
     if (typeof toast === 'function') toast('日期已修改并同步', 'success');
   } catch (e) {
-    if (typeof toast === 'function') toast('修改日期失败�? + e.message, 'error');
+    if (typeof toast === 'function') toast('修改日期失败：' + e.message, 'error');
     renderCourseHoursTable();
   }
 }
@@ -5285,7 +5285,7 @@ function renderCourseHoursTable() {
 
   var head = '<th class="col-course">课程名称</th><th class="col-teacher">授课教师</th>' +
     displayDates.map(function(d) {
-      if (!d) return '<th class="col-date">�?/th>';
+      if (!d) return '<th class="col-date">—</th>';
       if (courseHoursState.editing) {
         return '<th class="col-date has-del" title="' + escHtml(d.key) + '">' +
           '<button type="button" class="hours-col-del" data-del-date="' + escHtml(d.key) + '" title="删除此日期列">×</button>' +
@@ -5298,18 +5298,18 @@ function renderCourseHoursTable() {
   var body = rows.map(function(row) {
     var active = row.course_name === boardState.selectedCourse ? ' hours-row-active' : '';
     var cells = displayDates.map(function(d) {
-      if (!d) return '<td class="cell-empty">�?/td>';
+      if (!d) return '<td class="cell-empty">—</td>';
       var val = getCourseHoursCellValue(row.course_name, d.key);
       if (courseHoursState.editing) {
         return '<td><input type="text" class="hours-cell-input" data-hours-course="' + escHtml(row.course_name) +
           '" data-hours-date="' + escHtml(d.key) + '" value="' + escHtml(val) + '" placeholder=""></td>';
       }
-      if (!val) return '<td class="cell-empty">�?/td>';
+      if (!val) return '<td class="cell-empty">—</td>';
       return '<td>' + escHtml(val) + '</td>';
     }).join('');
     return '<tr class="' + active.trim() + '" data-course="' + escHtml(row.course_name) + '">' +
       '<td class="col-course">' + escHtml(row.course_name) + '</td>' +
-      '<td class="col-teacher">' + escHtml(row.teacher_name || '�?) + '</td>' +
+      '<td class="col-teacher">' + escHtml(row.teacher_name || '—') + '</td>' +
       cells + '</tr>';
   }).join('');
 
@@ -5359,7 +5359,7 @@ async function saveCourseHoursEdits() {
     return;
   }
   var editBtn = document.getElementById('courseHoursEditBtn');
-  if (editBtn) { editBtn.disabled = true; editBtn.textContent = '保存中�?; }
+  if (editBtn) { editBtn.disabled = true; editBtn.textContent = '保存中…'; }
   try {
     await request('PUT', '/api/course-hours', { updates: updates, delete_dates: deleteDates });
     updates.forEach(function(u) {
@@ -5382,12 +5382,12 @@ async function saveCourseHoursEdits() {
     courseHoursState.deletedDates = [];
     courseHoursState.dirty = false;
     courseHoursState.editing = false;
-    if (typeof toast === 'function') toast('上课记录已保�?, 'success');
-    else alert('上课记录已保�?);
+    if (typeof toast === 'function') toast('上课记录已保存', 'success');
+    else alert('上课记录已保存');
     renderCourseHoursTable();
   } catch (e) {
-    if (typeof toast === 'function') toast('保存失败�? + e.message, 'error');
-    else alert('保存失败�? + e.message);
+    if (typeof toast === 'function') toast('保存失败：' + e.message, 'error');
+    else alert('保存失败：' + e.message);
   }
   if (editBtn) { editBtn.disabled = false; editBtn.textContent = '编辑'; }
 }
@@ -5395,12 +5395,12 @@ async function saveCourseHoursEdits() {
 function exportCourseHoursTable() {
   var data = courseHoursState.data;
   if (!data || !(data.rows || []).length) {
-    if (typeof toast === 'function') toast('暂无数据可导�?, 'warn');
+    if (typeof toast === 'function') toast('暂无数据可导出', 'warn');
     return;
   }
   var displayDates = getCourseHoursDisplayDates(data.dates || []);
   var colCount = COURSE_HOURS_TOTAL_COLS;
-  var title = '浦江一中拓展课 考勤�?;
+  var title = '浦江一中拓展课 考勤表';
   var header = ['课程名称', '授课老师'].concat(displayDates.map(function(d) {
     return d ? (d.label || d.key) : '';
   }));
@@ -5468,7 +5468,7 @@ async function loadCourseHoursPanel() {
   var wrap = document.getElementById('courseHoursTableWrap');
   if (!wrap) return;
   if (courseHoursState.editing && courseHoursState.dirty) {
-    if (!confirm('有未保存的课时修改，刷新将丢失更改，是否继续�?)) return;
+    if (!confirm('有未保存的课时修改，刷新将丢失更改，是否继续？')) return;
   }
   courseHoursState.editing = false;
   courseHoursState.dirty = false;
@@ -5478,9 +5478,9 @@ async function loadCourseHoursPanel() {
   var editBtn = document.getElementById('courseHoursEditBtn');
   if (editBtn) editBtn.textContent = '编辑';
   updateCourseHoursEditActions();
-  // 有旧数据时保留表格，避免闪「加载中�?
+  // 有旧数据时保留表格，避免闪「加载中」
   if (!courseHoursState.data) {
-    wrap.innerHTML = '<div class="bd-empty">加载中�?/div>';
+    wrap.innerHTML = '<div class="bd-empty">加载中…</div>';
   }
   try {
     var data = await request('GET', '/api/course-hours');
@@ -5489,7 +5489,7 @@ async function loadCourseHoursPanel() {
     if (boardState.selectedCourse) highlightCourseHoursRow(boardState.selectedCourse);
   } catch (e) {
     if (!courseHoursState.data) {
-      wrap.innerHTML = '<div class="bd-empty">加载失败�? + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+      wrap.innerHTML = '<div class="bd-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
     }
   }
 }
@@ -5504,8 +5504,8 @@ async function openBoardDetail(courseName) {
     t.classList.toggle('active', t.getAttribute('data-bd-tab') === 'overview');
   });
   document.getElementById('bdTitle').textContent = courseName;
-  document.getElementById('bdSub').textContent = '加载中�?;
-  document.getElementById('boardDetailBody').innerHTML = '<div class="bd-empty">加载中�?/div>';
+  document.getElementById('bdSub').textContent = '加载中…';
+  document.getElementById('boardDetailBody').innerHTML = '<div class="bd-empty">加载中…</div>';
   try {
     var data = await request('GET', '/api/teacher-classroom?course_name=' + encodeURIComponent(courseName));
     if (boardState.selectedCourse !== courseName) return;
@@ -5515,14 +5515,14 @@ async function openBoardDetail(courseName) {
     var s = data.summary || {};
     document.getElementById('bdTitle').textContent = c.name || courseName;
     document.getElementById('bdSub').textContent =
-      '教师 ' + (s.teacher_name || c.teacher || '�?) +
+      '教师 ' + (s.teacher_name || c.teacher || '—') +
       (c.location ? (' · ' + c.location) : '') +
-      (data.synced ? (' · 已同�?) : ' · 未上�?);
+      (data.synced ? (' · 已同步') : ' · 未上报');
     renderBoardDetail();
   } catch (e) {
     if (boardState.selectedCourse !== courseName) return;
     document.getElementById('boardDetailBody').innerHTML =
-      '<div class="bd-empty">加载失败�? + escHtml(e.message) + '</div>';
+      '<div class="bd-empty">加载失败：' + escHtml(e.message) + '</div>';
   }
 }
 
@@ -5557,14 +5557,14 @@ function updateBoardScheduleUI(data) {
     btn.textContent = boardScheduleState.buttonText || '解除停课';
     btn.className = 'btn btn-success';
     if (status) {
-      status.textContent = boardScheduleState.statusText || '停课状�?;
+      status.textContent = boardScheduleState.statusText || '停课状态';
       status.classList.add('show');
     }
   } else {
     btn.textContent = boardScheduleState.buttonText || '今日停课';
     btn.className = 'btn btn-warning';
     if (status) {
-      status.textContent = '停课状�?;
+      status.textContent = '停课状态';
       status.classList.remove('show');
     }
   }
@@ -5586,7 +5586,7 @@ async function toggleBoardSchedule() {
     var data = await request('POST', '/api/class-schedule/toggle');
     updateBoardScheduleUI(data);
     if (typeof toast === 'function') {
-      toast(data.allowed ? '已解除停课，今日可正常使�? : '已设为今日停�?, 'success');
+      toast(data.allowed ? '已解除停课，今日可正常使用' : '已设为今日停课', 'success');
     }
   } catch (e) {
     if (typeof toast === 'function') toast(e.message, 'error');
@@ -5659,7 +5659,7 @@ function escapeAttr(s){
 }
 
 /* ============ Module 1: Courses ============ */
-const CATEGORIES = ['体育健康�?,'艺术技艺类','人文社科�?];
+const CATEGORIES = ['体育健康类','艺术技艺类','人文社科类'];
 let coursesData = [];
 let coursesSavedSnapshot = '';
 
@@ -5667,7 +5667,7 @@ function buildCoursesSnapshot(list) {
   return JSON.stringify((list || []).map(function(c){
     return {
       id: c.id == null ? '' : String(c.id),
-      category: c.category || '体育健康�?,
+      category: c.category || '体育健康类',
       name: c.name || '',
       description: c.description || '',
       teacher: c.teacher || '',
@@ -5694,7 +5694,7 @@ function renderCourses(){
   const tbody = document.getElementById('coursesBody');
   tbody.innerHTML = '';
   if (!coursesData.length){
-    tbody.innerHTML = '<tr><td colspan="10" class="empty">暂无课程数据，请上传文件或新增一�?/td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">暂无课程数据，请上传文件或新增一行</td></tr>';
     return;
   }
   coursesData.forEach(function(c, idx){
@@ -5731,7 +5731,7 @@ function renderCourses(){
     const lockBtn = document.createElement('button');
     lockBtn.className = c.selection_locked ? 'btn btn-warning btn-sm' : 'btn btn-outline btn-sm';
     lockBtn.textContent = c.selection_locked ? '解锁' : '锁定';
-    lockBtn.title = c.selection_locked ? '解锁后可重新参与选课' : '锁定后选课页不可再选该�?;
+    lockBtn.title = c.selection_locked ? '解锁后可重新参与选课' : '锁定后选课页不可再选该课';
     lockBtn.addEventListener('click', async function(){
       if (!c.id) {
         toast('请先保存课程后再锁定', 'warning');
@@ -5750,9 +5750,9 @@ function renderCourses(){
         }
         markCoursesSaved(coursesData);
         renderCourses();
-        toast(nextLocked ? '已锁定：选课页不可再选该�? : '已解锁：可重新参与选课', 'success');
+        toast(nextLocked ? '已锁定：选课页不可再选该课' : '已解锁：可重新参与选课', 'success');
       } catch (e) {
-        toast('操作失败�? + e.message, 'error');
+        toast('操作失败：' + e.message, 'error');
         lockBtn.disabled = false;
       }
     });
@@ -5764,7 +5764,7 @@ function renderCourses(){
     delBtn.addEventListener('click', function(){
       coursesData.splice(idx, 1);
       renderCourses();
-      toast('已删除一行，点击"确认保存"以提�?, 'warning');
+      toast('已删除一行，点击"确认保存"以提交', 'warning');
     });
     actions.appendChild(delBtn);
 
@@ -5857,7 +5857,7 @@ async function loadCourses(){
     fillCourseFilterFromList(coursesData);
     _sectionLoaded.selectionsMeta = true;
   } catch(e){
-    toast('加载课程失败�? + e.message, 'error');
+    toast('加载课程失败：' + e.message, 'error');
   }
 }
 
@@ -5882,12 +5882,12 @@ async function saveCourses(){
   }
   btn.disabled = true;
   const prevText = btn.textContent;
-  btn.textContent = '保存中�?;
+  btn.textContent = '保存中…';
   try {
     const payload = coursesData.map(function(c){
       return {
         id: c.id,
-        category: c.category || '体育健康�?,
+        category: c.category || '体育健康类',
         name: c.name || '',
         description: c.description || '',
         teacher: c.teacher || '',
@@ -5911,7 +5911,7 @@ async function saveCourses(){
             selection_locked: c.selection_locked === true || c.selection_locked === 1 || c.selection_locked === '1'
           });
         });
-        // 仅行列结构变化时重绘表格，避免无谓全�?DOM 重建拖慢体感
+        // 仅行列结构变化时重绘表格，避免无谓全表 DOM 重建拖慢体感
         if (inserted > 0 || deleted > 0) {
           renderCourses();
         }
@@ -5925,18 +5925,18 @@ async function saveCourses(){
         if (data.updated) parts.push('更新 ' + data.updated);
         if (inserted) parts.push('新增 ' + inserted);
         if (deleted) parts.push('删除 ' + deleted);
-        toast('保存成功�? + (parts.join('�?) || ('变更 ' + changed)) + '�?, 'success');
+        toast('保存成功（' + (parts.join('，') || ('变更 ' + changed)) + '）', 'success');
       } else {
-        toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课�?, 'success');
+        toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
       }
     } else {
       toast('保存失败', 'error');
     }
   } catch(e){
-    toast('保存失败�? + e.message, 'error');
+    toast('保存失败：' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = prevText || '�?确认保存全部课程';
+    btn.textContent = prevText || '✓ 确认保存全部课程';
   }
 }
 
@@ -5959,7 +5959,7 @@ function setupUpload(){
 
   async function uploadFile(file){
     msgEl.style.color = '#1e40af';
-    msgEl.textContent = '正在上传并解�?' + file.name + ' ...';
+    msgEl.textContent = '正在上传并解析 ' + file.name + ' ...';
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -5970,38 +5970,38 @@ function setupUpload(){
         renderCourses();
         msgEl.style.color = '#16a34a';
         msgEl.textContent = '解析成功，共 ' + (data.count || newCourses.length) + ' 门课程已添加到表格，请确认后点击"确认保存"';
-        toast('上传成功，新�?' + (data.count || newCourses.length) + ' 门课�?, 'success');
+        toast('上传成功，新增 ' + (data.count || newCourses.length) + ' 门课程', 'success');
       } else {
         msgEl.style.color = '#dc2626';
         const errMsg = data.error || data.message || '上传失败';
-        msgEl.textContent = '上传失败�? + errMsg;
-        toast('上传失败�? + errMsg, 'error');
+        msgEl.textContent = '上传失败：' + errMsg;
+        toast('上传失败：' + errMsg, 'error');
       }
     } catch(e){
       msgEl.style.color = '#dc2626';
-      msgEl.textContent = '上传失败�? + e.message;
-      toast('上传失败�? + e.message, 'error');
+      msgEl.textContent = '上传失败：' + e.message;
+      toast('上传失败：' + e.message, 'error');
     }
     input.value = '';
   }
 }
 
-// 解析 Excel 行数�?
+// 解析 Excel 行数据
 function parseExcelRows(rows) {
   if (!rows || rows.length < 2) return [];
   const headers = rows[0].map(h => String(h || '').trim());
   console.log('[解析] 表头数组:', headers);
   
-  // 字段名映射（支持多种命名�?
+  // 字段名映射（支持多种命名）
   const HEADER_RULES = [
     { key: 'category', patterns: ['类别', '分类'] },
-    { key: 'name', patterns: ['课程名称', '课程�?, '课程'] },
-    { key: 'description', patterns: ['简�?, '描述'] },
+    { key: 'name', patterns: ['课程名称', '课程名', '课程'] },
+    { key: 'description', patterns: ['简介', '描述'] },
     { key: 'teacher', patterns: ['老师', '教师'] },
     { key: 'location', patterns: ['地点', '位置'] },
     { key: 'requirement', patterns: ['要求', '备注'] },
-    { key: 'limit_grade6', patterns: ['六年�?, '6年级'] },
-    { key: 'limit_grade7', patterns: ['七年�?, '7年级'] }
+    { key: 'limit_grade6', patterns: ['六年级', '6年级'] },
+    { key: 'limit_grade7', patterns: ['七年级', '7年级'] }
   ];
   
   const headerMap = {};
@@ -6010,13 +6010,13 @@ function parseExcelRows(rows) {
       if (rule.key in headerMap) continue; // 已匹配，跳过
       if (rule.patterns.some(p => h.includes(p))) {
         headerMap[rule.key] = i;
-        console.log('[解析] 匹配表头:', h, '->', rule.key, '(�?, i + 1, ')');
+        console.log('[解析] 匹配表头:', h, '->', rule.key, '(列', i + 1, ')');
         break;
       }
     }
   });
   
-  console.log('[解析] 最终映�?', headerMap);
+  console.log('[解析] 最终映射:', headerMap);
   
   const result = [];
   for (let i = 1; i < rows.length; i++) {
@@ -6046,7 +6046,7 @@ function getExcelCol(cols, idx, defaultVal) {
   var el1 = document.getElementById('addRowBtn');
   if (el1) el1.addEventListener('click', function(){
     coursesData.push({
-      category: '体育健康�?, name: '', description: '', teacher: '',
+      category: '体育健康类', name: '', description: '', teacher: '',
       location: '', requirement: '', limit_grade6: 0, limit_grade7: 0
     });
     renderCourses();
@@ -6062,9 +6062,9 @@ function getExcelCol(cols, idx, defaultVal) {
 })();
 
 function downloadCourseTemplate(){
-  var headers = ['类别', '序号', '课程', '简�?, '地点', '授课老师', '报名要求', '六年级人数限�?, '七年级人数限�?];
+  var headers = ['类别', '序号', '课程', '简介', '地点', '授课老师', '报名要求', '六年级人数限制', '七年级人数限制'];
   var rows = [
-    ['体育健康�?, '1', '示例课程', '课程简介示�?, '操场', '张老师', '', '2', '2']
+    ['体育健康类', '1', '示例课程', '课程简介示例', '操场', '张老师', '', '2', '2']
   ];
   var csv = [headers].concat(rows).map(function(row){
     return row.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
@@ -6078,7 +6078,7 @@ function downloadCourseTemplate(){
   a.click();
   document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
-  toast('已下载课程导入模�?, 'success');
+  toast('已下载课程导入模板', 'success');
 }
 
 /* ============ Module 2: Selections ============ */
@@ -6091,7 +6091,7 @@ let currentViewMode = 'selections'; // 'selections' | 'unselected' | 'pre_enroll
 let unselectedData = [];
 let preEnrollData = [];
 
-let classesData = []; // /api/classes 缓存（筛选等�?
+let classesData = []; // /api/classes 缓存（筛选等）
 let teachersList = [];  // 教师列表
 let gradesList = [];    // 年级列表
 
@@ -6109,8 +6109,8 @@ function updateGradeFilter(){
   const gradeSel = document.getElementById('filterGrade');
   if (!gradeSel) return;
   gradeSel.innerHTML = '<option value="">全部</option>' +
-    '<option value="六年�?>六年�?/option>' +
-    '<option value="七年�?>七年�?/option>';
+    '<option value="六年级">六年级</option>' +
+    '<option value="七年级">七年级</option>';
   updateClassFilter();
   gradeSel.onchange = updateClassFilter;
 }
@@ -6121,13 +6121,13 @@ function updateClassFilter(){
   if (!classSel) return;
   const grade = gradeSel.value;
   let classCount = 10;
-  if (grade === '六年�?) classCount = 10;
-  else if (grade === '七年�?) classCount = 10;
+  if (grade === '六年级') classCount = 10;
+  else if (grade === '七年级') classCount = 10;
   else classCount = 10;
 
   let html = '<option value="">全部</option>';
   for (let i = 1; i <= classCount; i++){
-    html += '<option value="' + i + '">' + i + '�?/option>';
+    html += '<option value="' + i + '">' + i + '班</option>';
   }
   classSel.innerHTML = html;
 }
@@ -6142,7 +6142,7 @@ async function loadTeachersList(){
 }
 
 function buildCourseNameSelectOptions(selected){
-  const options = ['<option value="">不指定课�?/option>'];
+  const options = ['<option value="">不指定课程</option>'];
   const seen = new Set();
   (coursesForFilter || []).forEach(function(c){
     if (!c.name || seen.has(c.name)) return;
@@ -6215,18 +6215,18 @@ async function querySelections(opts){
       renderSelections();
       return;
     }
-    // 有旧数据时先保留表格，避免白屏等�?
+    // 有旧数据时先保留表格，避免白屏等待
     if (!(selectionsData && selectionsData.length) && !silent) {
       var tbody = document.getElementById('selectionsBody');
       if (tbody && !tbody.children.length) {
-        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#64748b">加载中�?/td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#64748b">加载中…</td></tr>';
       }
     }
     const data = await request('GET', '/api/selections?' + qs);
     selectionsData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     _selectionsQueryCache = { qs: qs, at: Date.now() };
     renderSelections();
-    if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数�?, 'success');
+    if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
     // 后台静默补全：同一浏览器会话最多一次，避免反复 sync 打爆 D1 配额
     if (!silent && !window.__pjyzClassroomSyncedOnce) {
       window.__pjyzClassroomSyncedOnce = true;
@@ -6240,7 +6240,7 @@ async function querySelections(opts){
       }).catch(function(){});
     }
   } catch(e){
-    if (!silent) toast('查询失败�? + e.message, 'error');
+    if (!silent) toast('查询失败：' + e.message, 'error');
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -6266,7 +6266,7 @@ async function queryUnselectedStudents(opts){
     renderUnselectedStudents();
     if (!silent) toast('查询完成，共 ' + unselectedData.length + ' 名未选课学生', 'success');
   } catch(e){
-    if (!silent) toast('查询失败�? + e.message, 'error');
+    if (!silent) toast('查询失败：' + e.message, 'error');
   }
 }
 
@@ -6277,7 +6277,7 @@ function renderUnselectedStudents(){
   const statTotal = document.getElementById('statTotal');
   const statCourseCount = document.getElementById('statCourseCount');
   
-  if (dataCountEl) dataCountEl.textContent = '�?' + unselectedData.length + ' 名未选课学生';
+  if (dataCountEl) dataCountEl.textContent = '共 ' + unselectedData.length + ' 名未选课学生';
   if (statTotal) statTotal.textContent = unselectedData.length;
   if (statCourseCount) statCourseCount.textContent = 0;
   
@@ -6355,8 +6355,8 @@ function openAddCourseToStudent(s){
     '<h3 style="display:none;">添加课程</h3>' +
     '<div style="padding:8px 0 12px;">' +
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">' +
-        '<div style="background:rgba(59,130,246,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">年级</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(grade || '�?) + '</div></div>' +
-        '<div style="background:rgba(16,185,129,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">班级</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(fullClassDisplay || '�?) + '</div></div>' +
+        '<div style="background:rgba(59,130,246,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">年级</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(grade || '—') + '</div></div>' +
+        '<div style="background:rgba(16,185,129,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">班级</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(fullClassDisplay || '—') + '</div></div>' +
         '<div style="background:rgba(245,158,11,0.08);border-radius:6px;padding:10px;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">姓名</div><div style="font-weight:600;color:#1f2937;">' + escapeHtml(studentName) + '</div></div>' +
       '</div>' +
       '<div class="form-group"><label>选择课程 <span style="color:#ef4444;">*</span></label><select class="form-select" id="addCourseSelect">' + courseHtml + '</select></div>' +
@@ -6366,7 +6366,7 @@ function openAddCourseToStudent(s){
       '<button class="btn btn-success" id="confirmAddCourseBtn">确认添加</button>' +
     '</div>'
   );
-  document.getElementById('modalTitle').textContent = '为学生添加课�?;
+  document.getElementById('modalTitle').textContent = '为学生添加课程';
   
   const confirmBtn = document.getElementById('confirmAddCourseBtn');
   confirmBtn.onclick = async function(){
@@ -6379,7 +6379,7 @@ function openAddCourseToStudent(s){
     if (!course_id) { toast('所选课程无效，请重新选择', 'error'); return; }
     
     confirmBtn.disabled = true;
-    confirmBtn.textContent = '添加�?..';
+    confirmBtn.textContent = '添加中...';
     
     try {
       await request('POST', '/api/selections', {
@@ -6394,11 +6394,11 @@ function openAddCourseToStudent(s){
         try {
           await request('DELETE', '/api/unselected-students/' + addCourseStudentId);
         } catch(e) {
-          console.warn('删除未选课记录失败（已添加选课�?', e.message);
+          console.warn('删除未选课记录失败（已添加选课）:', e.message);
         }
       }
       
-      toast('添加课程成功�?, 'success');
+      toast('添加课程成功！', 'success');
       closeModal();
       
       await queryUnselectedStudents();
@@ -6406,7 +6406,7 @@ function openAddCourseToStudent(s){
         await querySelections();
       }
     } catch(e) {
-      toast('添加课程失败�? + e.message, 'error');
+      toast('添加课程失败：' + e.message, 'error');
       confirmBtn.disabled = false;
       confirmBtn.textContent = '确认添加';
     }
@@ -6432,9 +6432,9 @@ async function queryPreEnrollStudents(opts){
     const data = await request('GET', '/api/selections?' + params.toString());
     preEnrollData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
     renderPreEnrollStudents();
-    if (!silent) toast('查询完成，共 ' + preEnrollData.length + ' 名内定学�?, 'success');
+    if (!silent) toast('查询完成，共 ' + preEnrollData.length + ' 名内定学生', 'success');
   } catch(e){
-    if (!silent) toast('查询失败�? + e.message, 'error');
+    if (!silent) toast('查询失败：' + e.message, 'error');
   }
 }
 
@@ -6499,18 +6499,18 @@ function switchToSelectionsView(){
 }
 
 function sortSelectionsByClassClient(rows) {
-  var gradeRank = { '六年�?: 6, '七年�?: 7 };
+  var gradeRank = { '六年级': 6, '七年级': 7 };
   function parseRow(s) {
     var g = String((s && s.grade) || '').trim();
     var c = String((s && s.class_name) || '').trim();
-    var m = c.match(/^(六年级|七年�?\s*[\(（]?(\d+)[\)）]?\s*�?/);
+    var m = c.match(/^(六年级|七年级)\s*[\(（]?(\d+)[\)）]?\s*班$/);
     var classNum = '';
     if (m) { g = m[1]; classNum = m[2]; }
     else {
       m = c.match(/(\d+)/);
       if (m) classNum = m[1];
       if (!g) {
-        var gm = (g + c).match(/(六年级|七年�?/);
+        var gm = (g + c).match(/(六年级|七年级)/);
         if (gm) g = gm[1];
       }
     }
@@ -6534,11 +6534,11 @@ function sortSelectionsByClassClient(rows) {
 function formatSelectionClassDisplay(s) {
   var parsedGrade = String((s && s.grade) || '').trim();
   var classDisplayName = String((s && s.class_name) || '').replace(/[()（）]/g, '');
-  // 统一展示为「六年级3班�?
-  var m = classDisplayName.match(/^(六年级|七年�??\s*(\d+)\s*�?/);
+  // 统一展示为「六年级3班」
+  var m = classDisplayName.match(/^(六年级|七年级)?\s*(\d+)\s*班$/);
   if (m) {
     var g = m[1] || parsedGrade;
-    return (g || '') + m[2] + '�?;
+    return (g || '') + m[2] + '班';
   }
   if (parsedGrade && classDisplayName.indexOf(parsedGrade) !== 0) {
     classDisplayName = parsedGrade + classDisplayName;
@@ -6550,17 +6550,17 @@ function parseSelectionGradeClassClient(s) {
   var grade = String((s && s.grade) || '').trim();
   var cls = String((s && s.class_name) || '').trim();
   var classNum = '';
-  var m = cls.match(/(六年级|七年�?\s*[\(（]?(\d+)[\)）]?\s*�?);
+  var m = cls.match(/(六年级|七年级)\s*[\(（]?(\d+)[\)）]?\s*班/);
   if (m) {
     grade = grade || m[1];
     classNum = m[2];
   } else {
-    m = cls.match(/([六七])(?:年级)?[\(（]?(\d+)[\)）]?\s*�?);
+    m = cls.match(/([六七])(?:年级)?[\(（]?(\d+)[\)）]?\s*班/);
     if (m) {
-      grade = grade || (m[1] === '�? ? '六年�? : '七年�?);
+      grade = grade || (m[1] === '六' ? '六年级' : '七年级');
       classNum = m[2];
     } else {
-      m = cls.replace(/[()（）]/g, '').match(/(六年级|七年�??\s*(\d+)\s*�?);
+      m = cls.replace(/[()（）]/g, '').match(/(六年级|七年级)?\s*(\d+)\s*班/);
       if (m) {
         grade = grade || m[1] || '';
         classNum = m[2] || '';
@@ -6570,21 +6570,21 @@ function parseSelectionGradeClassClient(s) {
     }
   }
   if (!grade) {
-    var gm = (String((s && s.grade) || '') + cls).match(/(六年级|七年�?/);
+    var gm = (String((s && s.grade) || '') + cls).match(/(六年级|七年级)/);
     if (gm) grade = gm[1];
   }
   return { grade: grade, classNum: classNum };
 }
 
-/** Excel 工作表名：六�?）班 */
+/** Excel 工作表名：六（1）班 */
 function formatClassSheetName(s) {
   var p = parseSelectionGradeClassClient(s);
   if (p.grade && p.classNum) {
-    var short = /�?.test(p.grade) ? '�? : (/�?.test(p.grade) ? '�? : p.grade);
-    return short + '�? + p.classNum + '）班';
+    var short = /六/.test(p.grade) ? '六' : (/七/.test(p.grade) ? '七' : p.grade);
+    return short + '（' + p.classNum + '）班';
   }
-  var fallback = formatSelectionClassDisplay(s) || '未分�?;
-  return fallback.replace(/年级/g, '').replace(/(\d+)�?, '�?1）班') || '未分�?;
+  var fallback = formatSelectionClassDisplay(s) || '未分班';
+  return fallback.replace(/年级/g, '').replace(/(\d+)班/, '（$1）班') || '未分班';
 }
 
 function sanitizeExcelSheetName(name) {
@@ -6621,7 +6621,7 @@ function compareSelectionsByStudentNo(a, b) {
 }
 
 function compareSelectionsByClassThenStudentNo(a, b) {
-  var gradeRank = { '六年�?: 6, '七年�?: 7 };
+  var gradeRank = { '六年级': 6, '七年级': 7 };
   var pa = parseSelectionGradeClassClient(a);
   var pb = parseSelectionGradeClassClient(b);
   var ga = gradeRank[pa.grade] || 99;
@@ -6639,7 +6639,7 @@ function resolveExportStudentNo(s, indexInGroup) {
   return String(indexInGroup + 1);
 }
 
-/** 有学号用库内值；否则按班级内顺序自动编号（仅导出，不写库�?*/
+/** 有学号用库内值；否则按班级内顺序自动编号（仅导出，不写库） */
 function withExportStudentNos(list) {
   var counters = {};
   return (list || []).map(function(s) {
@@ -6695,7 +6695,7 @@ function downloadXlsxWorkbook(wb, filename) {
 function renderSelections(){
   renderSelectionsTable(selectionsData, {
     emptyText: '暂无选课数据',
-    countText: '�?' + selectionsData.length + ' 条数�?,
+    countText: '共 ' + selectionsData.length + ' 条数据',
     updateStats: true
   });
 }
@@ -6703,7 +6703,7 @@ function renderSelections(){
 function renderPreEnrollStudents(){
   renderSelectionsTable(preEnrollData, {
     emptyText: '暂无内定学生数据',
-    countText: '�?' + preEnrollData.length + ' 名内定学�?,
+    countText: '共 ' + preEnrollData.length + ' 名内定学生',
     rowClass: 'pre-enroll-row'
   });
 }
@@ -6759,7 +6759,7 @@ function renderSelectionsTable(data, opts){
   const statTotal = document.getElementById('statTotal');
   const statCourseCount = document.getElementById('statCourseCount');
 
-  if (dataCountEl) dataCountEl.textContent = opts.countText || ('�?' + data.length + ' 条数�?);
+  if (dataCountEl) dataCountEl.textContent = opts.countText || ('共 ' + data.length + ' 条数据');
   if (opts.updateStats || currentViewMode === 'pre_enroll') {
     if (statTotal) statTotal.textContent = data.length;
     const courseNames = new Set();
@@ -6791,7 +6791,7 @@ function renderSelectionsTable(data, opts){
     var classDisplayName = formatSelectionClassDisplay(s);
     var courseName = s.course_name || '';
     var lockedTag = Number(s.is_locked) === 1
-      ? '<span class="internal-tag" title="提前录课，班主任端不可修�?>内定</span>'
+      ? '<span class="internal-tag" title="提前录课，班主任端不可修改">内定</span>'
       : '';
     html += '<tr' + rowClass + '>' +
       '<td><input type="checkbox" class="sel-checkbox" data-id="' + escapeAttr(String(s.id)) + '"' + checked + '></td>' +
@@ -6822,8 +6822,8 @@ function renderSelectionsPagination(){
   const totalPages = Math.max(1, Math.ceil(total / selectionsPageSize));
   if (selectionsPage > totalPages) selectionsPage = totalPages;
   
-  let html = '<span class="page-info">�?' + selectionsPage + ' / ' + totalPages + ' �?/span>';
-  html += '<button class="page-btn" id="selPrevPage"' + (selectionsPage <= 1 ? ' disabled' : '') + '>上一�?/button>';
+  let html = '<span class="page-info">第 ' + selectionsPage + ' / ' + totalPages + ' 页</span>';
+  html += '<button class="page-btn" id="selPrevPage"' + (selectionsPage <= 1 ? ' disabled' : '') + '>上一页</button>';
   
   const maxShow = 5;
   let startPage = Math.max(1, selectionsPage - Math.floor(maxShow / 2));
@@ -6834,10 +6834,10 @@ function renderSelectionsPagination(){
     html += '<button class="page-btn' + (i === selectionsPage ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
   }
   
-  html += '<button class="page-btn" id="selNextPage"' + (selectionsPage >= totalPages ? ' disabled' : '') + '>下一�?/button>';
+  html += '<button class="page-btn" id="selNextPage"' + (selectionsPage >= totalPages ? ' disabled' : '') + '>下一页</button>';
   html += '<select class="page-size-select" id="selPageSize">';
   [20, 30, 50, 100].forEach(function(n){
-    html += '<option value="' + n + '"' + (n === selectionsPageSize ? ' selected' : '') + '>' + n + '�?�?/option>';
+    html += '<option value="' + n + '"' + (n === selectionsPageSize ? ' selected' : '') + '>' + n + '条/页</option>';
   });
   html += '</select>';
   
@@ -6955,7 +6955,7 @@ async function deleteSelection(id){
       selectionsData = prevData;
       renderSelections();
     }
-    toast('删除失败�? + e.message, 'error');
+    toast('删除失败：' + e.message, 'error');
   }
 }
 
@@ -6964,7 +6964,7 @@ async function batchDeleteSelections(){
   if (!ids.length) { toast('请先选择要删除的记录', 'warning'); return; }
   
   if (currentViewMode === 'unselected') {
-    if (!confirm('确定要删除选中�?' + ids.length + ' 条未选课记录吗？')) return;
+    if (!confirm('确定要删除选中的 ' + ids.length + ' 条未选课记录吗？')) return;
     var prevUnselected = unselectedData.slice();
     var idSet = new Set(ids.map(String));
     unselectedData = unselectedData.filter(function(s) { return !idSet.has(String(s.id)); });
@@ -6976,12 +6976,12 @@ async function batchDeleteSelections(){
     } catch(e){
       unselectedData = prevUnselected;
       renderUnselectedStudents();
-      toast('批量删除失败�? + e.message, 'error');
+      toast('批量删除失败：' + e.message, 'error');
     }
     return;
   }
   
-  if (!confirm('确定要删除选中�?' + ids.length + ' 条选课记录吗？')) return;
+  if (!confirm('确定要删除选中的 ' + ids.length + ' 条选课记录吗？')) return;
   var prevData = selectionsData.slice();
   var removeSet = new Set(ids.map(String));
   selectionsData = selectionsData.filter(function(s) { return !removeSet.has(String(s.id)); });
@@ -6993,7 +6993,7 @@ async function batchDeleteSelections(){
   } catch(e){
     selectionsData = prevData;
     renderSelections();
-    toast('批量删除失败�? + e.message, 'error');
+    toast('批量删除失败：' + e.message, 'error');
   }
 }
 
@@ -7002,17 +7002,17 @@ function openEditSelection(s){
   var gradeVal = parsed.grade || String(s.grade || '').trim();
   var classNumVal = parsed.classNum || '';
   var gradeOpts = ['<option value="">选择年级</option>'];
-  ['六年�?, '七年�?].forEach(function(g){
+  ['六年级', '七年级'].forEach(function(g){
     gradeOpts.push('<option value="' + g + '"' + (g === gradeVal ? ' selected' : '') + '>' + g + '</option>');
   });
   var classOpts = ['<option value="">选择班级</option>'];
   for (var i = 1; i <= 10; i++) {
-    classOpts.push('<option value="' + i + '"' + (String(i) === String(classNumVal) ? ' selected' : '') + '>' + i + '�?/option>');
+    classOpts.push('<option value="' + i + '"' + (String(i) === String(classNumVal) ? ' selected' : '') + '>' + i + '班</option>');
   }
   var genderVal = String(s.gender || '').trim();
   var genderOpts = ['<option value="">未填</option>',
-    '<option value="�?' + (genderVal === '�? ? ' selected' : '') + '>�?/option>',
-    '<option value="�?' + (genderVal === '�? ? ' selected' : '') + '>�?/option>'];
+    '<option value="男"' + (genderVal === '男' ? ' selected' : '') + '>男</option>',
+    '<option value="女"' + (genderVal === '女' ? ' selected' : '') + '>女</option>'];
 
   var courseHtml = '';
   var names = coursesForFilter.map(function(c){ return c.name; }).filter(Boolean);
@@ -7030,7 +7030,7 @@ function openEditSelection(s){
     '<h3 style="display:none;">编辑学生</h3>' +
     '<div class="form-group"><label>年级</label><select class="form-select" id="editSelGrade">' + gradeOpts.join('') + '</select></div>' +
     '<div class="form-group"><label>班级</label><select class="form-select" id="editSelClass">' + classOpts.join('') + '</select></div>' +
-    '<div class="form-group"><label>学号</label><input type="text" class="form-input" id="editSelStudentNo" value="' + escapeAttr(s.student_no || '') + '" placeholder="可选，班级内学�?></div>' +
+    '<div class="form-group"><label>学号</label><input type="text" class="form-input" id="editSelStudentNo" value="' + escapeAttr(s.student_no || '') + '" placeholder="可选，班级内学号"></div>' +
     '<div class="form-group"><label>学生姓名</label><input type="text" class="form-input" id="editSelName" value="' + escapeAttr(s.student_name || '') + '"></div>' +
     '<div class="form-group"><label>性别</label><select class="form-select" id="editSelGender">' + genderOpts.join('') + '</select></div>' +
     '<div class="form-group"><label>课程</label><select class="form-select" id="editSelCourse">' + courseHtml + '</select></div>' +
@@ -7052,11 +7052,11 @@ function openEditSelection(s){
     var course_name = selEl ? selEl.value : '';
     var opt = selEl && selEl.options[selEl.selectedIndex];
     var course_id = opt ? opt.getAttribute('data-id') : '';
-    if (!student_name){ toast('请填写学生姓�?, 'error'); return; }
+    if (!student_name){ toast('请填写学生姓名', 'error'); return; }
     if (!course_id && !course_name){ toast('请选择课程', 'error'); return; }
     var class_name = '';
-    if (grade && classNum) class_name = grade + '(' + classNum + ')�?;
-    else if (classNum) class_name = classNum + '�?;
+    if (grade && classNum) class_name = grade + '(' + classNum + ')班';
+    else if (classNum) class_name = classNum + '班';
     else class_name = String(s.class_name || '');
 
     saveBtn.disabled = true;
@@ -7096,7 +7096,7 @@ function openEditSelection(s){
         });
         renderSelections();
       }
-      toast('保存失败�? + e.message, 'error');
+      toast('保存失败：' + e.message, 'error');
     } finally {
       saveBtn.disabled = false;
     }
@@ -7109,7 +7109,7 @@ function openExportSelectionsMenu(){
     return;
   }
   openModal(
-    '<p class="export-choice-hint">导出�?.xlsx 文件。可按当前筛选条件导出；未筛选则导出全部选课数据�?/p>' +
+    '<p class="export-choice-hint">导出为 .xlsx 文件。可按当前筛选条件导出；未筛选则导出全部选课数据。</p>' +
     '<div class="export-choice-list">' +
       '<button type="button" class="btn btn-success" id="exportDirectBtn">直接导出<span style="opacity:.75;font-weight:500;margin-left:6px">全部名单 · 单表</span></button>' +
       '<button type="button" class="btn btn-primary" id="exportByClassBtn">班级导出<span style="opacity:.75;font-weight:500;margin-left:6px">按班分工作表</span></button>' +
@@ -7143,7 +7143,7 @@ async function exportSelectionsXlsx(mode){
     if (typeof window.XLSX === 'undefined') throw new Error('Excel库未加载');
     var list = await fetchSelectionsForExport();
     if (!list.length) {
-      toast('暂无数据可导�?, 'warning');
+      toast('暂无数据可导出', 'warning');
       return;
     }
     var wb = XLSX.utils.book_new();
@@ -7164,12 +7164,12 @@ async function exportSelectionsXlsx(mode){
         var rows = groups[key].slice().sort(compareSelectionsByStudentNo);
         appendUniqueSheet(wb, sheetFromSelectionRows(rows, '课程名称'), key);
       });
-      filename = '选课数据_按班�?xlsx';
+      filename = '选课数据_按班级.xlsx';
     } else if (mode === 'course') {
       var courseGroups = {};
       var courseOrder = [];
       list.slice().sort(compareSelectionsByClassThenStudentNo).forEach(function(s){
-        var key = String(s.course_name || '').trim() || '未选课�?;
+        var key = String(s.course_name || '').trim() || '未选课程';
         if (!courseGroups[key]) {
           courseGroups[key] = [];
           courseOrder.push(key);
@@ -7181,7 +7181,7 @@ async function exportSelectionsXlsx(mode){
         var rows = courseGroups[key].slice().sort(compareSelectionsByClassThenStudentNo);
         appendUniqueSheet(wb, sheetFromSelectionRows(rows, '课程'), key);
       });
-      filename = '选课数据_按课�?xlsx';
+      filename = '选课数据_按课程.xlsx';
     } else {
       var allRows = list.slice().sort(compareSelectionsByClassThenStudentNo);
       appendUniqueSheet(wb, sheetFromSelectionRows(allRows, '课程名称'), '选课数据');
@@ -7191,7 +7191,7 @@ async function exportSelectionsXlsx(mode){
     downloadXlsxWorkbook(wb, filename);
     toast('导出成功', 'success');
   } catch(e){
-    toast('导出失败�? + e.message, 'error');
+    toast('导出失败：' + e.message, 'error');
   } finally {
     btns.forEach(function(b){ b.disabled = false; });
   }
@@ -7227,7 +7227,7 @@ async function exportSelectionsUnselected(){
     downloadXlsxWorkbook(wb, '未选课名单导出.xlsx');
     toast('导出成功', 'success');
   } catch(e){
-    toast('导出失败�? + e.message, 'error');
+    toast('导出失败：' + e.message, 'error');
   } finally {
     btns.forEach(function(b){ b.disabled = false; });
   }
@@ -7330,19 +7330,19 @@ function mapSchoolRosterColumns(headerRow) {
 function normalizeImportGrade(raw) {
   var s = String(raw || '').trim();
   if (!s) return '';
-  if (/六年�?.test(s)) return '六年�?;
-  if (/七年�?.test(s)) return '七年�?;
-  if (/^�?|^6$|6年级/.test(s)) return '六年�?;
-  if (/^�?|^7$|7年级/.test(s)) return '七年�?;
+  if (/六年级/.test(s)) return '六年级';
+  if (/七年级/.test(s)) return '七年级';
+  if (/^六$|^6$|6年级/.test(s)) return '六年级';
+  if (/^七$|^7$|7年级/.test(s)) return '七年级';
   return s;
 }
 
 function normalizeImportClassName(grade, raw) {
   var class_name = String(raw || '').trim();
   if (!class_name) return '';
-  if (/^[\(（]?\d+[\)）]?\s*�?/.test(class_name) && grade) {
+  if (/^[\(（]?\d+[\)）]?\s*班$/.test(class_name) && grade) {
     var n = class_name.match(/(\d+)/);
-    if (n) return grade + '(' + n[1] + ')�?;
+    if (n) return grade + '(' + n[1] + ')班';
   }
   return class_name;
 }
@@ -7350,7 +7350,7 @@ function normalizeImportClassName(grade, raw) {
 async function handleSchoolRosterImport(file) {
   if (!file) return;
   if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
-    toast('请上�?Excel / CSV 文件', 'error');
+    toast('请上传 Excel / CSV 文件', 'error');
     return;
   }
   if (typeof window.XLSX === 'undefined') {
@@ -7373,7 +7373,7 @@ async function handleSchoolRosterImport(file) {
       return;
     }
     if (col.class_name < 0 && col.grade < 0) {
-      toast('表头需包含「班级」或「年级」列，以便识别班级信�?, 'error');
+      toast('表头需包含「班级」或「年级」列，以便识别班级信息', 'error');
       return;
     }
     const items = [];
@@ -7406,12 +7406,12 @@ async function handleSchoolRosterImport(file) {
     if (!confirm('即将导入 ' + items.length + ' 名学生，并覆盖更新数据库中的全校名单。是否继续？')) {
       return;
     }
-    toast('正在导入学生名单�?, 'info');
+    toast('正在导入学生名单…', 'info');
     const data = await request('POST', '/api/school-students/import', { students: items, replace: true });
     const errCount = (data.errors && data.errors.length) || 0;
-    let msg = '已导�?' + (data.count || 0) + ' 名学�?;
+    let msg = '已导入 ' + (data.count || 0) + ' 名学生';
     if (data.total != null) msg += '（库中共 ' + data.total + ' 人）';
-    if (errCount) msg += '，跳�?' + errCount + ' �?;
+    if (errCount) msg += '，跳过 ' + errCount + ' 条';
     if (data.unselected_count != null) {
       msg += '，已同步 ' + data.unselected_count + ' 名未选课学生';
     }
@@ -7428,14 +7428,14 @@ async function handleSchoolRosterImport(file) {
       }
     }
   } catch (e) {
-    toast('导入学生名单失败�? + e.message, 'error');
+    toast('导入学生名单失败：' + e.message, 'error');
   }
 }
 
 async function handlePreEnrollUpload(file) {
   if (!file) return;
   if (!/\.(xlsx|xls)$/i.test(file.name)) {
-    toast('请上�?Excel 文件�?xlsx / .xls�?, 'error');
+    toast('请上传 Excel 文件（.xlsx / .xls）', 'error');
     return;
   }
   if (typeof window.XLSX === 'undefined') {
@@ -7454,7 +7454,7 @@ async function handlePreEnrollUpload(file) {
     const header = rows[0];
     const col = mapPreEnrollColumns(header);
     if (col.student_name < 0 || col.course_name < 0) {
-      toast('表头需包含「学生姓名」和「所选课程」（或课程名称）�?, 'error');
+      toast('表头需包含「学生姓名」和「所选课程」（或课程名称）列', 'error');
       return;
     }
     const items = [];
@@ -7468,7 +7468,7 @@ async function handlePreEnrollUpload(file) {
       let grade = col.grade >= 0 ? String(row[col.grade] || '').trim() : '';
       let class_name = col.class_name >= 0 ? String(row[col.class_name] || '').trim() : '';
       if (!grade && class_name) {
-        const gm = class_name.match(/^(六年级|七年�?/);
+        const gm = class_name.match(/^(六年级|七年级)/);
         if (gm) grade = gm[1];
       }
       items.push({
@@ -7480,17 +7480,17 @@ async function handlePreEnrollUpload(file) {
       });
     }
     if (!items.length) {
-      toast('未解析到有效的提前录课数�?, 'error');
+      toast('未解析到有效的提前录课数据', 'error');
       return;
     }
     if (!confirm('即将提前录课 ' + items.length + ' 名学生，确认后班主任端将自动占位且不可修改。是否继续？')) {
       return;
     }
-    toast('正在提交提前录课�?, 'info');
+    toast('正在提交提前录课…', 'info');
     const data = await request('POST', '/api/selections/pre-enroll', items);
     const errCount = (data.errors && data.errors.length) || 0;
-    let msg = '提前录课成功 ' + (data.count || 0) + ' �?;
-    if (errCount) msg += '，失�?' + errCount + ' �?;
+    let msg = '提前录课成功 ' + (data.count || 0) + ' 人';
+    if (errCount) msg += '，失败 ' + errCount + ' 条';
     toast(msg, errCount && !(data.count) ? 'error' : 'success');
     if (errCount && data.errors) {
       console.warn('pre-enroll errors', data.errors);
@@ -7506,7 +7506,7 @@ async function handlePreEnrollUpload(file) {
       );
     }
     if (data.count > 0) {
-      // 优先用接口返回的名单即时渲染，避免再等一次全量查�?
+      // 优先用接口返回的名单即时渲染，避免再等一次全量查询
       currentViewMode = 'pre_enroll';
       updateSelectionSidebarButtons('pre_enroll');
       var queryBtn = document.getElementById('queryBtn');
@@ -7516,7 +7516,7 @@ async function handlePreEnrollUpload(file) {
       if (Array.isArray(data.selections) && data.selections.length) {
         preEnrollData = sortSelectionsByClassClient(data.selections);
         renderPreEnrollStudents();
-        // 后台再拉一次完整内定列表，保证与库一�?
+        // 后台再拉一次完整内定列表，保证与库一致
         queryPreEnrollStudents({ silent: true }).catch(function(){});
       } else {
         await switchToPreEnrollView();
@@ -7525,7 +7525,7 @@ async function handlePreEnrollUpload(file) {
       await querySelections({ silent: true });
     }
   } catch (e) {
-    toast('提前录课失败�? + e.message, 'error');
+    toast('提前录课失败：' + e.message, 'error');
   }
 }
 
@@ -7550,13 +7550,13 @@ async function loadUsers(){
     usersData = Array.isArray(data) ? data : (data.users || []);
     renderUsers();
   } catch(e){
-    toast('加载用户失败�? + e.message, 'error');
+    toast('加载用户失败：' + e.message, 'error');
   }
 }
 
 function roleLabel(r, asBadge){
-  if (r === 'admin') return asBadge ? '<span class="role-badge admin">管理�?/span>' : '管理�?;
-  if (r === 'banzhuren') return asBadge ? '<span class="role-badge banzhuren">班主�?/span>' : '班主�?;
+  if (r === 'admin') return asBadge ? '<span class="role-badge admin">管理员</span>' : '管理员';
+  if (r === 'banzhuren') return asBadge ? '<span class="role-badge banzhuren">班主任</span>' : '班主任';
   if (r === 'teacher') return asBadge ? '<span class="role-badge teacher">教师</span>' : '教师';
   return escapeHtml(r || '');
 }
@@ -7564,7 +7564,7 @@ function roleLabel(r, asBadge){
 async function toggleUserStatus(u){
   const newStatus = u.status === 'active' ? 'disabled' : 'active';
   const action = newStatus === 'disabled' ? '禁用' : '启用';
-  if (!window.confirm('确定�? + action + '用户 ' + u.username + ' 吗？')) return;
+  if (!window.confirm('确定要' + action + '用户 ' + u.username + ' 吗？')) return;
   try {
     const data = await request('PUT', '/api/users/' + u.id + '/status', { status: newStatus });
     if (data.success) {
@@ -7575,7 +7575,7 @@ async function toggleUserStatus(u){
       toast(data.error || '操作失败', 'error');
     }
   } catch(e) {
-    toast('操作失败�? + e.message, 'error');
+    toast('操作失败：' + e.message, 'error');
   }
 }
 
@@ -7632,9 +7632,9 @@ function renderUsers(){
 
   // Stats
   document.getElementById('userStatInfo').textContent =
-    '�?' + usersData.length + ' 位用�? +
-    (userSearchQuery ? '，筛选出 ' + total + ' �? : '') +
-    '，当前第 ' + userCurrentPage + '/' + totalPages + ' �?;
+    '共 ' + usersData.length + ' 位用户' +
+    (userSearchQuery ? '，筛选出 ' + total + ' 条' : '') +
+    '，当前第 ' + userCurrentPage + '/' + totalPages + ' 页';
 
   if (!pageList.length){
     tbody.innerHTML = '<tr><td colspan="11" class="empty">' +
@@ -7648,7 +7648,7 @@ function renderUsers(){
     const tr = document.createElement('tr');
     const statusBadge = u.status === 'locked' ? '<span style="color:#dc2626;font-weight:600;">🔒 锁定</span>' :
                         u.status === 'disabled' ? '<span style="color:#f59e0b;font-weight:600;">🚫 禁用</span>' :
-                        '<span style="color:#10b981;font-weight:600;">�?正常</span>';
+                        '<span style="color:#10b981;font-weight:600;">✓ 正常</span>';
     const rolesDisplay = (u.roles && u.roles.length > 0) ?
       u.roles.map(function(r){ return roleLabel(r, true); }).join(' ') :
       roleLabel(u.role, true);
@@ -7672,7 +7672,7 @@ function renderUsers(){
         pwdCell.textContent = '******';
         pwdCell.dataset.shown = '0';
       } else {
-        pwdCell.textContent = u.password || '已加�?;
+        pwdCell.textContent = u.password || '已加密';
         pwdCell.dataset.shown = '1';
       }
     });
@@ -7689,7 +7689,7 @@ function renderUsers(){
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn btn-sm ' + (u.status === 'active' ? 'btn-warning' : 'btn-success');
     toggleBtn.textContent = u.status === 'active' ? '禁用' : '启用';
-    toggleBtn.title = u.status === 'active' ? '禁用该用�? : '启用该用�?;
+    toggleBtn.title = u.status === 'active' ? '禁用该用户' : '启用该用户';
     toggleBtn.addEventListener('click', function(){ toggleUserStatus(u); });
     actions.appendChild(editBtn);
     actions.appendChild(delBtn);
@@ -7705,9 +7705,9 @@ function renderUsers(){
 function renderPagination(totalPages){
   const container = document.getElementById('usersPagination');
   let html = '';
-  html += '<div class="page-info">�?' + totalPages + ' �?/div>';
+  html += '<div class="page-info">共 ' + totalPages + ' 页</div>';
   html += '<div class="page-controls">';
-  html += '<button class="page-btn" ' + (userCurrentPage <= 1 ? 'disabled' : '') + ' data-page="prev">�?/button>';
+  html += '<button class="page-btn" ' + (userCurrentPage <= 1 ? 'disabled' : '') + ' data-page="prev">‹</button>';
 
   let startPage = Math.max(1, userCurrentPage - 2);
   let endPage = Math.min(totalPages, startPage + 4);
@@ -7717,7 +7717,7 @@ function renderPagination(totalPages){
     html += '<button class="page-btn ' + (i === userCurrentPage ? 'active' : '') + '" data-page="' + i + '">' + i + '</button>';
   }
 
-  html += '<button class="page-btn" ' + (userCurrentPage >= totalPages ? 'disabled' : '') + ' data-page="next">�?/button>';
+  html += '<button class="page-btn" ' + (userCurrentPage >= totalPages ? 'disabled' : '') + ' data-page="next">›</button>';
   html += '</div>';
   html += '<div class="page-size">';
   html += '<label>每页</label>';
@@ -7726,7 +7726,7 @@ function renderPagination(totalPages){
     html += '<option value="' + s + '"' + (s === userPageSize ? ' selected' : '') + '>' + s + '</option>';
   });
   html += '</select>';
-  html += '<label>�?/label>';
+  html += '<label>条</label>';
   html += '</div>';
 
   container.innerHTML = html;
@@ -7756,10 +7756,10 @@ function renderSortIcons(){
     const field = th.dataset.sort;
     const icon = th.querySelector('.sort-icon');
     th.classList.remove('active');
-    if (icon) icon.textContent = '�?;
+    if (icon) icon.textContent = '⇅';
     if (field === userSortField){
       th.classList.add('active');
-      if (icon) icon.textContent = userSortOrder === 'asc' ? '�? : '�?;
+      if (icon) icon.textContent = userSortOrder === 'asc' ? '↑' : '↓';
     }
   });
 }
@@ -7794,17 +7794,17 @@ function parseUserClassName(classStr) {
   var classNum = '';
   if (!s) return { grade: '', classNum: '' };
 
-  var m = s.match(/^(六年级|七年�?\s*[\(（](\d+)[\)）]�?/);
+  var m = s.match(/^(六年级|七年级)\s*[\(（](\d+)[\)）]班$/);
   if (m) {
     grade = m[1];
     classNum = m[2];
   } else {
-    m = s.match(/^(六年级|七年�?\s*(\d+)\s*�?/);
+    m = s.match(/^(六年级|七年级)\s*(\d+)\s*班$/);
     if (m) {
       grade = m[1];
       classNum = m[2];
     } else {
-      m = s.match(/^[\(（](\d+)[\)）]�?/);
+      m = s.match(/^[\(（](\d+)[\)）]班$/);
       if (m) {
         classNum = m[1];
         var item = classesData.find(function (c) { return c.class_name === s; });
@@ -7816,8 +7816,8 @@ function parseUserClassName(classStr) {
 }
 
 function buildUserGradeOptions(selectedGrade) {
-  var html = '<option value="">不指�?/option>';
-  ['六年�?, '七年�?].forEach(function (g) {
+  var html = '<option value="">不指定</option>';
+  ['六年级', '七年级'].forEach(function (g) {
     html += '<option value="' + escapeAttr(g) + '"' + (selectedGrade === g ? ' selected' : '') + '>' + escapeHtml(g) + '</option>';
   });
   return html;
@@ -7825,12 +7825,12 @@ function buildUserGradeOptions(selectedGrade) {
 
 function buildUserClassNumOptions(grade, selectedClassNum) {
   if (!grade) {
-    return '<option value="">不指�?/option>';
+    return '<option value="">不指定</option>';
   }
-  var html = '<option value="">不指�?/option>';
+  var html = '<option value="">不指定</option>';
   for (var i = 1; i <= 10; i++) {
     var v = String(i);
-    html += '<option value="' + v + '"' + (selectedClassNum === v ? ' selected' : '') + '>' + i + '�?/option>';
+    html += '<option value="' + v + '"' + (selectedClassNum === v ? ' selected' : '') + '>' + i + '班</option>';
   }
   return html;
 }
@@ -7859,7 +7859,7 @@ function bindUserClassSelects() {
 
 function composeUserClassName(grade, classNum) {
   if (!grade || !classNum) return '';
-  return grade + '(' + classNum + ')�?;
+  return grade + '(' + classNum + ')班';
 }
 
 function readUserClassFromForm() {
@@ -7872,17 +7872,17 @@ function readUserClassFromForm() {
 function openAddUser(){
   openModal(
     '<h3 style="display:none;">添加用户</h3>' +
-    '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" autocomplete="off" placeholder="请输入登录账�?></div>' +
-    '<div class="form-group"><label>密码</label><input type="text" class="form-input" id="uPassword" autocomplete="off" placeholder="请输入登录密�?></div>' +
-    '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" autocomplete="off" placeholder="请输入教师姓�?></div>' +
+    '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" autocomplete="off" placeholder="请输入登录账号"></div>' +
+    '<div class="form-group"><label>密码</label><input type="text" class="form-input" id="uPassword" autocomplete="off" placeholder="请输入登录密码"></div>' +
+    '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" autocomplete="off" placeholder="请输入教师姓名"></div>' +
     '<div class="form-group"><label>课程名称</label><select class="form-select" id="uCourseName">' + buildCourseNameSelectOptions('') + '</select></div>' +
     buildUserClassFormHtml('', '') +
     '<div class="form-group"><label>邮箱</label><input type="text" class="form-input" id="uEmail" autocomplete="off" placeholder="选填"></div>' +
-    '<div class="form-group"><label>手机�?/label><input type="text" class="form-input" id="uPhone" autocomplete="off" placeholder="选填"></div>' +
+    '<div class="form-group"><label>手机号</label><input type="text" class="form-input" id="uPhone" autocomplete="off" placeholder="选填"></div>' +
     '<div class="form-group"><label>角色（可多选）</label>' +
       '<div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap;">' +
-        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"> 管理�?/label>' +
-        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleBanzhuren" value="banzhuren"> 班主�?/label>' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"> 管理员</label>' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleBanzhuren" value="banzhuren"> 班主任</label>' +
         '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleTeacher" value="teacher" checked> 教师</label>' +
       '</div>' +
     '</div>' +
@@ -7906,7 +7906,7 @@ function openAddUser(){
     if (document.getElementById('uRoleAdmin').checked) roles.push('admin');
     if (document.getElementById('uRoleBanzhuren').checked) roles.push('banzhuren');
     if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
-    if (roles.length === 0) { toast('请至少选择一个角�?, 'error'); return; }
+    if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
     if (!username || !password){ toast('请填写账号和密码', 'error'); return; }
     saveBtn.disabled = true;
     try {
@@ -7919,7 +7919,7 @@ function openAddUser(){
         toast(data.error || '添加失败', 'error');
       }
     } catch(e){
-      toast('添加失败�? + e.message, 'error');
+      toast('添加失败：' + e.message, 'error');
     } finally {
       saveBtn.disabled = false;
     }
@@ -7936,16 +7936,16 @@ function openEditUser(u){
   openModal(
     '<h3 style="display:none;">编辑用户</h3>' +
     '<div class="form-group"><label>账号</label><input type="text" class="form-input" id="uUsername" value="' + escapeAttr(u.username || '') + '"></div>' +
-    '<div class="form-group"><label>密码（留空不修改�?/label><input type="text" class="form-input" id="uPassword" placeholder="留空则不修改密码"></div>' +
+    '<div class="form-group"><label>密码（留空不修改）</label><input type="text" class="form-input" id="uPassword" placeholder="留空则不修改密码"></div>' +
     '<div class="form-group"><label>教师名字</label><input type="text" class="form-input" id="uTeacherName" value="' + escapeAttr(u.teacher_name || '') + '"></div>' +
     '<div class="form-group"><label>课程名称</label><select class="form-select" id="uCourseName">' + buildCourseNameSelectOptions(u.course_name || '') + '</select></div>' +
     buildUserClassFormHtml(parsed.grade, parsed.classNum) +
     '<div class="form-group"><label>邮箱</label><input type="text" class="form-input" id="uEmail" value="' + escapeAttr(u.email || '') + '"></div>' +
-    '<div class="form-group"><label>手机�?/label><input type="text" class="form-input" id="uPhone" value="' + escapeAttr(resolveUserPhone(u)) + '"></div>' +
+    '<div class="form-group"><label>手机号</label><input type="text" class="form-input" id="uPhone" value="' + escapeAttr(resolveUserPhone(u)) + '"></div>' +
     '<div class="form-group"><label>角色（可多选）</label>' +
       '<div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap;">' +
-        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"' + (isAdmin ? ' checked' : '') + '> 管理�?/label>' +
-        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleBanzhuren" value="banzhuren"' + (isBanzhuren ? ' checked' : '') + '> 班主�?/label>' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleAdmin" value="admin"' + (isAdmin ? ' checked' : '') + '> 管理员</label>' +
+        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleBanzhuren" value="banzhuren"' + (isBanzhuren ? ' checked' : '') + '> 班主任</label>' +
         '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="uRoleTeacher" value="teacher"' + (isTeacher ? ' checked' : '') + '> 教师</label>' +
       '</div>' +
     '</div>' +
@@ -7969,8 +7969,8 @@ function openEditUser(u){
     if (document.getElementById('uRoleAdmin').checked) roles.push('admin');
     if (document.getElementById('uRoleBanzhuren').checked) roles.push('banzhuren');
     if (document.getElementById('uRoleTeacher').checked) roles.push('teacher');
-    if (roles.length === 0) { toast('请至少选择一个角�?, 'error'); return; }
-    if (!username){ toast('请填写账�?, 'error'); return; }
+    if (roles.length === 0) { toast('请至少选择一个角色', 'error'); return; }
+    if (!username){ toast('请填写账号', 'error'); return; }
 
     const payload = {
       username: username,
@@ -8018,7 +8018,7 @@ function openEditUser(u){
     }).catch(function(e){
       if (userIdx > -1) usersData[userIdx] = snapshot;
       renderUsers();
-      toast('保存失败�? + e.message, 'error');
+      toast('保存失败：' + e.message, 'error');
     });
   };
 }
@@ -8034,7 +8034,7 @@ async function deleteUser(u){
       toast(data.error || '删除失败', 'error');
     }
   } catch(e){
-    toast('删除失败�? + e.message, 'error');
+    toast('删除失败：' + e.message, 'error');
   }
 }
 
@@ -8042,32 +8042,32 @@ async function runConsistencyCheck(){
   const btn = document.getElementById('consistencyCheckBtn');
   const originalText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '�?校验�?..';
+  btn.textContent = '⏳ 校验中...';
   try {
     const data = await request('GET', '/api/users/consistency-check');
     const { status, summary, issues, warnings } = data;
     
     let resultHtml = '';
     if (status === 'ok') {
-      resultHtml = '<div style="color:#10b981;font-weight:600;margin-bottom:8px;">�?数据一致性检查通过�?/div>' +
+      resultHtml = '<div style="color:#10b981;font-weight:600;margin-bottom:8px;">✓ 数据一致性检查通过！</div>' +
                    '<div>检查时间：' + new Date(data.timestamp).toLocaleString('zh-CN') + '</div>';
     } else {
-      resultHtml = '<div style="color:#ef4444;font-weight:600;margin-bottom:8px;">�?发现数据问题�?/div>';
+      resultHtml = '<div style="color:#ef4444;font-weight:600;margin-bottom:8px;">⚠ 发现数据问题：</div>';
       if (summary.issues > 0) {
-        resultHtml += '<div style="color:#dc2626;margin-bottom:8px;">问题�? + summary.issues + '）：</div>';
+        resultHtml += '<div style="color:#dc2626;margin-bottom:8px;">问题（' + summary.issues + '）：</div>';
         issues.slice(0, 10).forEach(function(i){
-          resultHtml += '<div style="font-size:13px;margin-bottom:4px;">�?[' + i.type + '] 用户 ' + i.username + ': ' + i.message + '</div>';
+          resultHtml += '<div style="font-size:13px;margin-bottom:4px;">• [' + i.type + '] 用户 ' + i.username + ': ' + i.message + '</div>';
         });
-        if (summary.issues > 10) resultHtml += '<div style="font-size:12px;color:#6b7280;">...还有 ' + (summary.issues - 10) + ' 个问�?/div>';
+        if (summary.issues > 10) resultHtml += '<div style="font-size:12px;color:#6b7280;">...还有 ' + (summary.issues - 10) + ' 个问题</div>';
       }
       if (summary.warnings > 0) {
-        resultHtml += '<div style="color:#f59e0b;margin-top:8px;margin-bottom:4px;">警告�? + summary.warnings + '）：</div>';
+        resultHtml += '<div style="color:#f59e0b;margin-top:8px;margin-bottom:4px;">警告（' + summary.warnings + '）：</div>';
         warnings.slice(0, 5).forEach(function(w){
-          resultHtml += '<div style="font-size:13px;margin-bottom:4px;">�?' + w.message + '</div>';
+          resultHtml += '<div style="font-size:13px;margin-bottom:4px;">• ' + w.message + '</div>';
         });
       }
       resultHtml += '<div style="margin-top:12px;">' +
-        '<button class="btn btn-sm btn-primary" id="fixLegacyBtn">🔧 修复旧密码格�?/button>' +
+        '<button class="btn btn-sm btn-primary" id="fixLegacyBtn">🔧 修复旧密码格式</button>' +
       '</div>';
     }
     
@@ -8078,34 +8078,34 @@ async function runConsistencyCheck(){
         '<button class="btn btn-secondary" onclick="closeModal()">关闭</button>' +
       '</div>'
     );
-    document.getElementById('modalTitle').textContent = '数据一致性校�?;
+    document.getElementById('modalTitle').textContent = '数据一致性校验';
     
     const fixBtn = document.getElementById('fixLegacyBtn');
     if (fixBtn) {
       fixBtn.onclick = async function(){
         fixBtn.disabled = true;
-        fixBtn.textContent = '�?修复�?..';
+        fixBtn.textContent = '⏳ 修复中...';
         try {
           const fixData = await request('POST', '/api/users/fix-legacy-passwords', { default_password: '123456' });
           if (fixData.success) {
-            toast('已修�?' + fixData.fixed + ' 个用户的密码格式', 'success');
+            toast('已修复 ' + fixData.fixed + ' 个用户的密码格式', 'success');
             closeModal();
             runConsistencyCheck();
           }
         } catch(e) {
-          toast('修复失败�? + e.message, 'error');
+          toast('修复失败：' + e.message, 'error');
         }
       };
     }
   } catch(e) {
-    toast('校验失败�? + e.message, 'error');
+    toast('校验失败：' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = originalText;
   }
 }
 
-/* ============ 用户导入：文件上�?============ */
+/* ============ 用户导入：文件上传 ============ */
 
 let importPreviewData = [];
 
@@ -8129,10 +8129,10 @@ function openImportUsers(){
       '<span class="btn-template" id="downloadTemplateBtn">📥 下载模板</span>' +
     '</div>' +
     '<div class="upload-area" id="userUploadArea" style="padding:24px 20px;">' +
-      '<span class="icon">�?/span>' +
+      '<span class="icon">↑</span>' +
       '<div class="text-col">' +
-        '<span class="title">点击或拖拽上传用户文�?/span>' +
-        '<span class="hint">表头：账号、密码、姓名、班级、课程名称、角色（admin/banzhuren/teacher）；多角色可用角�?、角�?、角�?。班级示例：六年�?1)�?/span>' +
+        '<span class="title">点击或拖拽上传用户文件</span>' +
+        '<span class="hint">表头：账号、密码、姓名、班级、课程名称、角色（admin/banzhuren/teacher）；多角色可用角色1、角色2、角色3。班级示例：六年级(1)班</span>' +
       '</div>' +
       '<input type="file" id="userFileInput" accept=".csv,.xlsx,.xls" style="display:none;">' +
     '</div>' +
@@ -8153,10 +8153,10 @@ function openImportUsers(){
 function downloadUserTemplate(){
   const headers = ['账号', '密码', '姓名', '班级', '课程名称', '角色1', '角色2', '角色3'];
   const rows = [
-    ['teacher01', '123456', '张老师', '', '乒乓�?, 'teacher', '', ''],
-    ['bzr01', '123456', '李班主任', '六年�?1)�?, '', 'banzhuren', '', ''],
-    ['admin01', 'admin123', '王管�?, '', '', 'admin', 'teacher', ''],
-    ['multi01', '123456', '赵老师', '七年�?2)�?, '武术', 'admin', 'banzhuren', 'teacher']
+    ['teacher01', '123456', '张老师', '', '乒乓球', 'teacher', '', ''],
+    ['bzr01', '123456', '李班主任', '六年级(1)班', '', 'banzhuren', '', ''],
+    ['admin01', 'admin123', '王管理', '', '', 'admin', 'teacher', ''],
+    ['multi01', '123456', '赵老师', '七年级(2)班', '武术', 'admin', 'banzhuren', 'teacher']
   ];
   const csv = [headers, ...rows].map(function(row){
     return row.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
@@ -8216,7 +8216,7 @@ async function handleUserFile(file){
             setTimeout(function(){ reject(new Error('加载超时')); }, 10000);
           });
         } catch(err) {
-          throw new Error('Excel 解析组件加载失败�? + err.message + '。请使用 CSV 格式');
+          throw new Error('Excel 解析组件加载失败：' + err.message + '。请使用 CSV 格式');
         }
       }
       msgEl.textContent = '解析文件内容...';
@@ -8233,8 +8233,8 @@ async function handleUserFile(file){
     renderImportPreview();
   } catch(e){
     msgEl.style.color = '#dc2626';
-    msgEl.textContent = '解析失败�? + e.message;
-    toast('解析失败�? + e.message, 'error');
+    msgEl.textContent = '解析失败：' + e.message;
+    toast('解析失败：' + e.message, 'error');
   }
 }
 
@@ -8304,7 +8304,7 @@ function parseUsersFromRows(rows){
       item._valid = false;
     }
     if (!roles.length){
-      item._errors.push('请填写有效角色（admin/banzhuren/teacher �?管理�?班主�?教师�?);
+      item._errors.push('请填写有效角色（admin/banzhuren/teacher 或 管理员/班主任/教师）');
       item._valid = false;
     }
 
@@ -8317,8 +8317,8 @@ function parseRoleCell(val){
   if (window.PjyzRole && PjyzRole.parseRoleValue) return PjyzRole.parseRoleValue(val);
   var v = String(val || '').trim().toLowerCase();
   if (!v) return null;
-  if (v === 'admin' || v === '管理�?) return 'admin';
-  if (v === 'banzhuren' || v === '班主�? || v === 'bzr') return 'banzhuren';
+  if (v === 'admin' || v === '管理员') return 'admin';
+  if (v === 'banzhuren' || v === '班主任' || v === 'bzr') return 'banzhuren';
   if (v === 'teacher' || v === '教师') return 'teacher';
   return null;
 }
@@ -8340,7 +8340,7 @@ function collectRolesFromRow(cols, headerMap){
 
 function rolesLabelList(roles){
   if (!roles || !roles.length) return '';
-  return roles.map(function(r){ return roleLabel(r); }).join('�?);
+  return roles.map(function(r){ return roleLabel(r); }).join('、');
 }
 
 function mapUserHeaders(headers){
@@ -8363,7 +8363,7 @@ function mapUserHeaders(headers){
   return map;
 }
 
-/** 将导入的年级/班级统一为「六年级(1)班」格式，便于与手动添加一�?*/
+/** 将导入的年级/班级统一为「六年级(1)班」格式，便于与手动添加一致 */
 function normalizeImportedUserClassName(gradeRaw, classRaw) {
   var grade = String(gradeRaw || '').trim();
   var cls = String(classRaw || '').trim();
@@ -8374,7 +8374,7 @@ function normalizeImportedUserClassName(gradeRaw, classRaw) {
     parsed = parseUserClassName(combined);
   }
   if (!parsed.grade && grade) {
-    var gm = grade.match(/(六年级|七年�?/) || combined.match(/(六年级|七年�?/);
+    var gm = grade.match(/(六年级|七年级)/) || combined.match(/(六年级|七年级)/);
     if (gm) parsed.grade = gm[1];
   }
   if (!parsed.classNum) {
@@ -8396,7 +8396,7 @@ function renderImportPreview(){
   if (!importPreviewData.length){
     container.innerHTML = '';
     msgEl.style.color = '#dc2626';
-    msgEl.textContent = '解析失败：未识别到有效数�?;
+    msgEl.textContent = '解析失败：未识别到有效数据';
     document.getElementById('confirmImportBtn').disabled = true;
     return;
   }
@@ -8420,15 +8420,15 @@ function renderImportPreview(){
       '<th>班级</th>' +
       '<th>角色</th>' +
       '<th>邮箱</th>' +
-      '<th>手机�?/th>' +
-      '<th>状�?/th>' +
+      '<th>手机号</th>' +
+      '<th>状态</th>' +
     '</tr></thead><tbody>';
 
   importPreviewData.forEach(function(d){
     const rowClass = d._valid ? '' : ' class="has-error"';
     const statusHtml = d._valid
-      ? '<span class="status-ok">�?正常</span>'
-      : '<span class="status-error">�?' + d._errors.join('�?) + '</span>';
+      ? '<span class="status-ok">✓ 正常</span>'
+      : '<span class="status-error">✗ ' + d._errors.join('、') + '</span>';
     html += '<tr' + rowClass + '>' +
       '<td>' + d._rowIndex + '</td>' +
       '<td>' + escapeHtml(d.username || '') + '</td>' +
@@ -8447,7 +8447,7 @@ function renderImportPreview(){
   container.innerHTML = html;
 
   msgEl.style.color = errorCount > 0 ? '#ea580c' : '#16a34a';
-  msgEl.textContent = '解析完成：共 ' + importPreviewData.length + ' 条，有效 ' + validCount + ' 条，异常 ' + errorCount + ' �?;
+  msgEl.textContent = '解析完成：共 ' + importPreviewData.length + ' 条，有效 ' + validCount + ' 条，异常 ' + errorCount + ' 条';
 
   document.getElementById('confirmImportBtn').disabled = validCount === 0;
 }
@@ -8458,7 +8458,7 @@ async function doImportUsers(){
 
   const btn = document.getElementById('confirmImportBtn');
   btn.disabled = true;
-  btn.textContent = '导入�?..';
+  btn.textContent = '导入中...';
 
   const users = validUsers.map(function(d){
     return {
@@ -8476,14 +8476,14 @@ async function doImportUsers(){
   try {
     const data = await request('POST', '/api/users/import', { users: users });
     if (data.success){
-      let msg = '导入完成：成�?' + data.imported + ' �?;
-      if (data.failed > 0) msg += '，失�?' + data.failed + ' �?;
+      let msg = '导入完成：成功 ' + data.imported + ' 个';
+      if (data.failed > 0) msg += '，失败 ' + data.failed + ' 个';
       toast(msg, data.failed > 0 ? 'warning' : 'success');
       if (data.errors && data.errors.length > 0){
         console.warn('用户导入错误详情:', data.errors);
       }
       closeModal();
-      // 先乐观刷新列表，再后台拉最新数�?
+      // 先乐观刷新列表，再后台拉最新数据
       loadUsers();
     } else {
       toast(data.error || '导入失败', 'error');
@@ -8491,7 +8491,7 @@ async function doImportUsers(){
       btn.textContent = '确认导入';
     }
   } catch(e){
-    toast('导入失败�? + e.message, 'error');
+    toast('导入失败：' + e.message, 'error');
     btn.disabled = false;
     btn.textContent = '确认导入';
   }
@@ -8502,8 +8502,8 @@ async function doImportUsers(){
 async function openImportHistory(){
   openModal(
     '<h3 style="display:none;">导入历史</h3>' +
-    '<div style="margin-bottom:12px;color:#6b7280;font-size:13px;">查看过往用户导入操作的详细记�?/div>' +
-    '<div id="importHistoryList" class="history-list"><div style="text-align:center;color:#6b7280;padding:40px;">加载�?..</div></div>' +
+    '<div style="margin-bottom:12px;color:#6b7280;font-size:13px;">查看过往用户导入操作的详细记录</div>' +
+    '<div id="importHistoryList" class="history-list"><div style="text-align:center;color:#6b7280;padding:40px;">加载中...</div></div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">关闭</button>' +
     '</div>'
@@ -8516,7 +8516,7 @@ async function openImportHistory(){
     renderImportHistoryList(list);
   } catch(e){
     document.getElementById('importHistoryList').innerHTML =
-      '<div style="text-align:center;color:#dc2626;padding:40px;">加载失败�? + escapeHtml(e.message) + '</div>';
+      '<div style="text-align:center;color:#dc2626;padding:40px;">加载失败：' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -8548,7 +8548,7 @@ function renderImportHistoryList(list){
   container.innerHTML = html;
 }
 
-/* ============ 选课开关（全局禁止/允许选课�?============ */
+/* ============ 选课开关（全局禁止/允许选课） ============ */
 let selectionLockEnabled = true;
 
 function updateSelectionLockUI(){
@@ -8565,10 +8565,10 @@ function updateSelectionLockUI(){
       btn.classList.remove('btn-success');
       btn.classList.add('btn-warning');
       if (pair.sm) btn.classList.add('btn-sm');
-      status.textContent = '当前状态为选课状�?;
+      status.textContent = '当前状态为选课状态';
       status.className = 'selection-status-text open';
     } else {
-      btn.textContent = '�?解除禁止选课';
+      btn.textContent = '✅ 解除禁止选课';
       btn.classList.remove('btn-warning');
       btn.classList.add('btn-success');
       if (pair.sm) btn.classList.add('btn-sm');
@@ -8639,7 +8639,7 @@ function ensureBoardSection() {
 }
 
 function initShell(){
-  // 显示管理员信�?
+  // 显示管理员信息
   try {
     const userStr = localStorage.getItem('pjyz_user');
     if (userStr) {
@@ -8647,7 +8647,7 @@ function initShell(){
       if (user) {
         const nameEl = document.getElementById('adminName');
         const avatarEl = document.getElementById('adminAvatar');
-        var displayName = user.teacher_name || user.username || '管理�?;
+        var displayName = user.teacher_name || user.username || '管理员';
         if (nameEl) {
           nameEl.textContent = displayName;
           var phoneHint = resolveUserPhone(user);
@@ -8675,7 +8675,7 @@ function initShell(){
   }
 }
 
-/** 移动端：课程统计移到标题行；条数移到查询下一行；桌面端放回原�?*/
+/** 移动端：课程统计移到标题行；条数移到查询下一行；桌面端放回原位 */
 function placeSelectionStats() {
   var stats = document.getElementById('courseStats');
   var head = document.getElementById('selHeadStatsSlot');
