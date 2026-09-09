@@ -891,7 +891,7 @@
         try {
           persistLoginSession(username, password, data);
         } catch (_) {}
-        setLoginBtnLabel('正在跳转...');
+        // 预热期间保持「自动登录中…/登录中…」，预热结束后再切「正在跳转…」
         await redirectAfterLogin(data.user);
         return;
       }
