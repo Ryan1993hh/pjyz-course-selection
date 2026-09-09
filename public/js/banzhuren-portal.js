@@ -264,9 +264,11 @@
       arr.forEach(function (item) {
         var row = normalizeStudentRow(item);
         if (!row.student_name) return;
-        var prev = map.get(row.student_name);
+        // 同名不同班保留各自条目
+        var key = String(row.student_name) + '\0' + String(row.grade || '') + '\0' + String(row.class_name || '');
+        var prev = map.get(key);
         if (!prev) {
-          map.set(row.student_name, row);
+          map.set(key, row);
         } else {
           if (!prev.gender && row.gender) prev.gender = row.gender;
           if (!prev.student_no && row.student_no) prev.student_no = row.student_no;

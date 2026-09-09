@@ -4986,19 +4986,14 @@ async function applyPreEnrollments(opts) {
     return 0;
   }
 
-  // 同一学生多条内定时只保留一条（优先匹配当前班级）
+  // 仅处理当前班级的内定记录（同名不同班互不影响）
   const byName = new Map();
   lockedRows.forEach(function(row) {
+    if (!preEnrollRowMatchesClass(row)) return;
     const name = String(row.student_name || '').trim();
     if (!name) return;
     const prev = byName.get(name);
-    if (!prev) {
-      byName.set(name, row);
-      return;
-    }
-    const prevMatch = preEnrollRowMatchesClass(prev) ? 1 : 0;
-    const curMatch = preEnrollRowMatchesClass(row) ? 1 : 0;
-    if (curMatch > prevMatch || ((row.id || 0) > (prev.id || 0) && curMatch === prevMatch)) {
+    if (!prev || ((row.id || 0) > (prev.id || 0))) {
       byName.set(name, row);
     }
   });
@@ -5157,11 +5152,12 @@ async function restoreSelectionsFromServer() {
     c.students = [];
   });
 
-  // 一人一课：同名多条时内定优先，其次较新 id
+  // 一人一课（本班内）：同名多条时内定优先，其次较新 id
   var byStudent = new Map();
   rows.forEach(function(row) {
     var name = String(row.student_name || '').trim();
     if (!name) return;
+    // rows 已按当前班级过滤，同班同名才合并
     var prev = byStudent.get(name);
     if (!prev) {
       byStudent.set(name, row);

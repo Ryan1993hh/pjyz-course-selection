@@ -1436,8 +1436,10 @@ function parseGradeClassFields(grade, className) {
 
 function selectionStudentKey(grade, className, studentName) {
   const parsed = parseGradeClassFields(grade, className);
-  // 一人一课：同年级同姓名只保留一条
-  return `${parsed.grade}|${String(studentName || '').trim()}`;
+  const name = String(studentName || '').trim();
+  // 同名不同班视为不同学生：年级 + 班号 + 姓名
+  const classPart = parsed.classNum || String(parsed.class_name || className || '').trim();
+  return `${parsed.grade || ''}|${classPart}|${name}`;
 }
 
 function preferSelectionRow(a, b) {
@@ -1482,15 +1484,12 @@ async function removeSelectionsForStudent(db, grade, className, studentName, opt
     'SELECT * FROM selections WHERE student_name = ?'
   ).bind(studentName).all();
 
-  const wantGrade = parseGradeClassFields(grade, className).grade;
   let deleted = 0;
   for (const row of (existing.results || [])) {
     if (!opts.includeLocked && Number(row.is_locked) === 1) continue;
     if (String(row.student_name || '').trim() !== String(studentName || '').trim()) continue;
-    if (wantGrade) {
-      const rowGrade = parseGradeClassFields(row.grade, row.class_name).grade;
-      if (rowGrade && rowGrade !== wantGrade) continue;
-    }
+    // 必须同年级同班级，避免误删其他班同名学生
+    if (!selectionMatchesClassScope(row, grade, className)) continue;
     if (row.course_id) {
       await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(row.course_id).run();
     }
@@ -1561,12 +1560,13 @@ async function syncMissingSelectionsFromClassroom(db, courseFilter, opts) {
   }
   if (!classroomRows.length) return { skipped: false, inserted: 0 };
 
-  const existRes = await db.prepare('SELECT student_name, course_name FROM selections').all();
+  const existRes = await db.prepare('SELECT student_name, course_name, grade, class_name FROM selections').all();
   const existSet = new Set();
   (existRes.results || []).forEach((r) => {
     const sn = String(r.student_name || '').trim();
     const cn = String(r.course_name || '').trim();
-    if (sn && cn) existSet.add(sn + '\0' + cn);
+    if (!sn || !cn) return;
+    existSet.add(selectionStudentKey(r.grade, r.class_name, sn) + '\0' + cn);
   });
 
   const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
@@ -1589,10 +1589,10 @@ async function syncMissingSelectionsFromClassroom(db, courseFilter, opts) {
     for (const s of students) {
       const studentName = String((s && s.student_name) || '').trim();
       if (!studentName) continue;
-      const key = studentName + '\0' + courseName;
+      const parsed = parseGradeClassFields(s.grade, s.class_name);
+      const key = selectionStudentKey(parsed.grade || s.grade, parsed.class_name || s.class_name, studentName) + '\0' + courseName;
       if (existSet.has(key)) continue;
       existSet.add(key);
-      const parsed = parseGradeClassFields(s.grade, s.class_name);
       insertStmts.push(db.prepare(
         `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
          VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
@@ -1706,13 +1706,16 @@ async function handleSelectionsBatchCreate(db, request) {
         const courseId = (item.course_id != null && item.course_id !== '') ? (parseInt(item.course_id, 10) || 0) : 0;
         const gender = (item.gender != null && item.gender !== '') ? String(item.gender) : '';
 
-        // 提前录课锁定学生：仅同步年级/班级/性别，不允许改课程；并清除冲突的未锁定记录
+        // 提前录课锁定学生：仅处理本班同名锁定记录，不允许改课程；并清除本班冲突的未锁定记录
         const lockedRows = await db.prepare(
           'SELECT * FROM selections WHERE student_name = ? AND is_locked = 1'
         ).bind(studentName).all();
-        if ((lockedRows.results || []).length > 0) {
+        const lockedInClass = (lockedRows.results || []).filter(function (row) {
+          return selectionMatchesClassScope(row, grade, className);
+        });
+        if (lockedInClass.length > 0) {
           await removeSelectionsForStudent(db, grade, className, studentName);
-          for (const row of lockedRows.results) {
+          for (const row of lockedInClass) {
             const parsed = parseGradeClassFields(grade || row.grade, className || row.class_name);
             await db.prepare(
               'UPDATE selections SET grade = ?, class_name = ?, gender = ? WHERE id = ?'
@@ -1730,13 +1733,14 @@ async function handleSelectionsBatchCreate(db, request) {
         }
 
         const priorRows = await db.prepare(
-          'SELECT course_name FROM selections WHERE student_name = ?'
+          'SELECT course_name, grade, class_name FROM selections WHERE student_name = ?'
         ).bind(studentName).all();
         (priorRows.results || []).forEach((row) => {
+          if (!selectionMatchesClassScope(row, grade, className)) return;
           if (row.course_name) affectedCourses.add(String(row.course_name).trim());
         });
 
-        // 同一学生只保留最新一条：先删除该学生已有未锁定选课记录
+        // 同一学生（同年级同班）只保留最新一条：先删除该班该学生已有未锁定选课记录
         await removeSelectionsForStudent(db, grade, className, studentName);
 
         const parsedSave = parseGradeClassFields(grade, className);
@@ -1859,7 +1863,7 @@ async function handlePreEnrollBatch(db, request) {
       continue;
     }
     const finalCourseName = matched ? matched.name : courseName;
-    // 同一批内同名只保留最后一条
+    // 同名不同班保留各自记录
     prepared.push({
       studentName,
       grade,
@@ -1885,16 +1889,27 @@ async function handlePreEnrollBatch(db, request) {
   const courseDeltas = new Map();
   const nowIso = new Date().toISOString();
 
-  // 一次查出所有将要覆盖的旧记录，批量删除
+  // 同名不同班去重：按身份键保留最后一条
+  const byIdentity = new Map();
+  prepared.forEach((p) => {
+    byIdentity.set(selectionStudentKey(p.grade, p.className, p.studentName), p);
+  });
+  const uniquePrepared = Array.from(byIdentity.values());
+
+  // 仅删除与待写入身份键匹配的旧记录，避免误删其他班同名学生
+  const identitySet = new Set(uniquePrepared.map((p) => selectionStudentKey(p.grade, p.className, p.studentName)));
   const existingRows = [];
   const NAME_CHUNK = 80;
   for (let i = 0; i < names.length; i += NAME_CHUNK) {
     const chunk = names.slice(i, i + NAME_CHUNK);
     const ph = chunk.map(() => '?').join(',');
     const res = await db.prepare(
-      'SELECT id, course_id, course_name, student_name FROM selections WHERE student_name IN (' + ph + ')'
+      'SELECT id, course_id, course_name, student_name, grade, class_name FROM selections WHERE student_name IN (' + ph + ')'
     ).bind(...chunk).all();
-    (res.results || []).forEach((row) => existingRows.push(row));
+    (res.results || []).forEach((row) => {
+      const key = selectionStudentKey(row.grade, row.class_name, row.student_name);
+      if (identitySet.has(key)) existingRows.push(row);
+    });
   }
 
   const delStmts = [];
@@ -1906,11 +1921,6 @@ async function handlePreEnrollBatch(db, request) {
     delStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
   }
   await runD1Batch(db, delStmts);
-
-  // 同名去重：保留 prepared 中最后一条
-  const byName = new Map();
-  prepared.forEach((p) => byName.set(p.studentName, p));
-  const uniquePrepared = Array.from(byName.values());
 
   const insertStmts = uniquePrepared.map((p) => {
     affectedCourses.add(p.finalCourseName);
@@ -1934,6 +1944,7 @@ async function handlePreEnrollBatch(db, request) {
   await applyCourseCountDeltas(db, courseDeltas);
 
   // 回读本批内定记录供前端即时展示（避免再查全表）
+  const identityWant = new Set(uniquePrepared.map((p) => selectionStudentKey(p.grade, p.className, p.studentName)));
   const selections = [];
   for (let i = 0; i < uniquePrepared.length; i += NAME_CHUNK) {
     const chunk = uniquePrepared.slice(i, i + NAME_CHUNK).map((p) => p.studentName);
@@ -1941,7 +1952,10 @@ async function handlePreEnrollBatch(db, request) {
     const res = await db.prepare(
       'SELECT * FROM selections WHERE is_locked = 1 AND student_name IN (' + ph + ')'
     ).bind(...chunk).all();
-    (res.results || []).forEach((row) => selections.push(row));
+    (res.results || []).forEach((row) => {
+      const key = selectionStudentKey(row.grade, row.class_name, row.student_name);
+      if (identityWant.has(key)) selections.push(row);
+    });
   }
 
   await bumpSelectionDataRevision(db);
@@ -5678,7 +5692,7 @@ async function handleBanzhurenSaveClassSelections(db, request, ctx) {
   }
   await runD1Batch(db, classDeleteStmts);
 
-  // 2) 预读锁定记录
+  // 2) 预读本班锁定记录（同名不同班互不影响）
   const names = [...new Set(selections.map(function(s) { return String(s.student_name || '').trim(); }).filter(Boolean))];
   const lockedByName = new Map();
   if (names.length) {
@@ -5687,20 +5701,22 @@ async function handleBanzhurenSaveClassSelections(db, request, ctx) {
       'SELECT * FROM selections WHERE is_locked = 1 AND student_name IN (' + placeholders + ')'
     ).bind(...names).all();
     for (const row of (lockedRes.results || [])) {
+      if (!selectionMatchesClassScope(row, grade, className)) continue;
       const n = String(row.student_name || '').trim();
       if (n && !lockedByName.has(n)) lockedByName.set(n, row);
     }
   }
 
-  // 3) 清除待写入学生的其他未锁定选课（一人一课）
+  // 3) 清除本班待写入学生的其他未锁定选课（一人一课，仅限本班）
   const unlockedNames = names.filter(function(n) { return !lockedByName.has(n); });
   if (unlockedNames.length) {
     const ph = unlockedNames.map(function() { return '?'; }).join(',');
     const priorRes = await db.prepare(
-      'SELECT id, course_id, course_name FROM selections WHERE is_locked = 0 AND student_name IN (' + ph + ')'
+      'SELECT id, course_id, course_name, grade, class_name FROM selections WHERE is_locked = 0 AND student_name IN (' + ph + ')'
     ).bind(...unlockedNames).all();
     const priorDelStmts = [];
     for (const row of (priorRes.results || [])) {
+      if (!selectionMatchesClassScope(row, grade, className)) continue;
       priorDelStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(row.id));
       if (row.course_id) courseDeltas.set(row.course_id, (courseDeltas.get(row.course_id) || 0) - 1);
       if (row.course_name) affectedCourses.add(String(row.course_name).trim());
