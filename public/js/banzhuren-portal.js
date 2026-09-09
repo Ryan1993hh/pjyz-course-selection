@@ -354,23 +354,27 @@
     if (!opts.forceNetwork) {
       var mem = getLocalSelectionStudents();
       if (mem.length) {
-        bzState.classStudents = mem.slice();
-        writeRosterCache(mem, lastSyncRevision);
-        if (opts.memoryOnly) return mem.slice();
+        bzState.classStudents = sortStudentsByNo(mem);
+        writeRosterCache(bzState.classStudents, lastSyncRevision);
+        if (opts.memoryOnly) return bzState.classStudents.slice();
       } else if (opts.memoryOnly) {
-        if (bzState.classStudents.length) return bzState.classStudents.slice();
+        if (bzState.classStudents.length) {
+          bzState.classStudents = sortStudentsByNo(bzState.classStudents);
+          return bzState.classStudents.slice();
+        }
         var cachedMem = readRosterCache();
         if (cachedMem && cachedMem.students && cachedMem.students.length) {
-          bzState.classStudents = cachedMem.students.slice();
+          bzState.classStudents = sortStudentsByNo(cachedMem.students);
           return bzState.classStudents.slice();
         }
         return [];
       } else if (bzState.classStudents.length && opts.preferMemory) {
+        bzState.classStudents = sortStudentsByNo(bzState.classStudents);
         return bzState.classStudents.slice();
       } else {
         var cachedQuick = readRosterCache();
         if (cachedQuick && cachedQuick.students && cachedQuick.students.length && opts.preferMemory) {
-          bzState.classStudents = cachedQuick.students.slice();
+          bzState.classStudents = sortStudentsByNo(cachedQuick.students);
           return bzState.classStudents.slice();
         }
       }
@@ -591,8 +595,8 @@
   function syncFromSelectionPage() {
     var mem = getLocalSelectionStudents();
     if (mem.length) {
-      bzState.classStudents = mem.slice();
-      writeRosterCache(mem, lastSyncRevision);
+      bzState.classStudents = sortStudentsByNo(mem);
+      writeRosterCache(bzState.classStudents, lastSyncRevision);
     } else {
       bzState.classStudents = [];
       try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
