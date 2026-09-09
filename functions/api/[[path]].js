@@ -61,6 +61,7 @@ const INIT_STATEMENTS = [
     class_name TEXT DEFAULT '',
     student_name TEXT NOT NULL,
     gender TEXT DEFAULT '',
+    student_no TEXT DEFAULT '',
     course_id INTEGER,
     course_name TEXT DEFAULT '',
     selected_at TEXT DEFAULT (datetime('now')),
@@ -265,6 +266,9 @@ async function ensureDbReady(db) {
       }
       if (!selColNames.includes('is_locked')) {
         await db.prepare('ALTER TABLE selections ADD COLUMN is_locked INTEGER DEFAULT 0').run();
+      }
+      if (!selColNames.includes('student_no')) {
+        await db.prepare("ALTER TABLE selections ADD COLUMN student_no TEXT DEFAULT ''").run();
       }
     } catch (selSchemaErr) {
       console.warn('Selections schema migration error:', selSchemaErr.message);
@@ -1928,22 +1932,66 @@ async function handleSelectionUpdate(db, request, id, ctx) {
   const body = await request.json();
   const existing = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
   if (!existing) return json({ error: '选课记录不存在' }, 404);
-  
-  if (body.course_id) {
-    const newCourseId = parseInt(body.course_id);
-    // 减少旧课程的已选人数
-    if (existing.course_id) {
-      await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?').bind(existing.course_id).run();
+
+  const studentName = body.student_name != null
+    ? String(body.student_name).trim()
+    : String(existing.student_name || '').trim();
+  if (!studentName) return json({ error: '学生姓名不能为空' }, 400);
+
+  const gender = body.gender != null ? String(body.gender).trim() : String(existing.gender || '');
+  const studentNo = body.student_no != null
+    ? String(body.student_no).trim()
+    : String(existing.student_no || '');
+
+  let grade = body.grade != null ? String(body.grade).trim() : String(existing.grade || '');
+  let className = body.class_name != null ? String(body.class_name).trim() : String(existing.class_name || '');
+  const parsedClass = parseGradeClassFields(grade, className);
+  if (parsedClass.grade) grade = parsedClass.grade;
+  if (parsedClass.class_name) className = parsedClass.class_name;
+
+  let newCourseId = existing.course_id;
+  let newCourseName = existing.course_name || '';
+  let courseChanged = false;
+
+  if (body.course_id != null && String(body.course_id).trim() !== '') {
+    const parsedId = parseInt(body.course_id, 10);
+    if (!isNaN(parsedId) && parsedId > 0) {
+      if (parseInt(existing.course_id, 10) !== parsedId) courseChanged = true;
+      newCourseId = parsedId;
+      const course = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(parsedId).first();
+      newCourseName = (body.course_name != null && String(body.course_name).trim())
+        ? String(body.course_name).trim()
+        : (course ? course.name : newCourseName);
     }
-    // 增加新课程的已选人数
-    await db.prepare('UPDATE courses SET selected_count = selected_count + 1 WHERE id = ?').bind(newCourseId).run();
-    
-    const course = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(newCourseId).first();
-    const newCourseName = body.course_name || (course ? course.name : existing.course_name);
-    
-    await db.prepare('UPDATE selections SET course_id = ?, course_name = ? WHERE id = ?').bind(newCourseId, newCourseName, id).run();
+  } else if (body.course_name != null && String(body.course_name).trim()) {
+    const wantName = String(body.course_name).trim();
+    if (wantName !== String(existing.course_name || '').trim()) {
+      const course = await db.prepare('SELECT * FROM courses WHERE name = ?').bind(wantName).first();
+      if (course) {
+        courseChanged = parseInt(existing.course_id, 10) !== parseInt(course.id, 10);
+        newCourseId = course.id;
+        newCourseName = course.name;
+      } else {
+        newCourseName = wantName;
+      }
+    }
   }
-  
+
+  if (courseChanged) {
+    if (existing.course_id) {
+      await db.prepare('UPDATE courses SET selected_count = MAX(0, selected_count - 1) WHERE id = ?')
+        .bind(existing.course_id).run();
+    }
+    if (newCourseId) {
+      await db.prepare('UPDATE courses SET selected_count = selected_count + 1 WHERE id = ?')
+        .bind(newCourseId).run();
+    }
+  }
+
+  await db.prepare(
+    'UPDATE selections SET grade = ?, class_name = ?, student_name = ?, gender = ?, student_no = ?, course_id = ?, course_name = ? WHERE id = ?'
+  ).bind(grade, className, studentName, gender, studentNo, newCourseId || null, newCourseName, id).run();
+
   const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
   const courseNames = [existing.course_name, selection && selection.course_name].filter(Boolean);
   await bumpSelectionDataRevision(db);

@@ -2102,7 +2102,7 @@ table.sel-table td:nth-child(6) {
   text-overflow: clip;
   word-break: break-word;
 }
-/* 操作列：换课/删除居中对齐在「操作」下方；内定在删除右侧，不参与居中 */
+/* 操作列：编辑/删除居中对齐在「操作」下方；内定在删除右侧，不参与居中 */
 table.sel-table td.row-actions {
   text-align: center;
   vertical-align: middle;
@@ -2605,6 +2605,24 @@ table.sel-table .course-link {
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+.export-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 4px;
+}
+.export-choice-list .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.export-choice-hint {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* ===== Toast ===== */
@@ -6364,6 +6382,152 @@ function formatSelectionClassDisplay(s) {
   return classDisplayName;
 }
 
+function parseSelectionGradeClassClient(s) {
+  var grade = String((s && s.grade) || '').trim();
+  var cls = String((s && s.class_name) || '').trim();
+  var classNum = '';
+  var m = cls.match(/(六年级|七年级)\s*[\(（]?(\d+)[\)）]?\s*班/);
+  if (m) {
+    grade = grade || m[1];
+    classNum = m[2];
+  } else {
+    m = cls.match(/([六七])(?:年级)?[\(（]?(\d+)[\)）]?\s*班/);
+    if (m) {
+      grade = grade || (m[1] === '六' ? '六年级' : '七年级');
+      classNum = m[2];
+    } else {
+      m = cls.replace(/[()（）]/g, '').match(/(六年级|七年级)?\s*(\d+)\s*班/);
+      if (m) {
+        grade = grade || m[1] || '';
+        classNum = m[2] || '';
+      } else if (/^\d+$/.test(cls)) {
+        classNum = cls;
+      }
+    }
+  }
+  if (!grade) {
+    var gm = (String((s && s.grade) || '') + cls).match(/(六年级|七年级)/);
+    if (gm) grade = gm[1];
+  }
+  return { grade: grade, classNum: classNum };
+}
+
+/** Excel 工作表名：六（1）班 */
+function formatClassSheetName(s) {
+  var p = parseSelectionGradeClassClient(s);
+  if (p.grade && p.classNum) {
+    var short = /六/.test(p.grade) ? '六' : (/七/.test(p.grade) ? '七' : p.grade);
+    return short + '（' + p.classNum + '）班';
+  }
+  var fallback = formatSelectionClassDisplay(s) || '未分班';
+  return fallback.replace(/年级/g, '').replace(/(\d+)班/, '（$1）班') || '未分班';
+}
+
+function sanitizeExcelSheetName(name) {
+  var s = String(name == null ? '' : name).replace(/[\\\/\?\*\[\]\:]/g, '_').trim();
+  if (!s) s = 'Sheet';
+  if (s.length > 31) s = s.slice(0, 31);
+  return s;
+}
+
+function appendUniqueSheet(wb, ws, rawName) {
+  var base = sanitizeExcelSheetName(rawName);
+  var name = base;
+  var i = 2;
+  while (wb.SheetNames.indexOf(name) >= 0) {
+    var suffix = '_' + i;
+    name = sanitizeExcelSheetName(base.slice(0, Math.max(1, 31 - suffix.length)) + suffix);
+    i++;
+  }
+  XLSX.utils.book_append_sheet(wb, ws, name);
+}
+
+function selectionStudentNoNum(s) {
+  var n = parseInt(String((s && s.student_no) || '').trim(), 10);
+  return isNaN(n) ? null : n;
+}
+
+function compareSelectionsByStudentNo(a, b) {
+  var na = selectionStudentNoNum(a);
+  var nb = selectionStudentNoNum(b);
+  if (na != null && nb != null && na !== nb) return na - nb;
+  if (na != null && nb == null) return -1;
+  if (na == null && nb != null) return 1;
+  return String((a && a.student_name) || '').localeCompare(String((b && b.student_name) || ''), 'zh');
+}
+
+function compareSelectionsByClassThenStudentNo(a, b) {
+  var gradeRank = { '六年级': 6, '七年级': 7 };
+  var pa = parseSelectionGradeClassClient(a);
+  var pb = parseSelectionGradeClassClient(b);
+  var ga = gradeRank[pa.grade] || 99;
+  var gb = gradeRank[pb.grade] || 99;
+  if (ga !== gb) return ga - gb;
+  var ca = parseInt(pa.classNum, 10) || 999;
+  var cb = parseInt(pb.classNum, 10) || 999;
+  if (ca !== cb) return ca - cb;
+  return compareSelectionsByStudentNo(a, b);
+}
+
+function resolveExportStudentNo(s, indexInGroup) {
+  var stored = String((s && s.student_no) || '').trim();
+  if (stored) return stored;
+  return String(indexInGroup + 1);
+}
+
+/** 有学号用库内值；否则按班级内顺序自动编号（仅导出，不写库） */
+function withExportStudentNos(list) {
+  var counters = {};
+  return (list || []).map(function(s) {
+    var stored = String((s && s.student_no) || '').trim();
+    var no = stored;
+    if (!no) {
+      var key = formatClassSheetName(s);
+      counters[key] = (counters[key] || 0) + 1;
+      no = String(counters[key]);
+    }
+    return { row: s, studentNo: no };
+  });
+}
+
+function buildSelectionExportAoa(list, courseHeader) {
+  var header = ['班级', '学号', '姓名', '性别', courseHeader || '课程名称'];
+  var aoa = [header];
+  withExportStudentNos(list).forEach(function(item) {
+    var s = item.row;
+    aoa.push([
+      formatSelectionClassDisplay(s),
+      item.studentNo,
+      s.student_name || '',
+      s.gender || '',
+      s.course_name || ''
+    ]);
+  });
+  return aoa;
+}
+
+function sheetFromSelectionRows(list, courseHeader) {
+  var aoa = buildSelectionExportAoa(list, courseHeader);
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 6 }, { wch: 24 }];
+  return ws;
+}
+
+function downloadXlsxWorkbook(wb, filename) {
+  var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  var blob = new Blob([wbout], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+}
+
 function renderSelections(){
   renderSelectionsTable(selectionsData, {
     emptyText: '暂无选课数据',
@@ -6473,7 +6637,7 @@ function renderSelectionsTable(data, opts){
       '<td>' + escapeHtml(s.gender || '') + '</td>' +
       '<td><span class="course-link" data-course="' + escapeAttr(courseName) + '" title="' + escapeAttr(courseName) + '">' + escapeHtml(courseName) + '</span></td>' +
       '<td class="row-actions"><span class="actions-group">' +
-        '<button type="button" class="btn btn-sm btn-outline" data-act="edit" data-id="' + escapeAttr(String(s.id)) + '">换课</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-act="edit" data-id="' + escapeAttr(String(s.id)) + '">编辑</button>' +
         '<button type="button" class="btn btn-sm btn-danger" data-act="del" data-id="' + escapeAttr(String(s.id)) + '">删除</button>' +
         lockedTag +
       '</span></td></tr>';
@@ -6670,56 +6834,96 @@ async function batchDeleteSelections(){
 }
 
 function openEditSelection(s){
-  let html = '';
-  const names = coursesForFilter.map(function(c){ return c.name; }).filter(Boolean);
-  const inList = s.course_name && names.indexOf(s.course_name) > -1;
+  var parsed = parseSelectionGradeClassClient(s);
+  var gradeVal = parsed.grade || String(s.grade || '').trim();
+  var classNumVal = parsed.classNum || '';
+  var gradeOpts = ['<option value="">选择年级</option>'];
+  ['六年级', '七年级'].forEach(function(g){
+    gradeOpts.push('<option value="' + g + '"' + (g === gradeVal ? ' selected' : '') + '>' + g + '</option>');
+  });
+  var classOpts = ['<option value="">选择班级</option>'];
+  for (var i = 1; i <= 10; i++) {
+    classOpts.push('<option value="' + i + '"' + (String(i) === String(classNumVal) ? ' selected' : '') + '>' + i + '班</option>');
+  }
+  var genderVal = String(s.gender || '').trim();
+  var genderOpts = ['<option value="">未填</option>',
+    '<option value="男"' + (genderVal === '男' ? ' selected' : '') + '>男</option>',
+    '<option value="女"' + (genderVal === '女' ? ' selected' : '') + '>女</option>'];
+
+  var courseHtml = '';
+  var names = coursesForFilter.map(function(c){ return c.name; }).filter(Boolean);
+  var inList = s.course_name && names.indexOf(s.course_name) > -1;
   if (s.course_name && !inList){
-    html += '<option value="' + escapeAttr(s.course_name) + '" data-id="' + escapeAttr(s.course_id != null ? s.course_id : '') + '" selected>' + escapeHtml(s.course_name) + '</option>';
+    courseHtml += '<option value="' + escapeAttr(s.course_name) + '" data-id="' + escapeAttr(s.course_id != null ? s.course_id : '') + '" selected>' + escapeHtml(s.course_name) + '</option>';
   }
   coursesForFilter.forEach(function(c){
     if (!c.name) return;
-    const selAttr = c.name === s.course_name ? ' selected' : '';
-    html += '<option value="' + escapeAttr(c.name) + '" data-id="' + escapeAttr(c.id != null ? c.id : '') + '"' + selAttr + '>' + escapeHtml(c.name) + '</option>';
+    var selAttr = c.name === s.course_name ? ' selected' : '';
+    courseHtml += '<option value="' + escapeAttr(c.name) + '" data-id="' + escapeAttr(c.id != null ? c.id : '') + '"' + selAttr + '>' + escapeHtml(c.name) + '</option>';
   });
 
   openModal(
-    '<h3 style="display:none;">编辑选课</h3>' +
-    '<div class="form-group"><label>学生姓名</label><input type="text" class="form-input" value="' + escapeAttr(s.student_name || '') + '" readonly></div>' +
-    '<div class="form-group"><label>更换到课程</label><select class="form-select" id="editSelCourse">' + html + '</select></div>' +
+    '<h3 style="display:none;">编辑学生</h3>' +
+    '<div class="form-group"><label>年级</label><select class="form-select" id="editSelGrade">' + gradeOpts.join('') + '</select></div>' +
+    '<div class="form-group"><label>班级</label><select class="form-select" id="editSelClass">' + classOpts.join('') + '</select></div>' +
+    '<div class="form-group"><label>学号</label><input type="text" class="form-input" id="editSelStudentNo" value="' + escapeAttr(s.student_no || '') + '" placeholder="可选，班级内学号"></div>' +
+    '<div class="form-group"><label>学生姓名</label><input type="text" class="form-input" id="editSelName" value="' + escapeAttr(s.student_name || '') + '"></div>' +
+    '<div class="form-group"><label>性别</label><select class="form-select" id="editSelGender">' + genderOpts.join('') + '</select></div>' +
+    '<div class="form-group"><label>课程</label><select class="form-select" id="editSelCourse">' + courseHtml + '</select></div>' +
     '<div class="modal-actions">' +
       '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
-      '<button class="btn btn-success" id="saveSelBtn">确认换课</button>' +
+      '<button class="btn btn-success" id="saveSelBtn">保存</button>' +
     '</div>'
   );
-  document.getElementById('modalTitle').textContent = '换课编辑';
+  document.getElementById('modalTitle').textContent = '编辑学生信息';
 
-  const saveBtn = document.getElementById('saveSelBtn');
+  var saveBtn = document.getElementById('saveSelBtn');
   saveBtn.onclick = async function(){
-    const selEl = document.getElementById('editSelCourse');
-    const course_name = selEl.value;
-    const opt = selEl.options[selEl.selectedIndex];
-    const course_id = opt ? opt.getAttribute('data-id') : '';
-    if (!course_id){ toast('请选择课程', 'error'); return; }
+    var grade = (document.getElementById('editSelGrade') || {}).value || '';
+    var classNum = (document.getElementById('editSelClass') || {}).value || '';
+    var student_no = String((document.getElementById('editSelStudentNo') || {}).value || '').trim();
+    var student_name = String((document.getElementById('editSelName') || {}).value || '').trim();
+    var gender = (document.getElementById('editSelGender') || {}).value || '';
+    var selEl = document.getElementById('editSelCourse');
+    var course_name = selEl ? selEl.value : '';
+    var opt = selEl && selEl.options[selEl.selectedIndex];
+    var course_id = opt ? opt.getAttribute('data-id') : '';
+    if (!student_name){ toast('请填写学生姓名', 'error'); return; }
+    if (!course_id && !course_name){ toast('请选择课程', 'error'); return; }
+    var class_name = '';
+    if (grade && classNum) class_name = grade + '(' + classNum + ')班';
+    else if (classNum) class_name = classNum + '班';
+    else class_name = String(s.class_name || '');
+
     saveBtn.disabled = true;
+    var payload = {
+      grade: grade || s.grade || '',
+      class_name: class_name,
+      student_name: student_name,
+      gender: gender,
+      student_no: student_no,
+      course_id: course_id,
+      course_name: course_name
+    };
     var prevRow = selectionsData.find(function(row) { return String(row.id) === String(s.id); });
     var prevSnapshot = prevRow ? Object.assign({}, prevRow) : null;
     selectionsData = selectionsData.map(function(row) {
       if (String(row.id) !== String(s.id)) return row;
-      return Object.assign({}, row, {
-        course_id: parseInt(course_id, 10) || course_id,
-        course_name: course_name
+      return Object.assign({}, row, payload, {
+        course_id: parseInt(course_id, 10) || course_id
       });
     });
     renderSelections();
     try {
-      var res = await request('PUT', '/api/selections/' + s.id, { course_id: course_id, course_name: course_name });
+      var res = await request('PUT', '/api/selections/' + s.id, payload);
       if (res && res.selection) {
         selectionsData = selectionsData.map(function(row) {
           return String(row.id) === String(s.id) ? res.selection : row;
         });
+        selectionsData = sortSelectionsByClassClient(selectionsData);
         renderSelections();
       }
-      toast('换课成功', 'success');
+      toast('保存成功', 'success');
       closeModal();
     } catch(e){
       if (prevSnapshot) {
@@ -6735,62 +6939,138 @@ function openEditSelection(s){
   };
 }
 
-async function exportSelections(){
-  const btns = [
+function openExportSelectionsMenu(){
+  if (currentViewMode === 'unselected') {
+    exportSelectionsUnselected();
+    return;
+  }
+  openModal(
+    '<p class="export-choice-hint">导出为 .xlsx 文件。可按当前筛选条件导出；未筛选则导出全部选课数据。</p>' +
+    '<div class="export-choice-list">' +
+      '<button type="button" class="btn btn-success" id="exportDirectBtn">直接导出<span style="opacity:.75;font-weight:500;margin-left:6px">全部名单 · 单表</span></button>' +
+      '<button type="button" class="btn btn-primary" id="exportByClassBtn">班级导出<span style="opacity:.75;font-weight:500;margin-left:6px">按班分工作表</span></button>' +
+      '<button type="button" class="btn btn-outline" id="exportByCourseBtn">课程导出<span style="opacity:.75;font-weight:500;margin-left:6px">按课分工作表</span></button>' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '导出 Excel';
+  var directBtn = document.getElementById('exportDirectBtn');
+  var classBtn = document.getElementById('exportByClassBtn');
+  var courseBtn = document.getElementById('exportByCourseBtn');
+  if (directBtn) directBtn.onclick = function(){ closeModal(); exportSelectionsXlsx('direct'); };
+  if (classBtn) classBtn.onclick = function(){ closeModal(); exportSelectionsXlsx('class'); };
+  if (courseBtn) courseBtn.onclick = function(){ closeModal(); exportSelectionsXlsx('course'); };
+}
+
+async function fetchSelectionsForExport(){
+  var data = await request('GET', '/api/selections?' + buildQuery());
+  return sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
+}
+
+async function exportSelectionsXlsx(mode){
+  var btns = [
     document.getElementById('exportBtn'),
     document.getElementById('exportBtnMob')
   ].filter(Boolean);
   btns.forEach(function(b){ b.disabled = true; });
   try {
-    let url;
-    if (currentViewMode === 'unselected') {
-      const params = new URLSearchParams();
-      const gradeSel = document.getElementById('filterGrade');
-      const classSel = document.getElementById('filterClass');
-      const studentSel = document.getElementById('filterStudent');
-      if (gradeSel && gradeSel.value) params.set('grade', gradeSel.value);
-      if (classSel && classSel.value) params.set('class', classSel.value);
-      if (studentSel && studentSel.value) params.set('student_name', studentSel.value);
-      const data = await request('GET', '/api/unselected-students?' + params.toString());
-      const list = data.unselected || [];
-      const exportData = list.map(function(s){
-        let cls = (s.class_name || '').replace(/[()（）]/g, '');
-        if (s.grade && cls.indexOf(s.grade) !== 0) cls = s.grade + cls;
-        return { '年级': s.grade || '', '班级': cls, '姓名': s.student_name || '', '选课名称': '未选课' };
-      });
-      const XLSX = window.XLSX;
-      if (!XLSX) throw new Error('Excel库未加载');
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, '未选课名单');
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/octet-stream' });
-      url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = '未选课名单导出.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
-    } else {
-      const blob = await request('GET', '/api/selections/export?' + buildQuery());
-      url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = '选课数据导出.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    if (typeof window.XLSX === 'undefined') throw new Error('Excel库未加载');
+    var list = await fetchSelectionsForExport();
+    if (!list.length) {
+      toast('暂无数据可导出', 'warning');
+      return;
     }
+    var wb = XLSX.utils.book_new();
+    var filename = '选课数据导出.xlsx';
+
+    if (mode === 'class') {
+      var groups = {};
+      var order = [];
+      list.slice().sort(compareSelectionsByClassThenStudentNo).forEach(function(s){
+        var key = formatClassSheetName(s);
+        if (!groups[key]) {
+          groups[key] = [];
+          order.push(key);
+        }
+        groups[key].push(s);
+      });
+      order.forEach(function(key){
+        var rows = groups[key].slice().sort(compareSelectionsByStudentNo);
+        appendUniqueSheet(wb, sheetFromSelectionRows(rows, '课程名称'), key);
+      });
+      filename = '选课数据_按班级.xlsx';
+    } else if (mode === 'course') {
+      var courseGroups = {};
+      var courseOrder = [];
+      list.slice().sort(compareSelectionsByClassThenStudentNo).forEach(function(s){
+        var key = String(s.course_name || '').trim() || '未选课程';
+        if (!courseGroups[key]) {
+          courseGroups[key] = [];
+          courseOrder.push(key);
+        }
+        courseGroups[key].push(s);
+      });
+      courseOrder.sort(function(a, b){ return String(a).localeCompare(String(b), 'zh'); });
+      courseOrder.forEach(function(key){
+        var rows = courseGroups[key].slice().sort(compareSelectionsByClassThenStudentNo);
+        appendUniqueSheet(wb, sheetFromSelectionRows(rows, '课程'), key);
+      });
+      filename = '选课数据_按课程.xlsx';
+    } else {
+      var allRows = list.slice().sort(compareSelectionsByClassThenStudentNo);
+      appendUniqueSheet(wb, sheetFromSelectionRows(allRows, '课程名称'), '选课数据');
+      filename = '选课数据导出.xlsx';
+    }
+
+    downloadXlsxWorkbook(wb, filename);
     toast('导出成功', 'success');
   } catch(e){
     toast('导出失败：' + e.message, 'error');
   } finally {
     btns.forEach(function(b){ b.disabled = false; });
   }
+}
+
+async function exportSelectionsUnselected(){
+  var btns = [
+    document.getElementById('exportBtn'),
+    document.getElementById('exportBtnMob')
+  ].filter(Boolean);
+  btns.forEach(function(b){ b.disabled = true; });
+  try {
+    var params = new URLSearchParams();
+    var gradeSel = document.getElementById('filterGrade');
+    var classSel = document.getElementById('filterClass');
+    var studentSel = document.getElementById('filterStudent');
+    if (gradeSel && gradeSel.value) params.set('grade', gradeSel.value);
+    if (classSel && classSel.value) params.set('class', classSel.value);
+    if (studentSel && studentSel.value) params.set('student_name', studentSel.value);
+    var data = await request('GET', '/api/unselected-students?' + params.toString());
+    var list = data.unselected || [];
+    var exportData = list.map(function(s){
+      var cls = (s.class_name || '').replace(/[()（）]/g, '');
+      if (s.grade && cls.indexOf(s.grade) !== 0) cls = s.grade + cls;
+      return { '年级': s.grade || '', '班级': cls, '姓名': s.student_name || '', '选课名称': '未选课' };
+    });
+    var X = window.XLSX;
+    if (!X) throw new Error('Excel库未加载');
+    var ws = X.utils.json_to_sheet(exportData);
+    ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+    var wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, ws, '未选课名单');
+    downloadXlsxWorkbook(wb, '未选课名单导出.xlsx');
+    toast('导出成功', 'success');
+  } catch(e){
+    toast('导出失败：' + e.message, 'error');
+  } finally {
+    btns.forEach(function(b){ b.disabled = false; });
+  }
+}
+
+async function exportSelections(){
+  openExportSelectionsMenu();
 }
 
 (function(){
