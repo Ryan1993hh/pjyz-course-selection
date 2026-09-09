@@ -2228,7 +2228,11 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
   .header-title-btn small { display: none; }
   .header-user-meta .meta-course { display: none; }
   .header-user-meta { max-width: 72px; }
-  .stats-start-btn { font-size: clamp(12px, 3.2vw, 13px); padding: 0 clamp(10px, 2.8vw, 14px); }
+  .stats-start-btn {
+    font-size: clamp(15px, 4.2vw, 17px);
+    padding: 0 clamp(12px, 3vw, 16px);
+    min-height: 52px;
+  }
   .action-bar { flex-direction: column; }
   .action-bar .btn { width: 100%; }
   .card-toolbar { flex-direction: column; align-items: stretch; }
@@ -2236,9 +2240,35 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
   .card-toolbar-actions .btn { flex: 1; }
   .flex-input-row { flex-direction: column; }
   .flex-input-row .btn { width: 100%; }
-  .abnormal-head { flex-direction: column; align-items: stretch; }
-  .abnormal-actions { max-width: none; text-align: left; }
-  .btn-copy-absent { width: 100%; }
+  .abnormal-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+  .abnormal-head .card-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .abnormal-actions {
+    max-width: none;
+    flex: 0 0 auto;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .btn-copy-absent {
+    width: auto;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .copy-absent-hint {
+    display: none;
+  }
   .timer-controls {
     flex-direction: row !important;
     flex-wrap: nowrap;
