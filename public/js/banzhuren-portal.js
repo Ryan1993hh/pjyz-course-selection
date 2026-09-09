@@ -151,7 +151,7 @@
 
   async function refreshClockAbnormalCount() {
     try {
-      var data = await apiRequest('GET', '/api/banzhuren/class-dashboard');
+      var data = await apiRequest('GET', '/api/banzhuren/class-dashboard' + getSelectionPageClassQuery());
       clockAbnormalCount = Number(data && data.today_abnormal_count) || 0;
     } catch (_) {
       clockAbnormalCount = 0;
@@ -305,6 +305,21 @@
     }
   }
 
+  function getSelectionPageClassQuery() {
+    try {
+      var g = (typeof gradeName !== 'undefined' && gradeName) ? String(gradeName).trim() : '';
+      var n = (typeof classNumber !== 'undefined' && classNumber) ? String(classNumber).trim() : '';
+      if (!g || !n) return '';
+      var qs = new URLSearchParams();
+      qs.set('grade', g);
+      qs.set('class', n + '班');
+      qs.set('class_name', g + '(' + n + ')班');
+      return '?' + qs.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
   async function loadClassStudents(opts) {
     opts = opts || {};
     if (!getToken()) {
@@ -342,7 +357,7 @@
     var roster = [];
 
     try {
-      var data = await apiRequest('GET', '/api/banzhuren/class-roster');
+      var data = await apiRequest('GET', '/api/banzhuren/class-roster' + getSelectionPageClassQuery());
       roster = (data && data.students) || [];
       revision = (data && data.revision) || 0;
       apiOk = true;
@@ -390,7 +405,7 @@
 
   async function loadTodayLeaves() {
     try {
-      var data = await apiRequest('GET', '/api/student-leaves?date=' + todayKey());
+      var data = await apiRequest('GET', '/api/student-leaves?date=' + todayKey() + getSelectionPageClassQuery().replace(/^\?/, '&'));
       bzState.todayLeaves = data.leaves || [];
     } catch (e) {
       bzState.todayLeaves = [];
@@ -546,11 +561,53 @@
 
   function syncFromSelectionPage() {
     var mem = getLocalSelectionStudents();
-    if (!mem.length) return;
-    bzState.classStudents = mem.slice();
-    writeRosterCache(mem, lastSyncRevision);
+    if (mem.length) {
+      bzState.classStudents = mem.slice();
+      writeRosterCache(mem, lastSyncRevision);
+    } else {
+      bzState.classStudents = [];
+      try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
+    }
+    bzState.dashboard = null;
+    bzState.selectedStudent = null;
+    updateClockInfo();
     if (bzState.tab === 'leave') {
       renderLeaveGrid();
+      renderLeaveList();
+    }
+  }
+
+  async function notifyRosterUpdated(opts) {
+    opts = opts || {};
+    var silent = !!opts.silent;
+    try {
+      var sync = await apiRequest('GET', '/api/selection-data-sync');
+      lastSyncRevision = (sync && sync.revision) || lastSyncRevision;
+    } catch (_) {}
+
+    // 先用选课页内存名单立刻同步，避免换班后请假/看板短暂显示旧班
+    syncFromSelectionPage();
+    try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
+
+    try {
+      await loadClassStudents({ forceNetwork: true, silent: silent });
+    } catch (_) {}
+
+    // 请假与看板都刷新（不限当前 tab），切过去即可看到新班数据
+    try { await loadTodayLeaves(); } catch (_) {}
+    if (bzState.tab === 'leave') {
+      renderLeaveGrid();
+      renderLeaveList();
+    }
+
+    try {
+      await loadDashboard({ silent: true });
+    } catch (_) {
+      bzState.dashboard = null;
+    }
+
+    if (bzState.tab === 'profile') {
+      try { await loadProfile(); } catch (_) {}
     }
     updateClockInfo();
   }
@@ -722,7 +779,7 @@
     } catch (_) {}
 
     try {
-      var data = await apiRequest('GET', '/api/banzhuren/class-dashboard');
+      var data = await apiRequest('GET', '/api/banzhuren/class-dashboard' + getSelectionPageClassQuery());
       bzState.dashboard = normalizeDashboardData(data, fallback);
       renderDashboard(bzState.dashboard, { silent: silent });
     } catch (e) {
@@ -946,24 +1003,6 @@
     }
   }
 
-  async function notifyRosterUpdated(opts) {
-    opts = opts || {};
-    var silent = !!opts.silent;
-    try {
-      var sync = await apiRequest('GET', '/api/selection-data-sync');
-      lastSyncRevision = (sync && sync.revision) || lastSyncRevision;
-    } catch (_) {}
-    bzState.classStudents = [];
-    try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
-    try { await loadClassStudents({ silent: silent }); } catch (_) {}
-    if (bzState.tab === 'leave') {
-      await loadTodayLeaves();
-      renderLeaveGrid();
-      renderLeaveList();
-    } else if (bzState.tab === 'dashboard') await loadDashboard({ silent: silent });
-    else if (bzState.tab === 'profile') await loadProfile();
-  }
-
   async function pollSelectionSync() {
     if (!getToken()) return;
     ensureLeaveDayFresh();
@@ -976,11 +1015,15 @@
       if (revChanged) lastSyncRevision = rev;
       if (clsChanged) lastClassroomSync = clsSync;
       if (revChanged || clsChanged) {
-        bzState.classStudents = [];
-        try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
-        if (bzState.tab === 'leave') loadLeavePage();
-        else if (bzState.tab === 'dashboard') loadDashboard({ silent: true });
-        else if (bzState.tab === 'profile') loadProfile();
+        if (typeof notifyRosterUpdated === 'function') {
+          notifyRosterUpdated({ silent: true }).catch(function () {});
+        } else {
+          bzState.classStudents = [];
+          try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
+          if (bzState.tab === 'leave') loadLeavePage();
+          else if (bzState.tab === 'dashboard') loadDashboard({ silent: true });
+          else if (bzState.tab === 'profile') loadProfile();
+        }
       }
     } catch (e) { /* ignore */ }
   }

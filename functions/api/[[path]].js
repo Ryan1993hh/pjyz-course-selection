@@ -4439,6 +4439,13 @@ async function handleStudentLeavesGet(db, request) {
     if (!ctx || !ctx.grade) return json({ error: '账号未绑定班级' }, 400);
     grade = ctx.grade;
     className = ctx.class_name;
+    const qGrade = String(url.searchParams.get('grade') || '').trim();
+    const qClass = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+    if (qGrade || qClass) {
+      const parsed = parseGradeClassFields(qGrade || grade, qClass || className);
+      if (parsed.grade) grade = parsed.grade;
+      if (parsed.class_name) className = parsed.class_name;
+    }
   }
 
   let sql = 'SELECT * FROM student_leave_reports WHERE leave_date = ?';
@@ -5183,6 +5190,14 @@ async function handleBanzhurenClassDashboard(db, request) {
     grade = ctx.grade;
     className = ctx.class_name;
     classDisplay = ctx.class_display;
+    const qGrade = String(url.searchParams.get('grade') || '').trim();
+    const qClass = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+    if (qGrade || qClass) {
+      const parsed = parseGradeClassFields(qGrade || grade, qClass || className);
+      if (parsed.grade) grade = parsed.grade;
+      if (parsed.class_name) className = parsed.class_name;
+      classDisplay = className;
+    }
   }
 
   const parsedClass = parseGradeClassFields(grade, className || classDisplay);
@@ -5582,6 +5597,15 @@ async function handleBanzhurenClassRosterGet(db, request) {
     grade = ctx.grade;
     className = ctx.class_name;
     classDisplay = ctx.class_display;
+    // 班主任重选班级查看时，允许用查询参数覆盖绑定班级
+    const qGrade = String(url.searchParams.get('grade') || '').trim();
+    const qClass = String(url.searchParams.get('class_name') || url.searchParams.get('class') || '').trim();
+    if (qGrade || qClass) {
+      const parsed = parseGradeClassFields(qGrade || grade, qClass || className);
+      if (parsed.grade) grade = parsed.grade;
+      if (parsed.class_name) className = parsed.class_name;
+      classDisplay = className;
+    }
   }
 
   if (!grade) return json({ error: '缺少年级信息' }, 400);

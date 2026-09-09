@@ -4209,6 +4209,9 @@ function renderStats() {
       resetCourseAssignmentsForClassSwitch();
       syncCourseSlots();
       renderAll();
+      if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
+        window.BzPortal.notifyRosterUpdated({ silent: true }).catch(function () {});
+      }
     });
   }
   if (classSelect) {
@@ -4217,17 +4220,27 @@ function renderStats() {
       classNumber = e.target.value;
       updateClassName();
       await loadClassQuotaOverrides();
-      syncCourseSlots();
-      await refreshPreEnrollments();
-      // 仅在非上传来源时，尝试用后台名单补齐
-      if (studentListSource !== 'upload') {
-        const hadStudents = students.length > 0;
-        await loadSchoolRosterForClass({ force: !hadStudents });
-      } else {
+      // 换班后从数据库重新拉取本班选课，并同步请假/看板
+      if (studentListSource === 'upload') {
         rosterReadyTip = false;
+        syncCourseSlots();
+        await refreshPreEnrollments();
+        renderAll();
+      } else {
+        clearLocalSelectionDraft();
+        applyBanzhurenClassPreset();
+        // 重选后 preset 可能把班级写回绑定班；若已解锁则保留用户选择
+        if (classSelectUnlocked) {
+          gradeName = (document.getElementById('gradeSelect') || {}).value || gradeName;
+          classNumber = e.target.value;
+          updateClassName();
+        }
+        await applyServerSelectionSync({ silent: true });
+        renderAll();
       }
-      renderAll();
-      if (rosterReadyTip || lockedStudentNames.size) await applyPreEnrollments({ skipReset: true });
+      if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
+        await window.BzPortal.notifyRosterUpdated({ silent: true });
+      }
     });
   }
 }
@@ -6007,7 +6020,9 @@ document.addEventListener('keydown', e => {
 
   function notifyPortalRoster() {
     try {
-      if (window.BzPortal && typeof window.BzPortal.syncFromSelectionPage === 'function') {
+      if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
+        window.BzPortal.notifyRosterUpdated({ silent: true }).catch(function () {});
+      } else if (window.BzPortal && typeof window.BzPortal.syncFromSelectionPage === 'function') {
         window.BzPortal.syncFromSelectionPage();
       }
     } catch (_) {}
@@ -6270,6 +6285,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260909a"></script>
+<script src="js/banzhuren-portal.js?v=20260909b"></script>
 </body>
 </html>
