@@ -3599,13 +3599,9 @@ async function isServerClassSelectionEmpty() {
     ]);
     var selData = pair[0];
     var udata = pair[1];
-    var selRows = (Array.isArray(selData) ? selData : (selData.selections || [])).filter(function(row) {
-      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
-    });
+    var selRows = (Array.isArray(selData) ? selData : (selData.selections || [])).filter(selectionRowMatchesCurrentClass);
     if (selRows.length) return false;
-    var unsel = ((udata && udata.unselected) || []).filter(function(row) {
-      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
-    });
+    var unsel = ((udata && udata.unselected) || []).filter(selectionRowMatchesCurrentClass);
     return unsel.length === 0;
   } catch (e) {
     return false;
@@ -3628,6 +3624,8 @@ async function applyServerSelectionSync(opts) {
     }
   }
   await applyPreEnrollments({ skipReset: true, skipRender: true });
+  finalizeCourseSlotsAfterPreEnroll();
+  syncCourseSlots();
   saveState(serverDataRevision);
   if (!silent) renderAll();
   return restored;
@@ -4020,22 +4018,22 @@ async function loadClassQuotaOverrides() {
 }
 
 // 根据当前年级同步各课程的 students 数组长度
-// 内定学生始终保留；普通选课超出名额时才裁剪
+// 已选学生（含后台写入）一律保留；名额只决定额外空位数量，不裁剪已有名单
 function syncCourseSlots() {
   COURSES.forEach(c => {
     const limit = getCourseLimit(c);
-    const filled = c.students.filter(s => s != null);
-    const locked = filled.filter(n => lockedStudentNames.has(n));
-    const normal = filled.filter(n => !lockedStudentNames.has(n));
-    const maxNormal = Math.max(0, limit - locked.length);
-    const keptNormal = normal.slice(0, maxNormal);
-    const overflow = normal.slice(maxNormal);
-    const kept = locked.concat(keptNormal);
+    const filled = (c.students || []).filter(s => s != null && String(s).trim() !== '');
+    // 去重保序
+    const seen = new Set();
+    const kept = [];
+    filled.forEach(function (n) {
+      var name = String(n).trim();
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      kept.push(name);
+    });
     const slotCount = Math.max(limit, kept.length);
     c.students = kept.concat(Array(Math.max(0, slotCount - kept.length)).fill(null));
-    if (overflow.length) {
-      showToast(`${c.name} 已超出限制，已移除 ${overflow.join('、')}`, 'warning');
-    }
   });
 }
 
@@ -4047,12 +4045,14 @@ function buildClassKey(grade, classNum) {
 }
 
 function extractClassKeyFromRow(row) {
-  const rowGrade = String(row.grade || '').trim();
-  const rowClass = String(row.class_name || '').trim();
+  const rowGrade = String((row && row.grade) || '').trim();
+  const rowClass = String((row && row.class_name) || '').trim();
   if (rowClass) {
-    let m = rowClass.match(/^(六年级|七年级)\s*[\(（]?(\d+)[\)）]?班$/);
+    let m = rowClass.match(/^(六年级|七年级)\s*[\(（]?(\d+)[\)）]?\s*班$/);
     if (m) return buildClassKey(m[1], m[2]);
-    m = rowClass.match(/^[\(（]?(\d+)[\)）]?班$/);
+    m = rowClass.match(/^([六七])(?:年级)?\s*[\(（]?(\d+)[\)）]?\s*班$/);
+    if (m) return buildClassKey(m[1] === '六' ? '六年级' : '七年级', m[2]);
+    m = rowClass.match(/^[\(（]?(\d+)[\)）]?\s*班$/);
     if (m && rowGrade) return buildClassKey(rowGrade, m[1]);
   }
   if (rowGrade && rowClass) {
@@ -4062,9 +4062,39 @@ function extractClassKeyFromRow(row) {
   return rowClass.replace(/[()（）\s]/g, '');
 }
 
-function preEnrollRowMatchesClass(row) {
+function selectionRowMatchesCurrentClass(row) {
   if (!gradeName || !classNumber) return false;
-  return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
+  var want = buildClassKey(gradeName, classNumber);
+  var got = extractClassKeyFromRow(row);
+  if (got && want && got === want) return true;
+  // 宽松兜底：同年级且班号一致
+  var raw = String((row && row.class_name) || '') + String((row && row.grade) || '');
+  var num = raw.match(/(\d+)/);
+  var gOk = !row.grade || String(row.grade).indexOf(gradeName.replace('年级', '')) >= 0 || String(row.grade) === gradeName;
+  return !!(gOk && num && String(num[1]) === String(classNumber));
+}
+
+function findCourseForSelectionRow(row) {
+  if (!row || !COURSES.length) return null;
+  var cid = row.course_id != null && String(row.course_id).trim() !== '' ? String(row.course_id) : '';
+  var cname = String(row.course_name || '').trim();
+  if (cid) {
+    var byId = COURSES.find(function (c) { return String(c.id) === cid; });
+    if (byId) return byId;
+  }
+  if (cname) {
+    var byName = COURSES.find(function (c) { return String(c.name || '').trim() === cname; });
+    if (byName) return byName;
+    byName = COURSES.find(function (c) {
+      return String(c.name || '').replace(/\s+/g, '') === cname.replace(/\s+/g, '');
+    });
+    if (byName) return byName;
+  }
+  return null;
+}
+
+function preEnrollRowMatchesClass(row) {
+  return selectionRowMatchesCurrentClass(row);
 }
 
 function resetCourseAssignmentsForClassSwitch() {
@@ -4294,9 +4324,7 @@ async function loadSchoolRosterForClass(opts) {
     uq.set('grade', gradeName);
     uq.set('class', classNumber + '班');
     const udata = await apiRequest('GET', '/api/unselected-students?' + uq.toString());
-    const unselected = ((udata && udata.unselected) || []).filter(function(row) {
-      return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
-    });
+    const unselected = ((udata && udata.unselected) || []).filter(selectionRowMatchesCurrentClass);
     if (!unselected.length && !opts.force) {
       rosterReadyTip = false;
       return false;
@@ -4939,20 +4967,19 @@ async function applyPreEnrollments(opts) {
       nameSet.add(name);
     }
 
-    const course = COURSES.find(function(c) {
-      if (row.course_id && String(c.id) === String(row.course_id)) return true;
-      return c.name === row.course_name;
-    });
+    const course = findCourseForSelectionRow(row);
     if (!course) return;
 
     // 内定优先：先从其他课程移除，再放入目标课程
     removeStudentFromAllCourses(name);
 
-    const emptyIdx = course.students.findIndex(function(s) { return !s; });
-    if (emptyIdx < 0) {
-      course.students.push(name);
-    } else {
-      course.students[emptyIdx] = name;
+    if (course.students.indexOf(name) === -1) {
+      const emptyIdx = course.students.findIndex(function(s) { return !s; });
+      if (emptyIdx < 0) {
+        course.students.push(name);
+      } else {
+        course.students[emptyIdx] = name;
+      }
     }
     lockedStudentNames.add(name);
     if (row.gender) {
@@ -4967,7 +4994,7 @@ async function applyPreEnrollments(opts) {
   return placed;
 }
 
-/** 本地无草稿时，从后台恢复本班选课数据（与选课数据页一致） */
+/** 从后台恢复本班选课：把数据库中该班每门课的全部已选学生写入课程格子 */
 async function restoreSelectionsFromServer() {
   if (!getToken() || !COURSES.length) return false;
   if (!gradeName || !classNumber) {
@@ -4981,10 +5008,11 @@ async function restoreSelectionsFromServer() {
   try {
     const qs = new URLSearchParams();
     qs.set('grade', gradeName);
-    qs.set('class_name', classNumber + '班');
+    qs.set('class', String(classNumber));
+    qs.set('class_name', String(classNumber) + '班');
     const uq = new URLSearchParams();
     uq.set('grade', gradeName);
-    uq.set('class', classNumber + '班');
+    uq.set('class', String(classNumber) + '班');
     const pair = await Promise.all([
       apiRequest('GET', '/api/selections?' + qs.toString()).catch(function (e) {
         console.warn('restoreSelectionsFromServer selections:', e.message);
@@ -5004,12 +5032,8 @@ async function restoreSelectionsFromServer() {
     return false;
   }
 
-  rows = rows.filter(function(row) {
-    return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
-  });
-  unselected = unselected.filter(function(row) {
-    return extractClassKeyFromRow(row) === buildClassKey(gradeName, classNumber);
-  });
+  rows = rows.filter(selectionRowMatchesCurrentClass);
+  unselected = unselected.filter(selectionRowMatchesCurrentClass);
 
   if (!rows.length && !unselected.length) return false;
 
@@ -5034,47 +5058,46 @@ async function restoreSelectionsFromServer() {
   if (studentListSource !== 'upload') studentListSource = 'server';
   fileName = fileName || '已从服务器恢复本班选课';
 
+  // 清空课程格子后按数据库名单重新灌入（可超出名额，全部显示）
   COURSES.forEach(function(c) {
-    const limit = getCourseLimit(c);
-    c.students = Array(Math.max(0, limit)).fill(null);
+    c.students = [];
   });
 
-  // 普通选课先占位；随后内定覆盖（一人一课）
+  // 一人一课：同名多条时内定优先，其次较新 id
+  var byStudent = new Map();
   rows.forEach(function(row) {
-    if (Number(row.is_locked) === 1) return;
-    const name = String(row.student_name || '').trim();
+    var name = String(row.student_name || '').trim();
     if (!name) return;
-    const course = COURSES.find(function(c) {
-      if (row.course_id && String(c.id) === String(row.course_id)) return true;
-      return c.name === row.course_name;
-    });
-    if (!course) return;
-    if (getAssignedNames().has(name)) return;
-    const emptyIdx = course.students.findIndex(function(s) { return !s; });
-    if (emptyIdx < 0) course.students.push(name);
-    else course.students[emptyIdx] = name;
+    var prev = byStudent.get(name);
+    if (!prev) {
+      byStudent.set(name, row);
+      return;
+    }
+    var prevLock = Number(prev.is_locked) === 1 ? 1 : 0;
+    var curLock = Number(row.is_locked) === 1 ? 1 : 0;
+    if (curLock > prevLock || ((row.id || 0) >= (prev.id || 0) && curLock === prevLock)) {
+      byStudent.set(name, row);
+    }
   });
 
+  byStudent.forEach(function(row) {
+    var name = String(row.student_name || '').trim();
+    if (!name) return;
+    var course = findCourseForSelectionRow(row);
+    if (!course) {
+      console.warn('restoreSelectionsFromServer: 未匹配课程', row.course_name, row.course_id);
+      return;
+    }
+    if (course.students.indexOf(name) === -1) course.students.push(name);
+    if (Number(row.is_locked) === 1) lockedStudentNames.add(name);
+    var g = normalizeGender(row.gender);
+    if (g) studentGenders[name] = g;
+  });
+
+  // 再补一次内定（全校 locked 接口），确保管理员新加的内定也落位
   await applyPreEnrollments({ skipReset: true, skipRender: true });
-
-  // 再放入内定（若 apply 因名单已含而完成则已处理）；确保锁定行都在
-  rows.forEach(function(row) {
-    if (Number(row.is_locked) !== 1) return;
-    const name = String(row.student_name || '').trim();
-    if (!name) return;
-    const course = COURSES.find(function(c) {
-      if (row.course_id && String(c.id) === String(row.course_id)) return true;
-      return c.name === row.course_name;
-    });
-    if (!course) return;
-    removeStudentFromAllCourses(name);
-    const emptyIdx = course.students.findIndex(function(s) { return !s; });
-    if (emptyIdx < 0) course.students.push(name);
-    else course.students[emptyIdx] = name;
-    lockedStudentNames.add(name);
-  });
-
   finalizeCourseSlotsAfterPreEnroll();
+  syncCourseSlots();
 
   var uploadTextCol = document.getElementById('uploadTextCol');
   if (uploadTextCol) {
@@ -5082,7 +5105,7 @@ async function restoreSelectionsFromServer() {
       '<span class="title">✓ ' + esc(fileName) + '</span>' +
       '<span class="file-info">📋 共 ' + students.length + ' 名学生（与后台选课数据同步）</span>';
   }
-  return students.length > 0;
+  return students.length > 0 || byStudent.size > 0;
 }
 
 // ===== API 辅助函数 =====
