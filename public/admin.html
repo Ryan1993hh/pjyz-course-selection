@@ -634,8 +634,9 @@ button.course-mod-card {
   cursor: default;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
-  padding: 8px 10px;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
 }
 .course-mod-upload:hover {
   transform: none;
@@ -645,10 +646,11 @@ button.course-mod-card {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+  flex-shrink: 0;
 }
 .course-mod-upload .mod-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
 }
 .course-mod-upload .mod-tpl {
   flex-shrink: 0;
@@ -657,7 +659,7 @@ button.course-mod-card {
   color: #c2410c;
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
   cursor: pointer;
   font-family: inherit;
@@ -667,21 +669,21 @@ button.course-mod-card {
 }
 .course-mod-upload .upload-area {
   flex: 1;
-  padding: 6px 10px;
-  gap: 8px;
+  padding: 4px 8px;
+  gap: 6px;
   min-height: 0;
   align-items: center;
-  border-radius: 14px;
+  border-radius: 12px;
   border-style: dashed;
   border-width: 1.5px;
   border-color: rgba(249, 115, 22, 0.35);
   background: rgba(255,255,255,0.7);
 }
 .course-mod-upload .upload-area .icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 .course-mod-upload .upload-area .title {
-  font-size: 12px;
+  font-size: 11px;
 }
 .course-mod-upload .upload-area .hint {
   display: none;
