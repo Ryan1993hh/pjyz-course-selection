@@ -2907,7 +2907,8 @@ let state = {
   courseName: "",
   courses: [],
   classTeachers: {},
-  numericHoursTotal: null
+  numericHoursTotal: null,
+  rosterConfirmedEmpty: false
 };
 
 let timer = { mode: "up", seconds: 0, interval: null, running: false, target: 300 };
@@ -2983,6 +2984,52 @@ async function refreshUserProfile() {
 
 function storeKey() { return STORE_PREFIX + (state.courseId || state.courseName || "default"); }
 function classroomMetaKey() { return storeKey() + "_sync"; }
+function courseNameStoreKey(name) {
+  const n = String(name || state.courseName || "").trim();
+  return n ? (STORE_PREFIX + "name:" + n) : "";
+}
+function courseIdStoreKey(id) {
+  const i = String(id || state.courseId || "").trim();
+  return i ? (STORE_PREFIX + "id:" + i) : "";
+}
+
+/** 读取课堂本地缓存：兼容 courseId / courseName 两种键，避免秒开时读不到名单 */
+function readLocalClassroomRaw() {
+  const keys = [];
+  const primary = storeKey();
+  if (primary) keys.push(primary);
+  const byName = courseNameStoreKey(state.courseName);
+  if (byName && keys.indexOf(byName) === -1) keys.push(byName);
+  const byId = courseIdStoreKey(state.courseId);
+  if (byId && keys.indexOf(byId) === -1) keys.push(byId);
+  for (let i = 0; i < keys.length; i++) {
+    try {
+      const raw = localStorage.getItem(keys[i]);
+      if (raw) return raw;
+    } catch (_) {}
+  }
+  return null;
+}
+
+function writeLocalClassroomRaw(jsonStr) {
+  const keys = [];
+  const primary = storeKey();
+  if (primary) keys.push(primary);
+  const byName = courseNameStoreKey(state.courseName);
+  if (byName) keys.push(byName);
+  const byId = courseIdStoreKey(state.courseId);
+  if (byId) keys.push(byId);
+  const seen = {};
+  keys.forEach(function (k) {
+    if (!k || seen[k]) return;
+    seen[k] = 1;
+    try { localStorage.setItem(k, jsonStr); } catch (_) {}
+  });
+}
+
+function hasLocalClassroomCache() {
+  return !!readLocalClassroomRaw();
+}
 
 function stableStudentKey(s) {
   const name = String((s && s.student_name) || "").trim();
@@ -3079,8 +3126,8 @@ async function refreshNumericHoursTotal() {
 
 function loadLocal() {
   try {
-    const raw = localStorage.getItem(storeKey());
-    if (!raw) return;
+    const raw = readLocalClassroomRaw();
+    if (!raw) return false;
     const data = JSON.parse(raw);
     state.checkin = data.checkin || {};
     state.checkinDay = data.checkinDay || "";
@@ -3103,12 +3150,17 @@ function loadLocal() {
     state.teacher = Object.assign(state.teacher, data.teacher || {});
     state.teacher.totalClasses = resolveTotalClasses(state.teacher.totalClasses);
     if (data.password) state.password = data.password;
-  } catch (_) {}
+    if (data.courseId && !state.courseId) state.courseId = String(data.courseId);
+    if (data.courseName && !state.courseName) state.courseName = String(data.courseName);
+    return !!(state.students && state.students.length);
+  } catch (_) {
+    return false;
+  }
 }
 
 function saveLocal(opts) {
   state.teacher.totalClasses = resolveTotalClasses(state.teacher.totalClasses);
-  localStorage.setItem(storeKey(), JSON.stringify({
+  const jsonStr = JSON.stringify({
     checkin: state.checkin,
     checkinDay: state.checkinDay,
     checkinDone: state.checkinDone,
@@ -3118,8 +3170,11 @@ function saveLocal(opts) {
     history: state.history,
     students: state.students,
     teacher: state.teacher,
-    password: state.password
-  }));
+    password: state.password,
+    courseId: state.courseId || "",
+    courseName: state.courseName || state.teacher.course || ""
+  });
+  writeLocalClassroomRaw(jsonStr);
   if (!opts || !opts.skipSync) scheduleClassroomSync();
 }
 
@@ -3185,11 +3240,12 @@ async function syncClassroomToServer(opts) {
 function mergeClassroomFromServer(payload, summary) {
   if (!payload) return;
   const prevStudents = state.students.slice();
-  if (Array.isArray(payload.students)) {
+  if (Array.isArray(payload.students) && payload.students.length) {
     state.students = payload.students.map(function(s) {
       return Object.assign({}, s, { stableId: s.stableId || stableStudentKey(s) });
     });
   }
+  // 服务端名单为空时保留本地已缓存学生，避免签到页闪「暂无学生」
   state.checkin = remapKeyedMap(payload.checkin || {}, state.students, prevStudents);
   state.checkinDay = payload.checkinDay || state.checkinDay || "";
   state.checkinDone = !!payload.checkinDone;
@@ -3224,7 +3280,7 @@ async function pullClassroomFromServer() {
   if (!getToken()) return;
   const courseName = (state.courseName || state.teacher.course || "").trim();
   if (!courseName) return;
-  const hasLocal = !!localStorage.getItem(storeKey());
+  const hasLocal = hasLocalClassroomCache() || !!(state.students && state.students.length);
   const meta = loadClassroomMeta();
   try {
     // 用 query 传课程名，避免名称含 / 时路径截断
@@ -3707,11 +3763,13 @@ function renderCheckin() {
   const empty = document.getElementById("emptyStudents");
   if (!state.students.length) {
     grid.innerHTML = "";
-    empty.style.display = "";
+    // 仅确认无名单时显示；加载中或本地有缓存待同步时不闪「暂无学生」
+    if (empty) empty.style.display = state.rosterConfirmedEmpty ? "" : "none";
     updateCheckinStartBtn();
     return;
   }
-  empty.style.display = "none";
+  if (empty) empty.style.display = "none";
+  state.rosterConfirmedEmpty = false;
   grid.innerHTML = state.students.map(s => {
     const id = studentId(s);
     const st = getStatus(id);
@@ -4498,7 +4556,30 @@ function formatClassCompact(s) {
   return cls || grade;
 }
 
+/** 用本地用户与课堂缓存立刻画出签到名单，不等网络 */
+function bootPaintFromCache() {
+  const user = getUser();
+  const assignedName = (user && user.course_name) ? String(user.course_name).trim() : "";
+  if (assignedName) {
+    state.courseName = assignedName;
+    state.teacher.course = assignedName;
+  }
+  if (user && user.teacher_name) {
+    state.teacher.name = String(user.teacher_name).trim() || state.teacher.name;
+  }
+  const hasRoster = loadLocal();
+  if (hasRoster) state.rosterConfirmedEmpty = false;
+  ensureDailyCheckinState();
+  updateHeaderMeta();
+  updateDateLine();
+  try { renderCheckin(); } catch (_) {}
+  return hasRoster;
+}
+
 async function loadAssignedCourse() {
+  // 先秒开本地名单，再拉网校对
+  bootPaintFromCache();
+
   const user = await refreshUserProfile() || getUser();
   const assignedName = (user && user.course_name) ? String(user.course_name).trim() : "";
 
@@ -4513,15 +4594,28 @@ async function loadAssignedCourse() {
     return;
   }
 
-  // 先用本地缓存秒开界面，再并行拉网同步
   state.courseName = assignedName;
   state.teacher.course = assignedName;
-  loadLocal();
-  ensureDailyCheckinState();
-  updateHeaderMeta();
-  renderAll();
+  if (user && user.teacher_name) {
+    state.teacher.name = String(user.teacher_name).trim() || state.teacher.name;
+  }
+  // 课程名已确定后再读一次缓存（兼容 courseId 键）
+  if (loadLocal()) {
+    state.rosterConfirmedEmpty = false;
+    ensureDailyCheckinState();
+    updateHeaderMeta();
+    renderCheckin();
+  }
 
-  const data = await api("GET", "/api/courses");
+  const coursesP = api("GET", "/api/courses");
+  const syncP = Promise.all([
+    syncStudentsFromServer({ silent: true }).catch(function () {}),
+    pullClassroomFromServer().catch(function () {}),
+    refreshNumericHoursTotal().catch(function () {}),
+    loadClassScheduleStatus().catch(function () {})
+  ]);
+
+  const data = await coursesP;
   state.courses = (data.courses || []).filter(c => c.is_active !== 0 && c.is_active !== false);
   const course = state.courses.find(c => c.name === assignedName);
 
@@ -4530,11 +4624,15 @@ async function loadAssignedCourse() {
     state.courseId = "";
     toast("绑定的课程在课程库中不存在", "warning");
     updateHeaderMeta();
+    await syncP;
+    renderAll();
     return;
   }
 
   state.courseId = String(course.id);
   state.courseName = course.name;
+  // courseId 就绪后，把缓存双写到 id 键，下次秒开更稳
+  if (state.students.length) saveLocal({ skipSync: true });
 
   const authoritativeName = String((user && user.teacher_name) || "").trim()
     || String(course.teacher || "").trim()
@@ -4543,19 +4641,13 @@ async function loadAssignedCourse() {
   state.teacher.name = authoritativeName;
   state.teacher.course = course.name;
   state.teacher.location = course.location || state.teacher.location || "";
-  // 本地缓存可能带旧老师名，强制回写账号绑定姓名
-  state.teacher.name = authoritativeName || state.teacher.name;
 
-  await Promise.all([
-    syncStudentsFromServer({ silent: true }).catch(function () {}),
-    pullClassroomFromServer().catch(function () {}),
-    refreshNumericHoursTotal().catch(function () {}),
-    loadClassScheduleStatus().catch(function () {})
-  ]);
+  await syncP;
   ensureDailyCheckinState();
   state.teacher.name = authoritativeName || state.teacher.name;
   if (!state.teacher.course) state.teacher.course = course.name;
   if (!state.teacher.location) state.teacher.location = course.location || "";
+  if (state.students.length) state.rosterConfirmedEmpty = false;
 
   updateHeaderMeta();
   renderAll();
@@ -4595,21 +4687,30 @@ async function syncStudentsFromServer(opts) {
       return base;
     });
     const nextKeys = nextStudents.map(s => stableStudentKey(s)).sort().join("\n");
-    // 选课数据以管理员后台为准：名单为空则清空本地学生及关联记录
+    // 选课数据以管理员后台为准；静默同步若暂未拉到名单，保留本地缓存避免闪空
     if (!nextStudents.length) {
       if (prevStudents.length) {
+        if (silent) {
+          state.rosterConfirmedEmpty = false;
+          return;
+        }
         state.students = [];
         state.checkin = {};
         state.rewards = {};
         state.exams = {};
         state.history = [];
+        state.rosterConfirmedEmpty = true;
         ensureDailyCheckinState();
         saveLocal({ skipSync: true });
         renderAll();
         await syncClassroomToServer({ notify: false });
+      } else {
+        state.rosterConfirmedEmpty = true;
+        renderCheckin();
       }
       return;
     }
+    state.rosterConfirmedEmpty = false;
     if (silent && prevKeys === nextKeys) return;
     state.students = nextStudents;
     state.checkin = remapKeyedMap(state.checkin, state.students, prevStudents);
@@ -5246,6 +5347,8 @@ async function initApp() {
   }
   initSkin();
   updateDateLine();
+  // 登录态下立刻用本地缓存画出学生名单
+  bootPaintFromCache();
   if (window.TeacherQuotes && typeof TeacherQuotes.init === "function") {
     TeacherQuotes.init().catch(function () {});
   }
