@@ -4156,7 +4156,7 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-outline btn-block" id="preEnrollListBtn" title="查看提前录课（内定）学生">📌 <span class="txt-full">内定学生</span><span class="txt-short">内定</span></button>
                 <button type="button" class="btn btn-outline btn-block mob-filter-extra" id="resetFilterBtnMob"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
                 <button type="button" class="btn btn-primary btn-block mob-filter-extra" id="queryBtnMob">🔍 查询</button>
-                <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="导入全校六、七年级学生名单" hidden aria-hidden="true">📥 <span class="txt-full">导入学生名单</span><span class="txt-short">名单</span></button>
+                <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="添加学生到选课名单" hidden aria-hidden="true">➕ <span class="txt-full">添加学生</span><span class="txt-short">添加</span></button>
                 <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单" hidden aria-hidden="true">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
               <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
@@ -4201,7 +4201,7 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-danger" id="batchDeleteBtn">🗑 批量删除</button>
                 <button type="button" class="btn btn-primary" id="preEnrollBtn" title="上传已确定选课的学生名单">📌 提前录课</button>
                 <input type="file" id="preEnrollFile" accept=".xlsx,.xls,.csv" style="display:none">
-                <button type="button" class="btn btn-outline" id="importRosterBtn" title="导入全校六、七年级学生名单">📥 导入学生名单</button>
+                <button type="button" class="btn btn-outline" id="importRosterBtn" title="添加学生到选课名单（上传文件或个别录入）">➕ 添加学生</button>
                 <input type="file" id="importRosterFile" accept=".xlsx,.xls,.csv" style="display:none">
                 <button type="button" class="btn btn-success" id="exportBtn">⬇ 导出 Excel</button>
               </div>
@@ -7270,12 +7270,135 @@ async function exportSelections(){
     var file = e.target.files && e.target.files[0];
     if (file) handlePreEnrollUpload(file);
   });
+  function openAddStudentModal() {
+    openModal(
+      '<h3 style="display:none;">添加学生</h3>' +
+      '<div class="add-student-modal">' +
+        '<div class="add-student-tabs" style="display:flex;gap:8px;margin-bottom:16px;">' +
+          '<button type="button" class="btn btn-primary" id="addStuTabFile" style="flex:1;">📄 上传文件</button>' +
+          '<button type="button" class="btn btn-outline" id="addStuTabManual" style="flex:1;">✏️ 个别添加</button>' +
+        '</div>' +
+        '<div id="addStuPaneFile">' +
+          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">上传 Excel / CSV 花名册，系统自动识别年级、班级、姓名、性别并导入选课名单。</p>' +
+          '<p style="font-size:12px;color:#94a3b8;margin:0 0 14px;">表头建议包含：姓名、班级（或年级）、性别（可选）。批量导入将覆盖更新全校名单。</p>' +
+          '<button type="button" class="btn btn-primary btn-block" id="addStuPickFileBtn">选择文件并导入</button>' +
+        '</div>' +
+        '<div id="addStuPaneManual" style="display:none;">' +
+          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">填写单个学生信息，添加到选课数据库（未选课名单会同步更新）。</p>' +
+          '<div class="form-group"><label>年级 <span style="color:#ef4444;">*</span></label>' +
+            '<select class="form-select" id="addStuGrade">' +
+              '<option value="六年级">六年级</option>' +
+              '<option value="七年级">七年级</option>' +
+            '</select></div>' +
+          '<div class="form-group"><label>班级 <span style="color:#ef4444;">*</span></label>' +
+            '<select class="form-select" id="addStuClass"></select></div>' +
+          '<div class="form-group"><label>学生姓名 <span style="color:#ef4444;">*</span></label>' +
+            '<input type="text" class="form-input" id="addStuName" placeholder="请输入学生姓名" maxlength="40" autocomplete="off"></div>' +
+          '<div class="form-group"><label>性别</label>' +
+            '<select class="form-select" id="addStuGender">' +
+              '<option value="">未填写</option>' +
+              '<option value="男">男</option>' +
+              '<option value="女">女</option>' +
+            '</select></div>' +
+          '<div class="modal-actions" style="margin-top:8px;padding:0;">' +
+            '<button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+            '<button type="button" class="btn btn-success" id="addStuConfirmBtn">确认添加</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    document.getElementById('modalTitle').textContent = '添加学生';
+
+    function fillClassOptions() {
+      var grade = document.getElementById('addStuGrade').value;
+      var sel = document.getElementById('addStuClass');
+      if (!sel) return;
+      var html = '';
+      for (var i = 1; i <= 10; i++) {
+        var label = grade + '(' + i + ')班';
+        html += '<option value="' + i + '">' + label + '</option>';
+      }
+      sel.innerHTML = html;
+    }
+    fillClassOptions();
+
+    var tabFile = document.getElementById('addStuTabFile');
+    var tabManual = document.getElementById('addStuTabManual');
+    var paneFile = document.getElementById('addStuPaneFile');
+    var paneManual = document.getElementById('addStuPaneManual');
+    function showFile() {
+      paneFile.style.display = '';
+      paneManual.style.display = 'none';
+      tabFile.className = 'btn btn-primary';
+      tabFile.style.flex = '1';
+      tabManual.className = 'btn btn-outline';
+      tabManual.style.flex = '1';
+    }
+    function showManual() {
+      paneFile.style.display = 'none';
+      paneManual.style.display = '';
+      tabFile.className = 'btn btn-outline';
+      tabFile.style.flex = '1';
+      tabManual.className = 'btn btn-primary';
+      tabManual.style.flex = '1';
+      var nameEl = document.getElementById('addStuName');
+      if (nameEl) setTimeout(function () { nameEl.focus(); }, 30);
+    }
+    tabFile.onclick = showFile;
+    tabManual.onclick = showManual;
+    document.getElementById('addStuGrade').onchange = fillClassOptions;
+    document.getElementById('addStuPickFileBtn').onclick = function () {
+      closeModal();
+      openRosterImportPicker();
+    };
+    document.getElementById('addStuConfirmBtn').onclick = submitManualAddStudent;
+  }
+
+  async function submitManualAddStudent() {
+    var grade = String((document.getElementById('addStuGrade') || {}).value || '').trim();
+    var classNum = String((document.getElementById('addStuClass') || {}).value || '').trim();
+    var name = String((document.getElementById('addStuName') || {}).value || '').trim().replace(/\s+/g, ' ');
+    var gender = String((document.getElementById('addStuGender') || {}).value || '').trim();
+    if (!grade) { toast('请选择年级', 'error'); return; }
+    if (!classNum) { toast('请选择班级', 'error'); return; }
+    if (!name) { toast('请输入学生姓名', 'error'); return; }
+    if (!/[A-Za-z\u4e00-\u9fff]/.test(name)) { toast('学生姓名无效', 'error'); return; }
+
+    var class_name = grade + '(' + classNum + ')班';
+    var btn = document.getElementById('addStuConfirmBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '添加中...'; }
+    try {
+      var data = await request('POST', '/api/school-students/import', {
+        students: [{ grade: grade, class_name: class_name, student_name: name, gender: gender }],
+        replace: false
+      });
+      closeModal();
+      var errCount = (data.errors && data.errors.length) || 0;
+      if (!(data.count > 0)) {
+        toast((data.errors && data.errors[0]) || data.error || '添加失败', 'error');
+        return;
+      }
+      var msg = '已添加学生「' + name + '」';
+      if (data.unselected_count != null) msg += '，未选课名单已同步';
+      toast(msg, errCount ? 'warning' : 'success');
+      if (Array.isArray(data.unselected)) {
+        showUnselectedAfterImport(data.unselected);
+      } else {
+        clearSelectionFilters();
+        switchToUnselectedView();
+      }
+    } catch (e) {
+      toast('添加学生失败：' + e.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '确认添加'; }
+    }
+  }
+
   function openRosterImportPicker(){
     var input = document.getElementById('importRosterFile');
     if (input) { input.value = ''; input.click(); }
   }
-  safeBind('importRosterBtn', 'click', openRosterImportPicker);
-  safeBind('importRosterBtnMob', 'click', openRosterImportPicker);
+  safeBind('importRosterBtn', 'click', openAddStudentModal);
+  safeBind('importRosterBtnMob', 'click', openAddStudentModal);
   safeBind('importRosterFile', 'change', function(e){
     var file = e.target.files && e.target.files[0];
     if (file) handleSchoolRosterImport(file);
@@ -7458,7 +7581,7 @@ async function handleSchoolRosterImport(file) {
     if (!confirm('即将导入 ' + items.length + ' 名学生，并覆盖更新数据库中的全校名单。是否继续？')) {
       return;
     }
-    toast('正在导入学生名单…', 'info');
+    toast('正在导入学生…', 'info');
     const data = await request('POST', '/api/school-students/import', { students: items, replace: true });
     const errCount = (data.errors && data.errors.length) || 0;
     let msg = '已导入 ' + (data.count || 0) + ' 名学生';
@@ -7480,7 +7603,7 @@ async function handleSchoolRosterImport(file) {
       }
     }
   } catch (e) {
-    toast('导入学生名单失败：' + e.message, 'error');
+    toast('导入学生失败：' + e.message, 'error');
   }
 }
 
