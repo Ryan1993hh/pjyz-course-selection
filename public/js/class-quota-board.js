@@ -164,6 +164,11 @@
     return mount;
   }
 
+  function setUploadPanelVisible(visible) {
+    var wrap = document.getElementById('courseUploadWrap');
+    if (wrap) wrap.classList.toggle('is-hidden', !visible);
+  }
+
   function setActiveButtons() {
     var boardBtn = document.getElementById('openClassQuotaBoardBtn');
     var listBtn = document.getElementById('showCoursesListBtn');
@@ -181,6 +186,7 @@
       board.hidden = false;
       board.style.display = '';
     }
+    setUploadPanelVisible(false);
     setActiveButtons();
     var gradeSel = document.getElementById('cqbGradeSelect');
     if (gradeSel) gradeSel.value = state.grade;
@@ -196,6 +202,7 @@
       board.style.display = 'none';
       board.hidden = true;
     }
+    setUploadPanelVisible(true);
     setActiveButtons();
   }
 
@@ -577,6 +584,7 @@
     var listBtn = document.getElementById('showCoursesListBtn');
     if (boardBtn) boardBtn.addEventListener('click', showBoard);
     if (listBtn) listBtn.addEventListener('click', showCourses);
+    setUploadPanelVisible(state.view !== 'board');
     setActiveButtons();
   }
 

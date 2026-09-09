@@ -2675,6 +2675,8 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-profile-item .pi-value { font-size: 14px; font-weight: 600; }
 .bz-pass-panel { display: none; padding: 12px; background: var(--card); border-radius: 10px; margin-bottom: 12px; }
 .bz-pass-panel.open { display: block; }
+.bz-skin-panel { display: none; margin-bottom: 12px; }
+.bz-skin-panel.open { display: block; }
 .bz-pass-panel .form-group { margin-bottom: 10px; }
 .bz-pass-panel label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
 .bz-pass-panel .form-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
@@ -2983,21 +2985,32 @@ tr.no-quota:hover td { opacity: 0.7; }
     <div class="bz-profile-item clickable" id="bzExportRosterRow">
       <div class="pi-ico">📋</div>
       <div class="pi-body">
-        <div class="pi-label">班级名单</div>
-        <div class="pi-value">导出 Excel 表格</div>
+        <div class="pi-label">导出班级名单</div>
+        <div class="pi-value">班级学生信息 · .xlsx</div>
+      </div>
+      <span class="pi-chevron">›</span>
+    </div>
+    <div class="bz-profile-item clickable" id="bzExportSelectionsRow">
+      <div class="pi-ico">📗</div>
+      <div class="pi-body">
+        <div class="pi-label">导出选课名单</div>
+        <div class="pi-value">班级 / 学号 / 姓名 / 性别 / 选课 · .xlsx</div>
       </div>
       <span class="pi-chevron">›</span>
     </div>
   </div>
-  <div class="bz-profile-section">更换皮肤</div>
-  <div class="bz-profile-group">
-    <div class="skin-grid" id="skinGrid">
-      <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
-      <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
-      <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
-      <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
-      <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
-      <button type="button" class="skin-swatch" data-skin="ink"><div class="swatch-bar" style="background:linear-gradient(135deg,#334155,#0f172a)"></div><div class="swatch-name">墨夜</div></button>
+  <div class="bz-profile-section">界面外观</div>
+  <button type="button" class="bz-pass-toggle" id="bzToggleSkinBtn">🎨 更换皮肤</button>
+  <div class="bz-skin-panel" id="bzSkinPanel">
+    <div class="bz-profile-group" style="margin-bottom:0;">
+      <div class="skin-grid" id="skinGrid">
+        <button type="button" class="skin-swatch" data-skin="teal"><div class="swatch-bar" style="background:linear-gradient(135deg,#14b8a6,#0f766e)"></div><div class="swatch-name">青绿</div></button>
+        <button type="button" class="skin-swatch" data-skin="violet"><div class="swatch-bar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"></div><div class="swatch-name">紫罗兰</div></button>
+        <button type="button" class="skin-swatch" data-skin="ocean"><div class="swatch-bar" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)"></div><div class="swatch-name">海蓝</div></button>
+        <button type="button" class="skin-swatch" data-skin="sunset"><div class="swatch-bar" style="background:linear-gradient(135deg,#fb923c,#c2410c)"></div><div class="swatch-name">暖橙</div></button>
+        <button type="button" class="skin-swatch" data-skin="forest"><div class="swatch-bar" style="background:linear-gradient(135deg,#22c55e,#15803d)"></div><div class="swatch-name">森绿</div></button>
+        <button type="button" class="skin-swatch" data-skin="ink"><div class="swatch-bar" style="background:linear-gradient(135deg,#334155,#0f172a)"></div><div class="swatch-name">墨夜</div></button>
+      </div>
     </div>
   </div>
   <div class="bz-profile-section">账号密码</div>
@@ -5957,7 +5970,7 @@ document.addEventListener('keydown', e => {
   });
 })();
 
-// ===== 初始化：先本地首屏渲染，再后台同步（避免空白等待）=====
+// ===== 初始化：课程先出表；有库内班级数据则跳过本地草稿，直接从数据库恢复 =====
 (async function initBootstrap() {
   var painted = false;
   function paintNow() {
@@ -5969,14 +5982,21 @@ document.addEventListener('keydown', e => {
     }
   }
 
+  function notifyPortalRoster() {
+    try {
+      if (window.BzPortal && typeof window.BzPortal.syncFromSelectionPage === 'function') {
+        window.BzPortal.syncFromSelectionPage();
+      }
+    } catch (_) {}
+  }
+
   try {
-    // 1) 同步：课程缓存 + 本地草稿 → 立刻出表
+    // 1) 同步：仅用课程缓存立刻出表（不先读本地选课草稿，避免多端不一致闪屏）
     hydrateCoursesFromCache();
-    var loaded = loadStateFromStorage();
     applyBanzhurenClassPreset();
     if (COURSES.length) paintNow();
 
-    // 2) 关键：课程与开关并行拉取（不等待用户资料）
+    // 2) 网络：课程与开关并行拉取
     var sync = { revision: 0 };
     var networkReady = Promise.all([
       loadCoursesFromServer(),
@@ -5984,7 +6004,6 @@ document.addEventListener('keydown', e => {
       fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; })
     ]);
 
-    // 用户资料不阻塞首屏
     setTimeout(function () { syncUserProfile().catch(function () {}); }, 0);
 
     await networkReady;
@@ -5993,39 +6012,46 @@ document.addEventListener('keydown', e => {
     syncCourseSlots();
     if (!painted || COURSES.length) paintNow();
 
-    var localRev = getLocalDataRevision();
+    var serverEmpty = true;
+    if (getToken() && gradeName && classNumber) {
+      try {
+        serverEmpty = await isServerClassSelectionEmpty();
+      } catch (_) {
+        serverEmpty = true;
+      }
+    }
 
-    // 管理员已在后台变更选课数据 → 丢弃过期的本地草稿（班主任自行上传除外）
-    if (loaded && sync.revision > localRev && studentListSource !== 'upload') {
+    if (!serverEmpty) {
+      // 数据库已有本班选课 → 不读本地草稿，直接以库为准
       clearLocalSelectionDraft();
-      loaded = false;
-      paintNow();
-    }
-
-    if (loaded && students.length > 0 && studentListSource !== 'upload') {
-      var serverEmpty = await isServerClassSelectionEmpty();
-      if (serverEmpty) {
-        clearLocalSelectionDraft();
-        loaded = false;
-        paintNow();
-      }
-    }
-
-    if (loaded && students.length > 0) {
-      if (!studentListSource) studentListSource = 'local';
-      var uploadTextCol = document.getElementById('uploadTextCol');
-      if (uploadTextCol) {
-        uploadTextCol.innerHTML =
-          '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
-          '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
-      }
-      await applyPreEnrollments({ skipReset: true });
-    } else {
       await applyServerSelectionSync({ silent: true });
+      var uploadTextCol = document.getElementById('uploadTextCol');
+      if (uploadTextCol && students.length > 0) {
+        uploadTextCol.innerHTML =
+          '<span class="title">✓ ' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
+          '<span class="file-info">📋 共 ' + students.length + ' 名学生（数据库）</span>';
+      }
+    } else {
+      // 库中尚无本班数据：仅保留「刚上传未保存」的本地 upload 草稿，其余以库/花名册为准
+      var loaded = false;
+      try { loaded = loadStateFromStorage(); } catch (_) { loaded = false; }
+      if (loaded && students.length > 0 && studentListSource === 'upload') {
+        var uploadCol = document.getElementById('uploadTextCol');
+        if (uploadCol) {
+          uploadCol.innerHTML =
+            '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
+            '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
+        }
+        await applyPreEnrollments({ skipReset: true });
+      } else {
+        if (loaded) clearLocalSelectionDraft();
+        await applyServerSelectionSync({ silent: true });
+      }
     }
 
     saveState(sync.revision);
     paintNow();
+    notifyPortalRoster();
   } catch (e) {
     console.error('[initBootstrap] init failed:', e);
     if (!painted) paintNow();
@@ -6045,8 +6071,8 @@ document.addEventListener('keydown', e => {
   setInterval(async function() {
     try {
       var prev = serverDataRevision;
-      var sync = await fetchSelectionDataSync();
-      if (sync.revision > prev && studentListSource !== 'upload') {
+      var syncPoll = await fetchSelectionDataSync();
+      if (syncPoll.revision > prev && studentListSource !== 'upload') {
         if (isBanzhurenDashboardActive()) {
           if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
             await window.BzPortal.notifyRosterUpdated({ silent: true });
@@ -6056,6 +6082,7 @@ document.addEventListener('keydown', e => {
         clearLocalSelectionDraft();
         await applyServerSelectionSync({ silent: true });
         renderAll();
+        notifyPortalRoster();
       }
     } catch (e) {
       console.warn('selection data sync poll:', e.message);
@@ -6220,6 +6247,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260907b"></script>
+<script src="js/banzhuren-portal.js?v=20260909a"></script>
 </body>
 </html>

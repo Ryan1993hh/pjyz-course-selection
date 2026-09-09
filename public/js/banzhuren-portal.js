@@ -311,6 +311,32 @@
       return bzState.classStudents.length ? bzState.classStudents.slice() : [];
     }
 
+    // 选课页已从数据库灌入名单时，先用内存立刻返回，保证请假页秒开
+    if (!opts.forceNetwork) {
+      var mem = getLocalSelectionStudents();
+      if (mem.length) {
+        bzState.classStudents = mem.slice();
+        writeRosterCache(mem, lastSyncRevision);
+        if (opts.memoryOnly) return mem.slice();
+      } else if (opts.memoryOnly) {
+        if (bzState.classStudents.length) return bzState.classStudents.slice();
+        var cachedMem = readRosterCache();
+        if (cachedMem && cachedMem.students && cachedMem.students.length) {
+          bzState.classStudents = cachedMem.students.slice();
+          return bzState.classStudents.slice();
+        }
+        return [];
+      } else if (bzState.classStudents.length && opts.preferMemory) {
+        return bzState.classStudents.slice();
+      } else {
+        var cachedQuick = readRosterCache();
+        if (cachedQuick && cachedQuick.students && cachedQuick.students.length && opts.preferMemory) {
+          bzState.classStudents = cachedQuick.students.slice();
+          return bzState.classStudents.slice();
+        }
+      }
+    }
+
     var revision = 0;
     var apiOk = false;
     var roster = [];
@@ -500,12 +526,33 @@
   async function loadLeavePage() {
     ensureLeaveDayFresh();
     leavePageDate = todayKey();
-    bzState.classStudents = await loadClassStudents();
-    await loadTodayLeaves();
+
+    // 选课页已同步过 → 先秒开名单，再后台刷新
+    var instant = await loadClassStudents({ preferMemory: true, memoryOnly: true });
+    if (instant && instant.length) {
+      bzState.classStudents = instant;
+      renderLeaveGrid();
+    }
+
+    var refreshed = loadClassStudents({ forceNetwork: !instant.length });
+    var leavesP = loadTodayLeaves();
+    bzState.classStudents = await refreshed;
+    await leavesP;
     renderLeaveGrid();
     renderLeaveList();
     var dateEl = document.getElementById('bzLeaveDate');
     if (dateEl) dateEl.textContent = todayKey();
+  }
+
+  function syncFromSelectionPage() {
+    var mem = getLocalSelectionStudents();
+    if (!mem.length) return;
+    bzState.classStudents = mem.slice();
+    writeRosterCache(mem, lastSyncRevision);
+    if (bzState.tab === 'leave') {
+      renderLeaveGrid();
+    }
+    updateClockInfo();
   }
 
   function emptySessions(n) {
@@ -693,35 +740,131 @@
   }
 
   async function exportClassRoster() {
-    var students = await loadClassStudents();
-    if (!students.length) {
+    var list = await loadClassStudents();
+    if (!list.length) {
       showToast('暂无班级名单可导出', 'error');
       return;
     }
+    if (!(await ensureExportXlsx())) return;
     var user = getUser();
     var parsed = parseClassFromUser(user || {});
     var classLabel = parsed.display || '班级';
-    var html = '<html><head><meta charset="UTF-8"></head><body><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:12pt;">';
-    html += '<tr><th style="border:1px solid #000;padding:4px 8px;">序号</th>';
-    html += '<th style="border:1px solid #000;padding:4px 8px;">班级</th>';
-    html += '<th style="border:1px solid #000;padding:4px 8px;">姓名</th>';
-    html += '<th style="border:1px solid #000;padding:4px 8px;">性别</th></tr>';
-    students.forEach(function (s, i) {
-      html += '<tr>';
-      html += '<td style="border:1px solid #000;padding:4px 8px;">' + (i + 1) + '</td>';
-      html += '<td style="border:1px solid #000;padding:4px 8px;">' + escHtml(classLabel) + '</td>';
-      html += '<td style="border:1px solid #000;padding:4px 8px;">' + escHtml(s.student_name) + '</td>';
-      html += '<td style="border:1px solid #000;padding:4px 8px;">' + escHtml(s.gender || '') + '</td>';
-      html += '</tr>';
+    var aoa = [['序号', '班级', '姓名', '性别']];
+    list.forEach(function (s, i) {
+      aoa.push([i + 1, classLabel, s.student_name || '', s.gender || '']);
     });
-    html += '</table></body></html>';
-    var blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = classLabel + '学生名单.xls';
-    a.click();
-    URL.revokeObjectURL(a.href);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 12 }, { wch: 6 }];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '班级名单');
+    XLSX.writeFile(wb, classLabel + '学生名单.xlsx');
     showToast('已导出班级名单', 'success');
+  }
+
+  function buildSelectionExportRows() {
+    var rows = [];
+    var classLabel = '';
+    try {
+      if (typeof className === 'string' && className) classLabel = className;
+    } catch (_) {}
+    if (!classLabel) {
+      var parsed = parseClassFromUser(getUser() || {});
+      classLabel = parsed.display || '';
+    }
+    var seen = {};
+    try {
+      if (typeof COURSES !== 'undefined' && Array.isArray(COURSES)) {
+        COURSES.forEach(function (c) {
+          (c.students || []).forEach(function (name) {
+            if (!name) return;
+            var n = String(name).trim();
+            if (!n || seen[n]) return;
+            seen[n] = true;
+            var g = '';
+            try {
+              if (typeof getStudentGender === 'function') g = getStudentGender(n) || '';
+            } catch (_) {}
+            rows.push({
+              class_name: classLabel,
+              student_no: '',
+              student_name: n,
+              gender: g,
+              course_name: c.name || ''
+            });
+          });
+        });
+      }
+    } catch (_) {}
+    return rows;
+  }
+
+  async function fetchSelectionExportRows() {
+    var localRows = buildSelectionExportRows();
+    var user = getUser();
+    var parsed = parseClassFromUser(user || {});
+    if (!parsed.grade || !parsed.classNum) return localRows;
+    try {
+      var qs = new URLSearchParams();
+      qs.set('grade', parsed.grade);
+      qs.set('class_name', parsed.classNum + '班');
+      var data = await apiRequest('GET', '/api/selections?' + qs.toString());
+      var list = Array.isArray(data) ? data : ((data && data.selections) || []);
+      if (!list.length) return localRows;
+      return list.map(function (s) {
+        return {
+          class_name: parsed.display || (s.class_name || ''),
+          student_no: s.student_no || '',
+          student_name: s.student_name || '',
+          gender: s.gender || '',
+          course_name: s.course_name || ''
+        };
+      });
+    } catch (e) {
+      console.warn('fetchSelectionExportRows:', e.message);
+      return localRows;
+    }
+  }
+
+  async function ensureExportXlsx() {
+    if (typeof XLSX !== 'undefined') return true;
+    if (typeof ensureXLSXReady === 'function') {
+      return ensureXLSXReady();
+    }
+    showToast('Excel 组件未加载', 'error');
+    return false;
+  }
+
+  async function exportSelectionRoster() {
+    if (!(await ensureExportXlsx())) return;
+    var rows = await fetchSelectionExportRows();
+    if (!rows.length) {
+      showToast('暂无选课名单可导出', 'error');
+      return;
+    }
+    rows.sort(function (a, b) {
+      var na = parseInt(String(a.student_no || '').trim(), 10);
+      var nb = parseInt(String(b.student_no || '').trim(), 10);
+      if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+      return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
+    });
+    var aoa = [['班级', '学号', '姓名', '性别', '选课']];
+    rows.forEach(function (r, i) {
+      aoa.push([
+        r.class_name || '',
+        r.student_no || String(i + 1),
+        r.student_name || '',
+        r.gender || '',
+        r.course_name || ''
+      ]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 6 }, { wch: 22 }];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '选课名单');
+    var parsed = parseClassFromUser(getUser() || {});
+    var label = (parsed.display || '班级').replace(/[\\/:*?"<>|]/g, '_');
+    XLSX.writeFile(wb, label + '选课名单.xlsx');
+    showToast('已导出选课名单', 'success');
   }
 
   async function loadProfile() {
@@ -901,6 +1044,16 @@
 
     var exportRow = document.getElementById('bzExportRosterRow');
     if (exportRow) exportRow.addEventListener('click', exportClassRoster);
+    var exportSelRow = document.getElementById('bzExportSelectionsRow');
+    if (exportSelRow) exportSelRow.addEventListener('click', exportSelectionRoster);
+
+    var skinToggle = document.getElementById('bzToggleSkinBtn');
+    var skinPanel = document.getElementById('bzSkinPanel');
+    if (skinToggle && skinPanel) {
+      skinToggle.addEventListener('click', function () {
+        skinPanel.classList.toggle('open');
+      });
+    }
 
     var skinGrid = document.getElementById('skinGrid');
     if (skinGrid) {
@@ -976,6 +1129,7 @@
   window.BzPortal = {
     switchTab: switchTab,
     loadLeavePage: loadLeavePage,
-    notifyRosterUpdated: notifyRosterUpdated
+    notifyRosterUpdated: notifyRosterUpdated,
+    syncFromSelectionPage: syncFromSelectionPage
   };
 })();

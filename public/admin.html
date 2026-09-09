@@ -472,11 +472,37 @@ body {
   line-height: 1.4;
 }
 .course-top-modules {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: stretch;
+  justify-content: flex-end;
   min-height: 0;
+}
+.course-top-modules-left {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+}
+.course-top-modules-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.course-top-modules-right .course-mod-card {
+  min-width: 148px;
+  max-width: 200px;
+}
+.course-top-modules-left .course-mod-upload {
+  width: 100%;
+  max-width: 320px;
+}
+.course-top-modules-left.is-hidden {
+  display: none !important;
 }
 .course-mod-card {
   --mod-tint: #ecfeff;
@@ -505,18 +531,18 @@ body {
   overflow: hidden;
 }
 .course-mod-card:nth-child(1) {
-  --mod-tint: #ecfeff; --mod-accent: #14b8a6;
-  --mod-border: rgba(20, 184, 166, 0.22); --mod-shadow: rgba(20, 184, 166, 0.12);
+  --mod-tint: #fdf4ff; --mod-accent: #a855f7;
+  --mod-border: rgba(168, 85, 247, 0.22); --mod-shadow: rgba(168, 85, 247, 0.12);
 }
 .course-mod-card:nth-child(2) {
   --mod-tint: #eff6ff; --mod-accent: #3b82f6;
   --mod-border: rgba(59, 130, 246, 0.22); --mod-shadow: rgba(59, 130, 246, 0.12);
 }
 .course-mod-card:nth-child(3) {
-  --mod-tint: #fdf4ff; --mod-accent: #a855f7;
-  --mod-border: rgba(168, 85, 247, 0.22); --mod-shadow: rgba(168, 85, 247, 0.12);
+  --mod-tint: #fff7ed; --mod-accent: #f97316;
+  --mod-border: rgba(249, 115, 22, 0.22); --mod-shadow: rgba(249, 115, 22, 0.12);
 }
-.course-mod-card:nth-child(4) {
+.course-mod-upload {
   --mod-tint: #fff7ed; --mod-accent: #f97316;
   --mod-border: rgba(249, 115, 22, 0.22); --mod-shadow: rgba(249, 115, 22, 0.12);
 }
@@ -1236,8 +1262,10 @@ table.courses-table td[data-field="description"] {
   .board-kpis { grid-template-columns: repeat(2, 1fr); }
   .bd-overview-grid { grid-template-columns: repeat(2, 1fr); }
   .course-top-modules {
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+    justify-content: flex-end;
   }
   .course-mod-card {
     min-height: 58px;
@@ -1246,6 +1274,14 @@ table.courses-table td[data-field="description"] {
   .course-mod-card .mod-title { font-size: 12px; }
   .course-mod-card .mod-desc { font-size: 10px; -webkit-line-clamp: 1; }
   .course-mod-card .mod-ico { width: 30px; height: 30px; font-size: 14px; }
+  .course-top-modules-right .course-mod-card {
+    min-width: 0;
+    flex: 1 1 calc(50% - 4px);
+    max-width: none;
+  }
+  .course-top-modules-left .course-mod-upload {
+    max-width: none;
+  }
 }
 
 /* ===== 课程列表卡片 ===== */
@@ -3261,16 +3297,18 @@ th.sortable.active .sort-icon { opacity: 1; }
   .course-section-head h2 { font-size: 16px; }
   .course-section-head .desc { display: none; }
   .course-top-modules {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
-  }
-  #manageClassesBtn,
-  #courseUploadPanel {
-    display: none !important;
+    justify-content: flex-end;
   }
   #showCoursesListBtn { order: 1; }
   #openClassQuotaBoardBtn { order: 2; }
+  .course-top-modules-right .course-mod-card {
+    min-width: 0;
+    flex: 1 1 calc(50% - 4px);
+    max-width: none;
+  }
   .course-mod-card {
     min-height: 48px;
     padding: 8px;
@@ -3922,41 +3960,38 @@ th.sortable.active .sort-icon { opacity: 1; }
           <p class="desc">下方表格可编辑后统一保存</p>
         </div>
         <div class="course-top-modules">
-          <button type="button" class="course-mod-card" id="manageClassesBtn">
-            <span class="mod-ico" aria-hidden="true">🏫</span>
-            <span class="mod-body">
-              <span class="mod-title">班级管理</span>
-              <span class="mod-desc">年级班级与班主任</span>
-            </span>
-          </button>
-          <button type="button" class="course-mod-card" id="openClassQuotaBoardBtn">
-            <span class="mod-ico" aria-hidden="true">📊</span>
-            <span class="mod-body">
-              <span class="mod-title"><span class="txt-full">班级名额看板</span><span class="txt-short">名额看板</span></span>
-              <span class="mod-desc">按班调剂名额</span>
-            </span>
-          </button>
-          <button type="button" class="course-mod-card is-active" id="showCoursesListBtn">
-            <span class="mod-ico" aria-hidden="true">📚</span>
-            <span class="mod-body">
-              <span class="mod-title"><span class="txt-full">拓展课程管理</span><span class="txt-short">拓展课程</span></span>
-              <span class="mod-desc">编辑课程与锁定</span>
-            </span>
-          </button>
-          <div class="course-mod-card course-mod-upload" id="courseUploadPanel">
-            <div class="mod-head">
-              <div class="mod-title">上传课程文件</div>
-              <button type="button" class="mod-tpl" id="downloadCourseTemplateBtn" title="下载空白课程导入模板">📥 模板</button>
-            </div>
-            <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
-              <span class="icon">↑</span>
-              <div class="text-col">
-                <span class="title">点击或拖拽上传</span>
-                <span class="hint">csv / xlsx / xls / docx</span>
+          <div class="course-top-modules-left" id="courseUploadWrap">
+            <div class="course-mod-card course-mod-upload" id="courseUploadPanel">
+              <div class="mod-head">
+                <div class="mod-title">上传课程文件</div>
+                <button type="button" class="mod-tpl" id="downloadCourseTemplateBtn" title="下载空白课程导入模板">📥 模板</button>
               </div>
+              <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
+                <span class="icon">↑</span>
+                <div class="text-col">
+                  <span class="title">点击或拖拽上传</span>
+                  <span class="hint">csv / xlsx / xls / docx</span>
+                </div>
+              </div>
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
+              <div class="upload-msg" id="uploadMsg">可直接在下方表格新增</div>
             </div>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
-            <div class="upload-msg" id="uploadMsg">可直接在下方表格新增</div>
+          </div>
+          <div class="course-top-modules-right">
+            <button type="button" class="course-mod-card is-active" id="showCoursesListBtn">
+              <span class="mod-ico" aria-hidden="true">📚</span>
+              <span class="mod-body">
+                <span class="mod-title"><span class="txt-full">拓展课程管理</span><span class="txt-short">拓展课程</span></span>
+                <span class="mod-desc">编辑课程与锁定</span>
+              </span>
+            </button>
+            <button type="button" class="course-mod-card" id="openClassQuotaBoardBtn">
+              <span class="mod-ico" aria-hidden="true">📊</span>
+              <span class="mod-body">
+                <span class="mod-title"><span class="txt-full">班级名额看板</span><span class="txt-short">名额看板</span></span>
+                <span class="mod-desc">按班调剂名额</span>
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -5918,14 +5953,14 @@ function downloadCourseTemplate(){
 /* ============ Module 2: Selections ============ */
 let selectionsData = [];
 let selectionsPage = 1;
-let selectionsPageSize = 30;
+let selectionsPageSize = 50;
 let selectionsCheckedIds = new Set();
 let coursesForFilter = [];
 let currentViewMode = 'selections'; // 'selections' | 'unselected' | 'pre_enroll'
 let unselectedData = [];
 let preEnrollData = [];
 
-let classesData = []; // 班级管理数据
+let classesData = []; // /api/classes 缓存（筛选等）
 let teachersList = [];  // 教师列表
 let gradesList = [];    // 年级列表
 
@@ -7365,164 +7400,6 @@ async function handlePreEnrollUpload(file) {
   }
 }
 
-/* ============ Class Management Module ============ */
-
-function openClassManager(){
-  loadTeachersList().then(function(){
-    renderClassManager();
-  });
-}
-
-function renderClassManager(){
-  const gradeOptions = ['<option value="">选择年级</option>'];
-  ['六年级', '七年级'].forEach(function(g){
-    gradeOptions.push('<option value="' + g + '">' + g + '</option>');
-  });
-
-  const teacherOptions = ['<option value="">选择教师</option>'];
-  teachersList.forEach(function(t){
-    teacherOptions.push('<option value="' + escapeAttr(t) + '">' + escapeHtml(t) + '</option>');
-  });
-
-  let rowsHtml = '';
-  if (classesData.length === 0) {
-    rowsHtml = '<tr><td colspan="5" class="empty">暂无班级数据，请添加班级</td></tr>';
-  } else {
-    classesData.forEach(function(c, idx){
-      rowsHtml += '<tr>' +
-        '<td>' + (idx + 1) + '</td>' +
-        '<td>' + escapeHtml(c.grade || '') + '</td>' +
-        '<td>' + escapeHtml(c.class_name || '') + '</td>' +
-        '<td>' + escapeHtml(c.teacher_name || '') + '</td>' +
-        '<td class="row-actions">' +
-          '<button class="btn btn-sm btn-outline" onclick="editClassItem(' + c.id + ')">编辑</button> ' +
-          '<button class="btn btn-danger btn-sm" onclick="deleteClassItem(' + c.id + ')">删除</button>' +
-        '</td>' +
-      '</tr>';
-    });
-  }
-
-  const html =
-    '<div style="margin-bottom:16px;">' +
-      '<h4 style="margin-bottom:8px;color:var(--primary-dark);">添加班级</h4>' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">' +
-        '<div class="form-group" style="flex:1;min-width:100px;margin-bottom:0;"><label>年级</label><select class="form-select" id="newClsGrade">' + gradeOptions.join('') + '</select></div>' +
-        '<div class="form-group" style="flex:1;min-width:100px;margin-bottom:0;"><label>班级名称</label><input type="text" class="form-input" id="newClsName" placeholder="如：1班"></div>' +
-        '<div class="form-group" style="flex:1;min-width:100px;margin-bottom:0;"><label>授课教师</label><input type="text" class="form-input" id="newClsTeacher" list="teacherList" placeholder="输入或选择教师">' +
-          '<datalist id="teacherList">' + teacherOptions.map(o => '<option value="' + o.replace('<option value="','').replace('">','') + '">').join('') + '</datalist>' +
-        '</div>' +
-        '<button class="btn btn-primary" id="addClassBtn">+ 添加</button>' +
-      '</div>' +
-    '</div>' +
-    '<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
-      '<h4 style="color:var(--primary-dark);margin:0;">班级列表</h4>' +
-      '<span style="font-size:12px;color:var(--muted);">共 ' + classesData.length + ' 个班级</span>' +
-    '</div>' +
-    '<div class="table-wrap" style="max-height:300px;overflow-y:auto;">' +
-      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
-        '<thead><tr style="background:var(--bg-soft);">' +
-          '<th style="padding:8px;border:1px solid var(--border);width:40px;">序号</th>' +
-          '<th style="padding:8px;border:1px solid var(--border);width:80px;">年级</th>' +
-          '<th style="padding:8px;border:1px solid var(--border);width:100px;">班级名称</th>' +
-          '<th style="padding:8px;border:1px solid var(--border);">授课教师</th>' +
-          '<th style="padding:8px;border:1px solid var(--border);width:140px;">操作</th>' +
-        '</tr></thead>' +
-        '<tbody>' + rowsHtml + '</tbody>' +
-      '</table>' +
-    '</div>' +
-    '<div class="modal-actions" style="margin-top:16px;">' +
-      '<button class="btn btn-secondary" onclick="closeModal()">关闭</button>' +
-    '</div>';
-
-  openModal(html);
-  document.getElementById('modalTitle').textContent = '班级管理';
-
-  setTimeout(function(){
-    const addBtn = document.getElementById('addClassBtn');
-    if (addBtn) {
-      addBtn.onclick = async function(){
-        const grade = document.getElementById('newClsGrade').value;
-        const name = document.getElementById('newClsName').value.trim();
-        const teacher = document.getElementById('newClsTeacher').value.trim();
-        if (!grade || !name) { toast('请填写年级和班级名称', 'error'); return; }
-        try {
-          await request('POST', '/api/classes', { grade: grade, class_name: name, teacher_name: teacher });
-          toast('添加成功', 'success');
-          loadClasses();
-          renderClassManager();
-        } catch(e) {
-          toast('添加失败：' + e.message, 'error');
-        }
-      };
-    }
-  }, 50);
-}
-
-window.editClassItem = function(id){
-  const c = classesData.find(function(x){ return x.id === id; });
-  if (!c) return;
-  const grades = ['六年级', '七年级'];
-  const gradeOptions = grades.map(function(g){
-    return '<option value="' + g + '"' + (g === c.grade ? ' selected' : '') + '>' + g + '</option>';
-  }).join('');
-
-  const teacherOptions = ['<option value=""></option>'];
-  const seen = new Set();
-  if (c.teacher_name) { teacherOptions.push('<option value="' + escapeAttr(c.teacher_name) + '" selected>' + escapeHtml(c.teacher_name) + '</option>'); seen.add(c.teacher_name); }
-  teachersList.forEach(function(t){
-    if (!seen.has(t)) teacherOptions.push('<option value="' + escapeAttr(t) + '">' + escapeHtml(t) + '</option>');
-  });
-
-  openModal(
-    '<h3 style="display:none;">编辑班级</h3>' +
-    '<div class="form-group"><label>年级</label><select class="form-select" id="editClsGrade">' + gradeOptions + '</select></div>' +
-    '<div class="form-group"><label>班级名称</label><input type="text" class="form-input" id="editClsName" value="' + escapeAttr(c.class_name || '') + '"></div>' +
-    '<div class="form-group"><label>授课教师</label><select class="form-select" id="editClsTeacher">' + teacherOptions.join('') + '</select></div>' +
-    '<div class="modal-actions">' +
-      '<button class="btn btn-secondary" onclick="closeModal()">取消</button>' +
-      '<button class="btn btn-success" id="saveEditCls">保存修改</button>' +
-    '</div>'
-  );
-  document.getElementById('modalTitle').textContent = '编辑班级';
-  setTimeout(function(){
-    const btn = document.getElementById('saveEditCls');
-    if (btn) {
-      btn.onclick = async function(){
-        const grade = document.getElementById('editClsGrade').value;
-        const name = document.getElementById('editClsName').value.trim();
-        const teacher = document.getElementById('editClsTeacher').value;
-        if (!grade || !name) { toast('请填写完整信息', 'error'); return; }
-        try {
-          await request('PUT', '/api/classes/' + id, { grade: grade, class_name: name, teacher_name: teacher });
-          toast('保存成功', 'success');
-          closeModal();
-          loadClasses();
-          loadTeachersList();
-          renderClassManager();
-        } catch(e) {
-          toast('保存失败：' + e.message, 'error');
-        }
-      };
-    }
-  }, 50);
-};
-
-window.deleteClassItem = function(id){
-  if (!window.confirm('确定删除该班级吗？')) return;
-  request('DELETE', '/api/classes/' + id).then(function(){
-    toast('删除成功', 'success');
-    loadClasses();
-    renderClassManager();
-  }).catch(function(e){
-    toast('删除失败：' + e.message, 'error');
-  });
-};
-
-(function(){
-  var el = document.getElementById('manageClassesBtn');
-  if (el) el.addEventListener('click', openClassManager);
-})();
-
 /* ============ Module 3: Users ============ */
 let usersData = [];
 function resolveUserPhone(u) {
@@ -8708,6 +8585,6 @@ if (checkLogin()){
   initAll();
 }
 </script>
-<script src="js/class-quota-board.js?v=20260905h"></script>
+<script src="js/class-quota-board.js?v=20260909a"></script>
 </body>
 </html>
