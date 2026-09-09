@@ -4,48 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>登录 · 浦江一中拓展课 系统</title>
+<meta http-equiv="refresh" content="0;url=denglu" />
+<link rel="prefetch" href="denglu" as="document" />
 <script>
-/* 站点入口：记住密码且有会话则直达业务页，否则进入统一登录页 denglu */
-(function () {
-  try {
-    if (localStorage.getItem('pjyz_login_remember') === '1') {
-      var token = localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token');
-      var user = null;
-      try { user = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) { user = null; }
-      if (token && user) {
-        function pageOf(role) {
-          if (role === 'admin') return 'admin';
-          if (role === 'banzhuren') return 'xuanke';
-          if (role === 'teacher') return 'jiaoshi';
-          return '';
-        }
-        function roleOfPage(p) {
-          p = String(p || '').replace(/\.html$/i, '').replace(/^\//, '');
-          if (p === 'admin') return 'admin';
-          if (p === 'xuanke' || p === 'index' || p === '') return 'banzhuren';
-          if (p === 'jiaoshi') return 'teacher';
-          return '';
-        }
-        var roles = (user.roles && user.roles.length) ? user.roles : (user.role ? [user.role] : []);
-        var target = '';
-        var last = String(localStorage.getItem('pjyz_last_page') || '').replace(/\.html$/i, '').replace(/^\//, '');
-        var lastRole = roleOfPage(last);
-        if (last && lastRole && roles.indexOf(lastRole) > -1) target = pageOf(lastRole);
-        if (!target) {
-          var active = localStorage.getItem('pjyz_active_role') || '';
-          if (active && roles.indexOf(active) > -1) target = pageOf(active);
-        }
-        if (!target && roles.length) target = pageOf(roles[0]);
-        if (target) {
-          sessionStorage.setItem('pjyz_autologin_fast', '1');
-          location.replace(target);
-          return;
-        }
-      }
-    }
-  } catch (_) {}
-  location.replace('denglu');
-})();
+/* 首页统一进入登录页（先展示登录界面，再由 denglu 自动登录） */
+location.replace('denglu');
 </script>
 <style>
   html, body { height: 100%; margin: 0; }
@@ -57,5 +20,5 @@
   }
 </style>
 </head>
-<body>正在进入…</body>
+<body><a href="denglu" style="color:#0f766e;text-decoration:none">进入登录</a></body>
 </html>
