@@ -131,6 +131,376 @@
     location.replace(p);
   }
 
+  function getApiBase() {
+    try {
+      if (global.__API_BASE__ && typeof global.__API_BASE__ === 'string') {
+        return String(global.__API_BASE__).replace(/\/+$/, '');
+      }
+      var saved = localStorage.getItem('pjyz_api_base');
+      if (saved) return saved.replace(/\/+$/, '');
+    } catch (_) {}
+    return '';
+  }
+
+  function getAuthToken() {
+    try {
+      return localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token') || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function todayDateKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function authFetchJson(path, token) {
+    return fetch(getApiBase() + path, {
+      credentials: 'same-origin',
+      headers: {
+        Authorization: 'Bearer ' + token,
+        Accept: 'application/json'
+      }
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + res.status));
+        return data;
+      });
+    });
+  }
+
+  function parseUserClass(user) {
+    var s = String((user && user.class_name) || '').trim();
+    var m = s.match(/^(六年级|七年级)\s*[\(（](\d+)[\)）]班$/);
+    if (m) return { grade: m[1], classNum: m[2], display: s };
+    m = s.match(/^(六年级|七年级)\s*(\d+)\s*班$/);
+    if (m) return { grade: m[1], classNum: m[2], display: s };
+    m = s.match(/^([六七])(?:年级)?[\(（]?(\d+)[\)）]?\s*班?$/);
+    if (m) {
+      return {
+        grade: m[1] === '六' ? '六年级' : '七年级',
+        classNum: m[2],
+        display: s
+      };
+    }
+    return { grade: '', classNum: '', display: s };
+  }
+
+  function stableStudentKey(s) {
+    var name = String((s && s.student_name) || '').trim();
+    var cls = String((s && (s.class_name || s.grade)) || '').trim().replace(/[()（）\s]/g, '');
+    return name + '|' + cls;
+  }
+
+  function seedTeacherLocalCache(courseName, classroomData, selectionsData, user) {
+    if (!courseName) return;
+    var payload = (classroomData && classroomData.payload) || {};
+    var students = [];
+    var list = (selectionsData && selectionsData.selections) || [];
+    if (list.length) {
+      var map = new Map();
+      list.forEach(function (row) {
+        var key = (row.student_name || '') + '|' + (row.class_name || '');
+        if (!map.has(key)) map.set(key, row);
+      });
+      students = Array.from(map.values()).map(function (row, i) {
+        var base = {
+          id: row.id || (i + 1),
+          student_name: row.student_name,
+          class_name: row.class_name,
+          grade: row.grade,
+          gender: row.gender || '',
+          course_name: row.course_name,
+          course_id: row.course_id
+        };
+        base.stableId = stableStudentKey(base);
+        return base;
+      });
+    }
+    if (!students.length && Array.isArray(payload.students)) students = payload.students;
+
+    var hours = null;
+    if (classroomData && classroomData.numeric_hours_total != null) hours = Number(classroomData.numeric_hours_total) || 0;
+    else if (classroomData && classroomData.summary && classroomData.summary.numeric_hours_total != null) {
+      hours = Number(classroomData.summary.numeric_hours_total) || 0;
+    }
+
+    var store = {
+      checkin: payload.checkin || {},
+      checkinDay: payload.checkinDay || '',
+      checkinDone: !!payload.checkinDone,
+      rewards: payload.rewards || {},
+      exams: payload.exams || {},
+      activities: payload.activities || [],
+      history: payload.history || [],
+      students: students,
+      teacher: Object.assign({}, payload.teacher || {}, {
+        name: String((user && user.teacher_name) || (payload.teacher && payload.teacher.name) || '').trim(),
+        course: courseName,
+        location: (payload.teacher && payload.teacher.location) || '',
+        totalClasses: hours != null ? hours : (Number(payload.teacher && payload.teacher.totalClasses) || 0)
+      }),
+      courseId: '',
+      courseName: courseName
+    };
+
+    var prefix = 'pjyz_teacher_attendance_';
+    var json = JSON.stringify(store);
+    try {
+      localStorage.setItem(prefix + 'name:' + courseName, json);
+      localStorage.setItem(prefix + courseName, json);
+    } catch (_) {}
+
+    var syncedAt = classroomData && classroomData.summary && classroomData.summary.synced_at
+      ? String(classroomData.summary.synced_at)
+      : (classroomData && classroomData.synced_at ? String(classroomData.synced_at) : '');
+    if (syncedAt) {
+      try {
+        var meta = JSON.stringify({ syncedAt: syncedAt });
+        localStorage.setItem(prefix + 'name:' + courseName + '_sync', meta);
+        localStorage.setItem(prefix + courseName + '_sync', meta);
+      } catch (_) {}
+    }
+  }
+
+  /**
+   * 登录页跳转前预热落地页 HTML + 首屏接口，写入本地缓存，落地后可秒开。
+   */
+  function warmRoleBootstrap(opts) {
+    opts = opts || {};
+    var token = opts.token || getAuthToken();
+    var user = opts.user || getUserFromStorage();
+    if (opts.user) {
+      try { localStorage.setItem('pjyz_user', JSON.stringify(opts.user)); } catch (_) {}
+      user = opts.user;
+    }
+    var page = normalizePagePath(opts.page || getLoginRedirectUrl(user));
+    var role = pageToRole(page);
+    if (!token || !page || page === 'denglu' || page === 'login' || !role) {
+      return Promise.resolve({ page: page, role: role, warmed: false });
+    }
+
+    prefetchPage(page);
+    try { setActiveRole(role); } catch (_) {}
+
+    var timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 2800;
+    var bag = { role: role, page: page, at: Date.now() };
+    var jobs = [];
+
+    function add(p) {
+      jobs.push(Promise.resolve(p).catch(function () { return null; }));
+    }
+
+    add(authFetchJson('/api/auth/me', token).then(function (d) {
+      bag.me = d;
+      if (d && d.user) {
+        try { localStorage.setItem('pjyz_user', JSON.stringify(d.user)); } catch (_) {}
+        user = d.user;
+      }
+      return d;
+    }));
+    add(authFetchJson('/api/class-schedule-status', token).then(function (d) {
+      bag.schedule = d;
+      try {
+        sessionStorage.setItem('pjyz_schedule_boot', JSON.stringify({ at: Date.now(), data: d }));
+      } catch (_) {}
+      return d;
+    }));
+    add(authFetchJson('/api/selection-data-sync', token).then(function (d) {
+      bag.sync = d;
+      return d;
+    }));
+
+    if (role === 'teacher') {
+      var courseName = String((user && user.course_name) || '').trim();
+      var coursesP = authFetchJson('/api/courses', token).then(function (d) {
+        bag.courses = d;
+        try {
+          localStorage.setItem('pjyz_courses_cache_v1', JSON.stringify({
+            savedAt: Date.now(),
+            courses: (d && d.courses) || []
+          }));
+        } catch (_) {}
+        return d;
+      });
+      add(coursesP);
+
+      if (courseName) {
+        var selP = authFetchJson('/api/selections?course=' + encodeURIComponent(courseName), token);
+        var roomP = authFetchJson('/api/teacher-classroom?course_name=' + encodeURIComponent(courseName), token);
+        add(selP);
+        add(roomP);
+        add(Promise.all([selP, roomP, coursesP]).then(function (pair) {
+          var sel = pair[0];
+          var room = pair[1];
+          var coursesData = pair[2];
+          bag.selections = sel;
+          bag.classroom = room;
+          if (coursesData && Array.isArray(coursesData.courses)) {
+            var hit = coursesData.courses.find(function (c) {
+              return c && String(c.name || '').trim() === courseName;
+            });
+            if (hit && hit.id) {
+              try {
+                var raw = localStorage.getItem('pjyz_teacher_attendance_name:' + courseName);
+                if (raw) {
+                  var obj = JSON.parse(raw);
+                  obj.courseId = String(hit.id);
+                  var json = JSON.stringify(obj);
+                  localStorage.setItem('pjyz_teacher_attendance_name:' + courseName, json);
+                  localStorage.setItem('pjyz_teacher_attendance_id:' + hit.id, json);
+                }
+              } catch (_) {}
+            }
+          }
+          seedTeacherLocalCache(courseName, room, sel, user);
+          return true;
+        }));
+        add(authFetchJson('/api/course-hours/total?course_name=' + encodeURIComponent(courseName), token).then(function (d) {
+          bag.hoursTotal = d;
+          return d;
+        }));
+        add(authFetchJson(
+          '/api/student-leaves?date=' + encodeURIComponent(todayDateKey()) +
+          '&course_name=' + encodeURIComponent(courseName),
+          token
+        ).then(function (d) {
+          bag.leaves = d;
+          try {
+            sessionStorage.setItem('pjyz_teacher_leaves_boot', JSON.stringify({
+              at: Date.now(),
+              course: courseName,
+              data: d
+            }));
+          } catch (_) {}
+          return d;
+        }));
+        add(authFetchJson('/api/classes', token).then(function (d) {
+          bag.classes = d;
+          return d;
+        }));
+      }
+    } else if (role === 'banzhuren') {
+      var parsed = parseUserClass(user);
+      add(authFetchJson('/api/courses', token).then(function (d) {
+        bag.courses = d;
+        try {
+          localStorage.setItem('pjyz_courses_cache_v1', JSON.stringify({
+            savedAt: Date.now(),
+            courses: (d && d.courses) || []
+          }));
+        } catch (_) {}
+        return d;
+      }));
+      add(authFetchJson('/api/selection-status', token).then(function (d) {
+        bag.selectionStatus = d;
+        try {
+          sessionStorage.setItem('pjyz_selection_status_boot', JSON.stringify({ at: Date.now(), data: d }));
+        } catch (_) {}
+        return d;
+      }));
+      if (parsed.grade && parsed.classNum) {
+        var qs = new URLSearchParams();
+        qs.set('grade', parsed.grade);
+        qs.set('class', parsed.classNum);
+        qs.set('class_name', parsed.grade + '(' + parsed.classNum + ')班');
+        var uq = new URLSearchParams();
+        uq.set('grade', parsed.grade);
+        uq.set('class', parsed.classNum + '班');
+        var qstr = qs.toString();
+        var selP = authFetchJson('/api/selections?' + qstr, token);
+        var unP = authFetchJson('/api/unselected-students?' + uq.toString(), token);
+        add(selP.then(function (d) { bag.selections = d; return d; }));
+        add(unP.then(function (d) { bag.unselected = d; return d; }));
+        add(Promise.all([
+          selP.catch(function () { return { selections: [] }; }),
+          unP.catch(function () { return { unselected: [] }; })
+        ]).then(function (pair) {
+          try {
+            sessionStorage.setItem('pjyz_xuanke_boot_v1', JSON.stringify({
+              at: Date.now(),
+              grade: parsed.grade,
+              classNum: parsed.classNum,
+              selections: (pair[0] && pair[0].selections) || [],
+              unselected: (pair[1] && pair[1].unselected) || []
+            }));
+          } catch (_) {}
+          return pair;
+        }));
+        add(authFetchJson('/api/banzhuren/class-roster?' + qstr, token).then(function (d) {
+          bag.roster = d;
+          try {
+            sessionStorage.setItem('bz_class_roster_cache', JSON.stringify({
+              students: (d && d.students) || [],
+              revision: (d && d.revision) || 0,
+              at: Date.now()
+            }));
+          } catch (_) {}
+          return d;
+        }));
+        add(authFetchJson('/api/banzhuren/class-dashboard?' + qstr, token).then(function (d) {
+          bag.dashboard = d;
+          try {
+            sessionStorage.setItem('bz_dashboard_cache', JSON.stringify({
+              at: Date.now(),
+              data: d
+            }));
+          } catch (_) {}
+          return d;
+        }));
+      }
+    } else if (role === 'admin') {
+      add(authFetchJson('/api/courses', token).then(function (d) {
+        bag.courses = d;
+        try {
+          localStorage.setItem('pjyz_courses_cache_v1', JSON.stringify({
+            savedAt: Date.now(),
+            courses: (d && d.courses) || []
+          }));
+        } catch (_) {}
+        return d;
+      }));
+      add(authFetchJson('/api/teacher-classroom', token).then(function (d) {
+        bag.classroom = d;
+        try {
+          sessionStorage.setItem('pjyz_admin_board_cache_v1', JSON.stringify({
+            items: (d && d.items) || [],
+            overview: (d && d.overview) || {},
+            today: (d && d.today) || '',
+            at: Date.now()
+          }));
+        } catch (_) {}
+        return d;
+      }));
+      add(authFetchJson('/api/course-hours', token).then(function (d) {
+        bag.hours = d;
+        try {
+          sessionStorage.setItem('pjyz_admin_hours_boot', JSON.stringify({ at: Date.now(), data: d }));
+        } catch (_) {}
+        return d;
+      }));
+      add(authFetchJson('/api/selection-status', token).then(function (d) {
+        bag.selectionStatus = d;
+        return d;
+      }));
+    }
+
+    return Promise.race([
+      Promise.all(jobs),
+      new Promise(function (resolve) { setTimeout(resolve, timeoutMs); })
+    ]).then(function () {
+      try {
+        sessionStorage.setItem('pjyz_role_boot_cache_v1', JSON.stringify({
+          role: role,
+          page: page,
+          at: Date.now()
+        }));
+      } catch (_) {}
+      return { page: page, role: role, warmed: true, bag: bag };
+    });
+  }
+
   function getLastPage() {
     try { return normalizePagePath(localStorage.getItem(LAST_PAGE_KEY) || ''); } catch (_) { return ''; }
   }
@@ -409,6 +779,7 @@
     prefetchPage: prefetchPage,
     prefetchRolePages: prefetchRolePages,
     prefetchAllRolePages: prefetchAllRolePages,
+    warmRoleBootstrap: warmRoleBootstrap,
     navigateToPage: navigateToPage,
     checkDbHealthBanner: checkDbHealthBanner,
     hideDbHealthBanner: hideDbHealthBanner

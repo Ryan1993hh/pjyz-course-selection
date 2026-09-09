@@ -856,6 +856,25 @@
     var silent = !!opts.silent;
     var wrap = document.getElementById('bzDashboardBody');
 
+    // 登录预热看板缓存：先秒开
+    try {
+      if (!(bzState.dashboard && bzState.dashboard.students && bzState.dashboard.students.length)) {
+        var dashBoot = sessionStorage.getItem('bz_dashboard_cache');
+        if (dashBoot) {
+          var parsedDash = JSON.parse(dashBoot);
+          if (parsedDash && parsedDash.data && (Date.now() - (parsedDash.at || 0) < 120000)) {
+            bzState.dashboard = normalizeDashboardData(parsedDash.data, bzState.classStudents || []);
+            if (typeof bzState.dashboard.today_abnormal_count !== 'number' && parsedDash.data) {
+              bzState.dashboard.today_abnormal_count = Number(parsedDash.data.today_abnormal_count) || 0;
+            }
+            clockAbnormalCount = Number((parsedDash.data && parsedDash.data.today_abnormal_count) || clockAbnormalCount) || 0;
+            renderDashboard(bzState.dashboard, { silent: true });
+            updateClockInfo();
+          }
+        }
+      }
+    } catch (_) {}
+
     // 有缓存先秒开，再后台刷新
     if (bzState.dashboard && bzState.dashboard.students && bzState.dashboard.students.length) {
       renderDashboard(bzState.dashboard, { silent: true });
@@ -878,6 +897,9 @@
         bzState.dashboard.today_abnormal_count = Number(data.today_abnormal_count) || 0;
       }
       clockAbnormalCount = Number((data && data.today_abnormal_count) || clockAbnormalCount) || 0;
+      try {
+        sessionStorage.setItem('bz_dashboard_cache', JSON.stringify({ at: Date.now(), data: data }));
+      } catch (_) {}
       renderDashboard(bzState.dashboard, { silent: silent });
       updateClockInfo();
     } catch (e) {

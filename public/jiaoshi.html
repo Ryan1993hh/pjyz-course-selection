@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课 教师端</title>
 <link rel="stylesheet" href="css/muyu.css?v=20260905e">
-<script src="js/role-utils.js?v=20260907c"></script>
+<script src="js/role-utils.js?v=20260909f"></script>
 <script src="js/teacher-quotes.js?v=20260826b"></script>
 <script src="js/muyu-audio-data.js?v=20260905e"></script>
 <script src="js/muyu.js?v=20260905e"></script>
@@ -2937,23 +2937,43 @@ function isCheckinSessionAllowed() {
 
 async function loadClassScheduleStatus() {
   try {
+    // 登录预热缓存优先，避免首屏先显示可签到再跳回不可用
+    try {
+      var boot = sessionStorage.getItem('pjyz_schedule_boot');
+      if (boot) {
+        var parsed = JSON.parse(boot);
+        if (parsed && parsed.data && (Date.now() - (parsed.at || 0) < 90000)) {
+          scheduleState = Object.assign({}, parsed.data, { pending: false });
+          if (typeof scheduleState.allowed !== 'boolean') {
+            scheduleState.allowed = scheduleState.blocked === false;
+          }
+          applyClassScheduleUI();
+        }
+      }
+    } catch (_) {}
+
     const data = await api("GET", "/api/class-schedule-status");
     scheduleState = Object.assign({}, data, { pending: false });
     if (typeof scheduleState.allowed !== "boolean") {
       scheduleState.allowed = scheduleState.blocked === false;
     }
+    try {
+      sessionStorage.setItem('pjyz_schedule_boot', JSON.stringify({ at: Date.now(), data: scheduleState }));
+    } catch (_) {}
     applyClassScheduleUI();
   } catch (e) {
     console.warn("loadClassScheduleStatus:", e);
-    scheduleState = {
-      allowed: false,
-      pending: false,
-      reason: "无法确认上课时间，暂不可签到",
-      mode: "unknown",
-      suspended: false,
-      date: ""
-    };
-    applyClassScheduleUI();
+    if (scheduleState.pending) {
+      scheduleState = {
+        allowed: false,
+        pending: false,
+        reason: "无法确认上课时间，暂不可签到",
+        mode: "unknown",
+        suspended: false,
+        date: ""
+      };
+      applyClassScheduleUI();
+    }
   }
 }
 
@@ -5392,6 +5412,18 @@ async function initApp() {
   updateDateLine();
   // 登录态下立刻用本地缓存画出学生名单；上课状态默认锁定直到确认
   bootPaintFromCache();
+  try {
+    var bootSch = sessionStorage.getItem('pjyz_schedule_boot');
+    if (bootSch) {
+      var parsedSch = JSON.parse(bootSch);
+      if (parsedSch && parsedSch.data && (Date.now() - (parsedSch.at || 0) < 90000)) {
+        scheduleState = Object.assign({}, parsedSch.data, { pending: false });
+        if (typeof scheduleState.allowed !== 'boolean') {
+          scheduleState.allowed = scheduleState.blocked === false;
+        }
+      }
+    }
+  } catch (_) {}
   applyClassScheduleUI();
   const scheduleBootP = loadClassScheduleStatus();
   if (window.TeacherQuotes && typeof TeacherQuotes.init === "function") {

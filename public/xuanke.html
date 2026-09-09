@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>浦江一中拓展课·班主任</title>
 <link rel="stylesheet" href="css/muyu.css?v=20260905e">
-<script src="js/role-utils.js?v=20260907c"></script>
+<script src="js/role-utils.js?v=20260909f"></script>
 <script src="js/teacher-quotes.js?v=20260827d"></script>
 <script src="js/muyu-audio-data.js?v=20260905e"></script>
 <script src="js/muyu.js?v=20260905e"></script>
@@ -5055,6 +5055,23 @@ async function restoreSelectionsFromServer() {
 
   let rows = [];
   let unselected = [];
+  // 登录页预热缓存：有则先用，落地秒开
+  try {
+    const bootRaw = sessionStorage.getItem('pjyz_xuanke_boot_v1');
+    if (bootRaw) {
+      const boot = JSON.parse(bootRaw);
+      if (
+        boot &&
+        String(boot.grade || '') === String(gradeName) &&
+        String(boot.classNum || '') === String(classNumber) &&
+        (Date.now() - (boot.at || 0) < 120000)
+      ) {
+        rows = Array.isArray(boot.selections) ? boot.selections.slice() : [];
+        unselected = Array.isArray(boot.unselected) ? boot.unselected.slice() : [];
+      }
+    }
+  } catch (_) {}
+
   try {
     const qs = new URLSearchParams();
     qs.set('grade', gradeName);
@@ -5063,23 +5080,50 @@ async function restoreSelectionsFromServer() {
     const uq = new URLSearchParams();
     uq.set('grade', gradeName);
     uq.set('class', String(classNumber) + '班');
-    const pair = await Promise.all([
-      apiRequest('GET', '/api/selections?' + qs.toString()).catch(function (e) {
-        console.warn('restoreSelectionsFromServer selections:', e.message);
-        return { selections: [] };
-      }),
-      apiRequest('GET', '/api/unselected-students?' + uq.toString()).catch(function (e) {
-        console.warn('restoreSelectionsFromServer unselected:', e.message);
-        return { unselected: [] };
-      })
-    ]);
-    const data = pair[0];
-    const udata = pair[1];
-    rows = Array.isArray(data) ? data : (data.selections || []);
-    unselected = (udata && udata.unselected) || [];
+    const hasBoot = !!(rows.length || unselected.length);
+    if (hasBoot) {
+      // 已有登录预热数据：先用本地秒开，网络刷新不阻塞首屏
+      Promise.all([
+        apiRequest('GET', '/api/selections?' + qs.toString()).catch(function () { return null; }),
+        apiRequest('GET', '/api/unselected-students?' + uq.toString()).catch(function () { return null; })
+      ]).then(function (pair) {
+        try { sessionStorage.removeItem('pjyz_xuanke_boot_v1'); } catch (_) {}
+        if (!pair || (!pair[0] && !pair[1])) return;
+        // 后台静默刷新：有明显差异时再走一次完整恢复
+        try {
+          var netRows = pair[0] ? (Array.isArray(pair[0]) ? pair[0] : (pair[0].selections || [])) : [];
+          var netUn = pair[1] ? ((pair[1].unselected) || []) : [];
+          if ((netRows.length || netUn.length) && (netRows.length !== rows.length || netUn.length !== unselected.length)) {
+            sessionStorage.setItem('pjyz_xuanke_boot_v1', JSON.stringify({
+              at: Date.now(),
+              grade: gradeName,
+              classNum: classNumber,
+              selections: netRows,
+              unselected: netUn
+            }));
+          }
+        } catch (_) {}
+      });
+    } else {
+      const pair = await Promise.all([
+        apiRequest('GET', '/api/selections?' + qs.toString()).catch(function (e) {
+          console.warn('restoreSelectionsFromServer selections:', e.message);
+          return { selections: [] };
+        }),
+        apiRequest('GET', '/api/unselected-students?' + uq.toString()).catch(function (e) {
+          console.warn('restoreSelectionsFromServer unselected:', e.message);
+          return { unselected: [] };
+        })
+      ]);
+      const data = pair[0];
+      const udata = pair[1];
+      rows = Array.isArray(data) ? data : (data.selections || []);
+      unselected = (udata && udata.unselected) || [];
+      try { sessionStorage.removeItem('pjyz_xuanke_boot_v1'); } catch (_) {}
+    }
   } catch (e) {
     console.warn('restoreSelectionsFromServer:', e.message);
-    return false;
+    if (!rows.length && !unselected.length) return false;
   }
 
   rows = rows.filter(selectionRowMatchesCurrentClass);
@@ -6322,6 +6366,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260909e"></script>
+<script src="js/banzhuren-portal.js?v=20260909f"></script>
 </body>
 </html>
