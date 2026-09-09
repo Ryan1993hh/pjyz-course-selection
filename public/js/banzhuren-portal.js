@@ -230,12 +230,31 @@
 
   function normalizeStudentRow(s) {
     if (typeof s === 'string') {
-      return { student_name: String(s || '').trim(), gender: '' };
+      return { student_name: String(s || '').trim(), gender: '', student_no: '' };
     }
     return {
       student_name: String((s && s.student_name) || '').trim(),
-      gender: String((s && s.gender) || '').trim()
+      gender: String((s && s.gender) || '').trim(),
+      student_no: String((s && s.student_no) || '').trim()
     };
+  }
+
+  function compareStudentNoAsc(a, b) {
+    var na = parseInt(String((a && a.student_no) || '').trim(), 10);
+    var nb = parseInt(String((b && b.student_no) || '').trim(), 10);
+    var aOk = !isNaN(na);
+    var bOk = !isNaN(nb);
+    if (aOk && bOk && na !== nb) return na - nb;
+    if (aOk && !bOk) return -1;
+    if (!aOk && bOk) return 1;
+    var sa = String((a && a.student_no) || '').trim();
+    var sb = String((b && b.student_no) || '').trim();
+    if (sa && sb && sa !== sb) return sa.localeCompare(sb, 'zh', { numeric: true });
+    return String((a && a.student_name) || '').localeCompare(String((b && b.student_name) || ''), 'zh');
+  }
+
+  function sortStudentsByNo(list) {
+    return (list || []).slice().sort(compareStudentNoAsc);
   }
 
   function mergeStudentLists() {
@@ -248,14 +267,13 @@
         var prev = map.get(row.student_name);
         if (!prev) {
           map.set(row.student_name, row);
-        } else if (!prev.gender && row.gender) {
-          prev.gender = row.gender;
+        } else {
+          if (!prev.gender && row.gender) prev.gender = row.gender;
+          if (!prev.student_no && row.student_no) prev.student_no = row.student_no;
         }
       });
     }
-    return Array.from(map.values()).sort(function (a, b) {
-      return String(a.student_name).localeCompare(String(b.student_name), 'zh');
-    });
+    return sortStudentsByNo(Array.from(map.values()));
   }
 
   function readRosterCache() {
@@ -374,6 +392,9 @@
 
     // 服务端名单为权威来源：成功拉取后不再与本地缓存/选课草稿合并，避免已删除学生被加回
     if (apiOk) {
+      roster = sortStudentsByNo((roster || []).map(normalizeStudentRow).filter(function (s) {
+        return !!s.student_name;
+      }));
       if (roster.length) {
         writeRosterCache(roster, revision);
       } else {
@@ -394,7 +415,7 @@
       return roster.slice();
     }
 
-    if (bzState.classStudents.length) return bzState.classStudents.slice();
+    if (bzState.classStudents.length) return sortStudentsByNo(bzState.classStudents);
     return [];
   }
 
@@ -428,6 +449,8 @@
     var grid = document.getElementById('bzLeaveGrid');
     var hint = document.getElementById('bzLeaveHint');
     if (!grid) return;
+
+    bzState.classStudents = sortStudentsByNo(bzState.classStudents || []);
 
     if (!bzState.classStudents.length) {
       grid.innerHTML = '';
@@ -659,13 +682,12 @@
         return {
           student_name: n,
           gender: (s && s.gender) || '',
+          student_no: (s && s.student_no) || '',
           cells: (s && s.cells) || []
         };
       }).filter(function (s) { return s.student_name; });
-      students.sort(function (a, b) {
-        return String(a.student_name).localeCompare(String(b.student_name), 'zh');
-      });
     }
+    students = sortStudentsByNo(students);
     var excluded = { '2026-08-27': 1, '2026-08-28': 1 };
     var sessions = ((data && data.sessions) || []).filter(function (s) {
       return s && s.date && !excluded[s.date];
@@ -676,8 +698,14 @@
     var keepDates = {};
     sessions.forEach(function (s) { keepDates[s.date] = 1; });
     var rawSessions = ((data && data.sessions) || []).filter(function (s) { return s && s.date; });
+    // 原始顺序可能与学号排序不一致：先按姓名建索引，再按学号序重排 cells
+    var cellByName = {};
+    ((data && data.students) || []).forEach(function (stu) {
+      var n = String((stu && stu.student_name) || '').trim();
+      if (n) cellByName[n] = stu.cells || [];
+    });
     students = students.map(function (stu) {
-      var cells = stu.cells || [];
+      var cells = stu.cells || cellByName[stu.student_name] || [];
       var byDate = {};
       rawSessions.forEach(function (sess, idx) {
         if (sess && sess.date && cells[idx]) byDate[sess.date] = cells[idx];

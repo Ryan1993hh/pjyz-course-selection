@@ -4294,9 +4294,26 @@ async function removeLeaveFromClassrooms(db, report, opts) {
 async function getBanzhurenClassRoster(db, grade, className) {
   const map = new Map();
   const genderByName = new Map();
+  const studentNoByName = new Map();
+
+  function sortByStudentNo(list) {
+    return list.sort((a, b) => {
+      const na = parseInt(String(a.student_no || '').trim(), 10);
+      const nb = parseInt(String(b.student_no || '').trim(), 10);
+      const aOk = !isNaN(na);
+      const bOk = !isNaN(nb);
+      if (aOk && bOk && na !== nb) return na - nb;
+      if (aOk && !bOk) return -1;
+      if (!aOk && bOk) return 1;
+      const sa = String(a.student_no || '').trim();
+      const sb = String(b.student_no || '').trim();
+      if (sa && sb && sa !== sb) return sa.localeCompare(sb, 'zh', { numeric: true });
+      return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
+    });
+  }
 
   const selRes = await db.prepare(
-    'SELECT student_name, gender, grade, class_name FROM selections'
+    'SELECT student_name, gender, grade, class_name, student_no FROM selections'
   ).all();
   for (const row of (selRes.results || [])) {
     if (!selectionMatchesClassScope(row, grade, className)) continue;
@@ -4304,6 +4321,8 @@ async function getBanzhurenClassRoster(db, grade, className) {
     if (!name) continue;
     const gender = String(row.gender || '').trim();
     if (gender && !genderByName.get(name)) genderByName.set(name, gender);
+    const sno = String(row.student_no || '').trim();
+    if (sno && !studentNoByName.get(name)) studentNoByName.set(name, sno);
   }
 
   const rosterRes = await db.prepare(
@@ -4314,17 +4333,21 @@ async function getBanzhurenClassRoster(db, grade, className) {
     const name = String(row.student_name || '').trim();
     if (!name) continue;
     const gender = String(row.gender || '').trim() || genderByName.get(name) || '';
-    map.set(name, { student_name: name, gender: gender, source: 'roster' });
+    map.set(name, {
+      student_name: name,
+      gender: gender,
+      student_no: studentNoByName.get(name) || '',
+      source: 'roster'
+    });
   }
 
   // 本班已有花名册：只返回花名册，避免已从班级删除的学生仍因选课/未选课记录回显
   if (map.size > 0) {
-    return Array.from(map.values()).map((s) => ({
+    return sortByStudentNo(Array.from(map.values()).map((s) => ({
       student_name: s.student_name,
-      gender: s.gender || ''
-    })).sort((a, b) =>
-      String(a.student_name).localeCompare(String(b.student_name), 'zh')
-    );
+      gender: s.gender || '',
+      student_no: s.student_no || studentNoByName.get(s.student_name) || ''
+    })));
   }
 
   for (const row of (selRes.results || [])) {
@@ -4334,6 +4357,7 @@ async function getBanzhurenClassRoster(db, grade, className) {
     map.set(name, {
       student_name: name,
       gender: String(row.gender || '').trim() || genderByName.get(name) || '',
+      student_no: String(row.student_no || '').trim() || studentNoByName.get(name) || '',
       source: 'selection'
     });
   }
@@ -4350,18 +4374,22 @@ async function getBanzhurenClassRoster(db, grade, className) {
     const name = String(row.student_name || '').trim();
     if (!name) continue;
     if (!map.has(name)) {
-      map.set(name, { student_name: name, gender: String(row.gender || '').trim(), source: 'unselected' });
+      map.set(name, {
+        student_name: name,
+        gender: String(row.gender || '').trim(),
+        student_no: studentNoByName.get(name) || '',
+        source: 'unselected'
+      });
     } else if (!map.get(name).gender && row.gender) {
       map.get(name).gender = String(row.gender || '').trim();
     }
   }
 
-  return Array.from(map.values()).map((s) => ({
+  return sortByStudentNo(Array.from(map.values()).map((s) => ({
     student_name: s.student_name,
-    gender: s.gender || ''
-  })).sort((a, b) =>
-    String(a.student_name).localeCompare(String(b.student_name), 'zh')
-  );
+    gender: s.gender || '',
+    student_no: s.student_no || studentNoByName.get(s.student_name) || ''
+  })));
 }
 
 async function getClassSchoolStudentsRoster(db, grade, className) {
@@ -5488,6 +5516,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     return {
       student_name: name,
       gender: r.gender || '',
+      student_no: r.student_no || '',
       cells: cells,
       courses: courseStats,
       totals: {
@@ -5498,6 +5527,20 @@ async function handleBanzhurenClassDashboard(db, request) {
         late: totalLate
       }
     };
+  });
+
+  studentsOut.sort((a, b) => {
+    const na = parseInt(String(a.student_no || '').trim(), 10);
+    const nb = parseInt(String(b.student_no || '').trim(), 10);
+    const aOk = !isNaN(na);
+    const bOk = !isNaN(nb);
+    if (aOk && bOk && na !== nb) return na - nb;
+    if (aOk && !bOk) return -1;
+    if (!aOk && bOk) return 1;
+    const sa = String(a.student_no || '').trim();
+    const sb = String(b.student_no || '').trim();
+    if (sa && sb && sa !== sb) return sa.localeCompare(sb, 'zh', { numeric: true });
+    return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
   });
 
   const revision = await getSelectionDataRevision(db);
