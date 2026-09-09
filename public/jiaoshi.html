@@ -2912,7 +2912,14 @@ let state = {
 };
 
 let timer = { mode: "up", seconds: 0, interval: null, running: false, target: 300 };
-let scheduleState = { allowed: true, reason: "", mode: "default", suspended: false, date: "" };
+let scheduleState = {
+  allowed: false,
+  pending: true,
+  reason: "正在确认上课时间…",
+  mode: "default",
+  suspended: false,
+  date: ""
+};
 let serverSelectionRevision = 0;
 
 async function fetchSelectionDataRevision() {
@@ -2925,15 +2932,28 @@ async function fetchSelectionDataRevision() {
 }
 
 function isCheckinSessionAllowed() {
-  return scheduleState.allowed !== false;
+  return scheduleState.allowed === true && !scheduleState.pending;
 }
 
 async function loadClassScheduleStatus() {
   try {
-    scheduleState = await api("GET", "/api/class-schedule-status");
+    const data = await api("GET", "/api/class-schedule-status");
+    scheduleState = Object.assign({}, data, { pending: false });
+    if (typeof scheduleState.allowed !== "boolean") {
+      scheduleState.allowed = scheduleState.blocked === false;
+    }
     applyClassScheduleUI();
   } catch (e) {
     console.warn("loadClassScheduleStatus:", e);
+    scheduleState = {
+      allowed: false,
+      pending: false,
+      reason: "无法确认上课时间，暂不可签到",
+      mode: "unknown",
+      suspended: false,
+      date: ""
+    };
+    applyClassScheduleUI();
   }
 }
 
@@ -2943,7 +2963,7 @@ function applyClassScheduleUI() {
   const allowed = isCheckinSessionAllowed();
   if (banner) banner.classList.toggle("show", !allowed);
   const msg = document.getElementById("sessionBlockedMsg");
-  if (msg) msg.textContent = scheduleState.reason || "非上课时间 不可使用";
+  if (msg) msg.textContent = scheduleState.reason || (scheduleState.pending ? "正在确认上课时间…" : "非上课时间 不可使用");
   if (panel) panel.classList.toggle("session-blocked", !allowed);
   updateCheckinStartBtn();
   ["finishCheckinBtn", "resetCheckinBtn"].forEach(function(id) {
@@ -3231,7 +3251,14 @@ async function syncClassroomToServer(opts) {
     if (opts.notify) toast("已同步到后台管理", "success");
     return true;
   } catch (e) {
-    if (opts.notify) toast("同步后台失败：" + (e && e.message ? e.message : e), "error");
+    const msg = (e && e.message) ? String(e.message) : String(e || "");
+    if (/非上课时间|不可使用/.test(msg)) {
+      scheduleState.allowed = false;
+      scheduleState.pending = false;
+      scheduleState.reason = msg || "非上课时间 不可使用";
+      applyClassScheduleUI();
+    }
+    if (opts.notify) toast("同步后台失败：" + msg, "error");
     console.warn("syncClassroomToServer failed:", e);
     return false;
   }
@@ -3323,9 +3350,12 @@ function updateCheckinStartBtn() {
   const allBtn = document.getElementById("oneClickCheckinBtn");
   const blocked = !isCheckinSessionAllowed();
   if (btn) {
-    if (blocked) {
+    if (scheduleState.pending) {
       btn.disabled = true;
-      btn.textContent = "▶ 开始签到";
+      btn.textContent = "确认上课时间中…";
+    } else if (blocked) {
+      btn.disabled = true;
+      btn.textContent = scheduleState.reason || "非上课时间 不可使用";
     } else {
       btn.disabled = false;
       if (state.checkinDone && state.checkinDay === todayKey()) {
@@ -3853,6 +3883,11 @@ function renderFsCheckin(animateId) {
 }
 
 function openFsCheckin() {
+  if (scheduleState.pending) {
+    toast("正在确认上课时间，请稍候", "warning");
+    loadClassScheduleStatus().catch(function () {});
+    return;
+  }
   if (!isCheckinSessionAllowed()) {
     toast(scheduleState.reason || "非上课时间 不可使用", "error");
     return;
@@ -4577,8 +4612,10 @@ function bootPaintFromCache() {
 }
 
 async function loadAssignedCourse() {
-  // 先秒开本地名单，再拉网校对
+  // 先秒开本地名单；上课状态尽早拉取，避免先点签到才发现不可用
   bootPaintFromCache();
+  applyClassScheduleUI();
+  const scheduleP = loadClassScheduleStatus();
 
   const user = await refreshUserProfile() || getUser();
   const assignedName = (user && user.course_name) ? String(user.course_name).trim() : "";
@@ -4591,6 +4628,7 @@ async function loadAssignedCourse() {
     const hint = document.getElementById("studentCountHint");
     if (hint) hint.textContent = "账号未绑定课程，请联系管理员";
     toast("账号未绑定课程，请联系管理员", "error");
+    await scheduleP.catch(function () {});
     return;
   }
 
@@ -4612,7 +4650,7 @@ async function loadAssignedCourse() {
     syncStudentsFromServer({ silent: true }).catch(function () {}),
     pullClassroomFromServer().catch(function () {}),
     refreshNumericHoursTotal().catch(function () {}),
-    loadClassScheduleStatus().catch(function () {})
+    scheduleP.catch(function () {})
   ]);
 
   const data = await coursesP;
@@ -5347,8 +5385,10 @@ async function initApp() {
   }
   initSkin();
   updateDateLine();
-  // 登录态下立刻用本地缓存画出学生名单
+  // 登录态下立刻用本地缓存画出学生名单；上课状态默认锁定直到确认
   bootPaintFromCache();
+  applyClassScheduleUI();
+  const scheduleBootP = loadClassScheduleStatus();
   if (window.TeacherQuotes && typeof TeacherQuotes.init === "function") {
     TeacherQuotes.init().catch(function () {});
   }
@@ -5357,6 +5397,7 @@ async function initApp() {
   }
   try {
     await Promise.all([
+      scheduleBootP,
       loadClassTeachers(),
       loadAssignedCourse().then(function () { return fetchSelectionDataRevision(); }).then(function (rev) {
         serverSelectionRevision = rev;

@@ -394,11 +394,26 @@
       console.warn('loadClassStudents class-roster:', e.message);
     }
 
-    // 服务端名单为权威来源：成功拉取后不再与本地缓存/选课草稿合并，避免已删除学生被加回
+    // 服务端名单与班级选课页同源；选课页已加载时以其名单为准
     if (apiOk) {
       roster = sortStudentsByNo((roster || []).map(normalizeStudentRow).filter(function (s) {
         return !!s.student_name;
       }));
+      var memNow = getLocalSelectionStudents();
+      if (memNow.length) {
+        var apiByName = {};
+        roster.forEach(function (s) {
+          if (s && s.student_name) apiByName[s.student_name] = s;
+        });
+        roster = sortStudentsByNo(memNow.map(function (s) {
+          var a = apiByName[s.student_name] || {};
+          return {
+            student_name: s.student_name,
+            gender: s.gender || a.gender || '',
+            student_no: s.student_no || a.student_no || ''
+          };
+        }));
+      }
       if (roster.length) {
         writeRosterCache(roster, revision);
       } else {
@@ -408,13 +423,32 @@
       return roster.slice();
     }
 
-    var cached = readRosterCache();
-    var school = await fetchSchoolStudentsRoster();
+    // 接口失败：优先用选课页内存，避免用全校花名册把已删学生加回
     var local = getLocalSelectionStudents();
-    roster = mergeStudentLists(school, local, (cached && cached.students) || []);
+    if (local.length) {
+      bzState.classStudents = sortStudentsByNo(local);
+      var cachedRev = 0;
+      try {
+        var cachedLocal = readRosterCache();
+        if (cachedLocal && cachedLocal.revision) cachedRev = cachedLocal.revision;
+      } catch (_) {}
+      writeRosterCache(bzState.classStudents, cachedRev);
+      return bzState.classStudents.slice();
+    }
+
+    var cached = readRosterCache();
+    if (cached && cached.students && cached.students.length) {
+      bzState.classStudents = sortStudentsByNo(cached.students);
+      return bzState.classStudents.slice();
+    }
+
+    var school = await fetchSchoolStudentsRoster();
+    roster = sortStudentsByNo((school || []).map(normalizeStudentRow).filter(function (s) {
+      return !!s.student_name;
+    }));
 
     if (roster.length) {
-      writeRosterCache(roster, (cached && cached.revision) || 0);
+      writeRosterCache(roster, 0);
       bzState.classStudents = roster;
       return roster.slice();
     }

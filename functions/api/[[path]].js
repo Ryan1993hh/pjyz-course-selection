@@ -4290,7 +4290,7 @@ async function removeLeaveFromClassrooms(db, report, opts) {
   }
 }
 
-/** 班主任端班级名单：有花名册时以花名册为准（删除后不再被选课/未选课残留补回）；无花名册时用选课+未选课 */
+/** 班主任端班级名单：与班级选课页一致（selections ∪ unselected）；无选课数据时才回退花名册 */
 async function getBanzhurenClassRoster(db, grade, className) {
   const map = new Map();
   const genderByName = new Map();
@@ -4312,6 +4312,14 @@ async function getBanzhurenClassRoster(db, grade, className) {
     });
   }
 
+  function toPublicList() {
+    return sortByStudentNo(Array.from(map.values()).map((s) => ({
+      student_name: s.student_name,
+      gender: s.gender || genderByName.get(s.student_name) || '',
+      student_no: s.student_no || studentNoByName.get(s.student_name) || ''
+    })));
+  }
+
   const selRes = await db.prepare(
     'SELECT student_name, gender, grade, class_name, student_no FROM selections'
   ).all();
@@ -4323,41 +4331,10 @@ async function getBanzhurenClassRoster(db, grade, className) {
     if (gender && !genderByName.get(name)) genderByName.set(name, gender);
     const sno = String(row.student_no || '').trim();
     if (sno && !studentNoByName.get(name)) studentNoByName.set(name, sno);
-  }
-
-  const rosterRes = await db.prepare(
-    'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
-  ).bind(grade).all();
-  for (const row of (rosterRes.results || [])) {
-    if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
-    const name = String(row.student_name || '').trim();
-    if (!name) continue;
-    const gender = String(row.gender || '').trim() || genderByName.get(name) || '';
     map.set(name, {
       student_name: name,
-      gender: gender,
-      student_no: studentNoByName.get(name) || '',
-      source: 'roster'
-    });
-  }
-
-  // 本班已有花名册：只返回花名册，避免已从班级删除的学生仍因选课/未选课记录回显
-  if (map.size > 0) {
-    return sortByStudentNo(Array.from(map.values()).map((s) => ({
-      student_name: s.student_name,
-      gender: s.gender || '',
-      student_no: s.student_no || studentNoByName.get(s.student_name) || ''
-    })));
-  }
-
-  for (const row of (selRes.results || [])) {
-    if (!selectionMatchesClassScope(row, grade, className)) continue;
-    const name = String(row.student_name || '').trim();
-    if (!name) continue;
-    map.set(name, {
-      student_name: name,
-      gender: String(row.gender || '').trim() || genderByName.get(name) || '',
-      student_no: String(row.student_no || '').trim() || studentNoByName.get(name) || '',
+      gender: gender || genderByName.get(name) || '',
+      student_no: sno || studentNoByName.get(name) || '',
       source: 'selection'
     });
   }
@@ -4376,7 +4353,7 @@ async function getBanzhurenClassRoster(db, grade, className) {
     if (!map.has(name)) {
       map.set(name, {
         student_name: name,
-        gender: String(row.gender || '').trim(),
+        gender: String(row.gender || '').trim() || genderByName.get(name) || '',
         student_no: studentNoByName.get(name) || '',
         source: 'unselected'
       });
@@ -4385,11 +4362,45 @@ async function getBanzhurenClassRoster(db, grade, className) {
     }
   }
 
-  return sortByStudentNo(Array.from(map.values()).map((s) => ({
-    student_name: s.student_name,
-    gender: s.gender || '',
-    student_no: s.student_no || studentNoByName.get(s.student_name) || ''
-  })));
+  // 用花名册补全已在选课名单中的性别，但不把花名册多出的学生加进来
+  try {
+    const rosterRes = await db.prepare(
+      'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
+    ).bind(grade).all();
+    for (const row of (rosterRes.results || [])) {
+      if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+      const name = String(row.student_name || '').trim();
+      if (!name) continue;
+      const gender = String(row.gender || '').trim();
+      if (gender && !genderByName.get(name)) genderByName.set(name, gender);
+      if (map.has(name) && !map.get(name).gender && gender) {
+        map.get(name).gender = gender;
+      }
+    }
+  } catch (_) { /* ignore */ }
+
+  // 与班级选课页一致：有选课/未选课数据时，以其为权威名单
+  if (map.size > 0) return toPublicList();
+
+  // 本班尚无选课数据时，回退全校花名册（与选课页空班引导一致）
+  try {
+    const rosterRes = await db.prepare(
+      'SELECT student_name, gender, grade, class_name FROM school_students WHERE grade = ?'
+    ).bind(grade).all();
+    for (const row of (rosterRes.results || [])) {
+      if (!schoolStudentMatchesClassScope(row, grade, className)) continue;
+      const name = String(row.student_name || '').trim();
+      if (!name) continue;
+      map.set(name, {
+        student_name: name,
+        gender: String(row.gender || '').trim() || genderByName.get(name) || '',
+        student_no: studentNoByName.get(name) || '',
+        source: 'roster'
+      });
+    }
+  } catch (_) { /* ignore */ }
+
+  return toPublicList();
 }
 
 async function getClassSchoolStudentsRoster(db, grade, className) {
@@ -5185,7 +5196,13 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
   const rosterMap = new Map();
   (baseRoster || []).forEach((r) => {
     const name = String(r.student_name || '').trim();
-    if (name) rosterMap.set(name, { student_name: name, gender: r.gender || '' });
+    if (name) {
+      rosterMap.set(name, {
+        student_name: name,
+        gender: r.gender || '',
+        student_no: String(r.student_no || '').trim()
+      });
+    }
   });
 
   const studentCourses = {};
@@ -5305,9 +5322,19 @@ async function buildBanzhurenDashboardContext(db, grade, className, baseRoster) 
     }
   }
 
-  const finalRoster = Array.from(rosterMap.values()).sort((a, b) =>
-    String(a.student_name).localeCompare(String(b.student_name), 'zh')
-  );
+  const finalRoster = Array.from(rosterMap.values()).sort((a, b) => {
+    const na = parseInt(String(a.student_no || '').trim(), 10);
+    const nb = parseInt(String(b.student_no || '').trim(), 10);
+    const aOk = !isNaN(na);
+    const bOk = !isNaN(nb);
+    if (aOk && bOk && na !== nb) return na - nb;
+    if (aOk && !bOk) return -1;
+    if (!aOk && bOk) return 1;
+    const sa = String(a.student_no || '').trim();
+    const sb = String(b.student_no || '').trim();
+    if (sa && sb && sa !== sb) return sa.localeCompare(sb, 'zh', { numeric: true });
+    return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
+  });
 
   return {
     finalRoster,
@@ -5356,12 +5383,8 @@ async function handleBanzhurenClassDashboard(db, request) {
   className = parsedClass.class_name || className;
   if (!grade) return json({ error: '缺少年级信息' }, 400);
 
+  // 与班级选课页、请假报备共用 getBanzhurenClassRoster（选课∪未选课）
   const baseRoster = await getBanzhurenClassRoster(db, grade, className);
-  const schoolRoster = await getClassSchoolStudentsRoster(db, grade, className);
-  // 有花名册时以班级花名册为准；否则退回选课/未选课合并结果
-  const baseOrSchool = (baseRoster.length ? baseRoster : schoolRoster).slice().sort((a, b) =>
-    String(a.student_name).localeCompare(String(b.student_name), 'zh')
-  );
 
   const {
     finalRoster,
@@ -5370,7 +5393,7 @@ async function handleBanzhurenClassDashboard(db, request) {
     courseData,
     checkinCourses,
     selRows
-  } = await buildBanzhurenDashboardContext(db, grade, className, baseOrSchool);
+  } = await buildBanzhurenDashboardContext(db, grade, className, baseRoster);
 
   const ATTENDANCE_COLS = 18;
   const coursesToScan = [...new Set([
