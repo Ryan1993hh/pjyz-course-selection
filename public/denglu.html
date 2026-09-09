@@ -8,17 +8,11 @@
 <link rel="prefetch" href="xuanke" as="document" />
 <link rel="prefetch" href="jiaoshi" as="document" />
 <script>
-/* 记住密码且已有会话：在首屏渲染前立刻跳转，缩短等待 */
+/* 记住密码：首屏前尽量直接跳转 / 提前发起登录，缩短等待 */
 (function () {
   try {
     if (localStorage.getItem('pjyz_login_remember') !== '1') return;
-    var token = localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token');
-    if (!token) return;
-    var user = null;
-    try { user = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) { user = null; }
-    if (!user) return;
-    var roles = (user.roles && user.roles.length) ? user.roles : (user.role ? [user.role] : []);
-    if (!roles.length) return;
+
     function pageOf(role) {
       if (role === 'admin') return 'admin';
       if (role === 'banzhuren') return 'xuanke';
@@ -32,18 +26,116 @@
       if (p === 'jiaoshi') return 'teacher';
       return '';
     }
-    var last = String(localStorage.getItem('pjyz_last_page') || '').replace(/\.html$/i, '').replace(/^\//, '');
-    var lastRole = roleOfPage(last);
-    var target = '';
-    if (last && lastRole && roles.indexOf(lastRole) > -1) target = pageOf(lastRole);
-    if (!target) {
+    function resolveTarget(user) {
+      var roles = (user && user.roles && user.roles.length)
+        ? user.roles
+        : (user && user.role ? [user.role] : []);
+      if (!roles.length) return '';
+      var last = String(localStorage.getItem('pjyz_last_page') || '').replace(/\.html$/i, '').replace(/^\//, '');
+      var lastRole = roleOfPage(last);
+      if (last && lastRole && roles.indexOf(lastRole) > -1) return pageOf(lastRole);
       var active = localStorage.getItem('pjyz_active_role') || '';
-      if (active && roles.indexOf(active) > -1) target = pageOf(active);
+      if (active && roles.indexOf(active) > -1) return pageOf(active);
+      return pageOf(roles[0]);
     }
-    if (!target) target = pageOf(roles[0]);
-    if (!target) return;
-    sessionStorage.setItem('pjyz_autologin_fast', '1');
-    location.replace(target);
+    function showBootOverlay() {
+      document.documentElement.classList.add('pjyz-autologin');
+      var s = document.createElement('style');
+      s.id = 'pjyz-autologin-boot';
+      s.textContent =
+        'html.pjyz-autologin body{visibility:hidden!important}' +
+        'html.pjyz-autologin::after{content:"自动登录中…";position:fixed;inset:0;display:flex;' +
+        'align-items:center;justify-content:center;font:600 15px/1.4 system-ui,sans-serif;' +
+        'color:#0f766e;background:linear-gradient(160deg,#ecfdf5,#f0f9ff);z-index:99999}';
+      document.head.appendChild(s);
+    }
+    function clearBootOverlay() {
+      try {
+        document.documentElement.classList.remove('pjyz-autologin');
+        var s = document.getElementById('pjyz-autologin-boot');
+        if (s) s.remove();
+      } catch (_) {}
+      try { sessionStorage.removeItem('pjyz_autologin_pending'); } catch (_) {}
+    }
+    window.__pjyzClearAutologinBoot = clearBootOverlay;
+
+    var token = localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token');
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) { user = null; }
+    if (token && user) {
+      var target = resolveTarget(user);
+      if (target) {
+        sessionStorage.setItem('pjyz_autologin_fast', '1');
+        location.replace(target);
+        return;
+      }
+    }
+
+    var savedUser = localStorage.getItem('pjyz_login_user') || '';
+    var savedPass = localStorage.getItem('pjyz_login_pass') || '';
+    if (!savedUser || !savedPass) return;
+
+    showBootOverlay();
+    sessionStorage.setItem('pjyz_autologin_pending', '1');
+    window.__pjyzHeadAutologin = true;
+
+    var apiBase = '';
+    try {
+      if (window.__API_BASE__ && typeof window.__API_BASE__ === 'string') apiBase = window.__API_BASE__;
+      else {
+        var savedBase = localStorage.getItem('pjyz_api_base');
+        if (savedBase) apiBase = savedBase.replace(/\/+$/, '');
+      }
+    } catch (_) {}
+
+    // 同步预热落地页，与登录请求并行
+    try {
+      var warm = resolveTarget(user) || localStorage.getItem('pjyz_last_page') || 'xuanke';
+      warm = String(warm || 'xuanke').replace(/\.html$/i, '').replace(/^\//, '');
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.as = 'document';
+      link.href = warm;
+      document.head.appendChild(link);
+    } catch (_) {}
+
+    fetch(apiBase + '/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: savedUser, password: savedPass })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!(data && data.success && data.token)) {
+          clearBootOverlay();
+          return;
+        }
+        try {
+          localStorage.setItem('admin_token', data.token);
+          localStorage.setItem('pjyz_token', data.token);
+          if (data.user) localStorage.setItem('pjyz_user', JSON.stringify(data.user));
+          localStorage.setItem('pjyz_login_user', savedUser);
+          localStorage.setItem('pjyz_current_username', savedUser);
+          localStorage.setItem('pjyz_login_remember', '1');
+          localStorage.setItem('pjyz_login_pass', savedPass);
+        } catch (_) {}
+        var go = resolveTarget(data.user) || 'xuanke';
+        var roles = (data.user && data.user.roles && data.user.roles.length)
+          ? data.user.roles
+          : (data.user && data.user.role ? [data.user.role] : []);
+        var role = roleOfPage(go) || roles[0] || '';
+        if (role) {
+          try {
+            localStorage.setItem('pjyz_active_role', role);
+            localStorage.setItem('pjyz_login_role', role);
+            localStorage.setItem('pjyz_last_page', go);
+          } catch (_) {}
+        }
+        sessionStorage.setItem('pjyz_autologin_fast', '1');
+        window.__pjyzAutologinOk = true;
+        location.replace(go);
+      })
+      .catch(function () { clearBootOverlay(); });
   } catch (_) {}
 })();
 </script>
@@ -943,6 +1035,7 @@
 
   /* ---------- 记住密码 / 账号 ---------- */
   var shouldAutoLogin = false;
+  var headAutologinPending = false;
   try {
     var savedUser = localStorage.getItem('pjyz_login_user');
     var savedRemember = localStorage.getItem('pjyz_login_remember');
@@ -957,6 +1050,8 @@
         shouldAutoLogin = !!(savedUser && savedPass);
       }
     }
+    headAutologinPending = sessionStorage.getItem('pjyz_autologin_pending') === '1'
+      || !!window.__pjyzHeadAutologin;
   } catch (_) {}
 
   /* ---------- API 基址（同源默认，支持前后端分离） ---------- */
@@ -972,13 +1067,43 @@
   /* ---------- 表单提交 ---------- */
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (typeof window.__pjyzClearAutologinBoot === 'function') window.__pjyzClearAutologinBoot();
     performLogin({ auto: false });
   });
 
-  /* 记住密码：打开登录页即自动登录并跳转 */
-  if (shouldAutoLogin) {
-    // 若 head 已因有效会话跳转，这里通常不会执行到；无会话时立刻用账号密码登录
+  /* 记住密码：优先由 head 提前发起登录；失败则回退到表单自动登录 */
+  if (shouldAutoLogin && !headAutologinPending) {
     performLogin({ auto: true, silent: true });
+  } else if (shouldAutoLogin && headAutologinPending) {
+    loginBtn.disabled = true;
+    loginBtn.textContent = '自动登录中...';
+    var waitMs = 0;
+    var timer = setInterval(function () {
+      waitMs += 200;
+      if (window.__pjyzAutologinOk) {
+        clearInterval(timer);
+        return;
+      }
+      var still = false;
+      try { still = sessionStorage.getItem('pjyz_autologin_pending') === '1'; } catch (_) {}
+      var hasToken = !!(localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token'));
+      if (hasToken && still) {
+        // head 已写入 token，等待跳转
+        return;
+      }
+      if (!still || waitMs >= 8000) {
+        clearInterval(timer);
+        if (typeof window.__pjyzClearAutologinBoot === 'function') window.__pjyzClearAutologinBoot();
+        if (!loginInFlight && !hasToken && rememberEl.checked && passwordEl.value) {
+          loginBtn.disabled = false;
+          loginBtn.textContent = '登 录';
+          performLogin({ auto: true, silent: true });
+        } else {
+          loginBtn.disabled = false;
+          loginBtn.textContent = '登 录';
+        }
+      }
+    }, 200);
   }
 
   /* ---------- 忘记密码 / 联系管理员 ---------- */
