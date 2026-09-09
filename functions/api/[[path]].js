@@ -677,15 +677,15 @@ async function handleLogin(db, request) {
   try {
     const { username, password } = body || {};
     if (!username || !password) return json({ error: '用户名和密码不能为空' }, 400);
-
+    
     const user = await db.prepare(
       'SELECT id, username, password, password_hash, salt, roles, teacher_name, class_name, course_name, email, phone, status FROM users WHERE username = ?'
     ).bind(username).first();
     if (!user) return json({ error: '账号不存在' }, 401);
-
+    
     if (user.status === 'locked') return json({ error: '账号已被锁定，请联系管理员', status: 'locked' }, 403);
     if (user.status === 'disabled') return json({ error: '账号已被禁用，请联系管理员', status: 'disabled' }, 403);
-
+    
     let passwordOk = false;
     if (user.password_hash && user.salt) {
       passwordOk = await verifyPassword(password, user.salt || '', user.password_hash || '');
@@ -695,10 +695,10 @@ async function handleLogin(db, request) {
       passwordOk = true;
     }
     if (!passwordOk) return json({ error: '账号或密码错误' }, 401);
-
+    
     const roles = (user.roles || 'teacher').split(',').filter(Boolean);
     const token = await createToken(user.id, roles);
-
+    
     return json({
       success: true,
       token,
@@ -878,7 +878,7 @@ async function handleCoursesBatchSave(db, request) {
   try {
     const body = await request.json();
     const arr = Array.isArray(body) ? body : (body.courses || []);
-
+    
     // 差量保存：只写变更行，避免「全表删除 + 全量插入 + 二次老师同步」的多次 D1 往返
     const [existingRes, teacherMap] = await Promise.all([
       db.prepare('SELECT * FROM courses').all(),
@@ -967,7 +967,7 @@ async function handleCoursesBatchSave(db, request) {
     }
 
     if (hasNewInserts) {
-      const results = await db.prepare('SELECT * FROM courses').all();
+    const results = await db.prepare('SELECT * FROM courses').all();
       const courses = (results.results || []).map(mapCourseApiRow);
       return json({
         success: true,
@@ -1022,7 +1022,7 @@ async function handleCourseUpdate(db, request, id) {
   const body = await request.json();
   const existing = await db.prepare('SELECT * FROM courses WHERE id = ?').bind(id).first();
   if (!existing) return json({ error: '课程不存在' }, 404);
-
+  
   const selectionLocked = body.selection_locked !== undefined
     ? ((body.selection_locked === true || body.selection_locked === 1 || body.selection_locked === '1') ? 1 : 0)
     : (Number(existing.selection_locked) === 1 ? 1 : 0);
@@ -1780,6 +1780,34 @@ async function handleSelectionsBatchCreate(db, request) {
   }
 }
 
+function normalizeCourseMatchKey(s) {
+  return String(s || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[（）]/g, (ch) => (ch === '（' ? '(' : ')'))
+    .replace(/[“”"'‘’]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function matchCourseByName(courseName, courses) {
+  const raw = String(courseName || '').trim();
+  if (!raw || !courses.length) return null;
+  const exact = courses.find((c) => String(c.name || '').trim() === raw);
+  if (exact) return exact;
+  const key = normalizeCourseMatchKey(raw);
+  if (!key) return null;
+  const byKey = courses.filter((c) => normalizeCourseMatchKey(c.name) === key);
+  if (byKey.length === 1) return byKey[0];
+  if (byKey.length > 1) return byKey[0];
+  const contains = courses.filter((c) => {
+    const n = normalizeCourseMatchKey(c.name);
+    return n && key && (n.includes(key) || key.includes(n));
+  });
+  if (contains.length === 1) return contains[0];
+  return null;
+}
+
 /** 管理员提前录课：写入锁定选课记录，班主任端自动占位且不可改 */
 async function handlePreEnrollBatch(db, request) {
   const auth = requireAuth(request, ['admin']);
@@ -1796,9 +1824,10 @@ async function handlePreEnrollBatch(db, request) {
   if (!arr.length) return json({ error: '没有可录入的数据' }, 400);
 
   const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
+  const courseList = (coursesRes.results || []).filter((c) => c && c.name);
   const courseByName = {};
-  (coursesRes.results || []).forEach((c) => {
-    if (c && c.name) courseByName[String(c.name).trim()] = c;
+  courseList.forEach((c) => {
+    courseByName[String(c.name).trim()] = c;
   });
 
   const prepared = [];
@@ -1823,7 +1852,7 @@ async function handlePreEnrollBatch(db, request) {
     const className = parsedClass.class_name;
     const gender = String(item.gender || '').trim();
     let courseId = item.course_id != null && item.course_id !== '' ? (parseInt(item.course_id, 10) || 0) : 0;
-    const matched = courseByName[courseName];
+    const matched = courseByName[courseName] || matchCourseByName(courseName, courseList);
     if (!courseId && matched) courseId = matched.id;
     if (!matched && !courseId) {
       errors.push(studentName + '：课程不存在「' + courseName + '」');
@@ -1934,7 +1963,7 @@ async function handleSelectionUpdate(db, request, id, ctx) {
   const body = await request.json();
   const existing = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
   if (!existing) return json({ error: '选课记录不存在' }, 404);
-
+  
   const studentName = body.student_name != null
     ? String(body.student_name).trim()
     : String(existing.student_name || '').trim();
@@ -1993,7 +2022,7 @@ async function handleSelectionUpdate(db, request, id, ctx) {
   await db.prepare(
     'UPDATE selections SET grade = ?, class_name = ?, student_name = ?, gender = ?, student_no = ?, course_id = ?, course_name = ? WHERE id = ?'
   ).bind(grade, className, studentName, gender, studentNo, newCourseId || null, newCourseName, id).run();
-
+  
   const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(id).first();
   const courseNames = [existing.course_name, selection && selection.course_name].filter(Boolean);
   await bumpSelectionDataRevision(db);
