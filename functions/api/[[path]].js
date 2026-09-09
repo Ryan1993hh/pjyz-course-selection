@@ -1677,9 +1677,28 @@ async function handleSelectionsGet(db, request, url) {
   return json({ selections: list });
 }
 
+async function removeUnselectedForStudent(db, grade, className, studentName) {
+  const name = String(studentName || '').trim();
+  if (!name) return 0;
+  const res = await db.prepare(
+    'SELECT id, grade, class_name, student_name FROM unselected_students WHERE student_name = ?'
+  ).bind(name).all();
+  let deleted = 0;
+  for (const row of (res.results || [])) {
+    if (!selectionMatchesClassScope(row, grade, className)) continue;
+    await db.prepare('DELETE FROM unselected_students WHERE id = ?').bind(row.id).run();
+    deleted++;
+  }
+  return deleted;
+}
+
 async function handleSelectionsBatchCreate(db, request) {
   try {
-    if (!await getSelectionEnabled(db)) {
+    const auth = requireAuth(request, ['admin', 'banzhuren']);
+    if (auth.error) return json({ error: auth.error }, auth.status);
+    const isAdmin = (auth.user.roles || []).indexOf('admin') !== -1;
+    // 管理员后台录入不受「禁止选课」限制；班主任端仍受开关约束
+    if (!isAdmin && !await getSelectionEnabled(db)) {
       return json({ error: '当前状态禁止选课，无法保存', code: 'SELECTION_DISABLED' }, 403);
     }
     // Use text() + JSON.parse() instead of request.json() to avoid D1_TYPE_ERROR
@@ -1729,6 +1748,7 @@ async function handleSelectionsBatchCreate(db, request) {
             results.push(updated);
             if (updated && updated.course_name) affectedCourses.add(String(updated.course_name).trim());
           }
+          await removeUnselectedForStudent(db, grade, className, studentName);
           continue;
         }
 
@@ -1763,6 +1783,7 @@ async function handleSelectionsBatchCreate(db, request) {
         const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
         results.push(selection);
         if (courseName) affectedCourses.add(String(courseName).trim());
+        await removeUnselectedForStudent(db, grade, className, studentName);
       } catch(innerErr) {
         errors.push('插入失败: ' + innerErr.message);
       }

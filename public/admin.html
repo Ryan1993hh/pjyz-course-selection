@@ -7285,15 +7285,15 @@ async function exportSelections(){
       '<h3 style="display:none;">添加学生</h3>' +
       '<div class="add-student-modal">' +
         '<div class="add-student-tabs" style="display:flex;gap:8px;margin-bottom:16px;">' +
-          '<button type="button" class="btn btn-primary" id="addStuTabFile" style="flex:1;">📄 上传文件</button>' +
-          '<button type="button" class="btn btn-outline" id="addStuTabManual" style="flex:1;">✏️ 个别添加</button>' +
+          '<button type="button" class="btn btn-outline" id="addStuTabFile" style="flex:1;">📄 上传文件</button>' +
+          '<button type="button" class="btn btn-primary" id="addStuTabManual" style="flex:1;">✏️ 个别添加</button>' +
         '</div>' +
-        '<div id="addStuPaneFile">' +
+        '<div id="addStuPaneFile" style="display:none;">' +
           '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">上传 Excel / CSV 花名册，系统自动识别年级、班级、姓名、性别并导入选课名单。</p>' +
           '<p style="font-size:12px;color:#94a3b8;margin:0 0 14px;">表头建议包含：姓名、班级（或年级）、性别（可选）。批量导入将覆盖更新全校名单。</p>' +
           '<button type="button" class="btn btn-primary btn-block" id="addStuPickFileBtn">选择文件并导入</button>' +
         '</div>' +
-        '<div id="addStuPaneManual" style="display:none;">' +
+        '<div id="addStuPaneManual">' +
           '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">填写单个学生信息，可同时指定拓展课程；保存后写入选课数据库。</p>' +
           '<div class="form-group"><label>年级 <span style="color:#ef4444;">*</span></label>' +
             '<select class="form-select" id="addStuGrade">' +
@@ -7364,6 +7364,8 @@ async function exportSelections(){
       openRosterImportPicker();
     };
     document.getElementById('addStuConfirmBtn').onclick = submitManualAddStudent;
+    var nameElBoot = document.getElementById('addStuName');
+    if (nameElBoot) setTimeout(function () { nameElBoot.focus(); }, 30);
 
     // 课程列表为空时后台补拉一次
     if (!courseOptions.length) {
