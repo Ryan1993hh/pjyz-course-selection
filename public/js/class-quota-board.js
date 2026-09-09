@@ -208,14 +208,21 @@
 
   async function loadBoard() {
     var tbody = document.getElementById('cqbTbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="cqb-empty">加载中…</td></tr>';
+    // 有旧数据先渲染，避免切换年级时整表空白等待
+    if (state.rows && state.rows.length) {
+      renderTable();
+    } else if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="8" class="cqb-empty">加载中…</td></tr>';
+    }
     try {
       var data = await apiRequest('GET', '/api/class-quota-board?grade=' + encodeURIComponent(state.grade));
       state.rows = data.rows || [];
       state.courses = data.courses || [];
       renderTable();
     } catch (e) {
-      if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="cqb-empty">加载失败：' + esc(e.message) + '</td></tr>';
+      if (!(state.rows && state.rows.length) && tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="cqb-empty">加载失败：' + esc(e.message) + '</td></tr>';
+      }
       toast('加载看板失败：' + e.message, 'error');
     }
   }

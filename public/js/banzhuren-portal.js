@@ -150,9 +150,15 @@
   }
 
   async function refreshClockAbnormalCount() {
+    if (bzState.dashboard && typeof bzState.dashboard.today_abnormal_count === 'number') {
+      clockAbnormalCount = Number(bzState.dashboard.today_abnormal_count) || 0;
+      updateClockInfo();
+      return;
+    }
     try {
       var data = await apiRequest('GET', '/api/banzhuren/class-dashboard' + getSelectionPageClassQuery());
       clockAbnormalCount = Number(data && data.today_abnormal_count) || 0;
+      if (data) bzState.dashboard = normalizeDashboardData(data, bzState.classStudents || []);
     } catch (_) {
       clockAbnormalCount = 0;
     }
@@ -589,21 +595,34 @@
     syncFromSelectionPage();
     try { sessionStorage.removeItem(ROSTER_CACHE_KEY); } catch (_) {}
 
-    try {
-      await loadClassStudents({ forceNetwork: true, silent: silent });
-    } catch (_) {}
+    var rosterP = loadClassStudents({ forceNetwork: true, silent: silent }).catch(function () {
+      return bzState.classStudents || [];
+    });
+    var leavesP = (bzState.tab === 'leave' || opts.forceAll)
+      ? loadTodayLeaves().catch(function () {})
+      : Promise.resolve();
 
-    // 请假与看板都刷新（不限当前 tab），切过去即可看到新班数据
-    try { await loadTodayLeaves(); } catch (_) {}
+    try { await rosterP; } catch (_) {}
+
     if (bzState.tab === 'leave') {
+      try { await leavesP; } catch (_) {}
       renderLeaveGrid();
       renderLeaveList();
+    } else {
+      // 非请假页：后台刷新请假缓存，不阻塞
+      leavesP.catch(function () {});
     }
 
-    try {
-      await loadDashboard({ silent: true });
-    } catch (_) {
+    if (bzState.tab === 'dashboard' || opts.forceAll) {
+      try {
+        await loadDashboard({ silent: true });
+      } catch (_) {
+        bzState.dashboard = null;
+      }
+    } else {
+      // 切到看板时再拉；仅标记失效
       bzState.dashboard = null;
+      bzState.dashboardSig = '';
     }
 
     if (bzState.tab === 'profile') {
@@ -770,18 +789,31 @@
     opts = opts || {};
     var silent = !!opts.silent;
     var wrap = document.getElementById('bzDashboardBody');
-    if (wrap && !silent && !wrap.querySelector('.hours-table')) {
+
+    // 有缓存先秒开，再后台刷新
+    if (bzState.dashboard && bzState.dashboard.students && bzState.dashboard.students.length) {
+      renderDashboard(bzState.dashboard, { silent: true });
+    } else if (wrap && !silent && !wrap.querySelector('.hours-table')) {
       wrap.innerHTML = '<div class="bz-empty">加载中…</div>';
     }
+
+    var fallbackP = loadClassStudents({ preferMemory: true }).catch(function () {
+      return bzState.classStudents || [];
+    });
+    var dashP = apiRequest('GET', '/api/banzhuren/class-dashboard' + getSelectionPageClassQuery());
+
     var fallback = [];
-    try {
-      fallback = await loadClassStudents();
-    } catch (_) {}
+    try { fallback = await fallbackP; } catch (_) {}
 
     try {
-      var data = await apiRequest('GET', '/api/banzhuren/class-dashboard' + getSelectionPageClassQuery());
+      var data = await dashP;
       bzState.dashboard = normalizeDashboardData(data, fallback);
+      if (typeof bzState.dashboard.today_abnormal_count !== 'number' && data) {
+        bzState.dashboard.today_abnormal_count = Number(data.today_abnormal_count) || 0;
+      }
+      clockAbnormalCount = Number((data && data.today_abnormal_count) || clockAbnormalCount) || 0;
       renderDashboard(bzState.dashboard, { silent: silent });
+      updateClockInfo();
     } catch (e) {
       console.warn('loadDashboard:', e.message);
       bzState.dashboard = normalizeDashboardData({

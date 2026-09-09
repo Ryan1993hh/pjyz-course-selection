@@ -4479,6 +4479,14 @@ async function loadAssignedCourse() {
     return;
   }
 
+  // 先用本地缓存秒开界面，再并行拉网同步
+  state.courseName = assignedName;
+  state.teacher.course = assignedName;
+  loadLocal();
+  ensureDailyCheckinState();
+  updateHeaderMeta();
+  renderAll();
+
   const data = await api("GET", "/api/courses");
   state.courses = (data.courses || []).filter(c => c.is_active !== 0 && c.is_active !== false);
   const course = state.courses.find(c => c.name === assignedName);
@@ -4500,24 +4508,22 @@ async function loadAssignedCourse() {
     || "";
   state.teacher.name = authoritativeName;
   state.teacher.course = course.name;
-  state.teacher.location = course.location || "";
-
-  loadLocal();
+  state.teacher.location = course.location || state.teacher.location || "";
   // 本地缓存可能带旧老师名，强制回写账号绑定姓名
   state.teacher.name = authoritativeName || state.teacher.name;
-  state.teacher.course = course.name;
-  if (!state.teacher.location) state.teacher.location = course.location || "";
 
-  await syncStudentsFromServer({ silent: true });
-  await pullClassroomFromServer();
-  await refreshNumericHoursTotal();
+  await Promise.all([
+    syncStudentsFromServer({ silent: true }).catch(function () {}),
+    pullClassroomFromServer().catch(function () {}),
+    refreshNumericHoursTotal().catch(function () {}),
+    loadClassScheduleStatus().catch(function () {})
+  ]);
   ensureDailyCheckinState();
   state.teacher.name = authoritativeName || state.teacher.name;
   if (!state.teacher.course) state.teacher.course = course.name;
   if (!state.teacher.location) state.teacher.location = course.location || "";
 
   updateHeaderMeta();
-  await loadClassScheduleStatus();
   renderAll();
 }
 

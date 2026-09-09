@@ -3622,8 +3622,9 @@ async function applyServerSelectionSync(opts) {
       studentListSource = '';
       rosterReadyTip = false;
     }
+    // restore 未命中时才补内定；命中时 restore 内已 applyPreEnrollments
+    await applyPreEnrollments({ skipReset: true, skipRender: true });
   }
-  await applyPreEnrollments({ skipReset: true, skipRender: true });
   finalizeCourseSlotsAfterPreEnroll();
   syncCourseSlots();
   saveState(serverDataRevision);
@@ -4922,6 +4923,44 @@ async function refreshPreEnrollments() {
 }
 
 /** 识别管理员提前录课学生，按当前班级自动占位并锁定（可超出课程名额；一人一课以内定为准） */
+var _lockedSelectionsCache = { revision: -1, key: '', rows: null, inflight: null };
+
+function invalidateLockedSelectionsCache() {
+  _lockedSelectionsCache = { revision: -1, key: '', rows: null, inflight: null };
+}
+
+async function fetchLockedSelectionsCached() {
+  if (!getToken()) return [];
+  var key = String(gradeName || '') + '|' + String(classNumber || '');
+  var rev = serverDataRevision || 0;
+  if (_lockedSelectionsCache.rows && _lockedSelectionsCache.revision === rev && _lockedSelectionsCache.key === key) {
+    return _lockedSelectionsCache.rows;
+  }
+  if (_lockedSelectionsCache.inflight && _lockedSelectionsCache.key === key) {
+    return _lockedSelectionsCache.inflight;
+  }
+  _lockedSelectionsCache.key = key;
+  _lockedSelectionsCache.inflight = (async function () {
+    try {
+      var qs = new URLSearchParams();
+      qs.set('locked', '1');
+      if (gradeName) qs.set('grade', gradeName);
+      if (classNumber) {
+        qs.set('class', String(classNumber) + '班');
+        qs.set('class_name', String(classNumber) + '班');
+      }
+      var data = await apiRequest('GET', '/api/selections?' + qs.toString());
+      var rows = (data && data.selections) || [];
+      _lockedSelectionsCache = { revision: rev, key: key, rows: rows, inflight: null };
+      return rows;
+    } catch (e) {
+      _lockedSelectionsCache.inflight = null;
+      throw e;
+    }
+  })();
+  return _lockedSelectionsCache.inflight;
+}
+
 async function applyPreEnrollments(opts) {
   opts = opts || {};
   if (!students.length || !COURSES.length) return 0;
@@ -4937,8 +4976,7 @@ async function applyPreEnrollments(opts) {
 
   let lockedRows = [];
   try {
-    const data = await apiRequest('GET', '/api/selections?locked=1');
-    lockedRows = data.selections || [];
+    lockedRows = await fetchLockedSelectionsCached();
   } catch (e) {
     console.warn('load pre-enroll failed:', e.message);
     if (!opts.skipRender) renderAll();
@@ -6034,61 +6072,61 @@ document.addEventListener('keydown', e => {
     applyBanzhurenClassPreset();
     if (COURSES.length) paintNow();
 
-    // 2) 网络：课程与开关并行拉取
+    // 2) 网络：课程、开关、同步版本、名额并行拉取
     var sync = { revision: 0 };
     var networkReady = Promise.all([
       loadCoursesFromServer(),
       loadSelectionStatus(),
-      fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; })
+      fetchSelectionDataSync().then(function (s) { sync = s; }).catch(function () { sync = { revision: 0 }; }),
+      loadClassQuotaOverrides().catch(function () {})
     ]);
 
     setTimeout(function () { syncUserProfile().catch(function () {}); }, 0);
 
     await networkReady;
     applyBanzhurenClassPreset();
-    await loadClassQuotaOverrides();
     syncCourseSlots();
     if (!painted || COURSES.length) paintNow();
 
-    var serverEmpty = true;
+    // 3) 一次拉取本班选课（去掉「先探测是否为空」的重复请求）
+    var restored = false;
     if (getToken() && gradeName && classNumber) {
-      try {
-        serverEmpty = await isServerClassSelectionEmpty();
-      } catch (_) {
-        serverEmpty = true;
-      }
-    }
-
-    if (!serverEmpty) {
-      // 数据库已有本班选课 → 不读本地草稿，直接以库为准
-      clearLocalSelectionDraft();
-      await applyServerSelectionSync({ silent: true });
-      var uploadTextCol = document.getElementById('uploadTextCol');
-      if (uploadTextCol && students.length > 0) {
-        uploadTextCol.innerHTML =
-          '<span class="title">✓ ' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
-          '<span class="file-info">📋 共 ' + students.length + ' 名学生（数据库）</span>';
-      }
-    } else {
-      // 库中尚无本班数据：仅保留「刚上传未保存」的本地 upload 草稿，其余以库/花名册为准
-      var loaded = false;
-      try { loaded = loadStateFromStorage(); } catch (_) { loaded = false; }
-      if (loaded && students.length > 0 && studentListSource === 'upload') {
-        var uploadCol = document.getElementById('uploadTextCol');
-        if (uploadCol) {
-          uploadCol.innerHTML =
-            '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
-            '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
+      restored = await restoreSelectionsFromServer();
+      if (restored) {
+        clearLocalSelectionDraft();
+        finalizeCourseSlotsAfterPreEnroll();
+        syncCourseSlots();
+        var uploadTextCol = document.getElementById('uploadTextCol');
+        if (uploadTextCol && students.length > 0) {
+          uploadTextCol.innerHTML =
+            '<span class="title">✓ ' + esc(fileName || '已从服务器同步本班选课') + '</span>' +
+            '<span class="file-info">📋 共 ' + students.length + ' 名学生（数据库）</span>';
         }
-        await applyPreEnrollments({ skipReset: true });
       } else {
-        if (loaded) clearLocalSelectionDraft();
-        await applyServerSelectionSync({ silent: true });
+        var loaded = false;
+        try { loaded = loadStateFromStorage(); } catch (_) { loaded = false; }
+        if (loaded && students.length > 0 && studentListSource === 'upload') {
+          var uploadCol = document.getElementById('uploadTextCol');
+          if (uploadCol) {
+            uploadCol.innerHTML =
+              '<span class="title">✓ ' + esc(fileName || '已加载本地保存的名单') + '</span>' +
+              '<span class="file-info">📋 共 ' + students.length + ' 名学生</span>';
+          }
+          await applyPreEnrollments({ skipReset: true, skipRender: true });
+          finalizeCourseSlotsAfterPreEnroll();
+          syncCourseSlots();
+        } else {
+          if (loaded) clearLocalSelectionDraft();
+          await applyServerSelectionSync({ silent: true });
+        }
       }
+    } else if (getToken()) {
+      await applyServerSelectionSync({ silent: true });
     }
 
     saveState(sync.revision);
     paintNow();
+    // 门户刷新不阻塞选课页可交互
     notifyPortalRoster();
   } catch (e) {
     console.error('[initBootstrap] init failed:', e);
@@ -6111,6 +6149,7 @@ document.addEventListener('keydown', e => {
       var prev = serverDataRevision;
       var syncPoll = await fetchSelectionDataSync();
       if (syncPoll.revision > prev && studentListSource !== 'upload') {
+        if (typeof invalidateLockedSelectionsCache === 'function') invalidateLockedSelectionsCache();
         if (isBanzhurenDashboardActive()) {
           if (window.BzPortal && typeof window.BzPortal.notifyRosterUpdated === 'function') {
             await window.BzPortal.notifyRosterUpdated({ silent: true });
@@ -6285,6 +6324,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260909b"></script>
+<script src="js/banzhuren-portal.js?v=20260909c"></script>
 </body>
 </html>

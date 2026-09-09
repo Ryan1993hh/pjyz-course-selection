@@ -4767,20 +4767,57 @@ function showBoardPlaceholder() {
 
 async function loadCourseBoard() {
   var grid = document.getElementById('boardGrid');
-  if (grid) grid.innerHTML = '<div class="board-empty">加载中…</div>';
+  var BOARD_CACHE_KEY = 'pjyz_admin_board_cache_v1';
+
+  // 先用缓存秒开 KPI/卡片，再后台刷新
   try {
-    var data = await request('GET', '/api/teacher-classroom');
+    var cached = sessionStorage.getItem(BOARD_CACHE_KEY);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      if (parsed && Array.isArray(parsed.items)) {
+        boardState.items = parsed.items;
+        boardState.overview = parsed.overview || {};
+        boardState.today = parsed.today || '';
+        renderBoardKpis();
+        renderBoardGrid();
+        showBoardHoursView();
+      }
+    }
+  } catch (_) {}
+
+  if (grid && !(boardState.items && boardState.items.length)) {
+    grid.innerHTML = '<div class="board-empty">加载中…</div>';
+  }
+
+  try {
+    var classroomP = request('GET', '/api/teacher-classroom');
+    var hoursP = loadCourseHoursPanel().catch(function (e) {
+      console.warn('loadCourseHoursPanel:', e);
+    });
+    loadBoardScheduleUI();
+
+    var data = await classroomP;
     boardState.items = data.items || [];
     boardState.overview = data.overview || {};
     boardState.today = data.today || '';
     renderBoardKpis();
     renderBoardGrid();
-    loadBoardScheduleUI();
     showBoardHoursView();
-    await loadCourseHoursPanel();
+    try {
+      sessionStorage.setItem(BOARD_CACHE_KEY, JSON.stringify({
+        items: boardState.items,
+        overview: boardState.overview,
+        today: boardState.today,
+        at: Date.now()
+      }));
+    } catch (_) {}
+
+    await hoursP;
     syncBoardHoursFromMatrix();
   } catch (e) {
-    if (grid) grid.innerHTML = '<div class="board-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+    if (grid && !(boardState.items && boardState.items.length)) {
+      grid.innerHTML = '<div class="board-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+    }
     toast(friendlyApiErrorText(e.message), 'error');
   }
 }
@@ -5437,14 +5474,19 @@ async function loadCourseHoursPanel() {
   var editBtn = document.getElementById('courseHoursEditBtn');
   if (editBtn) editBtn.textContent = '编辑';
   updateCourseHoursEditActions();
-  wrap.innerHTML = '<div class="bd-empty">加载中…</div>';
+  // 有旧数据时保留表格，避免闪「加载中」
+  if (!courseHoursState.data) {
+    wrap.innerHTML = '<div class="bd-empty">加载中…</div>';
+  }
   try {
     var data = await request('GET', '/api/course-hours');
     courseHoursState.data = data;
     renderCourseHoursTable();
     if (boardState.selectedCourse) highlightCourseHoursRow(boardState.selectedCourse);
   } catch (e) {
-    wrap.innerHTML = '<div class="bd-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+    if (!courseHoursState.data) {
+      wrap.innerHTML = '<div class="bd-empty">加载失败：' + escHtml(friendlyApiErrorText(e.message)) + '</div>';
+    }
   }
 }
 
@@ -5785,6 +5827,19 @@ function startEdit(td, idx){
   }
 }
 
+function fillCourseFilterFromList(arr) {
+  coursesForFilter = arr || [];
+  var sel = document.getElementById('filterCourse');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">全部</option>';
+  coursesForFilter.forEach(function(c){
+    if (!c.name) return;
+    var opt = document.createElement('option');
+    opt.value = c.name; opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+}
+
 async function loadCourses(){
   try {
     const data = await request('GET', '/api/courses');
@@ -5795,8 +5850,23 @@ async function loadCourses(){
     });
     markCoursesSaved(coursesData);
     renderCourses();
+    fillCourseFilterFromList(coursesData);
+    _sectionLoaded.selectionsMeta = true;
   } catch(e){
     toast('加载课程失败：' + e.message, 'error');
+  }
+}
+
+async function loadCourseNames(){
+  try {
+    if (coursesData && coursesData.length) {
+      fillCourseFilterFromList(coursesData);
+      return;
+    }
+    const data = await request('GET', '/api/courses');
+    fillCourseFilterFromList(Array.isArray(data) ? data : (data.courses || []));
+  } catch(e){
+    /* silent */
   }
 }
 
@@ -6067,24 +6137,6 @@ async function loadTeachersList(){
   }
 }
 
-async function loadCourseNames(){
-  try {
-    const data = await request('GET', '/api/courses');
-    const arr = Array.isArray(data) ? data : (data.courses || []);
-    coursesForFilter = arr;
-    const sel = document.getElementById('filterCourse');
-    sel.innerHTML = '<option value="">全部</option>';
-    arr.forEach(function(c){
-      if (!c.name) return;
-      const opt = document.createElement('option');
-      opt.value = c.name; opt.textContent = c.name;
-      sel.appendChild(opt);
-    });
-  } catch(e){
-    /* silent */
-  }
-}
-
 function buildCourseNameSelectOptions(selected){
   const options = ['<option value="">不指定课程</option>'];
   const seen = new Set();
@@ -6129,8 +6181,10 @@ function activateSelectionsSection(opts) {
   if (opts.viewMode === 'pre_enroll') return switchToPreEnrollView();
   if (opts.viewMode === 'unselected') return switchToUnselectedView();
   switchToSelectionsView();
-  return querySelections({ silent: !!opts.silent });
+  return querySelections({ silent: !!opts.silent, useCache: !opts.force });
 }
+
+var _selectionsQueryCache = { qs: '', at: 0 };
 
 async function querySelections(opts){
   opts = opts || {};
@@ -6151,9 +6205,22 @@ async function querySelections(opts){
     }
     
     var qs = buildQuery();
-    // 查询默认不阻塞做 classroom 全量补全；需要补全时后台静默跑一次
+    // 30 秒内同条件复用结果，切换导航秒开
+    if (opts.useCache && _selectionsQueryCache.qs === qs && selectionsData && selectionsData.length &&
+        (Date.now() - _selectionsQueryCache.at) < 30000) {
+      renderSelections();
+      return;
+    }
+    // 有旧数据时先保留表格，避免白屏等待
+    if (!(selectionsData && selectionsData.length) && !silent) {
+      var tbody = document.getElementById('selectionsBody');
+      if (tbody && !tbody.children.length) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#64748b">加载中…</td></tr>';
+      }
+    }
     const data = await request('GET', '/api/selections?' + qs);
     selectionsData = sortSelectionsByClassClient(Array.isArray(data) ? data : (data.selections || []));
+    _selectionsQueryCache = { qs: qs, at: Date.now() };
     renderSelections();
     if (!silent) toast('查询完成，共 ' + selectionsData.length + ' 条数据', 'success');
     // 后台静默补全：同一浏览器会话最多一次，避免反复 sync 打爆 D1 配额
@@ -6164,6 +6231,7 @@ async function querySelections(opts){
         if (currentViewMode !== 'selections') return;
         if (next.length === selectionsData.length) return;
         selectionsData = next;
+        _selectionsQueryCache = { qs: qs, at: Date.now() };
         renderSelections();
       }).catch(function(){});
     }
@@ -8543,7 +8611,6 @@ function ensureCoursesSection() {
   loadCourses();
   loadClasses();
   loadTeachersList();
-  loadCourseNames();
   _sectionLoaded.selectionsMeta = true;
 }
 
@@ -8642,6 +8709,6 @@ if (checkLogin()){
   initAll();
 }
 </script>
-<script src="js/class-quota-board.js?v=20260909a"></script>
+<script src="js/class-quota-board.js?v=20260909b"></script>
 </body>
 </html>
