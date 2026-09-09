@@ -447,7 +447,7 @@ body {
 }
 .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
 
-/* ===== 统计卡片（紧凑横排） ===== */
+/* ===== 签到：开始按钮 + 名单标题行统计 ===== */
 .stats-row {
   display: flex;
   align-items: stretch;
@@ -455,20 +455,21 @@ body {
   margin-bottom: 12px;
 }
 .stats-start-group {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-self: stretch;
+  flex-direction: row;
+  gap: 8px;
+  align-items: stretch;
 }
 .stats-start-btn {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 0 14px;
-  min-height: 40px;
+  min-height: 42px;
   border: none;
   border-radius: var(--radius-sm);
   background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
@@ -488,38 +489,78 @@ body {
   box-shadow: none;
 }
 .stats-start-btn:active:not(:disabled) { transform: scale(0.97); }
-.stats-cards {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+
+.student-list-head {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 12px;
+  min-height: 44px;
+}
+.student-list-head-text {
+  flex: 0 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.student-list-head-text .card-title {
+  margin-bottom: 0;
+  line-height: 1.25;
+}
+.student-list-head-text .subtitle {
+  margin-bottom: 0;
+  line-height: 1.25;
+}
+.stats-cards {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  align-self: stretch;
 }
 .stat-card {
   background: var(--card);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  min-height: 44px;
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
 }
-.stat-card .icon { font-size: 16px; flex-shrink: 0; line-height: 1; margin: 0; }
-.stat-card .stat-meta { min-width: 0; display: flex; flex-direction: column; gap: 0; }
-.stat-card .num { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+.stat-card .icon { font-size: 14px; flex-shrink: 0; line-height: 1; margin: 0; }
+.stat-card .stat-meta { min-width: 0; display: flex; flex-direction: column; gap: 0; justify-content: center; }
+.stat-card .num { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
 .stat-card .label { font-size: 11px; color: var(--muted); margin: 0; line-height: 1.2; }
 .stat-card.ok .num { color: var(--success); }
 .stat-card.bad .num { color: var(--danger); }
 .stat-card.warn .num { color: var(--warning); }
-@media (max-width: 420px) {
-  .stats-row { flex-wrap: wrap; }
-  .stats-start-group { width: 100%; flex-direction: row; }
-  .stats-start-btn { flex: 1 1 0; min-height: 40px; }
-  .stats-cards { width: 100%; }
-  .stat-card { padding: 7px 8px; gap: 6px; }
-  .stat-card .num { font-size: 16px; }
+@media (max-width: 480px) {
+  .stats-start-group { gap: 6px; }
+  .stats-start-btn { min-height: 40px; padding: 0 10px; }
+  .student-list-head {
+    gap: 6px;
+    margin-bottom: 10px;
+    min-height: 40px;
+  }
+  .student-list-head-text .card-title { font-size: 14px; }
+  .student-list-head-text .subtitle { font-size: 12px; }
+  .stats-cards { gap: 4px; }
+  .stat-card { padding: 3px 5px; gap: 4px; }
+  .stat-card .icon { font-size: 12px; }
+  .stat-card .num { font-size: 14px; }
+  .stat-card .label { font-size: 10px; }
+}
+@media (max-width: 380px) {
+  .stat-card .icon { display: none; }
+  .stat-card { justify-content: center; text-align: center; padding: 3px 2px; }
+  .stat-card .stat-meta { align-items: center; }
 }
 
 /* ===== 标签 ===== */
@@ -2219,8 +2260,6 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
   .grade-stat .l { font-size: 9px; }
   .timer-controls .btn { padding: 8px 1px; font-size: 11px; min-height: 40px; }
   .timer-controls .btn .t-label { font-size: 10px; }
-  .stat-card { flex-direction: column; text-align: center; padding: 8px 6px; gap: 4px; }
-  .stat-card .stat-meta { align-items: center; }
   .tab-btn { font-size: 10px; letter-spacing: -0.2px; }
   .tab-btn .ico { font-size: 17px; margin-bottom: 1px; }
   .header-title-btn h1 { font-size: 12px; letter-spacing: 0; }
@@ -2406,11 +2445,6 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
         <button type="button" class="stats-start-btn" id="startCheckinBtn">▶ 开始签到</button>
         <button type="button" class="stats-start-btn stats-start-btn-all" id="oneClickCheckinBtn">✔ 一键全签</button>
       </div>
-      <div class="stats-cards">
-        <div class="stat-card ok"><span class="icon">✔</span><div class="stat-meta"><div class="num" id="statPresent">0</div><div class="label">已签到</div></div></div>
-        <div class="stat-card bad"><span class="icon">✖</span><div class="stat-meta"><div class="num" id="statAbsent">0</div><div class="label">未签到</div></div></div>
-        <div class="stat-card warn"><span class="icon">⚠</span><div class="stat-meta"><div class="num" id="statAbnormal">0</div><div class="label">异常</div></div></div>
-      </div>
     </div>
     <div class="card" id="abnormalCard">
       <div class="abnormal-head">
@@ -2423,8 +2457,17 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
       <div class="tags" id="abnormalTags"></div>
     </div>
     <div class="card">
-      <div class="card-title">学生名单</div>
-      <div class="subtitle" id="studentCountHint">正在加载绑定课程…</div>
+      <div class="student-list-head">
+        <div class="student-list-head-text">
+          <div class="card-title">学生名单</div>
+          <div class="subtitle" id="studentCountHint">正在加载绑定课程…</div>
+        </div>
+        <div class="stats-cards">
+          <div class="stat-card ok"><span class="icon">✔</span><div class="stat-meta"><div class="num" id="statPresent">0</div><div class="label">已签到</div></div></div>
+          <div class="stat-card bad"><span class="icon">✖</span><div class="stat-meta"><div class="num" id="statAbsent">0</div><div class="label">未签到</div></div></div>
+          <div class="stat-card warn"><span class="icon">⚠</span><div class="stat-meta"><div class="num" id="statAbnormal">0</div><div class="label">异常</div></div></div>
+        </div>
+      </div>
       <div class="student-grid" id="studentGrid"></div>
       <div class="empty-hint" id="emptyStudents" style="display:none">暂无学生，请在「教师信息」中同步选课数据</div>
     </div>
