@@ -7271,6 +7271,16 @@ async function exportSelections(){
     if (file) handlePreEnrollUpload(file);
   });
   function openAddStudentModal() {
+    var courseOptions = (coursesForFilter && coursesForFilter.length)
+      ? coursesForFilter
+      : (coursesData || []);
+    var courseHtml = '<option value="">不选课（仅加入名单）</option>';
+    courseOptions.forEach(function (c) {
+      var cname = (c && (c.name || c.course_name)) || '';
+      if (!cname) return;
+      courseHtml += '<option value="' + escapeAttr(cname) + '" data-id="' + escapeAttr(c.id != null ? c.id : '') + '">' + escapeHtml(cname) + '</option>';
+    });
+
     openModal(
       '<h3 style="display:none;">添加学生</h3>' +
       '<div class="add-student-modal">' +
@@ -7284,7 +7294,7 @@ async function exportSelections(){
           '<button type="button" class="btn btn-primary btn-block" id="addStuPickFileBtn">选择文件并导入</button>' +
         '</div>' +
         '<div id="addStuPaneManual" style="display:none;">' +
-          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">填写单个学生信息，添加到选课数据库（未选课名单会同步更新）。</p>' +
+          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">填写单个学生信息，可同时指定拓展课程；保存后写入选课数据库。</p>' +
           '<div class="form-group"><label>年级 <span style="color:#ef4444;">*</span></label>' +
             '<select class="form-select" id="addStuGrade">' +
               '<option value="六年级">六年级</option>' +
@@ -7300,6 +7310,8 @@ async function exportSelections(){
               '<option value="男">男</option>' +
               '<option value="女">女</option>' +
             '</select></div>' +
+          '<div class="form-group"><label>拓展课程</label>' +
+            '<select class="form-select" id="addStuCourse">' + courseHtml + '</select></div>' +
           '<div class="modal-actions" style="margin-top:8px;padding:0;">' +
             '<button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>' +
             '<button type="button" class="btn btn-success" id="addStuConfirmBtn">确认添加</button>' +
@@ -7352,6 +7364,22 @@ async function exportSelections(){
       openRosterImportPicker();
     };
     document.getElementById('addStuConfirmBtn').onclick = submitManualAddStudent;
+
+    // 课程列表为空时后台补拉一次
+    if (!courseOptions.length) {
+      loadCourses().then(function () {
+        var sel = document.getElementById('addStuCourse');
+        if (!sel) return;
+        var list = (coursesForFilter && coursesForFilter.length) ? coursesForFilter : (coursesData || []);
+        var html = '<option value="">不选课（仅加入名单）</option>';
+        list.forEach(function (c) {
+          var cname = (c && (c.name || c.course_name)) || '';
+          if (!cname) return;
+          html += '<option value="' + escapeAttr(cname) + '" data-id="' + escapeAttr(c.id != null ? c.id : '') + '">' + escapeHtml(cname) + '</option>';
+        });
+        sel.innerHTML = html;
+      }).catch(function () {});
+    }
   }
 
   async function submitManualAddStudent() {
@@ -7359,10 +7387,15 @@ async function exportSelections(){
     var classNum = String((document.getElementById('addStuClass') || {}).value || '').trim();
     var name = String((document.getElementById('addStuName') || {}).value || '').trim().replace(/\s+/g, ' ');
     var gender = String((document.getElementById('addStuGender') || {}).value || '').trim();
+    var courseSel = document.getElementById('addStuCourse');
+    var courseName = courseSel ? String(courseSel.value || '').trim() : '';
+    var courseOpt = courseSel && courseSel.options[courseSel.selectedIndex];
+    var courseId = courseOpt ? parseInt(courseOpt.getAttribute('data-id') || '0', 10) || 0 : 0;
     if (!grade) { toast('请选择年级', 'error'); return; }
     if (!classNum) { toast('请选择班级', 'error'); return; }
     if (!name) { toast('请输入学生姓名', 'error'); return; }
     if (!/[A-Za-z\u4e00-\u9fff]/.test(name)) { toast('学生姓名无效', 'error'); return; }
+    if (courseName && !courseId) { toast('所选拓展课程无效，请重新选择', 'error'); return; }
 
     var class_name = grade + '(' + classNum + ')班';
     var btn = document.getElementById('addStuConfirmBtn');
@@ -7372,16 +7405,43 @@ async function exportSelections(){
         students: [{ grade: grade, class_name: class_name, student_name: name, gender: gender }],
         replace: false
       });
-      closeModal();
       var errCount = (data.errors && data.errors.length) || 0;
       if (!(data.count > 0)) {
         toast((data.errors && data.errors[0]) || data.error || '添加失败', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '确认添加'; }
         return;
       }
+
       var msg = '已添加学生「' + name + '」';
-      if (data.unselected_count != null) msg += '，未选课名单已同步';
+      if (courseName) {
+        await request('POST', '/api/selections', {
+          grade: grade,
+          class_name: class_name,
+          student_name: name,
+          gender: gender,
+          course_id: courseId,
+          course_name: courseName
+        });
+        msg += '，已选课程「' + courseName + '」';
+      } else if (data.unselected_count != null) {
+        msg += '，未选课名单已同步';
+      }
+
+      closeModal();
       toast(msg, errCount ? 'warning' : 'success');
-      if (Array.isArray(data.unselected)) {
+
+      if (courseName) {
+        clearSelectionFilters();
+        var fg = document.getElementById('filterGrade');
+        var fc = document.getElementById('filterClass');
+        var fs = document.getElementById('filterStudent');
+        if (fg) fg.value = grade;
+        if (typeof updateClassFilter === 'function') updateClassFilter();
+        if (fc) fc.value = String(classNum);
+        if (fs) fs.value = name;
+        currentViewMode = 'selections';
+        await querySelections();
+      } else if (Array.isArray(data.unselected)) {
         showUnselectedAfterImport(data.unselected);
       } else {
         clearSelectionFilters();
