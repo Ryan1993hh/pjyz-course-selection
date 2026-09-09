@@ -12,7 +12,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :root {
-    /* 与选课页面保持一致的蓝绿色系主色�?*/
+    /* 与选课页面保持一致的蓝绿色系主色调 */
     --primary: #0d9488;
     --primary-light: #14b8a6;
     --primary-dark: #0f766e;
@@ -52,7 +52,7 @@
     padding: 20px;
   }
 
-  /* 流动光斑层（缓慢飘移�?*/
+  /* 流动光斑层（缓慢飘移） */
   .bg-orbs {
     position: fixed;
     inset: 0;
@@ -147,7 +147,7 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* ===== 左侧品牌�?===== */
+  /* ===== 左侧品牌区 ===== */
   .brand-side {
     flex: 1.1;
     position: relative;
@@ -159,7 +159,7 @@
       linear-gradient(160deg, rgba(15,118,110,0.55) 0%, rgba(4,47,46,0.65) 100%);
     overflow: hidden;
   }
-  /* 品牌区装饰：右上角金色弧�?*/
+  /* 品牌区装饰：右上角金色弧光 */
   .brand-side::before {
     content: "";
     position: absolute;
@@ -174,7 +174,7 @@
     0%, 100% { opacity: 0.55; transform: scale(1); }
     50%      { opacity: 0.85; transform: scale(1.1); }
   }
-  /* 品牌区装饰：左下角青色波�?*/
+  /* 品牌区装饰：左下角青色波纹 */
   .brand-side::after {
     content: "";
     position: absolute;
@@ -347,7 +347,7 @@
     to   { opacity: 1; transform: translateX(0); }
   }
 
-  /* ===== 右侧表单�?===== */
+  /* ===== 右侧表单区 ===== */
   .form-side {
     flex: 1;
     padding: 48px 44px;
@@ -466,7 +466,7 @@
   }
   .pwd-toggle:hover { color: #fff; }
 
-  /* 选项�?*/
+  /* 选项行 */
   .form-options {
     display: flex;
     justify-content: space-between;
@@ -533,7 +533,7 @@
   @keyframes rippleAnim {
     to { transform: scale(4); opacity: 0; }
   }
-  /* 按钮加载�?*/
+  /* 按钮加载态 */
   .btn-login.loading {
     pointer-events: none;
     opacity: 0.85;
@@ -596,7 +596,7 @@
   }
   .form-footer a:hover { color: #fff; text-decoration: underline; }
 
-  /* ===== 响应�?===== */
+  /* ===== 响应式 ===== */
   @media (max-width: 760px) {
     .login-wrap {
       flex-direction: column;
@@ -638,13 +638,13 @@
 <!-- 登录卡片 -->
 <div class="login-wrap" id="loginWrap">
 
-  <!-- 左侧品牌�?-->
+  <!-- 左侧品牌区 -->
   <div class="brand-side">
     <div class="brand-logo">
       <div class="logo-mark">
         <span class="logo-ring" aria-hidden="true"></span>
         <span class="logo-ring-2" aria-hidden="true"></span>
-        <img class="logo-img" src="images/logo.png" alt="浦江一中校�?>
+        <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
       </div>
       <div class="logo-text">
         <span class="cn">上海市闵行区浦江第一中学</span>
@@ -654,38 +654,38 @@
 
     <div class="brand-hero">
       <h1>浦江一中拓展课 系统</h1>
-      <p>公平 · 便捷 · 智能，一站式完成拓展课选课与课堂管�?/p>
+      <p>公平 · 便捷 · 智能，一站式完成拓展课选课与课堂管理</p>
     </div>
 
     <div class="brand-features">
       <div class="feature-item">
         <div class="feature-icon">📚</div>
-        <div class="feature-text"><strong>30+ 门课�?/strong> · 体育 / 艺术 / 人文社科全覆�?/div>
+        <div class="feature-text"><strong>30+ 门课程</strong> · 体育 / 艺术 / 人文社科全覆盖</div>
       </div>
       <div class="feature-item">
         <div class="feature-icon">✏️</div>
-        <div class="feature-text"><strong>班主任选课</strong> · 按年级班级录入，实时保存并导�?/div>
+        <div class="feature-text"><strong>班主任选课</strong> · 按年级班级录入，实时保存并导出</div>
       </div>
       <div class="feature-item">
-        <div class="feature-icon">👨‍�?/div>
+        <div class="feature-icon">👨‍🏫</div>
         <div class="feature-text"><strong>教师上课</strong> · 签到考勤、小红花加分与综合考核</div>
       </div>
     </div>
 
-    <div class="brand-footer">© 浦江一�?· 技术赋能教�?/div>
+    <div class="brand-footer">© 浦江一中 · 技术赋能教育</div>
   </div>
 
-  <!-- 右侧表单�?-->
+  <!-- 右侧表单区 -->
   <div class="form-side">
     <h2 class="form-title">欢迎登录</h2>
-    <p class="form-subtitle">请输入账号信�?/p>
+    <p class="form-subtitle">请输入账号信息</p>
 
     <!-- 登录表单 -->
     <form id="loginForm" autocomplete="off" novalidate>
       <div class="field">
         <label class="field-label" for="username">账号</label>
         <div class="input-wrap">
-          <input type="text" id="username" name="username" placeholder="请输入账�? autocomplete="off" />
+          <input type="text" id="username" name="username" placeholder="请输入账号" autocomplete="off" />
           <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
@@ -696,7 +696,7 @@
       <div class="field">
         <label class="field-label" for="password">密码</label>
         <div class="input-wrap">
-          <input type="password" id="password" name="password" placeholder="请输入密�? autocomplete="off" />
+          <input type="password" id="password" name="password" placeholder="请输入密码" autocomplete="off" />
           <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -714,18 +714,18 @@
         <label class="remember">
           <input type="checkbox" id="remember" /> 记住密码
         </label>
-        <a href="javascript:void(0)" class="forgot" id="forgotLink">忘记密码�?/a>
+        <a href="javascript:void(0)" class="forgot" id="forgotLink">忘记密码？</a>
       </div>
 
       <button type="submit" class="btn-login" id="loginBtn">
-        <span class="btn-text">�?�?/span>
+        <span class="btn-text">登 录</span>
       </button>
 
       <div class="form-msg" id="formMsg"></div>
     </form>
 
     <div class="form-footer">
-      遇到问题�?a href="javascript:void(0)" id="contactLink">联系管理�?/a>
+      遇到问题？<a href="javascript:void(0)" id="contactLink">联系管理员</a>
     </div>
   </div>
 </div>
@@ -735,7 +735,8 @@
 (function () {
   'use strict';
 
-  // 登录页提前预�?API 与三大落地页，缩短点击登录后的等�?  if (window.PjyzRole && typeof PjyzRole.prefetchAllRolePages === 'function') {
+  // 登录页提前预热 API 与三大落地页，缩短点击登录后的等待
+  if (window.PjyzRole && typeof PjyzRole.prefetchAllRolePages === 'function') {
     PjyzRole.prefetchAllRolePages();
   } else if (window.PjyzRole && typeof PjyzRole.prefetchRolePages === 'function') {
     PjyzRole.prefetchRolePages();
@@ -815,6 +816,13 @@
   async function redirectAfterLogin(user) {
     var redirectUrl = resolveRedirectUrl(user);
     try {
+      if (window.PjyzRole && typeof PjyzRole.clearManualLogoutSkip === 'function') {
+        PjyzRole.clearManualLogoutSkip();
+      } else {
+        sessionStorage.removeItem('pjyz_skip_autologin');
+      }
+    } catch (_) {}
+    try {
       if (window.PjyzRole && typeof PjyzRole.warmRoleBootstrap === 'function') {
         await PjyzRole.warmRoleBootstrap({
           user: user,
@@ -857,14 +865,14 @@
 
     if (!username) {
       if (!opts.silent) {
-        showMsg('请输入账�?, 'error');
+        showMsg('请输入账号', 'error');
         usernameEl.focus();
       }
       return;
     }
     if (!password) {
       if (!opts.silent) {
-        showMsg('请输入密�?, 'error');
+        showMsg('请输入密码', 'error');
         passwordEl.focus();
       }
       return;
@@ -872,8 +880,9 @@
 
     loginInFlight = true;
     loginBtn.disabled = true;
-    setLoginBtnLabel(opts.auto ? '自动登录�?..' : '登录�?..');
-    // 登录请求发出前预热落地页，缩短跳转等�?    try {
+    setLoginBtnLabel(opts.auto ? '自动登录中...' : '登录中...');
+    // 登录请求发出前预热落地页，缩短跳转等待
+    try {
       var warm = guessRedirectForPrefetch();
       if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') PjyzRole.prefetchPage(warm);
     } catch (_) {}
@@ -889,16 +898,17 @@
         try {
           persistLoginSession(username, password, data);
         } catch (_) {}
-        // 预热期间保持「自动登录中�?登录中…」，预热结束后再切「正在跳转…�?        await redirectAfterLogin(data.user);
+        // 预热期间保持「自动登录中…/登录中…」，预热结束后再切「正在跳转…」
+        await redirectAfterLogin(data.user);
         return;
       }
       showMsg(data.error || '登录失败', 'error');
     } catch (err) {
-      showMsg('登录请求失败�? + err.message, 'error');
+      showMsg('登录请求失败：' + err.message, 'error');
     }
     loginInFlight = false;
     loginBtn.disabled = false;
-    setLoginBtnLabel('�?�?);
+    setLoginBtnLabel('登 录');
   }
 
   /* ---------- 按钮波纹效果 ---------- */
@@ -938,7 +948,7 @@
         passwordEl.value = savedPass;
         shouldAutoLogin = !skipAutologin && !!(savedUser && savedPass);
       }
-      // 已有会话：先画登录页，再跳转（避免白屏）；主动退出后跳过
+      // 已有会话：先画登录页，再跳转；主动退出后跳过自动登录
       if (!skipAutologin) {
         var token = localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token');
         var userObj = null;
@@ -992,7 +1002,7 @@
     if (skipAutologin) return;
     if (sessionRedirectTarget) {
       loginBtn.disabled = true;
-      setLoginBtnLabel('自动登录�?..');
+      setLoginBtnLabel('自动登录中...');
       try { sessionStorage.setItem('pjyz_autologin_fast', '1'); } catch (_) {}
       var userObj = null;
       try { userObj = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) { userObj = null; }
@@ -1023,15 +1033,15 @@
     }
   }
 
-  /* ---------- 忘记密码 / 联系管理�?---------- */
+  /* ---------- 忘记密码 / 联系管理员 ---------- */
   forgotLink.addEventListener('click', function () {
-    showMsg('请联系学校信息中心重置密�?, 'error');
+    showMsg('请联系学校信息中心重置密码', 'error');
   });
   contactLink.addEventListener('click', function () {
     showMsg('联系方式：钉钉联系教导处', 'success');
   });
 
-  /* ---------- 输入时清除提�?---------- */
+  /* ---------- 输入时清除提示 ---------- */
   usernameEl.addEventListener('input', hideMsg);
   passwordEl.addEventListener('input', hideMsg);
 
