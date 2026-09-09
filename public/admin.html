@@ -479,30 +479,61 @@ body {
   justify-content: flex-end;
   min-height: 0;
 }
-.course-top-modules-left {
-  flex: 1 1 220px;
-  min-width: 0;
+.course-top-modules-actions {
   display: flex;
-  align-items: stretch;
-}
-.course-top-modules-right {
-  display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
-  align-items: stretch;
-  flex: 0 0 auto;
+  align-items: center;
   margin-left: auto;
+  max-width: 100%;
 }
-.course-top-modules-right .course-mod-card {
-  min-width: 148px;
-  max-width: 200px;
+#courseUploadWrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
 }
-.course-top-modules-left .course-mod-upload {
-  width: 100%;
-  max-width: 320px;
-}
-.course-top-modules-left.is-hidden {
+#courseUploadWrap.is-hidden {
   display: none !important;
+}
+#courseUploadWrap .course-mod-upload {
+  width: 240px;
+  max-width: min(240px, 42vw);
+  height: 72px;
+  min-height: 72px;
+  max-height: 72px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+/* 两个切换按钮：固定同宽同高，激活只变色不变尺寸 */
+.course-mod-card.course-mod-nav {
+  --mod-tint: #eff6ff;
+  --mod-accent: #3b82f6;
+  --mod-border: rgba(59, 130, 246, 0.22);
+  --mod-shadow: rgba(59, 130, 246, 0.12);
+  flex: 0 0 168px;
+  flex-shrink: 0;
+  width: 168px;
+  min-width: 168px;
+  max-width: 168px;
+  min-height: 72px;
+  height: 72px;
+  max-height: 72px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-width: 1.5px;
+  border-style: solid;
+}
+.course-mod-card.course-mod-nav:hover {
+  transform: translateY(-1px);
+}
+.course-mod-card.course-mod-nav.is-active {
+  border-color: #0d9488;
+  border-width: 1.5px;
+  background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 55%, #0f766e 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.28);
+  transform: none;
 }
 .course-mod-card {
   --mod-tint: #ecfeff;
@@ -524,23 +555,11 @@ body {
   box-shadow: 0 4px 14px var(--mod-shadow);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
   font-family: inherit;
   color: inherit;
   position: relative;
   overflow: hidden;
-}
-.course-mod-card:nth-child(1) {
-  --mod-tint: #fdf4ff; --mod-accent: #a855f7;
-  --mod-border: rgba(168, 85, 247, 0.22); --mod-shadow: rgba(168, 85, 247, 0.12);
-}
-.course-mod-card:nth-child(2) {
-  --mod-tint: #eff6ff; --mod-accent: #3b82f6;
-  --mod-border: rgba(59, 130, 246, 0.22); --mod-shadow: rgba(59, 130, 246, 0.12);
-}
-.course-mod-card:nth-child(3) {
-  --mod-tint: #fff7ed; --mod-accent: #f97316;
-  --mod-border: rgba(249, 115, 22, 0.22); --mod-shadow: rgba(249, 115, 22, 0.12);
 }
 .course-mod-upload {
   --mod-tint: #fff7ed; --mod-accent: #f97316;
@@ -551,15 +570,15 @@ button.course-mod-card {
   -webkit-appearance: none;
 }
 .course-mod-card:hover {
-  transform: translateY(-2px) scale(1.01);
+  transform: translateY(-1px);
   box-shadow: 0 8px 18px var(--mod-shadow);
   border-color: var(--mod-accent);
 }
 .course-mod-card.is-active {
-  border-color: transparent;
+  border-color: #0d9488;
   background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 55%, #0f766e 100%);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.28);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.28);
 }
 .course-mod-card.is-active .mod-desc,
 .course-mod-card.is-active .mod-ico {
@@ -1267,6 +1286,19 @@ table.courses-table td[data-field="description"] {
     gap: 8px;
     justify-content: flex-end;
   }
+  .course-top-modules-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .course-mod-card.course-mod-nav {
+    flex: 1 1 calc(50% - 4px);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    min-height: 58px;
+    height: 58px;
+    max-height: 58px;
+  }
   .course-mod-card {
     min-height: 58px;
     padding: 8px;
@@ -1274,13 +1306,15 @@ table.courses-table td[data-field="description"] {
   .course-mod-card .mod-title { font-size: 12px; }
   .course-mod-card .mod-desc { font-size: 10px; -webkit-line-clamp: 1; }
   .course-mod-card .mod-ico { width: 30px; height: 30px; font-size: 14px; }
-  .course-top-modules-right .course-mod-card {
-    min-width: 0;
-    flex: 1 1 calc(50% - 4px);
-    max-width: none;
+  #courseUploadWrap {
+    flex: 1 1 100%;
+    order: -1;
   }
-  .course-top-modules-left .course-mod-upload {
+  #courseUploadWrap .course-mod-upload {
+    width: 100%;
     max-width: none;
+    height: auto;
+    min-height: 58px;
   }
 }
 
@@ -3302,12 +3336,26 @@ th.sortable.active .sort-icon { opacity: 1; }
     gap: 6px;
     justify-content: flex-end;
   }
+  .course-top-modules-actions {
+    width: 100%;
+    gap: 6px;
+  }
+  .course-mod-card.course-mod-nav {
+    flex: 1 1 calc(50% - 4px);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    min-height: 48px;
+    height: 48px;
+    max-height: 48px;
+  }
   #showCoursesListBtn { order: 1; }
   #openClassQuotaBoardBtn { order: 2; }
-  .course-top-modules-right .course-mod-card {
-    min-width: 0;
-    flex: 1 1 calc(50% - 4px);
+  #courseUploadWrap { order: 0; flex: 1 1 100%; }
+  #courseUploadWrap .course-mod-upload {
+    width: 100%;
     max-width: none;
+    height: auto;
   }
   .course-mod-card {
     min-height: 48px;
@@ -3960,32 +4008,32 @@ th.sortable.active .sort-icon { opacity: 1; }
           <p class="desc">下方表格可编辑后统一保存</p>
         </div>
         <div class="course-top-modules">
-          <div class="course-top-modules-left" id="courseUploadWrap">
-            <div class="course-mod-card course-mod-upload" id="courseUploadPanel">
-              <div class="mod-head">
-                <div class="mod-title">上传课程文件</div>
-                <button type="button" class="mod-tpl" id="downloadCourseTemplateBtn" title="下载空白课程导入模板">📥 模板</button>
-              </div>
-              <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
-                <span class="icon">↑</span>
-                <div class="text-col">
-                  <span class="title">点击或拖拽上传</span>
-                  <span class="hint">csv / xlsx / xls / docx</span>
+          <div class="course-top-modules-actions">
+            <div id="courseUploadWrap">
+              <div class="course-mod-card course-mod-upload" id="courseUploadPanel">
+                <div class="mod-head">
+                  <div class="mod-title">上传课程文件</div>
+                  <button type="button" class="mod-tpl" id="downloadCourseTemplateBtn" title="下载空白课程导入模板">📥 模板</button>
                 </div>
+                <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
+                  <span class="icon">↑</span>
+                  <div class="text-col">
+                    <span class="title">点击或拖拽上传</span>
+                    <span class="hint">csv / xlsx / xls / docx</span>
+                  </div>
+                </div>
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
+                <div class="upload-msg" id="uploadMsg">可直接在下方表格新增</div>
               </div>
-              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
-              <div class="upload-msg" id="uploadMsg">可直接在下方表格新增</div>
             </div>
-          </div>
-          <div class="course-top-modules-right">
-            <button type="button" class="course-mod-card is-active" id="showCoursesListBtn">
+            <button type="button" class="course-mod-card course-mod-nav is-active" id="showCoursesListBtn">
               <span class="mod-ico" aria-hidden="true">📚</span>
               <span class="mod-body">
                 <span class="mod-title"><span class="txt-full">拓展课程管理</span><span class="txt-short">拓展课程</span></span>
                 <span class="mod-desc">编辑课程与锁定</span>
               </span>
             </button>
-            <button type="button" class="course-mod-card" id="openClassQuotaBoardBtn">
+            <button type="button" class="course-mod-card course-mod-nav" id="openClassQuotaBoardBtn">
               <span class="mod-ico" aria-hidden="true">📊</span>
               <span class="mod-body">
                 <span class="mod-title"><span class="txt-full">班级名额看板</span><span class="txt-short">名额看板</span></span>
