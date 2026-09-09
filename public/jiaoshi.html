@@ -454,14 +454,21 @@ body {
   gap: 8px;
   margin-bottom: 12px;
 }
-.stats-start-btn {
+.stats-start-group {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: stretch;
+}
+.stats-start-btn {
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 0 14px;
-  min-height: 44px;
+  min-height: 40px;
   border: none;
   border-radius: var(--radius-sm);
   background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
@@ -472,7 +479,15 @@ body {
   box-shadow: var(--shadow);
   white-space: nowrap;
 }
-.stats-start-btn:active { transform: scale(0.97); }
+.stats-start-btn-all {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+.stats-start-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.stats-start-btn:active:not(:disabled) { transform: scale(0.97); }
 .stats-cards {
   flex: 1;
   display: grid;
@@ -500,7 +515,8 @@ body {
 .stat-card.warn .num { color: var(--warning); }
 @media (max-width: 420px) {
   .stats-row { flex-wrap: wrap; }
-  .stats-start-btn { width: 100%; min-height: 40px; }
+  .stats-start-group { width: 100%; flex-direction: row; }
+  .stats-start-btn { flex: 1 1 0; min-height: 40px; }
   .stats-cards { width: 100%; }
   .stat-card { padding: 7px 8px; gap: 6px; }
   .stat-card .num { font-size: 16px; }
@@ -2386,7 +2402,10 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
   <!-- 签到 -->
   <section class="panel active" id="panel-checkin">
     <div class="stats-row">
-      <button type="button" class="stats-start-btn" id="startCheckinBtn">▶ 开始签到</button>
+      <div class="stats-start-group">
+        <button type="button" class="stats-start-btn" id="startCheckinBtn">▶ 开始签到</button>
+        <button type="button" class="stats-start-btn stats-start-btn-all" id="oneClickCheckinBtn">✔ 一键全签</button>
+      </div>
       <div class="stats-cards">
         <div class="stat-card ok"><span class="icon">✔</span><div class="stat-meta"><div class="num" id="statPresent">0</div><div class="label">已签到</div></div></div>
         <div class="stat-card bad"><span class="icon">✖</span><div class="stat-meta"><div class="num" id="statAbsent">0</div><div class="label">未签到</div></div></div>
@@ -3159,17 +3178,23 @@ function todayKey() {
 
 function updateCheckinStartBtn() {
   const btn = document.getElementById("startCheckinBtn");
-  if (!btn) return;
-  if (!isCheckinSessionAllowed()) {
-    btn.disabled = true;
-    btn.textContent = "▶ 开始签到";
-    return;
+  const allBtn = document.getElementById("oneClickCheckinBtn");
+  const blocked = !isCheckinSessionAllowed();
+  if (btn) {
+    if (blocked) {
+      btn.disabled = true;
+      btn.textContent = "▶ 开始签到";
+    } else {
+      btn.disabled = false;
+      if (state.checkinDone && state.checkinDay === todayKey()) {
+        btn.textContent = "▶ 今日已完成 · 查看/调整";
+      } else {
+        btn.textContent = "▶ 开始签到";
+      }
+    }
   }
-  btn.disabled = false;
-  if (state.checkinDone && state.checkinDay === todayKey()) {
-    btn.textContent = "▶ 今日已完成 · 查看/调整";
-  } else {
-    btn.textContent = "▶ 开始签到";
+  if (allBtn) {
+    allBtn.disabled = blocked;
   }
 }
 
@@ -3697,6 +3722,38 @@ function openFsCheckin() {
     document.body.classList.add("fs-checkin-open");
     document.body.style.overflow = "hidden";
     renderFsCheckin();
+  });
+}
+
+/** 一键全签：打开同一全屏签到窗，并将未请假学生全部标为已签到 */
+function openFsCheckinAllPresent() {
+  if (!isCheckinSessionAllowed()) {
+    toast(scheduleState.reason || "非上课时间 不可使用", "error");
+    return;
+  }
+  if (!state.students.length) {
+    toast("暂无学生，请先同步选课数据", "error");
+    return;
+  }
+  applyServerLeaveReports().then(function () {
+    const today = todayKey();
+    if (state.checkinDay !== today) {
+      state.checkinDay = today;
+      state.checkinDone = false;
+    }
+    state.students.forEach(function (s) {
+      const id = studentId(s);
+      const cur = state.checkin[id] || "none";
+      if (cur === "sick" || cur === "personal") return;
+      state.checkin[id] = "present";
+    });
+    saveLocal();
+    renderCheckin();
+    document.getElementById("fsCheckin").classList.add("show");
+    document.body.classList.add("fs-checkin-open");
+    document.body.style.overflow = "hidden";
+    renderFsCheckin();
+    toast("已全部标记为已签到，可继续调整", "success");
   });
 }
 
@@ -4637,6 +4694,7 @@ document.getElementById("clockOverlay").addEventListener("click", (e) => {
 document.getElementById("profileSyncBtn").addEventListener("click", syncStudentsFromServer);
 
 document.getElementById("startCheckinBtn").addEventListener("click", openFsCheckin);
+document.getElementById("oneClickCheckinBtn").addEventListener("click", openFsCheckinAllPresent);
 document.getElementById("fsCheckinClose").addEventListener("click", closeFsCheckin);
 document.getElementById("fsFinishBtn").addEventListener("click", () => {
   const fsStats = calcFsStats();

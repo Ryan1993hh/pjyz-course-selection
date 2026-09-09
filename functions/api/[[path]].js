@@ -415,9 +415,11 @@ function evaluateClassSchedule(control) {
     allowed,
     suspended: mode === 'suspended',
     unlocked: mode === 'unlocked',
+    // 非上课日（默认）与手动停课，对教师端都是不可用；后台按钮文案与左侧状态据此统一
+    blocked: !allowed,
     reason: allowed ? '' : '非上课时间 不可使用',
-    statusText: mode === 'suspended' ? '停课状态' : '',
-    buttonText: mode === 'suspended' ? '解除停课' : '今日停课'
+    statusText: allowed ? '' : '停课状态',
+    buttonText: allowed ? '今日停课' : '解除停课'
   };
 }
 
@@ -3843,7 +3845,9 @@ async function handleClassScheduleToggle(db, request) {
   if (auth.error) return json({ error: auth.error }, auth.status);
   const today = getTodayDateKey();
   const control = await getClassScheduleControl(db);
-  const nextMode = control.mode === 'suspended' ? 'unlocked' : 'suspended';
+  const current = evaluateClassSchedule(control);
+  // 当前可用 → 设为停课；当前不可用（非上课日/已停课）→ 解除为今日可上课
+  const nextMode = current.allowed ? 'suspended' : 'unlocked';
   await setClassScheduleControl(db, { date: today, mode: nextMode });
   const status = evaluateClassSchedule({ date: today, mode: nextMode });
   return json(Object.assign({ success: true }, status));

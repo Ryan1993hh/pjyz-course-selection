@@ -5506,14 +5506,21 @@ function updateBoardScheduleUI(data) {
   var btn = document.getElementById('boardSuspendBtn');
   var status = document.getElementById('boardScheduleStatus');
   if (!btn) return;
-  if (boardScheduleState.suspended) {
-    btn.textContent = '解除停课';
+  var blocked = boardScheduleState.blocked === true || boardScheduleState.allowed === false || boardScheduleState.suspended === true;
+  if (blocked) {
+    btn.textContent = boardScheduleState.buttonText || '解除停课';
     btn.className = 'btn btn-success';
-    if (status) status.classList.add('show');
+    if (status) {
+      status.textContent = boardScheduleState.statusText || '停课状态';
+      status.classList.add('show');
+    }
   } else {
-    btn.textContent = '今日停课';
+    btn.textContent = boardScheduleState.buttonText || '今日停课';
     btn.className = 'btn btn-warning';
-    if (status) status.classList.remove('show');
+    if (status) {
+      status.textContent = '停课状态';
+      status.classList.remove('show');
+    }
   }
 }
 
@@ -5533,7 +5540,7 @@ async function toggleBoardSchedule() {
     var data = await request('POST', '/api/class-schedule/toggle');
     updateBoardScheduleUI(data);
     if (typeof toast === 'function') {
-      toast(data.suspended ? '已设为今日停课' : '已解除停课，今日可正常使用', 'success');
+      toast(data.allowed ? '已解除停课，今日可正常使用' : '已设为今日停课', 'success');
     }
   } catch (e) {
     if (typeof toast === 'function') toast(e.message, 'error');
