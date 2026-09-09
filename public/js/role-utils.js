@@ -762,6 +762,21 @@
     }
   }
 
+  var SKIP_AUTOLOGIN_KEY = 'pjyz_skip_autologin';
+
+  /** 用户主动退出后，回登录页禁止自动登录，需手动点登录 */
+  function markManualLogout() {
+    try { sessionStorage.setItem(SKIP_AUTOLOGIN_KEY, '1'); } catch (_) {}
+  }
+
+  function shouldSkipAutologin() {
+    try { return sessionStorage.getItem(SKIP_AUTOLOGIN_KEY) === '1'; } catch (_) { return false; }
+  }
+
+  function clearManualLogoutSkip() {
+    try { sessionStorage.removeItem(SKIP_AUTOLOGIN_KEY); } catch (_) {}
+  }
+
   global.PjyzRole = {
     ROLE_PAGES: ROLE_PAGES,
     ROLE_LABELS: ROLE_LABELS,
@@ -781,6 +796,9 @@
     prefetchAllRolePages: prefetchAllRolePages,
     warmRoleBootstrap: warmRoleBootstrap,
     navigateToPage: navigateToPage,
+    markManualLogout: markManualLogout,
+    shouldSkipAutologin: shouldSkipAutologin,
+    clearManualLogoutSkip: clearManualLogoutSkip,
     checkDbHealthBanner: checkDbHealthBanner,
     hideDbHealthBanner: hideDbHealthBanner
   };

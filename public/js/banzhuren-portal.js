@@ -1277,6 +1277,13 @@
     var logoutBtn = document.getElementById('bzProfileLogout');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
+        try {
+          if (window.PjyzRole && typeof PjyzRole.markManualLogout === 'function') {
+            PjyzRole.markManualLogout();
+          } else {
+            sessionStorage.setItem('pjyz_skip_autologin', '1');
+          }
+        } catch (_) {}
         if (typeof window.pjyzLogout === 'function') window.pjyzLogout();
         else window.location.href = 'denglu';
       });
