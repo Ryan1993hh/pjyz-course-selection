@@ -7,6 +7,46 @@
 <link rel="prefetch" href="admin" as="document" />
 <link rel="prefetch" href="xuanke" as="document" />
 <link rel="prefetch" href="jiaoshi" as="document" />
+<script>
+/* 记住密码且已有会话：在首屏渲染前立刻跳转，缩短等待 */
+(function () {
+  try {
+    if (localStorage.getItem('pjyz_login_remember') !== '1') return;
+    var token = localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token');
+    if (!token) return;
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) { user = null; }
+    if (!user) return;
+    var roles = (user.roles && user.roles.length) ? user.roles : (user.role ? [user.role] : []);
+    if (!roles.length) return;
+    function pageOf(role) {
+      if (role === 'admin') return 'admin';
+      if (role === 'banzhuren') return 'xuanke';
+      if (role === 'teacher') return 'jiaoshi';
+      return '';
+    }
+    function roleOfPage(p) {
+      p = String(p || '').replace(/\.html$/i, '').replace(/^\//, '');
+      if (p === 'admin') return 'admin';
+      if (p === 'xuanke' || p === 'index' || p === '') return 'banzhuren';
+      if (p === 'jiaoshi') return 'teacher';
+      return '';
+    }
+    var last = String(localStorage.getItem('pjyz_last_page') || '').replace(/\.html$/i, '').replace(/^\//, '');
+    var lastRole = roleOfPage(last);
+    var target = '';
+    if (last && lastRole && roles.indexOf(lastRole) > -1) target = pageOf(lastRole);
+    if (!target) {
+      var active = localStorage.getItem('pjyz_active_role') || '';
+      if (active && roles.indexOf(active) > -1) target = pageOf(active);
+    }
+    if (!target) target = pageOf(roles[0]);
+    if (!target) return;
+    sessionStorage.setItem('pjyz_autologin_fast', '1');
+    location.replace(target);
+  } catch (_) {}
+})();
+</script>
 <style>
   /* ===== 全局重置 ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -818,8 +858,74 @@
     if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') {
       PjyzRole.prefetchPage(redirectUrl);
     }
-    // 立即跳转，不等待预取完成
     window.location.replace(redirectUrl);
+  }
+
+  function guessRedirectForPrefetch() {
+    try {
+      if (window.PjyzRole && typeof PjyzRole.getLoginRedirectUrl === 'function') {
+        var u = null;
+        try { u = JSON.parse(localStorage.getItem('pjyz_user') || 'null'); } catch (_) {}
+        return PjyzRole.getLoginRedirectUrl(u) || 'xuanke';
+      }
+    } catch (_) {}
+    return localStorage.getItem('pjyz_last_page') || 'xuanke';
+  }
+
+  var loginInFlight = false;
+  async function performLogin(opts) {
+    opts = opts || {};
+    if (loginInFlight) return;
+    hideMsg();
+
+    var username = usernameEl.value.trim();
+    var password = passwordEl.value;
+
+    if (!username) {
+      if (!opts.silent) {
+        showMsg('请输入账号', 'error');
+        usernameEl.focus();
+      }
+      return;
+    }
+    if (!password) {
+      if (!opts.silent) {
+        showMsg('请输入密码', 'error');
+        passwordEl.focus();
+      }
+      return;
+    }
+
+    loginInFlight = true;
+    loginBtn.disabled = true;
+    loginBtn.textContent = opts.auto ? '自动登录中...' : '登录中...';
+    // 登录请求发出前预热落地页，缩短跳转等待
+    try {
+      var warm = guessRedirectForPrefetch();
+      if (window.PjyzRole && typeof PjyzRole.prefetchPage === 'function') PjyzRole.prefetchPage(warm);
+    } catch (_) {}
+
+    try {
+      var res = await fetch(getApiBase() + '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      var data = await res.json();
+      if (data.success && data.token) {
+        try {
+          persistLoginSession(username, password, data);
+        } catch (_) {}
+        redirectAfterLogin(data.user);
+        return;
+      }
+      showMsg(data.error || '登录失败', 'error');
+    } catch (err) {
+      showMsg('登录请求失败：' + err.message, 'error');
+    }
+    loginInFlight = false;
+    loginBtn.disabled = false;
+    loginBtn.textContent = '登 录';
   }
 
   /* ---------- 按钮波纹效果 ---------- */
@@ -836,6 +942,7 @@
   });
 
   /* ---------- 记住密码 / 账号 ---------- */
+  var shouldAutoLogin = false;
   try {
     var savedUser = localStorage.getItem('pjyz_login_user');
     var savedRemember = localStorage.getItem('pjyz_login_remember');
@@ -845,7 +952,10 @@
     if (savedRemember === '1') {
       rememberEl.checked = true;
       var savedPass = localStorage.getItem('pjyz_login_pass');
-      if (savedPass) passwordEl.value = savedPass;
+      if (savedPass) {
+        passwordEl.value = savedPass;
+        shouldAutoLogin = !!(savedUser && savedPass);
+      }
     }
   } catch (_) {}
 
@@ -860,50 +970,16 @@
   }
 
   /* ---------- 表单提交 ---------- */
-  form.addEventListener('submit', async function (e) {
+  form.addEventListener('submit', function (e) {
     e.preventDefault();
-    hideMsg();
-
-    var username = usernameEl.value.trim();
-    var password = passwordEl.value;
-
-    // 简单校验
-    if (!username) {
-      showMsg('请输入账号', 'error');
-      usernameEl.focus();
-      return;
-    }
-    if (!password) {
-      showMsg('请输入密码', 'error');
-      passwordEl.focus();
-      return;
-    }
-
-    // 所有账号统一走 API 验证
-    loginBtn.disabled = true;
-    loginBtn.textContent = '登录中...';
-    try {
-      var res = await fetch(getApiBase() + '/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username, password: password })
-      });
-      var data = await res.json();
-      if (data.success && data.token) {
-        try {
-          persistLoginSession(username, password, data);
-        } catch (_) {}
-        redirectAfterLogin(data.user);
-        return;
-      } else {
-        showMsg(data.error || '登录失败', 'error');
-      }
-    } catch (err) {
-      showMsg('登录请求失败：' + err.message, 'error');
-    }
-    loginBtn.disabled = false;
-    loginBtn.textContent = '登 录';
+    performLogin({ auto: false });
   });
+
+  /* 记住密码：打开登录页即自动登录并跳转 */
+  if (shouldAutoLogin) {
+    // 若 head 已因有效会话跳转，这里通常不会执行到；无会话时立刻用账号密码登录
+    performLogin({ auto: true, silent: true });
+  }
 
   /* ---------- 忘记密码 / 联系管理员 ---------- */
   forgotLink.addEventListener('click', function () {
@@ -919,6 +995,7 @@
 
   /* ---------- 自动聚焦 ---------- */
   setTimeout(function () {
+    if (shouldAutoLogin || loginInFlight) return;
     if (rememberEl.checked && passwordEl.value) loginBtn.focus();
     else if (usernameEl.value && !passwordEl.value) passwordEl.focus();
     else usernameEl.focus();
