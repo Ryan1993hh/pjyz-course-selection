@@ -3906,6 +3906,11 @@ function openFsCheckin() {
 
 /** 一键全签：打开同一全屏签到窗，并将未请假学生全部标为已签到 */
 function openFsCheckinAllPresent() {
+  if (scheduleState.pending) {
+    toast("正在确认上课时间，请稍候", "warning");
+    loadClassScheduleStatus().catch(function () {});
+    return;
+  }
   if (!isCheckinSessionAllowed()) {
     toast(scheduleState.reason || "非上课时间 不可使用", "error");
     return;
