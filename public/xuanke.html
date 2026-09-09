@@ -3622,9 +3622,8 @@ async function applyServerSelectionSync(opts) {
       studentListSource = '';
       rosterReadyTip = false;
     }
-    // restore 未命中时才补内定；命中时 restore 内已 applyPreEnrollments
-    await applyPreEnrollments({ skipReset: true, skipRender: true });
   }
+  await applyPreEnrollments({ skipReset: true, skipRender: true });
   finalizeCourseSlotsAfterPreEnroll();
   syncCourseSlots();
   saveState(serverDataRevision);
