@@ -7078,37 +7078,38 @@ async function deleteAllSelections(){
   try {
     await captureBackupBeforeDeleteAll();
     var delRes = await request('DELETE', '/api/selections');
-    // 本地立即清空，避免等待期间仍显示旧名单
+    // 清空成功：立即以空列表展示（不等教室同步等收尾）
     selectionsData = [];
     preEnrollData = [];
     selectionsCheckedIds.clear();
     _selectionsQueryCache = { qs: '', at: 0 };
     window.__pjyzClassroomSyncedOnce = true; // 阻止随后 sync=1 把教室名单写回
+    if ((delRes && delRes.recycled) > 0) {
+      _recycleStatusAvailable = true;
+      _recycleStatusCount = delRes.recycled;
+    } else if (delRes && delRes.cleared) {
+      // 即使备份条数为 0，也允许提示可恢复（服务端可能仍有上次快照）
+      refreshRecycleStatus();
+    }
     clearSelectionFilters();
     switchToSelectionsView();
     renderSelections();
     try {
-      var st = document.getElementById('statTotal');
-      var sc = document.getElementById('statCourseCount');
-      if (st) st.textContent = '0';
-      if (sc) sc.textContent = '0';
+      var stEl = document.getElementById('statTotal');
+      var scEl = document.getElementById('statCourseCount');
+      if (stEl) stEl.textContent = '0';
+      if (scEl) scEl.textContent = '0';
     } catch (_) {}
-    // 再向服务端刷新一次，确保列表与数据库一致（应为空）
+    // 静默再拉一次；若偶发非空（旧缓存/回填），仍强制显示为空
     try {
       await querySelections({ silent: true, useCache: false });
-      selectionsData = Array.isArray(selectionsData) ? selectionsData : [];
-      if (selectionsData.length) {
-        // 若仍有残留，强制以空展示（清空接口已成功）
+      if (selectionsData && selectionsData.length) {
         selectionsData = [];
         renderSelections();
       }
     } catch (_) {
       selectionsData = [];
       renderSelections();
-    }
-    if ((delRes && delRes.recycled) > 0) {
-      _recycleStatusAvailable = true;
-      _recycleStatusCount = delRes.recycled;
     }
     updateRestoreDeleteBtn();
     refreshRecycleStatus();

@@ -2255,7 +2255,7 @@ async function handleSelectionsExport(db, request, url) {
   });
 }
 
-async function handleClearSelections(db, request) {
+async function handleClearSelections(db, request, ctx) {
   const url = new URL(request.url);
   const grade = url.searchParams.get('grade');
   const cls = url.searchParams.get('class_name');
@@ -2326,6 +2326,7 @@ async function handleClearSelections(db, request) {
     }
   }
 
+  // 先删表并打标，尽快返回，保证前端能立刻刷成空列表
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
 
@@ -2339,20 +2340,30 @@ async function handleClearSelections(db, request) {
     ).bind(SYNC_CLASSROOM_THROTTLE_KEY, new Date().toISOString()).run();
   } catch (_) {}
 
-  try {
-    await syncAllTeacherClassroomsFromSelections(db);
-  } catch (syncErr) {
-    console.warn('sync classrooms after clear selections:', syncErr && syncErr.message);
-  }
-  try {
-    await purgeAllOrphanLeaveReports();
-  } catch (_) {}
-  try {
-    await rebuildUnselectedFromSchoolRoster(db, { mode: 'full' });
-  } catch (rebuildErr) {
-    console.warn('rebuild unselected after clear selections:', rebuildErr && rebuildErr.message);
-  }
   await bumpSelectionDataRevision(db);
+
+  const afterClearCleanup = async () => {
+    try {
+      await syncAllTeacherClassroomsFromSelections(db);
+    } catch (syncErr) {
+      console.warn('sync classrooms after clear selections:', syncErr && syncErr.message);
+    }
+    try {
+      await purgeAllOrphanLeaveReports();
+    } catch (_) {}
+    try {
+      await rebuildUnselectedFromSchoolRoster(db, { mode: 'full' });
+    } catch (rebuildErr) {
+      console.warn('rebuild unselected after clear selections:', rebuildErr && rebuildErr.message);
+    }
+  };
+
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(afterClearCleanup());
+  } else {
+    await afterClearCleanup();
+  }
+
   return json({ success: true, recycled: snapshot.length, cleared: true });
 }
 
@@ -6938,7 +6949,7 @@ async function onRequestImpl(context) {
   if (path === '/api/selections') {
     if (method === 'GET') return handleSelectionsGet(db, request, url);
     if (method === 'POST') return handleSelectionsBatchCreate(db, request, context);
-    if (method === 'DELETE') return handleClearSelections(db, request);
+    if (method === 'DELETE') return handleClearSelections(db, request, context);
   }
 
   // /api/selections/restore — 恢复删除所有前的快照（须在 :id 之前）
