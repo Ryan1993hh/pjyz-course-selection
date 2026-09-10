@@ -1713,7 +1713,14 @@ table.courses-table td[data-field="description"] {
 .data-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.data-count-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .data-toolbar-right {
   display: flex;
@@ -1728,6 +1735,33 @@ table.courses-table td[data-field="description"] {
   padding-right: 10px;
   border-right: 1.5px solid var(--bg-soft);
   margin-right: 4px;
+}
+.add-stu-dropzone {
+  border: 1.5px dashed #94a3b8;
+  border-radius: 10px;
+  padding: 18px 16px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+}
+.add-stu-dropzone:hover,
+.add-stu-dropzone:focus {
+  border-color: #0d9488;
+  background: #f0fdfa;
+  outline: none;
+}
+.add-stu-dropzone .dz-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f766e;
+  margin: 0 0 8px;
+}
+.add-stu-dropzone p {
+  margin: 0 0 8px;
+}
+.add-stu-dropzone p:last-child {
+  margin-bottom: 0;
 }
 .selection-status-text {
   font-size: 13px;
@@ -3663,14 +3697,13 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-filter-extra {
     display: inline-flex !important;
   }
-  /* 移动端隐藏：提前录课 / 导入名单 / 导出 Excel */
-  #section-selections #preEnrollBtnMob,
+  /* 移动端隐藏：导入名单 / 导出 Excel（提前录课已并入添加学生弹窗） */
   #section-selections #importRosterBtnMob,
   #section-selections #exportBtnMob,
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行：共 N 条 | 状态 + 禁选 + 批量删除（右） */
+  /* 第四行：共 N 条 + 删除 | 状态 + 禁选 + 添加（右） */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
@@ -3688,11 +3721,24 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex: 0 1 auto;
     min-width: 0;
   }
+  #section-selections .sel-mob-count-slot .data-count-actions {
+    gap: 4px;
+  }
   #section-selections .sel-mob-count-slot .data-count {
     font-size: 12px;
     font-weight: 700;
     color: #0f766e;
     white-space: nowrap;
+  }
+  #section-selections .sel-mob-count-slot #batchDeleteBtn,
+  #section-selections .sel-mob-count-slot #deleteAllSelectionsBtn {
+    height: 30px;
+    min-height: 30px !important;
+    max-height: 30px;
+    padding: 0 6px;
+    font-size: 11px;
+    border-radius: 6px;
+    line-height: 1.2;
   }
   #section-selections .sel-mob-actions-right {
     display: flex;
@@ -3709,11 +3755,11 @@ th.sortable.active .sort-icon { opacity: 1; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 36vw;
+    max-width: 28vw;
     flex: 0 1 auto;
   }
   #section-selections #toggleSelectionBtnMob,
-  #section-selections #batchDeleteBtnMob {
+  #section-selections #importRosterBtnMob2 {
     flex: 0 0 auto;
     height: 30px;
     min-height: 30px !important;
@@ -4157,14 +4203,13 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <button type="button" class="btn btn-outline btn-block mob-filter-extra" id="resetFilterBtnMob"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
                 <button type="button" class="btn btn-primary btn-block mob-filter-extra" id="queryBtnMob">🔍 查询</button>
                 <button type="button" class="btn btn-outline btn-block mob-only mob-hide-640" id="importRosterBtnMob" title="添加学生到选课名单" hidden aria-hidden="true">➕ <span class="txt-full">添加学生</span><span class="txt-short">添加</span></button>
-                <button type="button" class="btn btn-primary btn-block mob-only mob-hide-640" id="preEnrollBtnMob" title="上传已确定选课的学生名单" hidden aria-hidden="true">📌 <span class="txt-full">提前录课</span><span class="txt-short">录课</span></button>
               </div>
               <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
                 <span id="selMobCountSlot" class="sel-mob-count-slot"></span>
                 <div class="sel-mob-actions-right">
                   <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
                   <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
-                  <button type="button" class="btn btn-danger btn-sm mob-only" id="batchDeleteBtnMob" disabled>🗑 <span class="txt-full">批量删除</span><span class="txt-short">删除</span></button>
+                  <button type="button" class="btn btn-outline btn-sm mob-only" id="importRosterBtnMob2" title="添加学生">➕ <span class="txt-full">添加学生</span><span class="txt-short">添加</span></button>
                   <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
                 </div>
               </div>
@@ -4191,17 +4236,19 @@ th.sortable.active .sort-icon { opacity: 1; }
           <div class="card data-card">
             <div class="data-toolbar">
               <div class="data-toolbar-left" id="dataToolbarCountSlot">
-                <span class="data-count" id="dataCount">共 0 条数据</span>
+                <div class="data-count-actions" id="dataCountActions">
+                  <span class="data-count" id="dataCount">共 0 条数据</span>
+                  <button type="button" class="btn btn-danger btn-sm" id="batchDeleteBtn" disabled>删除</button>
+                  <button type="button" class="btn btn-outline btn-sm" id="deleteAllSelectionsBtn" title="清空全部选课数据">删除所有</button>
+                </div>
               </div>
               <div class="data-toolbar-right desktop-only">
                 <div class="selection-lock-wrap">
-                  <button type="button" class="btn btn-warning" id="toggleSelectionBtn">🚫 禁止选课</button>
                   <span class="selection-status-text open" id="selectionStatusText">当前状态为选课状态</span>
+                  <button type="button" class="btn btn-warning" id="toggleSelectionBtn">🚫 禁止选课</button>
                 </div>
-                <button type="button" class="btn btn-danger" id="batchDeleteBtn">🗑 批量删除</button>
-                <button type="button" class="btn btn-primary" id="preEnrollBtn" title="上传已确定选课的学生名单">📌 提前录课</button>
+                <button type="button" class="btn btn-outline" id="importRosterBtn" title="添加学生（提前录课 / 上传文件 / 个别添加）">➕ 添加学生</button>
                 <input type="file" id="preEnrollFile" accept=".xlsx,.xls,.csv" style="display:none">
-                <button type="button" class="btn btn-outline" id="importRosterBtn" title="添加学生到选课名单（上传文件或个别录入）">➕ 添加学生</button>
                 <input type="file" id="importRosterFile" accept=".xlsx,.xls,.csv" style="display:none">
                 <button type="button" class="btn btn-success" id="exportBtn">⬇ 导出 Excel</button>
               </div>
@@ -6872,10 +6919,52 @@ function updateBatchDeleteBtn(){
   function sync(btn){
     if (!btn) return;
     btn.disabled = selectionsCheckedIds.size === 0;
-    btn.textContent = '🗑 批量删除' + (selectionsCheckedIds.size > 0 ? ' (' + selectionsCheckedIds.size + ')' : '');
+    var n = selectionsCheckedIds.size;
+    btn.textContent = n > 0 ? ('删除 (' + n + ')') : '删除';
   }
   sync(document.getElementById('batchDeleteBtn'));
-  sync(document.getElementById('batchDeleteBtnMob'));
+}
+
+async function deleteAllSelections(){
+  if (currentViewMode === 'unselected') {
+    if (!confirm('确定清空全部未选课学生记录吗？此操作不可恢复。')) return;
+    try {
+      await request('DELETE', '/api/unselected-students');
+      unselectedData = [];
+      selectionsCheckedIds.clear();
+      renderUnselectedStudents();
+      toast('已清空全部未选课记录', 'success');
+    } catch (e) {
+      toast('清空失败：' + e.message, 'error');
+    }
+    return;
+  }
+  if (currentViewMode === 'pre_enroll') {
+    if (!confirm('确定清空全部内定（提前录课）学生吗？此操作不可恢复。')) return;
+  } else if (!confirm('确定清空选课数据中的全部记录吗？此操作不可恢复。')) {
+    return;
+  }
+  try {
+    await request('DELETE', '/api/selections');
+    selectionsData = [];
+    preEnrollData = [];
+    selectionsCheckedIds.clear();
+    if (currentViewMode === 'pre_enroll') {
+      renderPreEnrollStudents();
+    } else {
+      currentViewMode = 'selections';
+      renderSelections();
+    }
+    try { 
+      var st = document.getElementById('statTotal');
+      var sc = document.getElementById('statCourseCount');
+      if (st) st.textContent = '0';
+      if (sc) sc.textContent = '0';
+    } catch (_) {}
+    toast('已清空全部选课数据', 'success');
+  } catch (e) {
+    toast('清空失败：' + e.message, 'error');
+  }
 }
 
 function updateSelectAllState(){
@@ -7249,7 +7338,7 @@ async function exportSelections(){
   safeBind('resetFilterBtn', 'click', resetFilterSelections);
   safeBind('resetFilterBtnMob', 'click', resetFilterSelections);
   safeBind('batchDeleteBtn', 'click', batchDeleteSelections);
-  safeBind('batchDeleteBtnMob', 'click', batchDeleteSelections);
+  safeBind('deleteAllSelectionsBtn', 'click', deleteAllSelections);
   safeBind('toggleSelectionBtn', 'click', toggleSelectionLock);
   safeBind('toggleSelectionBtnMob', 'click', toggleSelectionLock);
   safeBind('unselectedBtn', 'click', function(){
@@ -7258,18 +7347,14 @@ async function exportSelections(){
   safeBind('preEnrollListBtn', 'click', function(){
     activateSelectionsSection({ viewMode: 'pre_enroll', silent: true });
   });
-  safeBind('preEnrollBtn', 'click', function(){
-    var input = document.getElementById('preEnrollFile');
-    if (input) { input.value = ''; input.click(); }
-  });
-  safeBind('preEnrollBtnMob', 'click', function(){
-    var input = document.getElementById('preEnrollFile');
-    if (input) { input.value = ''; input.click(); }
-  });
   safeBind('preEnrollFile', 'change', function(e){
     var file = e.target.files && e.target.files[0];
     if (file) handlePreEnrollUpload(file);
   });
+  function openPreEnrollPicker(){
+    var input = document.getElementById('preEnrollFile');
+    if (input) { input.value = ''; input.click(); }
+  }
   function openAddStudentModal() {
     var courseOptions = (coursesForFilter && coursesForFilter.length)
       ? coursesForFilter
@@ -7285,16 +7370,26 @@ async function exportSelections(){
       '<h3 style="display:none;">添加学生</h3>' +
       '<div class="add-student-modal">' +
         '<div class="add-student-tabs" style="display:flex;gap:8px;margin-bottom:16px;">' +
-          '<button type="button" class="btn btn-outline" id="addStuTabFile" style="flex:1;">📄 上传文件</button>' +
-          '<button type="button" class="btn btn-primary" id="addStuTabManual" style="flex:1;">✏️ 个别添加</button>' +
+          '<button type="button" class="btn btn-outline" id="addStuTabPre" style="flex:1;">📌 提前录课</button>' +
+          '<button type="button" class="btn btn-primary" id="addStuTabFile" style="flex:1;">📄 上传文件</button>' +
+          '<button type="button" class="btn btn-outline" id="addStuTabManual" style="flex:1;">✏️ 个别添加</button>' +
         '</div>' +
-        '<div id="addStuPaneFile" style="display:none;">' +
-          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">上传 Excel / CSV 花名册，系统自动识别年级、班级、姓名、性别并导入选课名单。</p>' +
-          '<p style="font-size:12px;color:#94a3b8;margin:0 0 14px;">表头建议包含：姓名、班级（或年级）、性别（可选）。批量导入将覆盖更新全校名单。</p>' +
-          '<button type="button" class="btn btn-primary btn-block" id="addStuPickFileBtn">选择文件并导入</button>' +
+        '<div id="addStuPanePre" style="display:none;">' +
+          '<div class="add-stu-dropzone" id="addStuPreZone" tabindex="0" role="button" aria-label="选择提前录课文件">' +
+            '<div class="dz-title">点击此处选择提前录课文件</div>' +
+            '<p style="font-size:13px;color:#64748b;line-height:1.6;">上传已确定选课的学生名单（Excel / CSV）。录入后班主任端自动占位且不可修改。</p>' +
+            '<p style="font-size:12px;color:#94a3b8;line-height:1.6;">表头建议包含：姓名、班级（或年级）、课程名称、性别（可选）。</p>' +
+          '</div>' +
         '</div>' +
-        '<div id="addStuPaneManual">' +
-          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">填写单个学生信息，可同时指定拓展课程；保存后写入选课数据库。</p>' +
+        '<div id="addStuPaneFile">' +
+          '<div class="add-stu-dropzone" id="addStuFileZone" tabindex="0" role="button" aria-label="选择学生名单文件">' +
+            '<div class="dz-title">点击此处或下方说明区域上传花名册</div>' +
+            '<p style="font-size:13px;color:#64748b;line-height:1.6;">上传 Excel / CSV 花名册，系统自动识别年级、班级、姓名、性别并<strong>追加</strong>到选课名单（不覆盖已有数据）。</p>' +
+            '<p style="font-size:12px;color:#94a3b8;line-height:1.6;">表头建议包含：姓名、班级（或年级）、性别（可选）。已存在的同班同名学生会保留原记录并更新性别等信息。</p>' +
+          '</div>' +
+        '</div>' +
+        '<div id="addStuPaneManual" style="display:none;">' +
+          '<p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 12px;">填写单个学生信息，可同时指定拓展课程；保存后<strong>追加</strong>写入数据库，不覆盖其他学生。</p>' +
           '<div class="form-group"><label>年级 <span style="color:#ef4444;">*</span></label>' +
             '<select class="form-select" id="addStuGrade">' +
               '<option value="六年级">六年级</option>' +
@@ -7334,38 +7429,54 @@ async function exportSelections(){
     }
     fillClassOptions();
 
+    var tabPre = document.getElementById('addStuTabPre');
     var tabFile = document.getElementById('addStuTabFile');
     var tabManual = document.getElementById('addStuTabManual');
+    var panePre = document.getElementById('addStuPanePre');
     var paneFile = document.getElementById('addStuPaneFile');
     var paneManual = document.getElementById('addStuPaneManual');
-    function showFile() {
-      paneFile.style.display = '';
-      paneManual.style.display = 'none';
-      tabFile.className = 'btn btn-primary';
-      tabFile.style.flex = '1';
-      tabManual.className = 'btn btn-outline';
-      tabManual.style.flex = '1';
+    function setTab(active) {
+      var map = {
+        pre: { tab: tabPre, pane: panePre },
+        file: { tab: tabFile, pane: paneFile },
+        manual: { tab: tabManual, pane: paneManual }
+      };
+      Object.keys(map).forEach(function (k) {
+        var on = k === active;
+        map[k].pane.style.display = on ? '' : 'none';
+        map[k].tab.className = on ? 'btn btn-primary' : 'btn btn-outline';
+        map[k].tab.style.flex = '1';
+      });
+      if (active === 'manual') {
+        var nameEl = document.getElementById('addStuName');
+        if (nameEl) setTimeout(function () { nameEl.focus(); }, 30);
+      }
     }
-    function showManual() {
-      paneFile.style.display = 'none';
-      paneManual.style.display = '';
-      tabFile.className = 'btn btn-outline';
-      tabFile.style.flex = '1';
-      tabManual.className = 'btn btn-primary';
-      tabManual.style.flex = '1';
-      var nameEl = document.getElementById('addStuName');
-      if (nameEl) setTimeout(function () { nameEl.focus(); }, 30);
-    }
-    tabFile.onclick = showFile;
-    tabManual.onclick = showManual;
+    tabPre.onclick = function () { setTab('pre'); };
+    tabFile.onclick = function () { setTab('file'); };
+    tabManual.onclick = function () { setTab('manual'); };
     document.getElementById('addStuGrade').onchange = fillClassOptions;
-    document.getElementById('addStuPickFileBtn').onclick = function () {
-      closeModal();
-      openRosterImportPicker();
-    };
-    document.getElementById('addStuConfirmBtn').onclick = submitManualAddStudent;
-    var nameElBoot = document.getElementById('addStuName');
-    if (nameElBoot) setTimeout(function () { nameElBoot.focus(); }, 30);
+
+    function bindZone(id, pickFn) {
+      var zone = document.getElementById(id);
+      if (!zone) return;
+      zone.onclick = function () {
+        closeModal();
+        pickFn();
+      };
+      zone.onkeydown = function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          closeModal();
+          pickFn();
+        }
+      };
+    }
+    bindZone('addStuPreZone', openPreEnrollPicker);
+    bindZone('addStuFileZone', openRosterImportPicker);
+
+    var confirmBtn = document.getElementById('addStuConfirmBtn');
+    if (confirmBtn) confirmBtn.onclick = submitManualAddStudent;
 
     // 课程列表为空时后台补拉一次
     if (!courseOptions.length) {
@@ -7461,6 +7572,7 @@ async function exportSelections(){
   }
   safeBind('importRosterBtn', 'click', openAddStudentModal);
   safeBind('importRosterBtnMob', 'click', openAddStudentModal);
+  safeBind('importRosterBtnMob2', 'click', openAddStudentModal);
   safeBind('importRosterFile', 'change', function(e){
     var file = e.target.files && e.target.files[0];
     if (file) handleSchoolRosterImport(file);
@@ -7640,11 +7752,11 @@ async function handleSchoolRosterImport(file) {
       toast('未解析到有效学生名单', 'error');
       return;
     }
-    if (!confirm('即将导入 ' + items.length + ' 名学生，并覆盖更新数据库中的全校名单。是否继续？')) {
+    if (!confirm('即将追加导入 ' + items.length + ' 名学生（不覆盖已有名单，仅新增/更新导入名单中的学生）。是否继续？')) {
       return;
     }
     toast('正在导入学生…', 'info');
-    const data = await request('POST', '/api/school-students/import', { students: items, replace: true });
+    const data = await request('POST', '/api/school-students/import', { students: items, replace: false });
     const errCount = (data.errors && data.errors.length) || 0;
     let msg = '已导入 ' + (data.count || 0) + ' 名学生';
     if (data.total != null) msg += '（库中共 ' + data.total + ' 人）';
@@ -8935,10 +9047,11 @@ function placeSelectionStats() {
   }
 
   if (count && mobCount && deskCount) {
+    var actions = document.getElementById('dataCountActions') || count;
     if (mob) {
-      if (count.parentElement !== mobCount) mobCount.appendChild(count);
-    } else if (count.parentElement !== deskCount) {
-      deskCount.appendChild(count);
+      if (actions.parentElement !== mobCount) mobCount.appendChild(actions);
+    } else if (actions.parentElement !== deskCount) {
+      deskCount.appendChild(actions);
     }
   }
 }

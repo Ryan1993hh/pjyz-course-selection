@@ -2275,6 +2275,12 @@ async function handleClearSelections(db, request) {
   await db.prepare('UPDATE courses SET selected_count = 0').run();
   await syncAllTeacherClassroomsFromSelections(db);
   await purgeAllOrphanLeaveReports();
+  try {
+    await rebuildUnselectedFromSchoolRoster(db, { mode: 'full' });
+  } catch (rebuildErr) {
+    console.warn('rebuild unselected after clear selections:', rebuildErr && rebuildErr.message);
+  }
+  await bumpSelectionDataRevision(db);
   return json({ success: true });
 }
 
