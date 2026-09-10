@@ -8328,13 +8328,16 @@ async function handleSchoolRosterImport(file) {
     var withCourse = items.filter(function (s) { return !!(s.course_name); }).length;
     var confirmMsg = '识别到 ' + items.length + ' 名学生（' + sources.length + ' 个工作表）';
     if (withCourse) {
-      confirmMsg += '，其中 ' + withCourse + ' 人含课程，将追加到选课列表';
+      confirmMsg += '，其中 ' + withCourse + ' 人含课程，将保存到选课数据列表';
     } else {
-      confirmMsg += '。未识别到课程（请确认表头有「课程」列，或工作表名称为课程名），将仅导入名单';
+      confirmMsg += '。\n未识别到课程列/课程名，无法写入选课列表。\n请确认表头含「课程/所选课程/拓展课」或工作表名为课程名。\n若仍继续，将仅导入花名册（不进入选课列表）。';
     }
-    confirmMsg += '。不覆盖已有数据，是否继续？';
+    confirmMsg += '\n不覆盖其他已有选课记录，是否继续？';
     if (!confirm(confirmMsg)) {
       return;
+    }
+    if (!withCourse) {
+      toast('未识别到课程，已跳过选课写入。请检查表格课程列后重新上传。', 'warning');
     }
     toast('正在导入学生…', 'info');
     if (!(coursesData && coursesData.length)) {
@@ -8357,7 +8360,7 @@ async function handleSchoolRosterImport(file) {
         student_name: s.student_name,
         gender: s.gender,
         student_no: s.student_no || '',
-        course_id: cid || null,
+        course_id: cid > 0 ? cid : null,
         course_name: cname
       });
     });
@@ -8367,22 +8370,26 @@ async function handleSchoolRosterImport(file) {
     var createdRows = [];
     if (selectionPayload.length) {
       try {
-        // 分批写入，避免一次请求过大导致超时后列表空白
-        var CHUNK = 40;
+        // 分批写入；管理员端走服务端 bulk upsert，每批可更大
+        var CHUNK = 120;
         for (var off = 0; off < selectionPayload.length; off += CHUNK) {
           var chunk = selectionPayload.slice(off, off + CHUNK);
           var selRes = await request('POST', '/api/selections', chunk);
-          selCount += (selRes && selRes.count) || chunk.length;
-          if (selRes && Array.isArray(selRes.selections)) {
+          var wrote = (selRes && typeof selRes.count === 'number') ? selRes.count : 0;
+          if (!wrote) {
+            throw new Error((selRes && (selRes.error || (selRes.errors && selRes.errors[0]))) || '服务端未写入任何选课记录');
+          }
+          selCount += wrote;
+          if (selRes && Array.isArray(selRes.selections) && selRes.selections.length) {
             createdRows = createdRows.concat(selRes.selections.filter(Boolean));
           } else {
             createdRows = createdRows.concat(chunk.map(function (row) {
-              return Object.assign({ is_locked: 0, id: 'tmp_' + Math.random().toString(36).slice(2, 8) }, row);
+              return Object.assign({ is_locked: 0 }, row);
             }));
           }
         }
-        msg = '已追加选课 ' + selCount + ' 条';
-        if (courseMiss) msg += '（' + courseMiss + ' 条课程名需核对）';
+        msg = '已保存选课 ' + selCount + ' 条到数据库';
+        if (courseMiss) msg += '（' + courseMiss + ' 条课程名未匹配课程库，仍已按表格课程名保存）';
       } catch (selErr) {
         toast('选课写入失败：' + (selErr && selErr.message ? selErr.message : selErr), 'error');
         return;
@@ -8401,7 +8408,7 @@ async function handleSchoolRosterImport(file) {
         console.warn('school roster sync after upload:', e);
       });
 
-      // 先本地立刻上屏，再向服务端刷新；刷新若偶发为空仍保留本次导入结果
+      // 立刻上屏，再强制从数据库刷新；刷新失败则保留本地导入结果
       switchToSelectionsView();
       clearSelectionFilters();
       selectionsCheckedIds.clear();

@@ -1716,28 +1716,30 @@ async function handleSelectionsBatchCreate(db, request, context) {
     const auth = requireAuth(request, ['admin', 'banzhuren']);
     if (auth.error) return json({ error: auth.error }, auth.status);
     const isAdmin = (auth.user.roles || []).indexOf('admin') !== -1;
-    // 管理员后台录入不受「禁止选课」限制；班主任端仍受开关约束
     if (!isAdmin && !await getSelectionEnabled(db)) {
       return json({ error: '当前状态禁止选课，无法保存', code: 'SELECTION_DISABLED' }, 403);
     }
-    // Use text() + JSON.parse() instead of request.json() to avoid D1_TYPE_ERROR
     const text = await request.text();
     const body = JSON.parse(text);
     const arr = Array.isArray(body) ? body : [body];
     if (arr.length === 0) return json({ error: '没有可保存的选课数据' }, 400);
-    
+
+    // 管理员批量导入走快路径（一次读库 + batch 写），避免逐条查询超时导致前端空白
+    if (isAdmin) {
+      return await handleAdminSelectionsBulkUpsert(db, arr, context);
+    }
+
     const results = [];
     const errors = [];
     const affectedCourses = new Set();
     const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
     const courseList = (coursesRes.results || []).filter((c) => c && c.name);
-    
+
     for (const item of arr) {
       if (!item || !item.student_name) {
-        errors.push(`缺少学生姓名`);
+        errors.push('缺少学生姓名');
         continue;
       }
-      
       try {
         const grade = (item.grade != null && item.grade !== '') ? String(item.grade) : '';
         const className = (item.class_name != null && item.class_name !== '') ? String(item.class_name) : '';
@@ -1753,7 +1755,6 @@ async function handleSelectionsBatchCreate(db, request, context) {
           }
         }
 
-        // 提前录课锁定学生：仅处理本班同名锁定记录，不允许改课程；并清除本班冲突的未锁定记录
         const lockedRows = await db.prepare(
           'SELECT * FROM selections WHERE student_name = ? AND is_locked = 1'
         ).bind(studentName).all();
@@ -1788,7 +1789,6 @@ async function handleSelectionsBatchCreate(db, request, context) {
           if (row.course_name) affectedCourses.add(String(row.course_name).trim());
         });
 
-        // 同一学生（同年级同班）只保留最新一条：先删除该班该学生已有未锁定选课记录
         await removeSelectionsForStudent(db, grade, className, studentName);
 
         const parsedSave = parseGradeClassFields(grade, className);
@@ -1811,7 +1811,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
         if (courseId > 0) {
           await db.prepare('UPDATE courses SET selected_count = selected_count + 1 WHERE id = ?').bind(courseId).run();
         }
-        
+
         const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
         results.push(selection || {
           id: result.meta && result.meta.last_row_id,
@@ -1827,20 +1827,13 @@ async function handleSelectionsBatchCreate(db, request, context) {
         });
         if (courseName) affectedCourses.add(String(courseName).trim());
         await removeUnselectedForStudent(db, grade, className, studentName);
-      } catch(innerErr) {
+      } catch (innerErr) {
         errors.push('插入失败: ' + innerErr.message);
       }
     }
-    
+
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
     await bumpSelectionDataRevision(db);
-    // 管理员导入/追加选课后，取消「删除所有」禁回填标记，恢复正常查询
-    if (isAdmin && results.length) {
-      try {
-        await db.prepare('DELETE FROM system_settings WHERE key = ?').bind('admin_cleared_selections_at').run();
-      } catch (_) {}
-    }
-    // 教师端教室同步放到后台，避免管理员单条添加被拖慢
     const affectedCourseList = [...affectedCourses];
     const syncP = syncTeacherClassroomForCourseNames(db, affectedCourseList).catch(function (err) {
       console.warn('syncTeacherClassroom after selections create:', err && err.message);
@@ -1850,7 +1843,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
     } else {
       await syncP;
     }
-    
+
     return json({
       success: true,
       count: results.length,
@@ -1861,6 +1854,201 @@ async function handleSelectionsBatchCreate(db, request, context) {
   } catch (e) {
     return json({ error: '保存失败：' + e.message }, 400);
   }
+}
+
+/** 管理员批量写入选课：预读全表后 batch 删除/插入，适合上传导入 */
+async function handleAdminSelectionsBulkUpsert(db, arr, context) {
+  const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
+  const courseList = (coursesRes.results || []).filter((c) => c && c.name);
+
+  const existRes = await db.prepare(
+    'SELECT id, grade, class_name, student_name, gender, student_no, course_id, course_name, is_locked, selected_at FROM selections'
+  ).all();
+  const existingByKey = new Map();
+  (existRes.results || []).forEach((row) => {
+    const key = selectionStudentKey(row.grade, row.class_name, row.student_name);
+    const prev = existingByKey.get(key);
+    existingByKey.set(key, prev ? preferSelectionRow(prev, row) : row);
+  });
+
+  // 先归一化并去重（同学生保留最后一条）
+  const pending = new Map();
+  const errors = [];
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    if (!item || !item.student_name) {
+      errors.push('第' + (i + 1) + '条缺少学生姓名');
+      continue;
+    }
+    try {
+      const grade = (item.grade != null && item.grade !== '') ? String(item.grade) : '';
+      const className = (item.class_name != null && item.class_name !== '') ? String(item.class_name) : '';
+      const studentName = String(item.student_name).trim();
+      let courseName = (item.course_name != null && item.course_name !== '') ? String(item.course_name).trim() : '';
+      let courseId = (item.course_id != null && item.course_id !== '') ? (parseInt(item.course_id, 10) || 0) : 0;
+      const gender = (item.gender != null && item.gender !== '') ? String(item.gender) : '';
+      const studentNo = (item.student_no != null && item.student_no !== '')
+        ? String(item.student_no).trim().replace(/\.0+$/, '')
+        : '';
+
+      if (!courseName && !courseId) {
+        errors.push(studentName + '：缺少课程名称');
+        continue;
+      }
+      if (courseName && !courseId) {
+        const matched = matchCourseByName(courseName, courseList);
+        if (matched) {
+          courseId = matched.id;
+          courseName = matched.name;
+        }
+      }
+
+      const parsedSave = parseGradeClassFields(grade, className);
+      const saveGrade = parsedSave.grade || grade;
+      const saveClass = parsedSave.class_name || className;
+      if (!studentName || (!saveGrade && !saveClass)) {
+        errors.push(studentName || ('第' + (i + 1) + '条') + '：班级信息不完整');
+        continue;
+      }
+      const key = selectionStudentKey(saveGrade, saveClass, studentName);
+      pending.set(key, {
+        key: key,
+        grade: saveGrade,
+        class_name: saveClass,
+        student_name: studentName,
+        gender: gender,
+        student_no: studentNo,
+        course_id: courseId > 0 ? courseId : null,
+        course_name: courseName
+      });
+    } catch (e) {
+      errors.push('第' + (i + 1) + '条失败: ' + (e && e.message));
+    }
+  }
+
+  const deleteStmts = [];
+  const writeStmts = [];
+  const countDeltas = new Map();
+  const affectedCourses = new Set();
+  const results = [];
+  const unselectedClearKeys = [];
+  const nowIso = new Date().toISOString();
+
+  for (const item of pending.values()) {
+    const existing = existingByKey.get(item.key);
+    if (existing && Number(existing.is_locked) === 1) {
+      writeStmts.push(
+        db.prepare(
+          'UPDATE selections SET grade = ?, class_name = ?, gender = ?, student_no = CASE WHEN ? = \'\' THEN student_no ELSE ? END WHERE id = ?'
+        ).bind(
+          item.grade,
+          item.class_name,
+          item.gender || existing.gender || '',
+          item.student_no,
+          item.student_no,
+          existing.id
+        )
+      );
+      const updated = Object.assign({}, existing, {
+        grade: item.grade,
+        class_name: item.class_name,
+        gender: item.gender || existing.gender || '',
+        student_no: item.student_no || existing.student_no || ''
+      });
+      results.push(updated);
+      if (updated.course_name) affectedCourses.add(String(updated.course_name).trim());
+      unselectedClearKeys.push(item);
+      continue;
+    }
+
+    if (existing) {
+      deleteStmts.push(db.prepare('DELETE FROM selections WHERE id = ?').bind(existing.id));
+      if (existing.course_id) {
+        const cid = Number(existing.course_id);
+        countDeltas.set(cid, (countDeltas.get(cid) || 0) - 1);
+      }
+      if (existing.course_name) affectedCourses.add(String(existing.course_name).trim());
+    }
+
+    writeStmts.push(
+      db.prepare(
+        'INSERT INTO selections (grade, class_name, student_name, gender, student_no, course_id, course_name, selected_at, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)'
+      ).bind(
+        item.grade,
+        item.class_name,
+        item.student_name,
+        item.gender,
+        item.student_no,
+        item.course_id,
+        item.course_name,
+        nowIso
+      )
+    );
+    if (item.course_id) {
+      const cid = Number(item.course_id);
+      countDeltas.set(cid, (countDeltas.get(cid) || 0) + 1);
+    }
+    if (item.course_name) affectedCourses.add(String(item.course_name).trim());
+    results.push({
+      grade: item.grade,
+      class_name: item.class_name,
+      student_name: item.student_name,
+      gender: item.gender,
+      student_no: item.student_no,
+      course_id: item.course_id,
+      course_name: item.course_name,
+      is_locked: 0,
+      selected_at: nowIso
+    });
+    unselectedClearKeys.push(item);
+  }
+
+  if (deleteStmts.length) await runD1Batch(db, deleteStmts);
+  if (writeStmts.length) await runD1Batch(db, writeStmts);
+  if (countDeltas.size) await applyCourseCountDeltas(db, countDeltas);
+
+  if (unselectedClearKeys.length) {
+    const clearStmts = [];
+    for (const k of unselectedClearKeys) {
+      clearStmts.push(
+        db.prepare('DELETE FROM unselected_students WHERE student_name = ?').bind(k.student_name)
+      );
+    }
+    try { await runD1Batch(db, clearStmts); } catch (clearErr) {
+      console.warn('bulk clear unselected:', clearErr && clearErr.message);
+    }
+  }
+
+  await bumpSelectionDataRevision(db);
+  try {
+    await db.prepare('DELETE FROM system_settings WHERE key = ?').bind('admin_cleared_selections_at').run();
+  } catch (_) {}
+
+  const totalRes = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
+  const syncP = syncTeacherClassroomForCourseNames(db, [...affectedCourses]).catch(function (err) {
+    console.warn('syncTeacherClassroom after bulk import:', err && err.message);
+  });
+  if (context && typeof context.waitUntil === 'function') context.waitUntil(syncP);
+  else await syncP;
+
+  if (!results.length) {
+    return json({
+      success: false,
+      count: 0,
+      total: (totalRes && totalRes.count) || 0,
+      selections: [],
+      error: errors.length ? errors.slice(0, 5).join('；') : '没有成功写入的选课记录',
+      errors: errors.length ? errors : undefined
+    }, 400);
+  }
+
+  return json({
+    success: true,
+    count: results.length,
+    total: (totalRes && totalRes.count) || results.length,
+    selections: results,
+    errors: errors.length ? errors : undefined
+  });
 }
 
 function normalizeCourseMatchKey(s) {
