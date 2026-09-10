@@ -1477,6 +1477,12 @@ function dedupeSelectionRows(rows) {
 
 function sortSelectionsByClass(rows) {
   const gradeRank = { '六年级': 6, '七年级': 7 };
+  const studentNoNum = (s) => {
+    const raw = String((s && s.student_no) || '').trim().replace(/\.0+$/, '');
+    if (!raw || !/^\d+$/.test(raw)) return null;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  };
   return (rows || []).slice().sort((a, b) => {
     const pa = parseGradeClassFields(a.grade, a.class_name);
     const pb = parseGradeClassFields(b.grade, b.class_name);
@@ -1487,13 +1493,16 @@ function sortSelectionsByClass(rows) {
     const cb = parseInt(pb.classNum, 10) || 999;
     if (ca !== cb) return ca - cb;
     // 班级内学号升序；无学号靠后，再按姓名
-    const na = parseInt(String(a.student_no || '').trim(), 10);
-    const nb = parseInt(String(b.student_no || '').trim(), 10);
-    const aHas = Number.isFinite(na);
-    const bHas = Number.isFinite(nb);
-    if (aHas && bHas && na !== nb) return na - nb;
-    if (aHas && !bHas) return -1;
-    if (!aHas && bHas) return 1;
+    const na = studentNoNum(a);
+    const nb = studentNoNum(b);
+    const sa = String(a.student_no || '').trim();
+    const sb = String(b.student_no || '').trim();
+    if (na != null && nb != null && na !== nb) return na - nb;
+    if (na != null && nb == null) return -1;
+    if (na == null && nb != null) return 1;
+    if (sa && sb && sa !== sb) return sa.localeCompare(sb, 'zh');
+    if (sa && !sb) return -1;
+    if (!sa && sb) return 1;
     const nameCmp = String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
     if (nameCmp) return nameCmp;
     return (Number(b.is_locked) === 1 ? 1 : 0) - (Number(a.is_locked) === 1 ? 1 : 0);
