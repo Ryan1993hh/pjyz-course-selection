@@ -7015,6 +7015,15 @@ function showUnselectedAfterImport(unselectedRows){
   renderUnselectedStudents();
 }
 
+/** 添加学生后：留在选课数据视图并刷新全量列表，避免原有选课记录被筛选/切视图隐藏 */
+async function refreshSelectionsAfterStudentAdd() {
+  clearSelectionFilters();
+  switchToSelectionsView();
+  selectionsCheckedIds.clear();
+  selectionsPage = 1;
+  await querySelections({ silent: true });
+}
+
 async function deleteSelection(id){
   if (!confirm('确定要删除这条选课记录吗？')) return;
   var idStr = String(id);
@@ -7542,24 +7551,8 @@ async function exportSelections(){
 
       closeModal();
       toast(msg, errCount ? 'warning' : 'success');
-
-      if (courseName) {
-        clearSelectionFilters();
-        var fg = document.getElementById('filterGrade');
-        var fc = document.getElementById('filterClass');
-        var fs = document.getElementById('filterStudent');
-        if (fg) fg.value = grade;
-        if (typeof updateClassFilter === 'function') updateClassFilter();
-        if (fc) fc.value = String(classNum);
-        if (fs) fs.value = name;
-        currentViewMode = 'selections';
-        await querySelections();
-      } else if (Array.isArray(data.unselected)) {
-        showUnselectedAfterImport(data.unselected);
-      } else {
-        clearSelectionFilters();
-        switchToUnselectedView();
-      }
+      // 始终回到选课数据全量列表：有课程的新学生会追加显示，原有记录不受影响
+      await refreshSelectionsAfterStudentAdd();
     } catch (e) {
       toast('添加学生失败：' + e.message, 'error');
       if (btn) { btn.disabled = false; btn.textContent = '确认添加'; }
@@ -7769,12 +7762,8 @@ async function handleSchoolRosterImport(file) {
       console.warn('school roster import errors', data.errors);
     }
     if (data.count > 0) {
-      if (Array.isArray(data.unselected)) {
-        showUnselectedAfterImport(data.unselected);
-      } else {
-        clearSelectionFilters();
-        switchToUnselectedView();
-      }
+      // 追加名单后仍显示选课数据全量列表，不切到未选课视图以免原有记录看起来“消失”
+      await refreshSelectionsAfterStudentAdd();
     }
   } catch (e) {
     toast('导入学生失败：' + e.message, 'error');
