@@ -1544,6 +1544,18 @@ async function syncMissingSelectionsFromClassroom(db, courseFilter, opts) {
   const force = !!opts.force;
   const filter = String(courseFilter || '').trim();
 
+  // 管理员刚执行「删除所有」后，禁止从教师端教室名单自动回填选课表
+  if (!force) {
+    try {
+      const cleared = await db.prepare('SELECT value FROM system_settings WHERE key = ?')
+        .bind('admin_cleared_selections_at').first();
+      const clearedAt = cleared ? Date.parse(String(cleared.value || '')) : NaN;
+      if (Number.isFinite(clearedAt) && (Date.now() - clearedAt) < (24 * 60 * 60 * 1000)) {
+        return { skipped: true, inserted: 0, reason: 'admin_cleared' };
+      }
+    } catch (_) {}
+  }
+
   // 全量补全默认 15 分钟最多一次，避免每次查询都扫库把 D1 免费配额打爆
   if (!force && !filter) {
     try {
@@ -2300,28 +2312,48 @@ async function handleClearSelections(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
 
-  const allRes = await db.prepare('SELECT * FROM selections').all();
+  const allRes = await db.prepare(
+    `SELECT grade, class_name, student_name, gender, student_no, course_id, course_name, is_locked, selected_at
+     FROM selections`
+  ).all();
   const snapshot = allRes.results || [];
   if (snapshot.length) {
     try {
       await saveSelectionRecycleSnapshot(db, 'selections', snapshot);
     } catch (snapErr) {
+      // 备份失败不阻断清空，避免「删除所有」后列表仍显示旧数据
       console.warn('selection recycle snapshot:', snapErr && snapErr.message);
-      return json({ error: '备份失败，已取消清空：' + ((snapErr && snapErr.message) || '未知错误') }, 500);
     }
   }
 
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
-  await syncAllTeacherClassroomsFromSelections(db);
-  await purgeAllOrphanLeaveReports();
+
+  // 标记管理员已清空，避免随后 sync=1 从教师端教室名单再写回选课表
+  try {
+    await db.prepare(
+      'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    ).bind('admin_cleared_selections_at', new Date().toISOString()).run();
+    await db.prepare(
+      'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    ).bind(SYNC_CLASSROOM_THROTTLE_KEY, new Date().toISOString()).run();
+  } catch (_) {}
+
+  try {
+    await syncAllTeacherClassroomsFromSelections(db);
+  } catch (syncErr) {
+    console.warn('sync classrooms after clear selections:', syncErr && syncErr.message);
+  }
+  try {
+    await purgeAllOrphanLeaveReports();
+  } catch (_) {}
   try {
     await rebuildUnselectedFromSchoolRoster(db, { mode: 'full' });
   } catch (rebuildErr) {
     console.warn('rebuild unselected after clear selections:', rebuildErr && rebuildErr.message);
   }
   await bumpSelectionDataRevision(db);
-  return json({ success: true, recycled: snapshot.length });
+  return json({ success: true, recycled: snapshot.length, cleared: true });
 }
 
 async function saveSelectionRecycleSnapshot(db, type, rows) {
@@ -2477,6 +2509,9 @@ async function handleSelectionDataRestore(db, request) {
   } catch (rebuildErr) {
     console.warn('rebuild unselected after restore:', rebuildErr && rebuildErr.message);
   }
+  try {
+    await db.prepare('DELETE FROM system_settings WHERE key = ?').bind('admin_cleared_selections_at').run();
+  } catch (_) {}
   await bumpSelectionDataRevision(db);
 
   const totalRes = await db.prepare('SELECT COUNT(*) as c FROM selections').first();
