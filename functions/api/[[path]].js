@@ -1824,8 +1824,8 @@ async function handleSelectionsBatchCreate(db, request, context) {
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
     await bumpSelectionDataRevision(db);
     // 教师端教室同步放到后台，避免管理员单条添加被拖慢
-    const courseList = [...affectedCourses];
-    const syncP = syncTeacherClassroomForCourseNames(db, courseList).catch(function (err) {
+    const affectedCourseList = [...affectedCourses];
+    const syncP = syncTeacherClassroomForCourseNames(db, affectedCourseList).catch(function (err) {
       console.warn('syncTeacherClassroom after selections create:', err && err.message);
     });
     if (context && typeof context.waitUntil === 'function') {
