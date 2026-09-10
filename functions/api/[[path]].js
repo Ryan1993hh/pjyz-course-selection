@@ -2284,6 +2284,104 @@ async function handleClearSelections(db, request) {
   return json({ success: true });
 }
 
+/** 管理员恢复「删除所有」前的选课/未选课快照 */
+async function handleSelectionDataRestore(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+
+  let body;
+  try {
+    body = JSON.parse(await request.text());
+  } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const type = String(body.type || 'selections').trim() || 'selections';
+  const rows = Array.isArray(body.rows) ? body.rows
+    : (Array.isArray(body.selections) ? body.selections : []);
+  if (!rows.length) return json({ error: '没有可恢复的数据' }, 400);
+
+  if (type === 'unselected') {
+    await db.prepare('DELETE FROM unselected_students').run();
+    const savedAt = new Date().toISOString();
+    const stmts = [];
+    for (const item of rows) {
+      const name = String((item && item.student_name) || '').trim();
+      if (!name) continue;
+      const parsed = parseGradeClassFields(item.grade || '', item.class_name || item.class || '');
+      stmts.push(db.prepare(
+        'INSERT INTO unselected_students (grade, class_name, student_name, saved_at) VALUES (?, ?, ?, ?)'
+      ).bind(
+        parsed.grade || item.grade || '',
+        parsed.class_name || item.class_name || '',
+        name,
+        item.saved_at || savedAt
+      ));
+    }
+    await runD1Batch(db, stmts);
+    await bumpSelectionDataRevision(db);
+    return json({ success: true, type: 'unselected', count: stmts.length });
+  }
+
+  // 覆盖恢复选课表
+  await db.prepare('DELETE FROM selections').run();
+  await db.prepare('UPDATE courses SET selected_count = 0').run();
+
+  const courseCount = new Map();
+  const insertStmts = [];
+  const nowIso = new Date().toISOString();
+  for (const item of rows) {
+    const studentName = String((item && item.student_name) || '').trim();
+    if (!studentName) continue;
+    const parsed = parseGradeClassFields(item.grade || '', item.class_name || item.class || '');
+    const courseId = item.course_id != null && item.course_id !== ''
+      ? (parseInt(item.course_id, 10) || 0)
+      : 0;
+    const courseName = String(item.course_name || '').trim();
+    const locked = Number(item.is_locked) === 1 ? 1 : 0;
+    const selectedAt = String(item.selected_at || '').trim() || nowIso;
+    insertStmts.push(db.prepare(
+      `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      parsed.grade || item.grade || '',
+      parsed.class_name || item.class_name || '',
+      studentName,
+      String(item.gender || ''),
+      courseId > 0 ? courseId : null,
+      courseName,
+      selectedAt,
+      locked
+    ));
+    if (courseId > 0) {
+      courseCount.set(courseId, (courseCount.get(courseId) || 0) + 1);
+    }
+  }
+  await runD1Batch(db, insertStmts);
+
+  const countStmts = [];
+  for (const [cid, cnt] of courseCount.entries()) {
+    countStmts.push(
+      db.prepare('UPDATE courses SET selected_count = ? WHERE id = ?').bind(cnt, cid)
+    );
+  }
+  await runD1Batch(db, countStmts);
+
+  await syncAllTeacherClassroomsFromSelections(db);
+  try {
+    await rebuildUnselectedFromSchoolRoster(db, { mode: 'full' });
+  } catch (rebuildErr) {
+    console.warn('rebuild unselected after restore:', rebuildErr && rebuildErr.message);
+  }
+  await bumpSelectionDataRevision(db);
+
+  const totalRes = await db.prepare('SELECT COUNT(*) as c FROM selections').first();
+  return json({
+    success: true,
+    type: 'selections',
+    count: (totalRes && totalRes.c) || insertStmts.length
+  });
+}
+
 // ---- Unselected Students ----
 async function handleUnselectedStudentsGet(db, request) {
   const url = new URL(request.url);
@@ -6686,6 +6784,11 @@ async function onRequestImpl(context) {
     if (method === 'GET') return handleSelectionsGet(db, request, url);
     if (method === 'POST') return handleSelectionsBatchCreate(db, request);
     if (method === 'DELETE') return handleClearSelections(db, request);
+  }
+
+  // /api/selections/restore — 恢复删除所有前的快照（须在 :id 之前）
+  if (path === '/api/selections/restore' && method === 'POST') {
+    return handleSelectionDataRestore(db, request);
   }
 
   // /api/selections/pre-enroll — 管理员提前录课（须在 :id 路由之前）

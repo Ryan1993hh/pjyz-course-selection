@@ -3731,7 +3731,8 @@ th.sortable.active .sort-icon { opacity: 1; }
     white-space: nowrap;
   }
   #section-selections .sel-mob-count-slot #batchDeleteBtn,
-  #section-selections .sel-mob-count-slot #deleteAllSelectionsBtn {
+  #section-selections .sel-mob-count-slot #deleteAllSelectionsBtn,
+  #section-selections .sel-mob-count-slot #restoreDeletedSelectionsBtn {
     height: 30px;
     min-height: 30px !important;
     max-height: 30px;
@@ -4240,6 +4241,7 @@ th.sortable.active .sort-icon { opacity: 1; }
                   <span class="data-count" id="dataCount">共 0 条数据</span>
                   <button type="button" class="btn btn-danger btn-sm" id="batchDeleteBtn" disabled>删除</button>
                   <button type="button" class="btn btn-outline btn-sm" id="deleteAllSelectionsBtn" title="清空全部选课数据">删除所有</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="restoreDeletedSelectionsBtn" disabled title="暂无可恢复的删除备份">恢复删除</button>
                 </div>
               </div>
               <div class="data-toolbar-right desktop-only">
@@ -6925,26 +6927,117 @@ function updateBatchDeleteBtn(){
   sync(document.getElementById('batchDeleteBtn'));
 }
 
+var SEL_DELETE_BACKUP_KEY = 'pjyz_sel_delete_backup_v1';
+
+function readSelDeleteBackup() {
+  try {
+    var raw = localStorage.getItem(SEL_DELETE_BACKUP_KEY);
+    if (!raw) return null;
+    var data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.rows) || !data.rows.length) return null;
+    return data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeSelDeleteBackup(type, rows) {
+  try {
+    localStorage.setItem(SEL_DELETE_BACKUP_KEY, JSON.stringify({
+      at: Date.now(),
+      type: type || 'selections',
+      rows: rows || []
+    }));
+  } catch (e) {
+    console.warn('writeSelDeleteBackup:', e);
+  }
+  updateRestoreDeleteBtn();
+}
+
+function clearSelDeleteBackup() {
+  try { localStorage.removeItem(SEL_DELETE_BACKUP_KEY); } catch (_) {}
+  updateRestoreDeleteBtn();
+}
+
+function updateRestoreDeleteBtn() {
+  var btn = document.getElementById('restoreDeletedSelectionsBtn');
+  if (!btn) return;
+  var bak = readSelDeleteBackup();
+  btn.disabled = !bak;
+  if (bak) {
+    var when = '';
+    try { when = new Date(bak.at).toLocaleString(); } catch (_) {}
+    btn.title = '恢复删除前的 ' + bak.rows.length + ' 条记录' + (when ? '（' + when + '）' : '');
+  } else {
+    btn.title = '暂无可恢复的删除备份（先执行「删除所有」后可恢复）';
+  }
+}
+
+function serializeSelectionBackupRows(rows) {
+  return (rows || []).map(function (s) {
+    return {
+      grade: s.grade || '',
+      class_name: s.class_name || '',
+      student_name: s.student_name || '',
+      gender: s.gender || '',
+      course_id: s.course_id != null ? s.course_id : null,
+      course_name: s.course_name || '',
+      is_locked: Number(s.is_locked) === 1 ? 1 : 0,
+      selected_at: s.selected_at || ''
+    };
+  }).filter(function (s) { return !!(s.student_name); });
+}
+
+async function captureBackupBeforeDeleteAll() {
+  if (currentViewMode === 'unselected') {
+    var udata = await request('GET', '/api/unselected-students');
+    var urows = (udata && udata.unselected) || [];
+    if (!urows.length && unselectedData && unselectedData.length) urows = unselectedData.slice();
+    if (!urows.length) throw new Error('当前没有可备份的未选课数据');
+    writeSelDeleteBackup('unselected', urows.map(function (s) {
+      return {
+        grade: s.grade || '',
+        class_name: s.class_name || '',
+        student_name: s.student_name || '',
+        gender: s.gender || '',
+        saved_at: s.saved_at || ''
+      };
+    }).filter(function (s) { return !!(s.student_name); }));
+    return readSelDeleteBackup();
+  }
+  var data = await request('GET', '/api/selections');
+  var rows = Array.isArray(data) ? data : ((data && data.selections) || []);
+  if (!rows.length && selectionsData && selectionsData.length) rows = selectionsData.slice();
+  if (!rows.length && preEnrollData && preEnrollData.length && currentViewMode === 'pre_enroll') {
+    rows = preEnrollData.slice();
+  }
+  if (!rows.length) throw new Error('当前没有可备份的选课数据');
+  writeSelDeleteBackup('selections', serializeSelectionBackupRows(rows));
+  return readSelDeleteBackup();
+}
+
 async function deleteAllSelections(){
   if (currentViewMode === 'unselected') {
-    if (!confirm('确定清空全部未选课学生记录吗？此操作不可恢复。')) return;
+    if (!confirm('确定清空全部未选课学生记录吗？清空后可点击「恢复删除」回退。')) return;
     try {
+      await captureBackupBeforeDeleteAll();
       await request('DELETE', '/api/unselected-students');
       unselectedData = [];
       selectionsCheckedIds.clear();
       renderUnselectedStudents();
-      toast('已清空全部未选课记录', 'success');
+      toast('已清空全部未选课记录，可点击「恢复删除」回退', 'success');
     } catch (e) {
       toast('清空失败：' + e.message, 'error');
     }
     return;
   }
   if (currentViewMode === 'pre_enroll') {
-    if (!confirm('确定清空全部内定（提前录课）学生吗？此操作不可恢复。')) return;
-  } else if (!confirm('确定清空选课数据中的全部记录吗？此操作不可恢复。')) {
+    if (!confirm('确定清空全部内定（提前录课）学生吗？清空后可点击「恢复删除」回退。')) return;
+  } else if (!confirm('确定清空选课数据中的全部记录吗？清空后可点击「恢复删除」回退。')) {
     return;
   }
   try {
+    await captureBackupBeforeDeleteAll();
     await request('DELETE', '/api/selections');
     selectionsData = [];
     preEnrollData = [];
@@ -6955,15 +7048,51 @@ async function deleteAllSelections(){
       currentViewMode = 'selections';
       renderSelections();
     }
-    try { 
+    try {
       var st = document.getElementById('statTotal');
       var sc = document.getElementById('statCourseCount');
       if (st) st.textContent = '0';
       if (sc) sc.textContent = '0';
     } catch (_) {}
-    toast('已清空全部选课数据', 'success');
+    toast('已清空全部选课数据，可点击「恢复删除」回退', 'success');
   } catch (e) {
     toast('清空失败：' + e.message, 'error');
+  }
+}
+
+async function restoreDeletedSelections(){
+  var bak = readSelDeleteBackup();
+  if (!bak || !bak.rows || !bak.rows.length) {
+    toast('暂无可恢复的删除备份', 'warning');
+    updateRestoreDeleteBtn();
+    return;
+  }
+  var tip = '确定恢复删除前的 ' + bak.rows.length + ' 条记录吗？当前列表将被覆盖为删除前的内容。';
+  if (!confirm(tip)) return;
+  var btn = document.getElementById('restoreDeletedSelectionsBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '恢复中…'; }
+  try {
+    var res = await request('POST', '/api/selections/restore', {
+      type: bak.type || 'selections',
+      rows: bak.rows
+    });
+    clearSelDeleteBackup();
+    clearSelectionFilters();
+    selectionsCheckedIds.clear();
+    _selectionsQueryCache = { qs: '', at: 0 };
+    if ((bak.type || 'selections') === 'unselected') {
+      currentViewMode = 'unselected';
+      await queryUnselectedStudents({ silent: true });
+    } else {
+      switchToSelectionsView();
+      await querySelections({ silent: true, useCache: false });
+    }
+    toast('已恢复 ' + ((res && res.count) || bak.rows.length) + ' 条记录', 'success');
+  } catch (e) {
+    toast('恢复失败：' + e.message, 'error');
+  } finally {
+    if (btn) btn.textContent = '恢复删除';
+    updateRestoreDeleteBtn();
   }
 }
 
@@ -7369,6 +7498,8 @@ async function exportSelections(){
   safeBind('resetFilterBtnMob', 'click', resetFilterSelections);
   safeBind('batchDeleteBtn', 'click', batchDeleteSelections);
   safeBind('deleteAllSelectionsBtn', 'click', deleteAllSelections);
+  safeBind('restoreDeletedSelectionsBtn', 'click', restoreDeletedSelections);
+  updateRestoreDeleteBtn();
   safeBind('toggleSelectionBtn', 'click', toggleSelectionLock);
   safeBind('toggleSelectionBtnMob', 'click', toggleSelectionLock);
   safeBind('unselectedBtn', 'click', function(){
