@@ -6959,20 +6959,6 @@ function clearSelDeleteBackup() {
   updateRestoreDeleteBtn();
 }
 
-function updateRestoreDeleteBtn() {
-  var btn = document.getElementById('restoreDeletedSelectionsBtn');
-  if (!btn) return;
-  var bak = readSelDeleteBackup();
-  btn.disabled = !bak;
-  if (bak) {
-    var when = '';
-    try { when = new Date(bak.at).toLocaleString(); } catch (_) {}
-    btn.title = '恢复删除前的 ' + bak.rows.length + ' 条记录' + (when ? '（' + when + '）' : '');
-  } else {
-    btn.title = '暂无可恢复的删除备份（先执行「删除所有」后可恢复）';
-  }
-}
-
 function serializeSelectionBackupRows(rows) {
   return (rows || []).map(function (s) {
     return {
@@ -6980,6 +6966,7 @@ function serializeSelectionBackupRows(rows) {
       class_name: s.class_name || '',
       student_name: s.student_name || '',
       gender: s.gender || '',
+      student_no: s.student_no || '',
       course_id: s.course_id != null ? s.course_id : null,
       course_name: s.course_name || '',
       is_locked: Number(s.is_locked) === 1 ? 1 : 0,
@@ -6988,11 +6975,42 @@ function serializeSelectionBackupRows(rows) {
   }).filter(function (s) { return !!(s.student_name); });
 }
 
+var _recycleStatusAvailable = false;
+var _recycleStatusCount = 0;
+
+function updateRestoreDeleteBtn() {
+  var btn = document.getElementById('restoreDeletedSelectionsBtn');
+  if (!btn) return;
+  var bak = readSelDeleteBackup();
+  var localOk = !!(bak && bak.rows && bak.rows.length && !(bak.rows[0] && bak.rows[0].__server));
+  var enable = localOk || _recycleStatusAvailable;
+  btn.disabled = !enable;
+  if (localOk) {
+    var when = '';
+    try { when = new Date(bak.at).toLocaleString(); } catch (_) {}
+    btn.title = '恢复删除前的 ' + bak.rows.length + ' 条记录' + (when ? '（' + when + '）' : '');
+  } else if (_recycleStatusAvailable) {
+    btn.title = '恢复删除前的 ' + (_recycleStatusCount || 0) + ' 条记录（服务端备份）';
+  } else {
+    btn.title = '暂无可恢复的删除备份（先执行「删除所有」后可恢复）';
+  }
+}
+
+function refreshRecycleStatus() {
+  request('GET', '/api/selections/recycle-status').then(function (st) {
+    _recycleStatusAvailable = !!(st && st.available);
+    _recycleStatusCount = (st && st.count) || 0;
+    updateRestoreDeleteBtn();
+  }).catch(function () {});
+}
+
 async function captureBackupBeforeDeleteAll() {
   if (currentViewMode === 'unselected') {
-    var udata = await request('GET', '/api/unselected-students');
-    var urows = (udata && udata.unselected) || [];
-    if (!urows.length && unselectedData && unselectedData.length) urows = unselectedData.slice();
+    var urows = (unselectedData && unselectedData.length) ? unselectedData.slice() : [];
+    if (!urows.length) {
+      var udata = await request('GET', '/api/unselected-students');
+      urows = (udata && udata.unselected) || [];
+    }
     if (!urows.length) throw new Error('当前没有可备份的未选课数据');
     writeSelDeleteBackup('unselected', urows.map(function (s) {
       return {
@@ -7003,17 +7021,26 @@ async function captureBackupBeforeDeleteAll() {
         saved_at: s.saved_at || ''
       };
     }).filter(function (s) { return !!(s.student_name); }));
-    return readSelDeleteBackup();
+    var bakU = readSelDeleteBackup();
+    if (!bakU) throw new Error('本地备份失败，已取消清空（请清理浏览器存储后重试）');
+    return bakU;
   }
-  var data = await request('GET', '/api/selections');
-  var rows = Array.isArray(data) ? data : ((data && data.selections) || []);
-  if (!rows.length && selectionsData && selectionsData.length) rows = selectionsData.slice();
-  if (!rows.length && preEnrollData && preEnrollData.length && currentViewMode === 'pre_enroll') {
+  // 优先用当前列表内存数据备份，避免再拉全量导致超时
+  var rows = [];
+  if (currentViewMode === 'pre_enroll' && preEnrollData && preEnrollData.length) {
     rows = preEnrollData.slice();
+  } else if (selectionsData && selectionsData.length) {
+    rows = selectionsData.slice();
+  }
+  if (!rows.length) {
+    var data = await request('GET', '/api/selections');
+    rows = Array.isArray(data) ? data : ((data && data.selections) || []);
   }
   if (!rows.length) throw new Error('当前没有可备份的选课数据');
   writeSelDeleteBackup('selections', serializeSelectionBackupRows(rows));
-  return readSelDeleteBackup();
+  var bak = readSelDeleteBackup();
+  if (!bak) throw new Error('本地备份失败，已取消清空（数据量较大时请重试或清理浏览器存储）');
+  return bak;
 }
 
 async function deleteAllSelections(){
@@ -7025,6 +7052,7 @@ async function deleteAllSelections(){
       unselectedData = [];
       selectionsCheckedIds.clear();
       renderUnselectedStudents();
+      updateRestoreDeleteBtn();
       toast('已清空全部未选课记录，可点击「恢复删除」回退', 'success');
     } catch (e) {
       toast('清空失败：' + e.message, 'error');
@@ -7038,23 +7066,24 @@ async function deleteAllSelections(){
   }
   try {
     await captureBackupBeforeDeleteAll();
-    await request('DELETE', '/api/selections');
+    var delRes = await request('DELETE', '/api/selections');
     selectionsData = [];
     preEnrollData = [];
     selectionsCheckedIds.clear();
-    if (currentViewMode === 'pre_enroll') {
-      renderPreEnrollStudents();
-    } else {
-      currentViewMode = 'selections';
-      renderSelections();
-    }
+    _selectionsQueryCache = { qs: '', at: 0 };
+    clearSelectionFilters();
+    switchToSelectionsView();
+    renderSelections();
     try {
       var st = document.getElementById('statTotal');
       var sc = document.getElementById('statCourseCount');
       if (st) st.textContent = '0';
       if (sc) sc.textContent = '0';
     } catch (_) {}
-    toast('已清空全部选课数据，可点击「恢复删除」回退', 'success');
+    updateRestoreDeleteBtn();
+    refreshRecycleStatus();
+    var n = (delRes && delRes.recycled) || 0;
+    toast(n ? ('已清空 ' + n + ' 条选课数据，列表已更新为空；可点击「恢复删除」回退') : '已清空全部选课数据，可点击「恢复删除」回退', 'success');
   } catch (e) {
     toast('清空失败：' + e.message, 'error');
   }
@@ -7062,37 +7091,54 @@ async function deleteAllSelections(){
 
 async function restoreDeletedSelections(){
   var bak = readSelDeleteBackup();
-  if (!bak || !bak.rows || !bak.rows.length) {
+  var localOk = bak && bak.rows && bak.rows.length && !(bak.rows[0] && bak.rows[0].__server);
+  if (!localOk && !_recycleStatusAvailable) {
+    // 再查一次服务端
+    try {
+      var st = await request('GET', '/api/selections/recycle-status');
+      _recycleStatusAvailable = !!(st && st.available);
+      _recycleStatusCount = (st && st.count) || 0;
+    } catch (_) {}
+  }
+  if (!localOk && !_recycleStatusAvailable) {
     toast('暂无可恢复的删除备份', 'warning');
     updateRestoreDeleteBtn();
     return;
   }
-  var tip = '确定恢复删除前的 ' + bak.rows.length + ' 条记录吗？当前列表将被覆盖为删除前的内容。';
+  var tip = localOk
+    ? ('确定恢复删除前的 ' + bak.rows.length + ' 条记录吗？当前列表将被覆盖为删除前的内容。')
+    : ('确定从回收站恢复删除前的 ' + (_recycleStatusCount || '') + ' 条选课数据吗？当前列表将被覆盖。');
   if (!confirm(tip)) return;
   var btn = document.getElementById('restoreDeletedSelectionsBtn');
   if (btn) { btn.disabled = true; btn.textContent = '恢复中…'; }
   try {
-    var res = await request('POST', '/api/selections/restore', {
-      type: bak.type || 'selections',
-      rows: bak.rows
-    });
+    var payload = { use_recycle: true };
+    if (localOk) {
+      payload.type = bak.type || 'selections';
+      payload.rows = bak.rows;
+    }
+    var res = await request('POST', '/api/selections/restore', payload);
     clearSelDeleteBackup();
+    _recycleStatusAvailable = false;
+    _recycleStatusCount = 0;
     clearSelectionFilters();
     selectionsCheckedIds.clear();
     _selectionsQueryCache = { qs: '', at: 0 };
-    if ((bak.type || 'selections') === 'unselected') {
+    if ((res && res.type) === 'unselected' || (localOk && bak.type === 'unselected')) {
       currentViewMode = 'unselected';
+      updateSelectionSidebarButtons('unselected');
       await queryUnselectedStudents({ silent: true });
     } else {
       switchToSelectionsView();
       await querySelections({ silent: true, useCache: false });
     }
-    toast('已恢复 ' + ((res && res.count) || bak.rows.length) + ' 条记录', 'success');
+    toast('已恢复 ' + ((res && res.count) || 0) + ' 条记录，列表已刷新', 'success');
   } catch (e) {
     toast('恢复失败：' + e.message, 'error');
   } finally {
     if (btn) btn.textContent = '恢复删除';
     updateRestoreDeleteBtn();
+    refreshRecycleStatus();
   }
 }
 
@@ -7500,6 +7546,7 @@ async function exportSelections(){
   safeBind('deleteAllSelectionsBtn', 'click', deleteAllSelections);
   safeBind('restoreDeletedSelectionsBtn', 'click', restoreDeletedSelections);
   updateRestoreDeleteBtn();
+  refreshRecycleStatus();
   safeBind('toggleSelectionBtn', 'click', toggleSelectionLock);
   safeBind('toggleSelectionBtnMob', 'click', toggleSelectionLock);
   safeBind('unselectedBtn', 'click', function(){

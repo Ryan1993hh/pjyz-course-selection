@@ -134,6 +134,13 @@ const INIT_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_teacher_classroom_teacher ON teacher_classroom(teacher_name)`,
   `CREATE INDEX IF NOT EXISTS idx_teacher_classroom_synced ON teacher_classroom(synced_at)`,
+  `CREATE TABLE IF NOT EXISTS selection_recycle_bin (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    data_type TEXT NOT NULL DEFAULT 'selections',
+    payload TEXT NOT NULL DEFAULT '[]',
+    row_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
   `CREATE TABLE IF NOT EXISTS course_hour_overrides (
     course_name TEXT NOT NULL,
     session_date TEXT NOT NULL,
@@ -2292,7 +2299,18 @@ async function handleClearSelections(db, request) {
 
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
-  
+
+  const allRes = await db.prepare('SELECT * FROM selections').all();
+  const snapshot = allRes.results || [];
+  if (snapshot.length) {
+    try {
+      await saveSelectionRecycleSnapshot(db, 'selections', snapshot);
+    } catch (snapErr) {
+      console.warn('selection recycle snapshot:', snapErr && snapErr.message);
+      return json({ error: '备份失败，已取消清空：' + ((snapErr && snapErr.message) || '未知错误') }, 500);
+    }
+  }
+
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
   await syncAllTeacherClassroomsFromSelections(db);
@@ -2303,7 +2321,60 @@ async function handleClearSelections(db, request) {
     console.warn('rebuild unselected after clear selections:', rebuildErr && rebuildErr.message);
   }
   await bumpSelectionDataRevision(db);
-  return json({ success: true });
+  return json({ success: true, recycled: snapshot.length });
+}
+
+async function saveSelectionRecycleSnapshot(db, type, rows) {
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS selection_recycle_bin (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      data_type TEXT NOT NULL DEFAULT 'selections',
+      payload TEXT NOT NULL DEFAULT '[]',
+      row_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+  const payload = JSON.stringify(Array.isArray(rows) ? rows : []);
+  await db.prepare(
+    `INSERT INTO selection_recycle_bin (id, data_type, payload, row_count, created_at)
+     VALUES (1, ?, ?, ?, datetime('now'))
+     ON CONFLICT(id) DO UPDATE SET
+       data_type = excluded.data_type,
+       payload = excluded.payload,
+       row_count = excluded.row_count,
+       created_at = excluded.created_at`
+  ).bind(type || 'selections', payload, (rows && rows.length) || 0).run();
+}
+
+async function readSelectionRecycleSnapshot(db) {
+  try {
+    const row = await db.prepare('SELECT data_type, payload, row_count, created_at FROM selection_recycle_bin WHERE id = 1').first();
+    if (!row || !row.payload) return null;
+    let rows = [];
+    try { rows = JSON.parse(row.payload); } catch (_) { rows = []; }
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return {
+      type: row.data_type || 'selections',
+      rows: rows,
+      count: Number(row.row_count) || rows.length,
+      at: row.created_at || ''
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function handleSelectionRecycleStatus(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const snap = await readSelectionRecycleSnapshot(db);
+  return json({
+    success: true,
+    available: !!(snap && snap.rows && snap.rows.length),
+    type: snap ? snap.type : '',
+    count: snap ? snap.count : 0,
+    at: snap ? snap.at : ''
+  });
 }
 
 /** 管理员恢复「删除所有」前的选课/未选课快照 */
@@ -2311,15 +2382,26 @@ async function handleSelectionDataRestore(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
 
-  let body;
+  let body = {};
   try {
-    body = JSON.parse(await request.text());
+    const text = await request.text();
+    if (text && String(text).trim()) body = JSON.parse(text);
   } catch (_) {
     return json({ error: '请求体无效' }, 400);
   }
-  const type = String(body.type || 'selections').trim() || 'selections';
-  const rows = Array.isArray(body.rows) ? body.rows
+
+  let type = String(body.type || '').trim();
+  let rows = Array.isArray(body.rows) ? body.rows
     : (Array.isArray(body.selections) ? body.selections : []);
+
+  if (!rows.length || body.use_recycle === true || body.use_recycle === 1) {
+    const snap = await readSelectionRecycleSnapshot(db);
+    if (snap && snap.rows && snap.rows.length) {
+      type = snap.type || type || 'selections';
+      rows = snap.rows;
+    }
+  }
+  type = type || 'selections';
   if (!rows.length) return json({ error: '没有可恢复的数据' }, 400);
 
   if (type === 'unselected') {
@@ -2344,7 +2426,6 @@ async function handleSelectionDataRestore(db, request) {
     return json({ success: true, type: 'unselected', count: stmts.length });
   }
 
-  // 覆盖恢复选课表
   await db.prepare('DELETE FROM selections').run();
   await db.prepare('UPDATE courses SET selected_count = 0').run();
 
@@ -2361,14 +2442,16 @@ async function handleSelectionDataRestore(db, request) {
     const courseName = String(item.course_name || '').trim();
     const locked = Number(item.is_locked) === 1 ? 1 : 0;
     const selectedAt = String(item.selected_at || '').trim() || nowIso;
+    const studentNo = item.student_no != null ? String(item.student_no).trim() : '';
     insertStmts.push(db.prepare(
-      `INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO selections (grade, class_name, student_name, gender, student_no, course_id, course_name, selected_at, is_locked)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       parsed.grade || item.grade || '',
       parsed.class_name || item.class_name || '',
       studentName,
       String(item.gender || ''),
+      studentNo,
       courseId > 0 ? courseId : null,
       courseName,
       selectedAt,
@@ -6811,6 +6894,9 @@ async function onRequestImpl(context) {
   // /api/selections/restore — 恢复删除所有前的快照（须在 :id 之前）
   if (path === '/api/selections/restore' && method === 'POST') {
     return handleSelectionDataRestore(db, request);
+  }
+  if (path === '/api/selections/recycle-status' && method === 'GET') {
+    return handleSelectionRecycleStatus(db, request);
   }
 
   // /api/selections/pre-enroll — 管理员提前录课（须在 :id 路由之前）
