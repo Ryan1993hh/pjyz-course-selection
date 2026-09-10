@@ -183,7 +183,7 @@ const SELECTION_STATUS_KEY = 'selection_enabled';
 const SELECTION_DATA_REVISION_KEY = 'selection_data_revision';
 /** 变更建表/迁移逻辑时递增，用于跳过已完成的冷启动初始化 */
 const SCHEMA_VERSION_KEY = '_schema_version';
-const SCHEMA_VERSION = '20260904d';
+const SCHEMA_VERSION = '20260910a';
 
 /** Worker 隔离区内只跑一次建表/迁移，避免每个 API 请求都打大量 D1 */
 let dbInitPromise = null;
@@ -206,6 +206,24 @@ async function runD1Statements(db, sqlList) {
   }
   for (const stmt of stmts) {
     await stmt.run();
+  }
+}
+
+async function ensureSelectionsColumns(db) {
+  try {
+    const selColsRes = await db.prepare('PRAGMA table_info(selections)').all();
+    const selColNames = (selColsRes.results || []).map((c) => c.name);
+    if (!selColNames.includes('gender')) {
+      await db.prepare("ALTER TABLE selections ADD COLUMN gender TEXT DEFAULT ''").run();
+    }
+    if (!selColNames.includes('is_locked')) {
+      await db.prepare('ALTER TABLE selections ADD COLUMN is_locked INTEGER DEFAULT 0').run();
+    }
+    if (!selColNames.includes('student_no')) {
+      await db.prepare("ALTER TABLE selections ADD COLUMN student_no TEXT DEFAULT ''").run();
+    }
+  } catch (selSchemaErr) {
+    console.warn('ensureSelectionsColumns:', selSchemaErr && selSchemaErr.message);
   }
 }
 
@@ -266,17 +284,7 @@ async function ensureDbReady(db) {
     }
 
     try {
-      const selColsRes = await db.prepare('PRAGMA table_info(selections)').all();
-      const selColNames = (selColsRes.results || []).map((c) => c.name);
-      if (!selColNames.includes('gender')) {
-        await db.prepare("ALTER TABLE selections ADD COLUMN gender TEXT DEFAULT ''").run();
-      }
-      if (!selColNames.includes('is_locked')) {
-        await db.prepare('ALTER TABLE selections ADD COLUMN is_locked INTEGER DEFAULT 0').run();
-      }
-      if (!selColNames.includes('student_no')) {
-        await db.prepare("ALTER TABLE selections ADD COLUMN student_no TEXT DEFAULT ''").run();
-      }
+      await ensureSelectionsColumns(db);
     } catch (selSchemaErr) {
       console.warn('Selections schema migration error:', selSchemaErr.message);
     }
@@ -1719,6 +1727,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
     if (!isAdmin && !await getSelectionEnabled(db)) {
       return json({ error: '当前状态禁止选课，无法保存', code: 'SELECTION_DISABLED' }, 403);
     }
+    await ensureSelectionsColumns(db);
     const text = await request.text();
     const body = JSON.parse(text);
     const arr = Array.isArray(body) ? body : [body];
@@ -1858,6 +1867,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
 
 /** 管理员批量写入选课：预读全表后 batch 删除/插入，适合上传导入 */
 async function handleAdminSelectionsBulkUpsert(db, arr, context) {
+  await ensureSelectionsColumns(db);
   const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
   const courseList = (coursesRes.results || []).filter((c) => c && c.name);
 
