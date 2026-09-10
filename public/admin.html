@@ -6564,36 +6564,7 @@ function switchToSelectionsView(){
 }
 
 function sortSelectionsByClassClient(rows) {
-  var gradeRank = { '六年级': 6, '七年级': 7 };
-  function parseRow(s) {
-    var g = String((s && s.grade) || '').trim();
-    var c = String((s && s.class_name) || '').trim();
-    var m = c.match(/^(六年级|七年级)\s*[\(（]?(\d+)[\)）]?\s*班$/);
-    var classNum = '';
-    if (m) { g = m[1]; classNum = m[2]; }
-    else {
-      m = c.match(/(\d+)/);
-      if (m) classNum = m[1];
-      if (!g) {
-        var gm = (g + c).match(/(六年级|七年级)/);
-        if (gm) g = gm[1];
-      }
-    }
-    return { grade: g, classNum: classNum };
-  }
-  return (rows || []).slice().sort(function(a, b) {
-    var pa = parseRow(a);
-    var pb = parseRow(b);
-    var ga = gradeRank[pa.grade] || 99;
-    var gb = gradeRank[pb.grade] || 99;
-    if (ga !== gb) return ga - gb;
-    var na = parseInt(pa.classNum, 10) || 999;
-    var nb = parseInt(pb.classNum, 10) || 999;
-    if (na !== nb) return na - nb;
-    var nameCmp = String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
-    if (nameCmp) return nameCmp;
-    return (Number(b.is_locked) === 1 ? 1 : 0) - (Number(a.is_locked) === 1 ? 1 : 0);
-  });
+  return (rows || []).slice().sort(compareSelectionsByClassThenStudentNo);
 }
 
 function formatSelectionClassDisplay(s) {

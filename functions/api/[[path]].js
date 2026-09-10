@@ -1483,12 +1483,19 @@ function sortSelectionsByClass(rows) {
     const ga = gradeRank[pa.grade] || 99;
     const gb = gradeRank[pb.grade] || 99;
     if (ga !== gb) return ga - gb;
-    const na = parseInt(pa.classNum, 10) || 999;
-    const nb = parseInt(pb.classNum, 10) || 999;
-    if (na !== nb) return na - nb;
+    const ca = parseInt(pa.classNum, 10) || 999;
+    const cb = parseInt(pb.classNum, 10) || 999;
+    if (ca !== cb) return ca - cb;
+    // 班级内学号升序；无学号靠后，再按姓名
+    const na = parseInt(String(a.student_no || '').trim(), 10);
+    const nb = parseInt(String(b.student_no || '').trim(), 10);
+    const aHas = Number.isFinite(na);
+    const bHas = Number.isFinite(nb);
+    if (aHas && bHas && na !== nb) return na - nb;
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
     const nameCmp = String(a.student_name || '').localeCompare(String(b.student_name || ''), 'zh');
     if (nameCmp) return nameCmp;
-    // 同班同名时内定优先靠前一点（通常只剩一条）
     return (Number(b.is_locked) === 1 ? 1 : 0) - (Number(a.is_locked) === 1 ? 1 : 0);
   });
 }
