@@ -1823,6 +1823,12 @@ async function handleSelectionsBatchCreate(db, request, context) {
     
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
     await bumpSelectionDataRevision(db);
+    // 管理员导入/追加选课后，取消「删除所有」禁回填标记，恢复正常查询
+    if (isAdmin && results.length) {
+      try {
+        await db.prepare('DELETE FROM system_settings WHERE key = ?').bind('admin_cleared_selections_at').run();
+      } catch (_) {}
+    }
     // 教师端教室同步放到后台，避免管理员单条添加被拖慢
     const affectedCourseList = [...affectedCourses];
     const syncP = syncTeacherClassroomForCourseNames(db, affectedCourseList).catch(function (err) {

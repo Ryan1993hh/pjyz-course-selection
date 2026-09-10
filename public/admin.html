@@ -8059,6 +8059,87 @@ function inferCourseColumnFromRows(rows, headerIndex, col, courseNames) {
 }
 
 
+
+function resolveSheetAsCourseName(sheetName, courseNames) {
+  var raw = String(sheetName == null ? '' : sheetName).trim();
+  if (!raw) return '';
+  var skip = /^(sheet\d*|工作表\d*|名单|花名册|汇总|总表|选课汇总|学生名单)$/i;
+  if (skip.test(raw.replace(/\s+/g, ''))) return '';
+  var canonical = resolveCourseNameCanonical(raw);
+  if (canonical && resolveCourseIdByName(canonical)) return canonical;
+  var cleaned = raw
+    .replace(/[（(].*?[）)]/g, '')
+    .replace(/名单|选课|学生|班级|年级|汇总|明细|花名册|拓展课|选修课|课程/g, '')
+    .replace(/[-_—–\s]+/g, '')
+    .trim();
+  if (cleaned && cleaned !== raw) {
+    canonical = resolveCourseNameCanonical(cleaned);
+    if (canonical && resolveCourseIdByName(canonical)) return canonical;
+  }
+  var names = courseNames || [];
+  var key = raw.replace(/\s+/g, '').toLowerCase();
+  for (var i = 0; i < names.length; i++) {
+    var n = String(names[i] || '').replace(/\s+/g, '').toLowerCase();
+    if (!n) continue;
+    if (key === n || key.indexOf(n) >= 0 || n.indexOf(key) >= 0) return names[i];
+  }
+  if (cleaned) {
+    key = cleaned.replace(/\s+/g, '').toLowerCase();
+    for (var j = 0; j < names.length; j++) {
+      var n2 = String(names[j] || '').replace(/\s+/g, '').toLowerCase();
+      if (!n2) continue;
+      if (key === n2 || key.indexOf(n2) >= 0 || n2.indexOf(key) >= 0) return names[j];
+    }
+  }
+  // 工作表名本身像课程名（含中文且不太像班级）时直接采用
+  if (/[\u4e00-\u9fff]{2,}/.test(raw) && !/(年级|班$|班级)/.test(raw)) {
+    return raw.replace(/\s+/g, ' ').trim();
+  }
+  return '';
+}
+
+/** 收集工作簿中所有可用的学生名单表（支持「每门课一个工作表」） */
+function collectSchoolRosterSources(wb, courseNames) {
+  var sources = [];
+  var names = wb.SheetNames || [];
+  for (var s = 0; s < names.length; s++) {
+    var sheetName = names[s];
+    var sheet = wb.Sheets[sheetName];
+    if (!sheet) continue;
+    var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+    if (!rows || !rows.length) continue;
+    var best = null;
+    var scan = Math.min(rows.length, 40);
+    for (var r = 0; r < scan; r++) {
+      var col = mapSchoolRosterColumns(rows[r] || []);
+      if (!schoolRosterMapUsable(col)) continue;
+      var score = 30 - r;
+      if (col.course_name >= 0) score += 4;
+      if (col.class_name >= 0) score += 3;
+      if (col.grade >= 0) score += 2;
+      if (col.gender >= 0) score += 1;
+      if (col.student_no >= 0) score += 1;
+      if (!best || score > best.score) best = { headerIndex: r, col: col, score: score };
+    }
+    if (!best) continue;
+    var col2 = inferCourseColumnFromRows(rows, best.headerIndex, best.col, courseNames);
+    var sheetCourse = '';
+    if (col2.course_name < 0) {
+      sheetCourse = resolveSheetAsCourseName(sheetName, courseNames);
+    }
+    sources.push({
+      rows: rows,
+      headerIndex: best.headerIndex,
+      col: col2,
+      sheet: sheetName,
+      sheetCourse: sheetCourse,
+      score: best.score + (sheetCourse ? 3 : 0)
+    });
+  }
+  sources.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+  return sources;
+}
+
 function schoolRosterMapUsable(map) {
   return !!(map && map.student_name >= 0 && (map.class_name >= 0 || map.grade >= 0));
 }
@@ -8171,52 +8252,70 @@ async function handleSchoolRosterImport(file) {
     if (!(coursesData && coursesData.length)) {
       try { await loadCourses(); } catch (_) {}
     }
-    const found = findSchoolRosterTable(wb);
-    if (!found) {
+    var courseNamesForInfer = (coursesData || []).map(function (c) { return (c && (c.name || c.course_name)) || ''; });
+    var sources = collectSchoolRosterSources(wb, courseNamesForInfer);
+    if (!sources.length) {
       toast('未识别到表头。请确保包含「姓名」以及「班级」或「年级」列（可放在任意工作表前几行；建议含学号、性别、课程）', 'error');
       return;
     }
-    const rows = found.rows;
-    var courseNamesForInfer = (coursesData || []).map(function (c) { return (c && (c.name || c.course_name)) || ''; });
-    const col = inferCourseColumnFromRows(rows, found.headerIndex, found.col, courseNamesForInfer);
+
     const items = [];
     const parseErrors = [];
-    for (let i = found.headerIndex + 1; i < rows.length; i++) {
-      const row = rows[i] || [];
-      let student_name = cleanPreEnrollCell(row[col.student_name]);
-      if (!student_name && col.english_name >= 0 && col.english_name !== col.student_name) {
-        student_name = cleanPreEnrollCell(row[col.english_name]);
-      }
-      if (!student_name) continue;
-      if (/^(姓名|学生姓名|名字|学员|name)$/i.test(student_name)) continue;
-      if (/^\d{1,8}$/.test(student_name) && col.student_no < 0) continue;
-      if (!/[A-Za-z\u4e00-\u9fff]/.test(student_name)) continue;
+    var seenKey = {};
+    sources.forEach(function (found) {
+      var rows = found.rows;
+      var col = found.col;
+      for (var i = found.headerIndex + 1; i < rows.length; i++) {
+        var row = rows[i] || [];
+        var student_name = cleanPreEnrollCell(row[col.student_name]);
+        if (!student_name && col.english_name >= 0 && col.english_name !== col.student_name) {
+          student_name = cleanPreEnrollCell(row[col.english_name]);
+        }
+        if (!student_name) continue;
+        if (/^(姓名|学生姓名|名字|学员|name)$/i.test(student_name)) continue;
+        if (/^\d{1,8}$/.test(student_name) && col.student_no < 0) continue;
+        if (!/[A-Za-z\u4e00-\u9fff]/.test(student_name)) continue;
 
-      var gradeRaw = col.grade >= 0 ? cleanPreEnrollCell(row[col.grade]) : '';
-      var classRaw = col.class_name >= 0 ? cleanPreEnrollCell(row[col.class_name]) : '';
-      var parsedCls = normalizeImportClassFields(gradeRaw, classRaw || gradeRaw);
-      var grade = parsedCls.grade;
-      var class_name = parsedCls.class_name;
-      if (!grade || !class_name) {
-        parseErrors.push('第' + (i + 1) + '行「' + student_name + '」班级无法识别');
-        continue;
-      }
+        var gradeRaw = col.grade >= 0 ? cleanPreEnrollCell(row[col.grade]) : '';
+        var classRaw = col.class_name >= 0 ? cleanPreEnrollCell(row[col.class_name]) : '';
+        var parsedCls = normalizeImportClassFields(gradeRaw, classRaw || gradeRaw);
+        var grade = parsedCls.grade;
+        var class_name = parsedCls.class_name;
+        if (!grade || !class_name) {
+          parseErrors.push('第' + (i + 1) + '行「' + student_name + '」班级无法识别');
+          continue;
+        }
 
-      var course_name = '';
-      if (col.course_name >= 0) {
-        course_name = cleanPreEnrollCell(row[col.course_name]);
-        if (/^(课程|课程名称|所选课程|拓展课程|选课名称|分数)$/i.test(course_name)) course_name = '';
+        var course_name = '';
+        if (col.course_name >= 0) {
+          course_name = cleanPreEnrollCell(row[col.course_name]);
+          if (/^(课程|课程名称|所选课程|拓展课程|选课名称|分数)$/i.test(course_name)) course_name = '';
+        }
+        if (!course_name && found.sheetCourse) course_name = found.sheetCourse;
+        if (course_name) course_name = resolveCourseNameCanonical(course_name) || course_name;
+
+        var student_no = col.student_no >= 0 ? cleanPreEnrollCell(row[col.student_no]).replace(/\.0+$/, '') : '';
+        var key = [grade, class_name, student_name].join('|');
+        // 后者覆盖前者（多表时后读到的课程优先）
+        if (seenKey[key] != null) {
+          var prev = items[seenKey[key]];
+          if (!prev.course_name && course_name) prev.course_name = course_name;
+          if (course_name) prev.course_name = course_name;
+          if (student_no && !prev.student_no) prev.student_no = student_no;
+          continue;
+        }
+        seenKey[key] = items.length;
+        items.push({
+          grade: grade,
+          class_name: class_name,
+          student_name: student_name,
+          gender: col.gender >= 0 ? normalizeImportGender(row[col.gender]) : '',
+          course_name: course_name,
+          student_no: student_no
+        });
       }
-      var student_no = col.student_no >= 0 ? cleanPreEnrollCell(row[col.student_no]).replace(/\.0+$/, '') : '';
-      items.push({
-        grade: grade,
-        class_name: class_name,
-        student_name: student_name,
-        gender: col.gender >= 0 ? normalizeImportGender(row[col.gender]) : '',
-        course_name: course_name,
-        student_no: student_no
-      });
-    }
+    });
+
     if (!items.length) {
       toast(
         parseErrors.length
@@ -8227,13 +8326,11 @@ async function handleSchoolRosterImport(file) {
       return;
     }
     var withCourse = items.filter(function (s) { return !!(s.course_name); }).length;
-    var confirmMsg = '识别到 ' + items.length + ' 名学生（表头第 ' + (found.headerIndex + 1) + ' 行）';
+    var confirmMsg = '识别到 ' + items.length + ' 名学生（' + sources.length + ' 个工作表）';
     if (withCourse) {
       confirmMsg += '，其中 ' + withCourse + ' 人含课程，将追加到选课列表';
-    } else if (col.course_name < 0) {
-      confirmMsg += '。未识别到课程列（请确认表头含「课程/拓展课/所选课程」等），将仅导入名单';
     } else {
-      confirmMsg += '。课程列为空，将仅导入名单';
+      confirmMsg += '。未识别到课程（请确认表头有「课程」列，或工作表名称为课程名），将仅导入名单';
     }
     confirmMsg += '。不覆盖已有数据，是否继续？';
     if (!confirm(confirmMsg)) {
@@ -8248,8 +8345,8 @@ async function handleSchoolRosterImport(file) {
     var courseMiss = 0;
     items.forEach(function (s) {
       if (!s.course_name) return;
-      var cname = resolveCourseNameCanonical(s.course_name);
-      var cid = resolveCourseIdByName(cname || s.course_name);
+      var cname = resolveCourseNameCanonical(s.course_name) || s.course_name;
+      var cid = resolveCourseIdByName(cname);
       if (!cid) {
         cid = 0;
         courseMiss++;
@@ -8260,17 +8357,30 @@ async function handleSchoolRosterImport(file) {
         student_name: s.student_name,
         gender: s.gender,
         student_no: s.student_no || '',
-        course_id: cid,
-        course_name: cname || s.course_name
+        course_id: cid || null,
+        course_name: cname
       });
     });
 
     var selCount = 0;
     var msg = '';
+    var createdRows = [];
     if (selectionPayload.length) {
       try {
-        var selRes = await request('POST', '/api/selections', selectionPayload);
-        selCount = (selRes && selRes.count) || selectionPayload.length;
+        // 分批写入，避免一次请求过大导致超时后列表空白
+        var CHUNK = 40;
+        for (var off = 0; off < selectionPayload.length; off += CHUNK) {
+          var chunk = selectionPayload.slice(off, off + CHUNK);
+          var selRes = await request('POST', '/api/selections', chunk);
+          selCount += (selRes && selRes.count) || chunk.length;
+          if (selRes && Array.isArray(selRes.selections)) {
+            createdRows = createdRows.concat(selRes.selections.filter(Boolean));
+          } else {
+            createdRows = createdRows.concat(chunk.map(function (row) {
+              return Object.assign({ is_locked: 0, id: 'tmp_' + Math.random().toString(36).slice(2, 8) }, row);
+            }));
+          }
+        }
         msg = '已追加选课 ' + selCount + ' 条';
         if (courseMiss) msg += '（' + courseMiss + ' 条课程名需核对）';
       } catch (selErr) {
@@ -8290,8 +8400,39 @@ async function handleSchoolRosterImport(file) {
       }).catch(function (e) {
         console.warn('school roster sync after upload:', e);
       });
+
+      // 先本地立刻上屏，再向服务端刷新；刷新若偶发为空仍保留本次导入结果
+      switchToSelectionsView();
+      clearSelectionFilters();
+      selectionsCheckedIds.clear();
+      selectionsPage = 1;
+      _selectionsQueryCache = { qs: '', at: 0 };
+      window.__pjyzClassroomSyncedOnce = true;
+      if (createdRows.length) {
+        var importKeys = {};
+        createdRows.forEach(function (r) {
+          if (!r) return;
+          importKeys[[r.grade || '', r.class_name || '', r.student_name || ''].join('|')] = true;
+        });
+        var kept = (selectionsData || []).filter(function (s) {
+          return !importKeys[[s.grade || '', s.class_name || '', s.student_name || ''].join('|')];
+        });
+        selectionsData = sortSelectionsByClassClient(createdRows.concat(kept));
+        renderSelections();
+      }
       toast(msg, 'success');
-      await refreshSelectionsAfterStudentAdd();
+      try {
+        await refreshSelectionsAfterStudentAdd();
+        if (!(selectionsData && selectionsData.length) && createdRows.length) {
+          selectionsData = sortSelectionsByClassClient(createdRows);
+          renderSelections();
+        }
+      } catch (_) {
+        if (createdRows.length) {
+          selectionsData = sortSelectionsByClassClient(createdRows);
+          renderSelections();
+        }
+      }
       return;
     }
 
