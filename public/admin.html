@@ -7021,7 +7021,28 @@ async function refreshSelectionsAfterStudentAdd() {
   switchToSelectionsView();
   selectionsCheckedIds.clear();
   selectionsPage = 1;
-  await querySelections({ silent: true });
+  _selectionsQueryCache = { qs: '', at: 0 };
+  await querySelections({ silent: true, useCache: false });
+}
+
+function resolveCourseIdByName(courseName) {
+  var name = String(courseName || '').trim();
+  if (!name) return 0;
+  var list = (coursesData && coursesData.length)
+    ? coursesData
+    : ((coursesForFilter && coursesForFilter.length) ? coursesForFilter : []);
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    var cname = (c && (c.name || c.course_name)) || '';
+    if (cname === name) return parseInt(c.id, 10) || 0;
+  }
+  var want = name.replace(/\s+/g, '').toLowerCase();
+  for (var j = 0; j < list.length; j++) {
+    var c2 = list[j];
+    var n2 = String((c2 && (c2.name || c2.course_name)) || '').replace(/\s+/g, '').toLowerCase();
+    if (n2 && n2 === want) return parseInt(c2.id, 10) || 0;
+  }
+  return 0;
 }
 
 async function deleteSelection(id){
@@ -7393,8 +7414,8 @@ async function exportSelections(){
         '<div id="addStuPaneFile">' +
           '<div class="add-stu-dropzone" id="addStuFileZone" tabindex="0" role="button" aria-label="选择学生名单文件">' +
             '<div class="dz-title">点击此处或下方说明区域上传花名册</div>' +
-            '<p style="font-size:13px;color:#64748b;line-height:1.6;">上传 Excel / CSV 花名册，系统自动识别年级、班级、姓名、性别并<strong>追加</strong>到选课名单（不覆盖已有数据）。</p>' +
-            '<p style="font-size:12px;color:#94a3b8;line-height:1.6;">表头建议包含：姓名、班级（或年级）、性别（可选）。已存在的同班同名学生会保留原记录并更新性别等信息。</p>' +
+            '<p style="font-size:13px;color:#64748b;line-height:1.6;">上传 Excel / CSV，系统识别年级、班级、姓名、性别并<strong>追加</strong>名单（不覆盖已有选课数据）。</p>' +
+            '<p style="font-size:12px;color:#94a3b8;line-height:1.6;">表头建议：姓名、班级（或年级）、性别（可选）；若含「课程/拓展课」列，将同步追加到选课数据列表。</p>' +
           '</div>' +
         '</div>' +
         '<div id="addStuPaneManual" style="display:none;">' +
@@ -7544,9 +7565,9 @@ async function exportSelections(){
           course_id: courseId,
           course_name: courseName
         });
-        msg += '，已选课程「' + courseName + '」';
-      } else if (data.unselected_count != null) {
-        msg += '，未选课名单已同步';
+        msg += '，已选课程「' + courseName + '」，已追加到选课数据列表';
+      } else {
+        msg += '（未指定课程，已加入未选课名单；原有选课数据保持不变）';
       }
 
       closeModal();
@@ -7656,7 +7677,7 @@ function findPreEnrollTable(wb) {
 }
 
 function mapSchoolRosterColumns(headerRow) {
-  var map = { grade: -1, class_name: -1, student_name: -1, english_name: -1, gender: -1 };
+  var map = { grade: -1, class_name: -1, student_name: -1, english_name: -1, gender: -1, course_name: -1 };
   headerRow.forEach(function(h, i) {
     var t = normalizePreEnrollHeader(h);
     if (/年级|grade/.test(t) && map.grade < 0) map.grade = i;
@@ -7664,6 +7685,7 @@ function mapSchoolRosterColumns(headerRow) {
     else if (/英文名|englishname|studentname|fullname|^name$/.test(t) && map.english_name < 0) map.english_name = i;
     else if (/姓名|名字|学生姓名/.test(t) && map.student_name < 0) map.student_name = i;
     else if (/性别|gender/.test(t) && map.gender < 0) map.gender = i;
+    else if (/(课程名称|所选课程|拓展课程|拓展课|选修课|^课程$|course)/.test(t) && map.course_name < 0) map.course_name = i;
   });
   if (map.student_name < 0 && map.english_name >= 0) map.student_name = map.english_name;
   return map;
@@ -7734,35 +7756,84 @@ async function handleSchoolRosterImport(file) {
         grade = normalizeImportGrade(class_name);
       }
       class_name = normalizeImportClassName(grade, class_name);
+      var course_name = '';
+      if (col.course_name >= 0) {
+        course_name = String(row[col.course_name] || '').trim().replace(/\s+/g, ' ');
+        if (/^(课程|课程名称|所选课程|拓展课程|分数)$/i.test(course_name)) course_name = '';
+      }
       items.push({
         grade: grade,
         class_name: class_name,
         student_name: student_name,
-        gender: col.gender >= 0 ? String(row[col.gender] || '').trim() : ''
+        gender: col.gender >= 0 ? String(row[col.gender] || '').trim() : '',
+        course_name: course_name
       });
     }
     if (!items.length) {
       toast('未解析到有效学生名单', 'error');
       return;
     }
-    if (!confirm('即将追加导入 ' + items.length + ' 名学生（不覆盖已有名单，仅新增/更新导入名单中的学生）。是否继续？')) {
+    var withCourse = items.filter(function (s) { return !!(s.course_name); }).length;
+    var confirmMsg = '即将追加导入 ' + items.length + ' 名学生（不覆盖已有数据）';
+    if (withCourse) confirmMsg += '，其中 ' + withCourse + ' 人含拓展课程将写入选课列表';
+    confirmMsg += '。是否继续？';
+    if (!confirm(confirmMsg)) {
       return;
     }
     toast('正在导入学生…', 'info');
-    const data = await request('POST', '/api/school-students/import', { students: items, replace: false });
+    if (!(coursesData && coursesData.length)) {
+      try { await loadCourses(); } catch (_) {}
+    }
+    const data = await request('POST', '/api/school-students/import', {
+      students: items.map(function (s) {
+        return {
+          grade: s.grade,
+          class_name: s.class_name,
+          student_name: s.student_name,
+          gender: s.gender
+        };
+      }),
+      replace: false
+    });
     const errCount = (data.errors && data.errors.length) || 0;
     let msg = '已导入 ' + (data.count || 0) + ' 名学生';
     if (data.total != null) msg += '（库中共 ' + data.total + ' 人）';
     if (errCount) msg += '，跳过 ' + errCount + ' 条';
-    if (data.unselected_count != null) {
-      msg += '，已同步 ' + data.unselected_count + ' 名未选课学生';
+
+    var selectionPayload = [];
+    var courseMiss = 0;
+    items.forEach(function (s) {
+      if (!s.course_name) return;
+      var cid = resolveCourseIdByName(s.course_name);
+      if (!cid) { courseMiss++; return; }
+      selectionPayload.push({
+        grade: s.grade,
+        class_name: s.class_name,
+        student_name: s.student_name,
+        gender: s.gender,
+        course_id: cid,
+        course_name: s.course_name
+      });
+    });
+    var selCount = 0;
+    if (selectionPayload.length) {
+      try {
+        var selRes = await request('POST', '/api/selections', selectionPayload);
+        selCount = (selRes && selRes.count) || selectionPayload.length;
+        msg += '，已追加选课 ' + selCount + ' 条';
+      } catch (selErr) {
+        msg += '；选课写入失败：' + (selErr && selErr.message ? selErr.message : selErr);
+      }
+    }
+    if (courseMiss) msg += '，' + courseMiss + ' 条课程名未匹配已跳过';
+    if (!withCourse && data.unselected_count != null) {
+      msg += '，未选课名单已同步（可点「未选课学生」查看）';
     }
     toast(msg, errCount && !(data.count) ? 'error' : 'success');
     if (errCount && data.errors) {
       console.warn('school roster import errors', data.errors);
     }
-    if (data.count > 0) {
-      // 追加名单后仍显示选课数据全量列表，不切到未选课视图以免原有记录看起来“消失”
+    if (data.count > 0 || selCount > 0) {
       await refreshSelectionsAfterStudentAdd();
     }
   } catch (e) {
