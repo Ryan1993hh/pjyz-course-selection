@@ -1813,7 +1813,18 @@ async function handleSelectionsBatchCreate(db, request, context) {
         }
         
         const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
-        results.push(selection);
+        results.push(selection || {
+          id: result.meta && result.meta.last_row_id,
+          grade: parsedSave.grade || grade,
+          class_name: parsedSave.class_name || className,
+          student_name: studentName,
+          gender: gender,
+          student_no: studentNo,
+          course_id: courseId > 0 ? courseId : null,
+          course_name: courseName,
+          is_locked: 0,
+          selected_at: new Date().toISOString()
+        });
         if (courseName) affectedCourses.add(String(courseName).trim());
         await removeUnselectedForStudent(db, grade, className, studentName);
       } catch(innerErr) {
