@@ -6743,7 +6743,9 @@ function downloadXlsxWorkbook(wb, filename) {
 
 function renderSelections(){
   renderSelectionsTable(selectionsData, {
-    emptyText: '暂无选课数据',
+    emptyText: _recycleStatusAvailable
+      ? '暂无选课数据（可点击上方「恢复删除」找回）'
+      : '暂无选课数据',
     countText: '共 ' + selectionsData.length + ' 条数据',
     updateStats: true
   });
@@ -7008,22 +7010,24 @@ async function captureBackupBeforeDeleteAll() {
   if (currentViewMode === 'unselected') {
     var urows = (unselectedData && unselectedData.length) ? unselectedData.slice() : [];
     if (!urows.length) {
-      var udata = await request('GET', '/api/unselected-students');
-      urows = (udata && udata.unselected) || [];
+      try {
+        var udata = await request('GET', '/api/unselected-students');
+        urows = (udata && udata.unselected) || [];
+      } catch (_) {}
     }
-    if (!urows.length) throw new Error('当前没有可备份的未选课数据');
-    writeSelDeleteBackup('unselected', urows.map(function (s) {
-      return {
-        grade: s.grade || '',
-        class_name: s.class_name || '',
-        student_name: s.student_name || '',
-        gender: s.gender || '',
-        saved_at: s.saved_at || ''
-      };
-    }).filter(function (s) { return !!(s.student_name); }));
-    var bakU = readSelDeleteBackup();
-    if (!bakU) throw new Error('本地备份失败，已取消清空（请清理浏览器存储后重试）');
-    return bakU;
+    if (urows.length) {
+      writeSelDeleteBackup('unselected', urows.map(function (s) {
+        return {
+          grade: s.grade || '',
+          class_name: s.class_name || '',
+          student_name: s.student_name || '',
+          gender: s.gender || '',
+          saved_at: s.saved_at || ''
+        };
+      }).filter(function (s) { return !!(s.student_name); }));
+    }
+    // 服务端也会备份；本地失败不阻断清空
+    return readSelDeleteBackup();
   }
   // 优先用当前列表内存数据备份，避免再拉全量导致超时
   var rows = [];
@@ -7033,14 +7037,16 @@ async function captureBackupBeforeDeleteAll() {
     rows = selectionsData.slice();
   }
   if (!rows.length) {
-    var data = await request('GET', '/api/selections');
-    rows = Array.isArray(data) ? data : ((data && data.selections) || []);
+    try {
+      var data = await request('GET', '/api/selections');
+      rows = Array.isArray(data) ? data : ((data && data.selections) || []);
+    } catch (_) {}
   }
-  if (!rows.length) throw new Error('当前没有可备份的选课数据');
-  writeSelDeleteBackup('selections', serializeSelectionBackupRows(rows));
-  var bak = readSelDeleteBackup();
-  if (!bak) throw new Error('本地备份失败，已取消清空（数据量较大时请重试或清理浏览器存储）');
-  return bak;
+  if (rows.length) {
+    writeSelDeleteBackup('selections', serializeSelectionBackupRows(rows));
+  }
+  // 服务端 DELETE 时会写入回收站；本地配额不足时仍允许清空
+  return readSelDeleteBackup();
 }
 
 async function deleteAllSelections(){
@@ -7048,12 +7054,17 @@ async function deleteAllSelections(){
     if (!confirm('确定清空全部未选课学生记录吗？清空后可点击「恢复删除」回退。')) return;
     try {
       await captureBackupBeforeDeleteAll();
-      await request('DELETE', '/api/unselected-students');
+      var uDel = await request('DELETE', '/api/unselected-students');
       unselectedData = [];
       selectionsCheckedIds.clear();
       renderUnselectedStudents();
+      if ((uDel && uDel.recycled) > 0) {
+        _recycleStatusAvailable = true;
+        _recycleStatusCount = uDel.recycled;
+      }
       updateRestoreDeleteBtn();
-      toast('已清空全部未选课记录，可点击「恢复删除」回退', 'success');
+      refreshRecycleStatus();
+      toast('已清空未选课记录，可点击「恢复删除」回退', 'success');
     } catch (e) {
       toast('清空失败：' + e.message, 'error');
     }
@@ -7080,10 +7091,14 @@ async function deleteAllSelections(){
       if (st) st.textContent = '0';
       if (sc) sc.textContent = '0';
     } catch (_) {}
+    if ((delRes && delRes.recycled) > 0) {
+      _recycleStatusAvailable = true;
+      _recycleStatusCount = delRes.recycled;
+    }
     updateRestoreDeleteBtn();
     refreshRecycleStatus();
     var n = (delRes && delRes.recycled) || 0;
-    toast(n ? ('已清空 ' + n + ' 条选课数据，列表已更新为空；可点击「恢复删除」回退') : '已清空全部选课数据，可点击「恢复删除」回退', 'success');
+    toast(n ? ('已清空 ' + n + ' 条，列表已更新；可点「恢复删除」找回') : '已清空全部选课数据', 'success');
   } catch (e) {
     toast('清空失败：' + e.message, 'error');
   }

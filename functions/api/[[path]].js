@@ -2618,11 +2618,26 @@ async function handleClearUnselectedStudents(db, request) {
     const userId = parseInt(userIdStr);
     await db.prepare('DELETE FROM unselected_students WHERE user_id = ?').bind(userId).run();
     await purgeAllOrphanLeaveReports();
+    await bumpSelectionDataRevision(db);
   } else {
     const auth = requireAuth(request, ['admin']);
     if (auth.error) return json({ error: auth.error }, auth.status);
+    const allRes = await db.prepare(
+      'SELECT grade, class_name, student_name, saved_at FROM unselected_students'
+    ).all();
+    const snapshot = allRes.results || [];
+    if (snapshot.length) {
+      try {
+        await saveSelectionRecycleSnapshot(db, 'unselected', snapshot);
+      } catch (snapErr) {
+        console.warn('unselected recycle snapshot:', snapErr && snapErr.message);
+        return json({ error: '备份失败，已取消清空：' + ((snapErr && snapErr.message) || '未知错误') }, 500);
+      }
+    }
     await db.prepare('DELETE FROM unselected_students').run();
     await purgeAllOrphanLeaveReports();
+    await bumpSelectionDataRevision(db);
+    return json({ success: true, recycled: snapshot.length });
   }
   return json({ success: true });
 }
