@@ -2026,6 +2026,8 @@ table.sel-table th:nth-child(3) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(4) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(5) { border-bottom-color: #94a3b8; }
 table.sel-table th:nth-child(6) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(7) { border-bottom-color: #94a3b8; }
+table.sel-table th:nth-child(8) { border-bottom-color: #94a3b8; }
 /* 用户表 11 列 */
 table.usr-table {
   width: 100%;
@@ -2090,6 +2092,7 @@ table.sel-table {
   width: 100%;
   --sel-col-w: 90px;
   --sel-col-w-class: 120px;
+  --sel-col-w-no: 64px;
   --sel-col-w-gender: 56px;
   --sel-col-w-course: 220px;
   --sel-col-w-actions: 210px;
@@ -2102,13 +2105,15 @@ table.sel-table td:nth-child(2) { width: 56px !important; min-width: 56px; max-w
 table.sel-table th:nth-child(3),
 table.sel-table td:nth-child(3) { width: var(--sel-col-w-class) !important; min-width: var(--sel-col-w-class); max-width: var(--sel-col-w-class); }
 table.sel-table th:nth-child(4),
-table.sel-table td:nth-child(4) { width: var(--sel-col-w) !important; min-width: var(--sel-col-w); max-width: var(--sel-col-w); }
+table.sel-table td:nth-child(4) { width: var(--sel-col-w-no) !important; min-width: var(--sel-col-w-no); max-width: var(--sel-col-w-no); }
 table.sel-table th:nth-child(5),
-table.sel-table td:nth-child(5) { width: var(--sel-col-w-gender) !important; min-width: var(--sel-col-w-gender); max-width: var(--sel-col-w-gender); }
+table.sel-table td:nth-child(5) { width: var(--sel-col-w) !important; min-width: var(--sel-col-w); max-width: var(--sel-col-w); }
 table.sel-table th:nth-child(6),
-table.sel-table td:nth-child(6) { width: var(--sel-col-w-course) !important; min-width: var(--sel-col-w-course); max-width: none; }
+table.sel-table td:nth-child(6) { width: var(--sel-col-w-gender) !important; min-width: var(--sel-col-w-gender); max-width: var(--sel-col-w-gender); }
 table.sel-table th:nth-child(7),
-table.sel-table td:nth-child(7) { width: var(--sel-col-w-actions) !important; min-width: var(--sel-col-w-actions); max-width: none; }
+table.sel-table td:nth-child(7) { width: var(--sel-col-w-course) !important; min-width: var(--sel-col-w-course); max-width: none; }
+table.sel-table th:nth-child(8),
+table.sel-table td:nth-child(8) { width: var(--sel-col-w-actions) !important; min-width: var(--sel-col-w-actions); max-width: none; }
 
 table.sel-table thead th {
   background: #f8fafc;
@@ -2141,7 +2146,8 @@ table.sel-table thead th:nth-child(3),
 table.sel-table thead th:nth-child(4),
 table.sel-table thead th:nth-child(5),
 table.sel-table thead th:nth-child(6),
-table.sel-table thead th:nth-child(7) {
+table.sel-table thead th:nth-child(7),
+table.sel-table thead th:nth-child(8) {
   text-align: center;
 }
 
@@ -2184,22 +2190,29 @@ table.sel-table td:nth-child(3) {
   font-weight: 600;
   white-space: nowrap;
 }
-/* 学生姓名列 */
+/* 学号列（班级右侧） */
 table.sel-table td:nth-child(4) {
+  text-align: center;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* 学生姓名列 */
+table.sel-table td:nth-child(5) {
   text-align: center;
   color: #1e293b;
   font-weight: 600;
   white-space: nowrap;
 }
 /* 性别列 */
-table.sel-table td:nth-child(5) {
+table.sel-table td:nth-child(6) {
   text-align: center;
   color: #64748b;
   font-weight: 500;
   white-space: nowrap;
 }
 /* 所选课程列 */
-table.sel-table td:nth-child(6) {
+table.sel-table td:nth-child(7) {
   text-align: center;
   color: #475569;
   font-weight: 400;
@@ -2288,12 +2301,13 @@ table.sel-table tbody tr:hover td:nth-child(4),
 table.sel-table tbody tr:hover td:nth-child(5),
 table.sel-table tbody tr:hover td:nth-child(6),
 table.sel-table tbody tr:hover td:nth-child(7),
+table.sel-table tbody tr:hover td:nth-child(8),
 table.sel-table tbody tr:hover td.row-actions {
   background-color: #f0f9ff !important;
 }
 
 /* 课程链接样式 - 仅适用于所选课程列 */
-table.sel-table td:nth-child(6) .course-link {
+table.sel-table td:nth-child(7) .course-link {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 4px;
@@ -2309,7 +2323,7 @@ table.sel-table td:nth-child(6) .course-link {
   text-overflow: clip;
   line-height: 1.45;
 }
-table.sel-table td:nth-child(6) .course-link:hover {
+table.sel-table td:nth-child(7) .course-link:hover {
   background: var(--primary);
   color: #fff;
 }
@@ -2332,7 +2346,7 @@ table.sel-table tbody tr.unselected-row td {
 table.sel-table tbody tr.unselected-row:hover td {
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
 }
-table.sel-table tbody tr.unselected-row td:nth-child(6) .course-link {
+table.sel-table tbody tr.unselected-row td:nth-child(7) .course-link {
   background: rgba(59, 130, 246, 0.15);
   color: #2563eb;
 }
@@ -3057,7 +3071,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   .limit-badge, .req-tag { font-size: 11px; padding: 2px 5px; }
   table.sel-table { --sel-col-w: 68px; --sel-col-w-class: 96px; --sel-col-w-gender: 48px; --sel-col-w-course: 180px; --sel-col-w-actions: 190px; }
   table.sel-table th, table.sel-table td { padding: 7px 6px; font-size: 11px; }
-  table.sel-table td:nth-child(6) .course-link { font-size: 11px; padding: 2px 4px; }
+  table.sel-table td:nth-child(7) .course-link { font-size: 11px; padding: 2px 4px; }
 }
 @media (max-width: 760px) {
   .header { padding: 8px 12px; }
@@ -3076,7 +3090,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   .course-link { font-size: 11px; padding: 2px 4px; }
   table.sel-table { --sel-col-w: 56px; --sel-col-w-class: 80px; --sel-col-w-gender: 44px; --sel-col-w-course: 150px; --sel-col-w-actions: 180px; }
   table.sel-table th, table.sel-table td { padding: 6px 5px; font-size: 11px; }
-  table.sel-table td:nth-child(6) .course-link { font-size: 10px; padding: 1px 3px; }
+  table.sel-table td:nth-child(7) .course-link { font-size: 10px; padding: 1px 3px; }
   table.sel-table .btn-sm { height: 26px; padding: 0 8px; font-size: 11px; }
 }
 @media (max-width: 560px) {
@@ -3095,7 +3109,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   .btn-logout-icon { display: none; }
   table.sel-table { --sel-col-w: 52px; --sel-col-w-class: 76px; --sel-col-w-gender: 42px; --sel-col-w-course: 130px; --sel-col-w-actions: 170px; }
   table.sel-table th, table.sel-table td { padding: 5px 4px; font-size: 10px; }
-  table.sel-table td:nth-child(6) .course-link { font-size: 9px; padding: 1px 2px; }
+  table.sel-table td:nth-child(7) .course-link { font-size: 9px; padding: 1px 2px; }
   table.sel-table .btn-sm { height: 24px; padding: 0 6px; font-size: 10px; }
 }
 
@@ -4262,6 +4276,7 @@ th.sortable.active .sort-icon { opacity: 1; }
                     <th><input type="checkbox" id="selectAll" title="全选"></th>
                     <th>序号</th>
                     <th>班级</th>
+                    <th>学号</th>
                     <th>学生姓名</th>
                     <th>性别</th>
                     <th>所选课程</th>
@@ -6331,7 +6346,7 @@ function renderUnselectedStudents(){
   if (statCourseCount) statCourseCount.textContent = 0;
   
   if (!unselectedData.length){
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无未选课学生数据</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无未选课学生数据</td></tr>';
     renderSelectionsPagination();
     updateBatchDeleteBtn();
     return;
@@ -6352,6 +6367,7 @@ function renderUnselectedStudents(){
       '<td><input type="checkbox" class="sel-checkbox" data-id="' + escapeAttr(String(s.id)) + '"></td>' +
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
       '<td>' + escapeHtml(formatSelectionClassDisplay(s)) + '</td>' +
+      '<td>' + escapeHtml(s.student_no || '') + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td>' + escapeHtml(s.gender || '') + '</td>' +
       '<td><span class="course-link" style="background:rgba(59,130,246,0.15);color:#2563eb;">未选课</span></td>' +
@@ -6819,7 +6835,7 @@ function renderSelectionsTable(data, opts){
   }
 
   if (!data.length){
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">' + (opts.emptyText || '暂无数据') + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">' + (opts.emptyText || '暂无数据') + '</td></tr>';
     renderSelectionsPagination();
     updateBatchDeleteBtn();
     updateSelectAllState();
@@ -6848,6 +6864,7 @@ function renderSelectionsTable(data, opts){
       '<td><input type="checkbox" class="sel-checkbox" data-id="' + escapeAttr(String(s.id)) + '"' + checked + '></td>' +
       '<td class="seq">' + (globalIdx + 1) + '</td>' +
       '<td>' + escapeHtml(classDisplayName) + '</td>' +
+      '<td>' + escapeHtml(s.student_no || '') + '</td>' +
       '<td>' + escapeHtml(s.student_name || '') + '</td>' +
       '<td>' + escapeHtml(s.gender || '') + '</td>' +
       '<td><span class="course-link" data-course="' + escapeAttr(courseName) + '" title="' + escapeAttr(courseName) + '">' + escapeHtml(courseName) + '</span></td>' +
@@ -7248,7 +7265,36 @@ function resolveCourseIdByName(courseName) {
     var n2 = String((c2 && (c2.name || c2.course_name)) || '').replace(/\s+/g, '').toLowerCase();
     if (n2 && n2 === want) return parseInt(c2.id, 10) || 0;
   }
-  return 0;
+  // 包含匹配：表格写「篮球」对应课程「趣味篮球」
+  var bestId = 0;
+  var bestLen = 0;
+  for (var k = 0; k < list.length; k++) {
+    var c3 = list[k];
+    var n3 = String((c3 && (c3.name || c3.course_name)) || '').replace(/\s+/g, '').toLowerCase();
+    if (!n3 || want.length < 2) continue;
+    if (n3.indexOf(want) >= 0 || want.indexOf(n3) >= 0) {
+      var score = Math.min(n3.length, want.length);
+      if (score > bestLen) {
+        bestLen = score;
+        bestId = parseInt(c3.id, 10) || 0;
+      }
+    }
+  }
+  return bestId;
+}
+
+function resolveCourseNameCanonical(courseName) {
+  var name = String(courseName || '').trim();
+  if (!name) return '';
+  var list = (coursesData && coursesData.length)
+    ? coursesData
+    : ((coursesForFilter && coursesForFilter.length) ? coursesForFilter : []);
+  var id = resolveCourseIdByName(name);
+  if (!id) return name;
+  for (var i = 0; i < list.length; i++) {
+    if (parseInt(list[i].id, 10) === id) return list[i].name || list[i].course_name || name;
+  }
+  return name;
 }
 
 async function deleteSelection(id){
@@ -7863,15 +7909,26 @@ function classifyPreEnrollHeader(t) {
   if (/性别|gender|^sex$/.test(t)) return 'gender';
   if (/学号|studentid|studentno|学籍号/.test(t)) return '';
   if (/年级|grade/.test(t) && !/班级/.test(t)) return 'grade';
-  if ((/班级|classname|class_name|classno|^class$/.test(t)) && !/课程|course/.test(t)) return 'class_name';
-  if ((/姓名|名字|学员|^学生$|学生姓名|stuname|studentname|^name$|fullname/.test(t)) && !/课程|course|班级|class/.test(t)) {
+  if ((/班级|classname|class_name|classno|^class$/.test(t)) && !/课程|course|选课|拓展|选修/.test(t)) return 'class_name';
+  if ((/姓名|名字|学员|^学生$|学生姓名|stuname|studentname|^name$|ename/.test(t)) && !/课程|course|班级|class|选课|拓展/.test(t)) {
     return 'student_name';
   }
-  if ((/课程|选修|拓展课|所选课|科目|课名|course/.test(t)) && !/类别|简介|老师|教师|地点|名额|要求/.test(t)) {
-    return 'course_name';
-  }
+  if (isCourseHeaderToken(t)) return 'course_name';
   if (/^学生/.test(t) && !/课程|班级|学号/.test(t)) return 'student_name';
   return '';
+}
+
+function isCourseHeaderToken(t) {
+  if (!t) return false;
+  if (/^班级$|^年级$|^class$|^姓名$|^名字$|^性别$|^学号$/.test(t)) return false;
+  if (/类别|简介|老师|教师|地点|名额|要求|教室|容量|限制/.test(t) && !/(课程|选课|拓展|选修|科目|课名|course|志愿)/.test(t)) {
+    return false;
+  }
+  if (/课程|选课|拓展课|拓展|选修|所选课|科目|课名|志愿|报课|已选课|course|elective/.test(t)) {
+    return true;
+  }
+  if (/^课$|^课目$/.test(t)) return true;
+  return false;
 }
 
 function mapPreEnrollColumns(headerRow) {
@@ -7922,7 +7979,7 @@ function mapSchoolRosterColumns(headerRow) {
   (headerRow || []).forEach(function(h, i) {
     var t = normalizePreEnrollHeader(h);
     if (!t) return;
-    if (/学号|学籍号|studentid|studentno|stunumber|^no$|^id$/.test(t) && map.student_no < 0) {
+    if (/学号|学籍号|studentid|studentno|stunumber|^学号$/.test(t) && map.student_no < 0) {
       map.student_no = i;
       return;
     }
@@ -7934,15 +7991,15 @@ function mapSchoolRosterColumns(headerRow) {
       map.grade = i;
       return;
     }
-    if ((/班级|classname|class_name|classno|行政班|^class$/.test(t)) && !/课程|course/.test(t) && map.class_name < 0) {
+    if ((/班级|classname|class_name|classno|行政班|^class$/.test(t)) && !/课程|course|选课|拓展|选修/.test(t) && map.class_name < 0) {
       map.class_name = i;
       return;
     }
-    if ((/课程|选课|拓展|选修|科目|课名|course/.test(t)) && !/类别|简介|老师|教师|地点|名额|要求|班级/.test(t) && map.course_name < 0) {
+    if (isCourseHeaderToken(t) && map.course_name < 0) {
       map.course_name = i;
       return;
     }
-    if ((/姓名|名字|学员|学生姓名|stuname|studentname|^name$|ename|英文名/.test(t)) && !/课程|班级|学号/.test(t) && map.student_name < 0) {
+    if ((/姓名|名字|学员|学生姓名|stuname|studentname|^name$|ename|英文名/.test(t)) && !/课程|班级|学号|选课|拓展/.test(t) && map.student_name < 0) {
       if (/英文名|englishname|ename/.test(t)) map.english_name = i;
       else map.student_name = i;
       return;
@@ -7952,6 +8009,55 @@ function mapSchoolRosterColumns(headerRow) {
   if (map.student_name < 0 && map.english_name >= 0) map.student_name = map.english_name;
   return map;
 }
+
+/** 表头未标出课程列时，用课程库名称从数据列反推课程列 */
+function inferCourseColumnFromRows(rows, headerIndex, col, courseNames) {
+  if (!col || col.course_name >= 0) return col;
+  var names = (courseNames || []).map(function (n) {
+    return String(n || '').replace(/\s+/g, '').toLowerCase();
+  }).filter(Boolean);
+  if (!names.length) return col;
+  var used = {};
+  [col.grade, col.class_name, col.student_name, col.english_name, col.gender, col.student_no].forEach(function (i) {
+    if (i >= 0) used[i] = true;
+  });
+  var width = 0;
+  var end = Math.min(rows.length, headerIndex + 100);
+  for (var r = headerIndex; r < end; r++) {
+    width = Math.max(width, (rows[r] || []).length);
+  }
+  var bestIdx = -1;
+  var bestHits = 0;
+  for (var c = 0; c < width; c++) {
+    if (used[c]) continue;
+    var hits = 0;
+    var samples = 0;
+    for (var rr = headerIndex + 1; rr < end; rr++) {
+      var cell = cleanPreEnrollCell((rows[rr] || [])[c]);
+      if (!cell) continue;
+      if (/^(课程|课程名称|所选课程|拓展课程|选课名称|分数|姓名|班级)$/i.test(cell)) continue;
+      samples++;
+      var key = cell.replace(/\s+/g, '').toLowerCase();
+      var matched = false;
+      for (var k = 0; k < names.length; k++) {
+        var n = names[k];
+        if (!n) continue;
+        if (key === n || (key.length >= 2 && n.length >= 2 && (key.indexOf(n) >= 0 || n.indexOf(key) >= 0))) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) hits++;
+    }
+    if (samples >= 2 && hits >= Math.max(2, Math.ceil(samples * 0.35)) && hits > bestHits) {
+      bestHits = hits;
+      bestIdx = c;
+    }
+  }
+  if (bestIdx >= 0) col.course_name = bestIdx;
+  return col;
+}
+
 
 function schoolRosterMapUsable(map) {
   return !!(map && map.student_name >= 0 && (map.class_name >= 0 || map.grade >= 0));
@@ -8062,13 +8168,17 @@ async function handleSchoolRosterImport(file) {
   try {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: 'array', raw: false, cellDates: false });
+    if (!(coursesData && coursesData.length)) {
+      try { await loadCourses(); } catch (_) {}
+    }
     const found = findSchoolRosterTable(wb);
     if (!found) {
       toast('未识别到表头。请确保包含「姓名」以及「班级」或「年级」列（可放在任意工作表前几行；建议含学号、性别、课程）', 'error');
       return;
     }
     const rows = found.rows;
-    const col = found.col;
+    var courseNamesForInfer = (coursesData || []).map(function (c) { return (c && (c.name || c.course_name)) || ''; });
+    const col = inferCourseColumnFromRows(rows, found.headerIndex, found.col, courseNamesForInfer);
     const items = [];
     const parseErrors = [];
     for (let i = found.headerIndex + 1; i < rows.length; i++) {
@@ -8118,7 +8228,13 @@ async function handleSchoolRosterImport(file) {
     }
     var withCourse = items.filter(function (s) { return !!(s.course_name); }).length;
     var confirmMsg = '识别到 ' + items.length + ' 名学生（表头第 ' + (found.headerIndex + 1) + ' 行）';
-    if (withCourse) confirmMsg += '，其中 ' + withCourse + ' 人含课程，将追加到选课列表';
+    if (withCourse) {
+      confirmMsg += '，其中 ' + withCourse + ' 人含课程，将追加到选课列表';
+    } else if (col.course_name < 0) {
+      confirmMsg += '。未识别到课程列（请确认表头含「课程/拓展课/所选课程」等），将仅导入名单';
+    } else {
+      confirmMsg += '。课程列为空，将仅导入名单';
+    }
     confirmMsg += '。不覆盖已有数据，是否继续？';
     if (!confirm(confirmMsg)) {
       return;
@@ -8132,7 +8248,8 @@ async function handleSchoolRosterImport(file) {
     var courseMiss = 0;
     items.forEach(function (s) {
       if (!s.course_name) return;
-      var cid = resolveCourseIdByName(s.course_name);
+      var cname = resolveCourseNameCanonical(s.course_name);
+      var cid = resolveCourseIdByName(cname || s.course_name);
       if (!cid) {
         cid = 0;
         courseMiss++;
@@ -8144,7 +8261,7 @@ async function handleSchoolRosterImport(file) {
         gender: s.gender,
         student_no: s.student_no || '',
         course_id: cid,
-        course_name: s.course_name
+        course_name: cname || s.course_name
       });
     });
 

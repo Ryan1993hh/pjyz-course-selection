@@ -2349,7 +2349,7 @@ async function handleClearSelections(db, request, ctx) {
       console.warn('sync classrooms after clear selections:', syncErr && syncErr.message);
     }
     try {
-      await purgeAllOrphanLeaveReports();
+      await purgeAllOrphanLeaveReports(db);
     } catch (_) {}
     try {
       await rebuildUnselectedFromSchoolRoster(db, { mode: 'full' });
@@ -2663,7 +2663,7 @@ async function handleClearUnselectedStudents(db, request) {
   if (userIdStr) {
     const userId = parseInt(userIdStr);
     await db.prepare('DELETE FROM unselected_students WHERE user_id = ?').bind(userId).run();
-    await purgeAllOrphanLeaveReports();
+    await purgeAllOrphanLeaveReports(db);
     await bumpSelectionDataRevision(db);
   } else {
     const auth = requireAuth(request, ['admin']);
@@ -2681,7 +2681,7 @@ async function handleClearUnselectedStudents(db, request) {
       }
     }
     await db.prepare('DELETE FROM unselected_students').run();
-    await purgeAllOrphanLeaveReports();
+    await purgeAllOrphanLeaveReports(db);
     await bumpSelectionDataRevision(db);
     return json({ success: true, recycled: snapshot.length });
   }
