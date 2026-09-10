@@ -1692,7 +1692,7 @@ async function removeUnselectedForStudent(db, grade, className, studentName) {
   return deleted;
 }
 
-async function handleSelectionsBatchCreate(db, request) {
+async function handleSelectionsBatchCreate(db, request, context) {
   try {
     const auth = requireAuth(request, ['admin', 'banzhuren']);
     if (auth.error) return json({ error: auth.error }, auth.status);
@@ -1710,6 +1710,8 @@ async function handleSelectionsBatchCreate(db, request) {
     const results = [];
     const errors = [];
     const affectedCourses = new Set();
+    const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
+    const courseList = (coursesRes.results || []).filter((c) => c && c.name);
     
     for (const item of arr) {
       if (!item || !item.student_name) {
@@ -1721,9 +1723,16 @@ async function handleSelectionsBatchCreate(db, request) {
         const grade = (item.grade != null && item.grade !== '') ? String(item.grade) : '';
         const className = (item.class_name != null && item.class_name !== '') ? String(item.class_name) : '';
         const studentName = (item.student_name != null && item.student_name !== '') ? String(item.student_name) : '';
-        const courseName = (item.course_name != null && item.course_name !== '') ? String(item.course_name) : '';
-        const courseId = (item.course_id != null && item.course_id !== '') ? (parseInt(item.course_id, 10) || 0) : 0;
+        let courseName = (item.course_name != null && item.course_name !== '') ? String(item.course_name) : '';
+        let courseId = (item.course_id != null && item.course_id !== '') ? (parseInt(item.course_id, 10) || 0) : 0;
         const gender = (item.gender != null && item.gender !== '') ? String(item.gender) : '';
+        if (courseName && !courseId) {
+          const matched = matchCourseByName(courseName, courseList);
+          if (matched) {
+            courseId = matched.id;
+            courseName = matched.name;
+          }
+        }
 
         // 提前录课锁定学生：仅处理本班同名锁定记录，不允许改课程；并清除本班冲突的未锁定记录
         const lockedRows = await db.prepare(
@@ -1764,13 +1773,17 @@ async function handleSelectionsBatchCreate(db, request) {
         await removeSelectionsForStudent(db, grade, className, studentName);
 
         const parsedSave = parseGradeClassFields(grade, className);
+        const studentNo = (item.student_no != null && item.student_no !== '')
+          ? String(item.student_no).trim()
+          : '';
         const result = await db.prepare(
-          'INSERT INTO selections (grade, class_name, student_name, gender, course_id, course_name, selected_at, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
+          'INSERT INTO selections (grade, class_name, student_name, gender, student_no, course_id, course_name, selected_at, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)'
         ).bind(
           parsedSave.grade || grade,
           parsedSave.class_name || className,
           studentName,
           gender,
+          studentNo,
           courseId > 0 ? courseId : null,
           courseName,
           new Date().toISOString()
@@ -1790,8 +1803,17 @@ async function handleSelectionsBatchCreate(db, request) {
     }
     
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
-    await syncTeacherClassroomForCourseNames(db, [...affectedCourses]);
     await bumpSelectionDataRevision(db);
+    // 教师端教室同步放到后台，避免管理员单条添加被拖慢
+    const courseList = [...affectedCourses];
+    const syncP = syncTeacherClassroomForCourseNames(db, courseList).catch(function (err) {
+      console.warn('syncTeacherClassroom after selections create:', err && err.message);
+    });
+    if (context && typeof context.waitUntil === 'function') {
+      context.waitUntil(syncP);
+    } else {
+      await syncP;
+    }
     
     return json({
       success: true,
@@ -6782,7 +6804,7 @@ async function onRequestImpl(context) {
   // /api/selections (batch create or list)
   if (path === '/api/selections') {
     if (method === 'GET') return handleSelectionsGet(db, request, url);
-    if (method === 'POST') return handleSelectionsBatchCreate(db, request);
+    if (method === 'POST') return handleSelectionsBatchCreate(db, request, context);
     if (method === 'DELETE') return handleClearSelections(db, request);
   }
 
