@@ -3887,18 +3887,19 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections table.sel-table th:nth-child(5),
   #section-selections table.sel-table td:nth-child(5) {
     display: table-cell !important;
+    position: -webkit-sticky;
     position: sticky;
     left: 0;
-    z-index: 4;
+    z-index: 5;
     background: #ffffff !important;
-    box-shadow: 3px 0 8px rgba(15, 23, 42, 0.12);
+    box-shadow: 4px 0 10px rgba(15, 23, 42, 0.14);
     min-width: 72px !important;
     width: 72px !important;
     max-width: 96px !important;
     font-weight: 600;
   }
   #section-selections table.sel-table thead th:nth-child(5) {
-    z-index: 6;
+    z-index: 7;
     background: #f8fafc !important;
   }
   #section-selections table.sel-table tbody tr:nth-child(even) td:nth-child(5) {
@@ -3912,6 +3913,18 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   #section-selections table.sel-table tbody tr.pre-enroll-row td:nth-child(5) {
     background: #fefce8 !important;
+  }
+  /* 姓名列左侧列不挡冻结层 */
+  #section-selections table.sel-table th:nth-child(1),
+  #section-selections table.sel-table td:nth-child(1),
+  #section-selections table.sel-table th:nth-child(2),
+  #section-selections table.sel-table td:nth-child(2),
+  #section-selections table.sel-table th:nth-child(3),
+  #section-selections table.sel-table td:nth-child(3),
+  #section-selections table.sel-table th:nth-child(4),
+  #section-selections table.sel-table td:nth-child(4) {
+    position: relative;
+    z-index: 1;
   }
   #section-selections table.sel-table th:nth-child(6),
   #section-selections table.sel-table td:nth-child(6) {

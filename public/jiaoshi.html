@@ -2212,47 +2212,73 @@ html[data-skin="ink"] .absent-alert-item .ai-copy { background: #334155; }
   table.data-table th, table.data-table td {
     padding: 6px 4px;
   }
-  /* 考核看板：缩小序号/班级/姓名间距，冻结姓名列 */
+  /* 考核看板：缩小序号/班级/姓名间距，横滑时冻结姓名列 */
+  #panel-grade .table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  #panel-grade table.data-table {
+    width: max-content !important;
+    min-width: 520px;
+    border-collapse: separate !important;
+    border-spacing: 0;
+  }
   #panel-grade table.data-table th:nth-child(1),
   #panel-grade table.data-table td:nth-child(1) {
-    width: 34px;
-    min-width: 34px;
-    max-width: 38px;
-    padding-left: 4px;
-    padding-right: 2px;
+    width: 32px;
+    min-width: 32px;
+    max-width: 36px;
+    padding-left: 4px !important;
+    padding-right: 2px !important;
+    text-align: center;
   }
   #panel-grade table.data-table th:nth-child(2),
   #panel-grade table.data-table td:nth-child(2) {
-    width: 56px;
-    min-width: 48px;
-    max-width: 72px;
-    padding-left: 2px;
-    padding-right: 2px;
+    width: 52px;
+    min-width: 44px;
+    max-width: 68px;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
   }
   #panel-grade table.data-table th:nth-child(3),
   #panel-grade table.data-table td:nth-child(3) {
     position: sticky;
     left: 0;
-    z-index: 3;
-    background: #ffffff;
-    box-shadow: 3px 0 6px rgba(0, 0, 0, 0.08);
+    z-index: 4;
+    background: #ffffff !important;
+    box-shadow: 3px 0 8px rgba(0, 0, 0, 0.10);
     min-width: 56px;
-    max-width: 80px;
-    padding-left: 6px;
-    padding-right: 6px;
+    max-width: 84px;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
     font-weight: 600;
+    text-align: left;
   }
   #panel-grade table.data-table thead th:nth-child(3) {
-    z-index: 5;
-    background: #f5f5f7;
+    z-index: 6;
+    background: #f5f5f7 !important;
+  }
+  #panel-grade table.data-table tbody tr:nth-child(even) td:nth-child(3) {
+    background: #fafafa !important;
   }
   #panel-grade table.attendance-table {
-    min-width: 520px;
+    min-width: 480px;
   }
   #panel-grade table.attendance-table th,
   #panel-grade table.attendance-table td {
-    padding: 6px 4px;
+    padding: 5px 4px !important;
     font-size: 12px;
+  }
+  #panel-grade table.attendance-table th:nth-child(3),
+  #panel-grade table.attendance-table td:nth-child(3) {
+    background: #ffffff !important;
+  }
+  #panel-grade table.attendance-table thead th:nth-child(3) {
+    background: #f5f5f7 !important;
+  }
+  #panel-grade table.attendance-table tbody tr:nth-child(even) td:nth-child(3) {
+    background: #fafafa !important;
   }
   #panel-grade .card .table-wrap + .table-wrap,
   #panel-grade .card > .table-wrap {
