@@ -10,10 +10,13 @@
 <script src="js/muyu-audio-data.js?v=20260905e"></script>
 <script src="js/muyu.js?v=20260905e"></script>
 <script>
+/* 已有会话：首屏前隐藏本地登录层；无会话则回统一登录页，避免二次登录弹窗 */
 (function () {
   try {
     if (localStorage.getItem('admin_token') || localStorage.getItem('pjyz_token')) {
       document.documentElement.classList.add('pjyz-has-token');
+    } else {
+      location.replace('denglu');
     }
   } catch (_) {}
 })();
@@ -3043,7 +3046,15 @@ function applyClassScheduleUI() {
 }
 
 function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem("pjyz_token") || "";
+  var t = "";
+  try {
+    t = localStorage.getItem(TOKEN_KEY) || localStorage.getItem("pjyz_token") || "";
+    if (t) {
+      if (!localStorage.getItem(TOKEN_KEY)) localStorage.setItem(TOKEN_KEY, t);
+      if (!localStorage.getItem("pjyz_token")) localStorage.setItem("pjyz_token", t);
+    }
+  } catch (_) {}
+  return t;
 }
 function getUser() {
   try { return JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch (_) { return null; }
@@ -3491,9 +3502,9 @@ async function api(method, url, body) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem("pjyz_token");
       localStorage.removeItem(USER_KEY);
+      document.documentElement.classList.remove("pjyz-has-token");
     } catch (_) {}
-    const overlay = document.getElementById("loginOverlay");
-    if (overlay) overlay.classList.remove("hidden");
+    window.location.replace("denglu");
     throw new Error("登录已过期，请重新登录");
   }
   const ct = res.headers.get("content-type") || "";
@@ -5534,10 +5545,11 @@ async function initApp() {
 
 if (getToken()) {
   document.getElementById("loginOverlay").classList.add("hidden");
+  try { document.documentElement.classList.add("pjyz-has-token"); } catch (_) {}
   initApp();
 } else {
-  const u = localStorage.getItem("pjyz_login_user");
-  if (u) document.getElementById("loginUser").value = u;
+  try { document.documentElement.classList.remove("pjyz-has-token"); } catch (_) {}
+  window.location.replace("denglu");
 }
 </script>
 </body>
