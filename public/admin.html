@@ -3723,7 +3723,7 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行（仅移动端）：共 N 条 | 删除 | 选课状态 | 禁选 | 添加（隐藏删除所有/导出/恢复删除） */
+  /* 第四行（仅移动端）：左=共 N 条+删除+恢复删除；右=状态+禁选+添加（隐藏删除所有/导出） */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
@@ -3755,13 +3755,13 @@ th.sortable.active .sort-icon { opacity: 1; }
     color: #0f766e;
     white-space: nowrap;
   }
-  /* 移动端不显示：删除所有、恢复删除、导出 */
+  /* 移动端不显示：删除所有、导出 */
   #section-selections .sel-mob-count-slot #deleteAllSelectionsBtn,
-  #section-selections .sel-mob-count-slot #restoreDeletedSelectionsBtn,
   #section-selections #exportBtnMob {
     display: none !important;
   }
   #section-selections .sel-mob-count-slot #batchDeleteBtn,
+  #section-selections .sel-mob-count-slot #restoreDeletedSelectionsBtn,
   #section-selections #toggleSelectionBtnMob,
   #section-selections #importRosterBtnMob2 {
     height: 30px;
@@ -3782,10 +3782,11 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 6px;
     flex: 0 0 auto;
     min-width: 0;
+    margin-left: auto;
   }
   #section-selections #selectionStatusTextMob {
     font-size: 11px;
