@@ -3711,23 +3711,22 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-filter-extra {
     display: inline-flex !important;
   }
-  /* 移动端隐藏：导入名单 / 导出 Excel（提前录课已并入添加学生弹窗） */
+  /* 移动端隐藏侧栏多余导入按钮；导出改在查询下方工具行显示 */
   #section-selections #importRosterBtnMob,
-  #section-selections #exportBtnMob,
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行：共 N 条 + 删除 | 状态 + 禁选 + 添加（右） */
+  /* 第四行：共 N 条 + 删除所有/恢复删除 | 导出 | 状态 + 禁选 + 添加 */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 4px;
     width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 2px 0;
     order: 0;
     min-height: 0;
   }
@@ -3736,6 +3735,9 @@ th.sortable.active .sort-icon { opacity: 1; }
     min-width: 0;
   }
   #section-selections .sel-mob-count-slot .data-count-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 4px;
   }
   #section-selections .sel-mob-count-slot .data-count {
@@ -3746,7 +3748,10 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   #section-selections .sel-mob-count-slot #batchDeleteBtn,
   #section-selections .sel-mob-count-slot #deleteAllSelectionsBtn,
-  #section-selections .sel-mob-count-slot #restoreDeletedSelectionsBtn {
+  #section-selections .sel-mob-count-slot #restoreDeletedSelectionsBtn,
+  #section-selections #exportBtnMob,
+  #section-selections #toggleSelectionBtnMob,
+  #section-selections #importRosterBtnMob2 {
     height: 30px;
     min-height: 30px !important;
     max-height: 30px;
@@ -3754,13 +3759,20 @@ th.sortable.active .sort-icon { opacity: 1; }
     font-size: 11px;
     border-radius: 6px;
     line-height: 1.2;
+    flex: 0 0 auto;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  #section-selections #exportBtnMob {
+    order: 0;
   }
   #section-selections .sel-mob-actions-right {
-    display: flex;
+    display: inline-flex;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 4px;
     flex: 1 1 auto;
     min-width: 0;
@@ -3770,19 +3782,8 @@ th.sortable.active .sort-icon { opacity: 1; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 28vw;
+    max-width: 22vw;
     flex: 0 1 auto;
-  }
-  #section-selections #toggleSelectionBtnMob,
-  #section-selections #importRosterBtnMob2 {
-    flex: 0 0 auto;
-    height: 30px;
-    min-height: 30px !important;
-    max-height: 30px;
-    padding: 0 6px;
-    font-size: 11px;
-    border-radius: 6px;
-    line-height: 1.2;
   }
   /* 工具栏整行隐藏，避免重复的禁选/删除/录课与条数 */
   #section-selections .data-toolbar {
@@ -3804,11 +3805,15 @@ th.sortable.active .sort-icon { opacity: 1; }
     flex-direction: column;
     min-height: 0;
   }
-  /* 表格区域尽量占满剩余视口，多显示学生行 */
+  /* 表格区域：横滑看全列，姓名列冻结 */
   #section-selections .data-card .table-wrap {
     flex: 1 1 auto;
     min-height: min(62vh, calc(100dvh - 250px));
     max-height: none;
+    overflow-x: auto !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
   #section-selections .data-card .pagination {
     margin-top: 4px;
@@ -3822,11 +3827,89 @@ th.sortable.active .sort-icon { opacity: 1; }
     padding: 0 8px;
     font-size: 12px;
   }
+  #section-selections table.sel-table {
+    table-layout: auto !important;
+    width: max-content !important;
+    min-width: 680px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
   #section-selections table.sel-table th,
   #section-selections table.sel-table td {
-    padding: 6px 6px !important;
-    font-size: 14px !important;
+    padding: 6px 4px !important;
+    font-size: 12px !important;
     line-height: 1.25;
+    white-space: nowrap;
+  }
+  #section-selections table.sel-table th:nth-child(1),
+  #section-selections table.sel-table td:nth-child(1) {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    padding-left: 4px !important;
+    padding-right: 2px !important;
+  }
+  #section-selections table.sel-table th:nth-child(2),
+  #section-selections table.sel-table td:nth-child(2) {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 44px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  #section-selections table.sel-table th:nth-child(3),
+  #section-selections table.sel-table td:nth-child(3) {
+    width: 72px !important;
+    min-width: 64px !important;
+    max-width: 88px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  #section-selections table.sel-table th:nth-child(4),
+  #section-selections table.sel-table td:nth-child(4) {
+    width: 44px !important;
+    min-width: 40px !important;
+    max-width: 52px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  /* 冻结学生姓名列（第5列） */
+  #section-selections table.sel-table th:nth-child(5),
+  #section-selections table.sel-table td:nth-child(5) {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #ffffff !important;
+    box-shadow: 3px 0 6px rgba(15, 23, 42, 0.10);
+    min-width: 64px;
+    max-width: 88px;
+    font-weight: 600;
+  }
+  #section-selections table.sel-table thead th:nth-child(5) {
+    z-index: 5;
+    background: #f8fafc !important;
+  }
+  #section-selections table.sel-table tbody tr:hover td:nth-child(5) {
+    background: #f0f9ff !important;
+  }
+  #section-selections table.sel-table tbody tr.unselected-row td:nth-child(5) {
+    background: #eff6ff !important;
+  }
+  #section-selections table.sel-table th:nth-child(6),
+  #section-selections table.sel-table td:nth-child(6) {
+    width: 36px !important;
+    min-width: 36px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  #section-selections table.sel-table th:nth-child(7),
+  #section-selections table.sel-table td:nth-child(7) {
+    min-width: 96px;
+    max-width: none !important;
+  }
+  #section-selections table.sel-table th:nth-child(8),
+  #section-selections table.sel-table td:nth-child(8) {
+    min-width: 120px;
   }
   #section-selections table.sel-table .btn-sm {
     min-height: 28px !important;
@@ -3835,7 +3918,7 @@ th.sortable.active .sort-icon { opacity: 1; }
     font-size: 12px !important;
   }
   #section-selections table.sel-table .course-link {
-    font-size: 13px !important;
+    font-size: 12px !important;
   }
 
   /* ========== 3. 课程看板 ========== */
@@ -4221,11 +4304,11 @@ th.sortable.active .sort-icon { opacity: 1; }
               </div>
               <div class="selections-title-actions mob-only" id="selectionsTitleActionsMob">
                 <span id="selMobCountSlot" class="sel-mob-count-slot"></span>
+                <button type="button" class="btn btn-success btn-sm" id="exportBtnMob" title="导出 Excel">⬇ 导出</button>
                 <div class="sel-mob-actions-right">
-                  <span class="selection-status-text open" id="selectionStatusTextMob">当前状态为选课状态</span>
+                  <span class="selection-status-text open" id="selectionStatusTextMob">选课状态</span>
                   <button type="button" class="btn btn-warning btn-sm" id="toggleSelectionBtnMob">🚫 <span class="txt-full">禁止选课</span><span class="txt-short">禁选</span></button>
-                  <button type="button" class="btn btn-outline btn-sm mob-only" id="importRosterBtnMob2" title="添加学生">➕ <span class="txt-full">添加学生</span><span class="txt-short">添加</span></button>
-                  <button type="button" class="btn btn-success btn-sm mob-hide-640" id="exportBtnMob" hidden aria-hidden="true">⬇ <span class="txt-full">导出 Excel</span><span class="txt-short">导出</span></button>
+                  <button type="button" class="btn btn-outline btn-sm" id="importRosterBtnMob2" title="添加学生">➕ <span class="txt-full">添加学生</span><span class="txt-short">添加</span></button>
                 </div>
               </div>
             </div>
@@ -9583,18 +9666,18 @@ function updateSelectionLockUI(){
     const status = document.getElementById(pair.status);
     if (!btn || !status) return;
     if (selectionLockEnabled) {
-      btn.textContent = '🚫 禁止选课';
+      btn.textContent = pair.sm ? '🚫 禁选' : '🚫 禁止选课';
       btn.classList.remove('btn-success');
       btn.classList.add('btn-warning');
       if (pair.sm) btn.classList.add('btn-sm');
-      status.textContent = '当前状态为选课状态';
+      status.textContent = pair.sm ? '选课状态' : '当前状态为选课状态';
       status.className = 'selection-status-text open';
     } else {
-      btn.textContent = '✅ 解除禁止选课';
+      btn.textContent = pair.sm ? '✅ 开选' : '✅ 解除禁止选课';
       btn.classList.remove('btn-warning');
       btn.classList.add('btn-success');
       if (pair.sm) btn.classList.add('btn-sm');
-      status.textContent = '当前状态为禁止选课';
+      status.textContent = pair.sm ? '已禁选' : '当前状态为禁止选课';
       status.className = 'selection-status-text locked';
     }
   });
