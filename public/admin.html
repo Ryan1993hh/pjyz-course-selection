@@ -3515,19 +3515,13 @@ th.sortable.active .sort-icon { opacity: 1; }
   table.courses-table th:nth-child(9),
   table.courses-table td:nth-child(9) { min-width: 64px; }
 
-  /* 选课表：保留班级、姓名、课程、操作 */
+  /* 选课表：移动端横滑看全列（含姓名），姓名列在下方 #section-selections 规则中冻结 */
   table.sel-table {
     --sel-col-w: 88px;
     --sel-col-w-class: 108px;
-    --sel-col-w-gender: 0;
+    --sel-col-w-gender: 48px;
     --sel-col-w-course: 140px;
     --sel-col-w-actions: 120px;
-  }
-  table.sel-table th:nth-child(2),
-  table.sel-table td:nth-child(2),
-  table.sel-table th:nth-child(5),
-  table.sel-table td:nth-child(5) {
-    display: none !important;
   }
 
   /* 用户表：隐藏部分列，冻结教师名字；保留课程名称 */
@@ -3729,29 +3723,31 @@ th.sortable.active .sort-icon { opacity: 1; }
   #section-selections .mob-hide-640 {
     display: none !important;
   }
-  /* 第四行：共 N 条 + 删除所有/恢复删除 | 导出 | 状态 + 禁选 + 添加 */
+  /* 第四行（仅移动端）：共 N 条 | 删除 | 选课状态 | 禁选 | 添加（隐藏删除所有/导出/恢复删除） */
   #section-selections #selectionsTitleActionsMob {
     display: flex !important;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-start;
-    gap: 4px;
+    gap: 6px;
     width: 100%;
     margin: 0;
     padding: 2px 0;
     order: 0;
     min-height: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   #section-selections .sel-mob-count-slot {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
   }
   #section-selections .sel-mob-count-slot .data-count-actions {
     display: inline-flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
   }
   #section-selections .sel-mob-count-slot .data-count {
     font-size: 12px;
@@ -3759,16 +3755,19 @@ th.sortable.active .sort-icon { opacity: 1; }
     color: #0f766e;
     white-space: nowrap;
   }
-  #section-selections .sel-mob-count-slot #batchDeleteBtn,
+  /* 移动端不显示：删除所有、恢复删除、导出 */
   #section-selections .sel-mob-count-slot #deleteAllSelectionsBtn,
   #section-selections .sel-mob-count-slot #restoreDeletedSelectionsBtn,
-  #section-selections #exportBtnMob,
+  #section-selections #exportBtnMob {
+    display: none !important;
+  }
+  #section-selections .sel-mob-count-slot #batchDeleteBtn,
   #section-selections #toggleSelectionBtnMob,
   #section-selections #importRosterBtnMob2 {
     height: 30px;
     min-height: 30px !important;
     max-height: 30px;
-    padding: 0 6px;
+    padding: 0 8px;
     font-size: 11px;
     border-radius: 6px;
     line-height: 1.2;
@@ -3776,27 +3775,25 @@ th.sortable.active .sort-icon { opacity: 1; }
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-  }
-  #section-selections #exportBtnMob {
-    order: 0;
+    white-space: nowrap;
   }
   #section-selections .sel-mob-actions-right {
     display: inline-flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-start;
-    gap: 4px;
-    flex: 1 1 auto;
+    gap: 6px;
+    flex: 0 0 auto;
     min-width: 0;
   }
   #section-selections #selectionStatusTextMob {
     font-size: 11px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 22vw;
-    flex: 0 1 auto;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
+    flex: 0 0 auto;
   }
   /* 工具栏整行隐藏，避免重复的禁选/删除/录课与条数 */
   #section-selections .data-toolbar {
@@ -3886,20 +3883,25 @@ th.sortable.active .sort-icon { opacity: 1; }
     padding-left: 2px !important;
     padding-right: 2px !important;
   }
-  /* 冻结学生姓名列（第5列） */
+  /* 冻结学生姓名列（第5列）：横滑时姓名始终可见 */
   #section-selections table.sel-table th:nth-child(5),
   #section-selections table.sel-table td:nth-child(5) {
+    display: table-cell !important;
     position: sticky;
     left: 0;
-    z-index: 3;
+    z-index: 4;
     background: #ffffff !important;
-    box-shadow: 3px 0 6px rgba(15, 23, 42, 0.10);
-    min-width: 64px;
-    max-width: 88px;
+    box-shadow: 3px 0 8px rgba(15, 23, 42, 0.12);
+    min-width: 72px !important;
+    width: 72px !important;
+    max-width: 96px !important;
     font-weight: 600;
   }
   #section-selections table.sel-table thead th:nth-child(5) {
-    z-index: 5;
+    z-index: 6;
+    background: #f8fafc !important;
+  }
+  #section-selections table.sel-table tbody tr:nth-child(even) td:nth-child(5) {
     background: #f8fafc !important;
   }
   #section-selections table.sel-table tbody tr:hover td:nth-child(5) {
@@ -3907,6 +3909,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   #section-selections table.sel-table tbody tr.unselected-row td:nth-child(5) {
     background: #eff6ff !important;
+  }
+  #section-selections table.sel-table tbody tr.pre-enroll-row td:nth-child(5) {
+    background: #fefce8 !important;
   }
   #section-selections table.sel-table th:nth-child(6),
   #section-selections table.sel-table td:nth-child(6) {
