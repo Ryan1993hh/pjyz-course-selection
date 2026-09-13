@@ -4096,11 +4096,9 @@ th.sortable.active .sort-icon { opacity: 1; }
   }
   #section-board .hours-panel-head {
     display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     padding: 10px 12px;
   }
   #section-board .hours-panel-head h3 {
@@ -4109,14 +4107,21 @@ th.sortable.active .sort-icon { opacity: 1; }
     white-space: nowrap;
   }
   #section-board .hours-panel-actions {
-    width: auto;
-    flex-wrap: nowrap;
-    gap: 4px;
+    width: 100%;
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-left: 0;
   }
   #section-board .hours-panel-actions .btn {
     min-height: 36px;
-    padding: 0 8px;
+    padding: 0 10px;
     font-size: 12px;
+    flex: 0 0 auto;
+  }
+  #section-board #courseHoursFillTodayBtn {
+    display: inline-flex !important;
   }
 }
 </style>
