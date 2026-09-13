@@ -828,7 +828,7 @@ async function handleAccountPasswordPut(db, request) {
 
 // ---- Courses ----
 async function handleCoursesGet(db) {
-  const results = await db.prepare('SELECT * FROM courses').all();
+  const results = await db.prepare('SELECT * FROM courses ORDER BY id ASC').all();
   const courses = (results.results || []).map(mapCourseApiRow);
   return json({ courses });
 }
@@ -1753,13 +1753,13 @@ async function handleSelectionsBatchCreate(db, request, context) {
     if (isAdmin) {
       return await handleAdminSelectionsBulkUpsert(db, arr, context);
     }
-
+    
     const results = [];
     const errors = [];
     const affectedCourses = new Set();
     const coursesRes = await db.prepare('SELECT id, name FROM courses').all();
     const courseList = (coursesRes.results || []).filter((c) => c && c.name);
-
+    
     for (const item of arr) {
       if (!item || !item.student_name) {
         errors.push('缺少学生姓名');
@@ -1836,7 +1836,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
         if (courseId > 0) {
           await db.prepare('UPDATE courses SET selected_count = selected_count + 1 WHERE id = ?').bind(courseId).run();
         }
-
+        
         const selection = await db.prepare('SELECT * FROM selections WHERE id = ?').bind(result.meta.last_row_id).first();
         results.push(selection || {
           id: result.meta && result.meta.last_row_id,
@@ -1856,7 +1856,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
         errors.push('插入失败: ' + innerErr.message);
       }
     }
-
+    
     const countResult = await db.prepare('SELECT COUNT(*) as count FROM selections').first();
     await bumpSelectionDataRevision(db);
     const affectedCourseList = [...affectedCourses];
@@ -1868,7 +1868,7 @@ async function handleSelectionsBatchCreate(db, request, context) {
     } else {
       await syncP;
     }
-
+    
     return json({
       success: true,
       count: results.length,
@@ -2542,7 +2542,7 @@ async function handleClearSelections(db, request, ctx) {
 
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
-
+  
   const allRes = await db.prepare(
     `SELECT grade, class_name, student_name, gender, student_no, course_id, course_name, is_locked, selected_at
      FROM selections`
@@ -6530,7 +6530,7 @@ async function handleTeacherClassroomList(db, request) {
   if (auth.error) return json({ error: auth.error }, auth.status);
 
   const coursesRes = await db.prepare(
-    'SELECT id, name, teacher, location, category, selected_count FROM courses WHERE is_active = 1 ORDER BY category, name'
+    'SELECT id, name, teacher, location, category, selected_count FROM courses WHERE is_active = 1 ORDER BY id ASC'
   ).all();
   const courses = coursesRes.results || [];
 
@@ -6813,8 +6813,9 @@ function buildCourseHourCellsForCourse(name, dates, signedDatesByCourse, overrid
 }
 
 async function buildCourseHoursMatrix(db) {
+  // 与课程管理列表一致：按 courses.id 升序，避免按名称重排打乱顺序
   const coursesRes = await db.prepare(
-    'SELECT id, name, teacher FROM courses WHERE is_active = 1 ORDER BY category, name'
+    'SELECT id, name, teacher FROM courses WHERE is_active = 1 ORDER BY id ASC'
   ).all();
   const courses = coursesRes.results || [];
 
@@ -6881,7 +6882,7 @@ async function buildCourseHoursMatrix(db) {
     });
   });
 
-  rows.sort((a, b) => String(a.course_name).localeCompare(String(b.course_name), 'zh'));
+  // 不再按课程名重排，保持与课程管理 id 顺序一致
 
   return {
     dates: dates.map((d) => ({ key: d, label: formatCourseHourDateLabel(d) })),

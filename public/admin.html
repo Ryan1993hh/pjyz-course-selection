@@ -4118,15 +4118,15 @@ th.sortable.active .sort-icon { opacity: 1; }
 <!-- ===== 顶部标题栏 ===== -->
 <div class="header">
   <div class="header-brand">
-    <div class="header-logo">
+  <div class="header-logo">
       <img class="logo-img" src="images/logo.png" alt="浦江一中校徽">
-      <div class="logo-text">
-        <span class="cn">上海市闵行区浦江第一中学</span>
-        <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
-      </div>
+    <div class="logo-text">
+      <span class="cn">上海市闵行区浦江第一中学</span>
+      <span class="en">Shanghai Minhang Pujiang No.1 Middle School</span>
     </div>
-    <div class="header-title">
-      <h1>浦江一中拓展课 · 后台管理</h1>
+  </div>
+  <div class="header-title">
+    <h1>浦江一中拓展课 · 后台管理</h1>
     </div>
   </div>
 
@@ -4139,14 +4139,14 @@ th.sortable.active .sort-icon { opacity: 1; }
     </div>
     <div class="header-tools">
       <div id="roleSwitcher"></div>
-      <div class="admin-info">
-        <div class="avatar" id="adminAvatar">A</div>
-        <span id="adminName">管理员</span>
-      </div>
-      <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
-        <span class="btn-logout-icon" aria-hidden="true">→</span>
-        <span>退出</span>
-      </button>
+    <div class="admin-info">
+      <div class="avatar" id="adminAvatar">A</div>
+      <span id="adminName">管理员</span>
+    </div>
+    <button type="button" class="btn-logout" id="adminLogoutBtn" title="退出登录">
+      <span class="btn-logout-icon" aria-hidden="true">→</span>
+      <span>退出</span>
+    </button>
     </div>
   </div>
 </div>
@@ -4160,9 +4160,9 @@ th.sortable.active .sort-icon { opacity: 1; }
     <section class="section" id="section-courses">
       <div class="course-top-bar">
         <div class="course-section-head">
-          <h2>课程管理</h2>
+              <h2>课程管理</h2>
           <p class="desc">下方表格可编辑后统一保存</p>
-        </div>
+            </div>
         <div class="course-top-modules">
           <div class="course-top-modules-actions">
             <div id="courseUploadWrap">
@@ -4170,15 +4170,15 @@ th.sortable.active .sort-icon { opacity: 1; }
                 <div class="mod-head">
                   <div class="mod-title">上传课程文件</div>
                   <button type="button" class="mod-tpl" id="downloadCourseTemplateBtn" title="下载空白课程导入模板">📥 模板</button>
-                </div>
-                <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
-                  <span class="icon">↑</span>
-                  <div class="text-col">
+          </div>
+            <div class="upload-area" id="uploadArea" title="点击或拖拽上传 csv / xlsx / xls / docx 文件">
+              <span class="icon">↑</span>
+              <div class="text-col">
                     <span class="title">点击或拖拽上传</span>
                     <span class="hint">csv / xlsx / xls / docx</span>
-                  </div>
-                </div>
-                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
+              </div>
+            </div>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.docx" style="position:fixed;opacity:0;width:0;height:0;z-index:-1;">
                 <div class="upload-msg" id="uploadMsg">可直接在下方表格新增</div>
               </div>
             </div>
@@ -4262,7 +4262,7 @@ th.sortable.active .sort-icon { opacity: 1; }
       <div class="section-header selections-section-header">
         <div class="selections-header-main">
           <div class="selections-title-row">
-            <h2>选课数据看板</h2>
+          <h2>选课数据看板</h2>
             <div id="selHeadStatsSlot" class="sel-head-stats-slot"></div>
           </div>
           <p class="desc">按年级 / 班级 / 课程筛选，支持批量操作与 Excel 导出</p>
@@ -4276,33 +4276,33 @@ th.sortable.active .sort-icon { opacity: 1; }
             <div class="card-title">精准查找</div>
             <div class="filter-vertical selections-filter">
               <div class="filter-row filter-row-mob1">
-                <div class="f-item">
-                  <label>年级</label>
-                  <select class="form-select" id="filterGrade">
-                    <option value="">全部</option>
-                    <option value="六年级">六年级</option>
-                    <option value="七年级">七年级</option>
-                  </select>
-                </div>
-                <div class="f-item">
-                  <label>班级</label>
-                  <select class="form-select" id="filterClass">
-                    <option value="">全部</option>
-                  </select>
-                </div>
-                <div class="f-item">
-                  <label>课程名称</label>
-                  <select class="form-select" id="filterCourse">
-                    <option value="">全部</option>
-                  </select>
-                </div>
+              <div class="f-item">
+                <label>年级</label>
+                <select class="form-select" id="filterGrade">
+                  <option value="">全部</option>
+                  <option value="六年级">六年级</option>
+                  <option value="七年级">七年级</option>
+                </select>
+              </div>
+              <div class="f-item">
+                <label>班级</label>
+                <select class="form-select" id="filterClass">
+                  <option value="">全部</option>
+                </select>
+              </div>
+              <div class="f-item">
+                <label>课程名称</label>
+                <select class="form-select" id="filterCourse">
+                  <option value="">全部</option>
+                </select>
+              </div>
                 <div class="f-item filter-student-item">
-                  <label>学生姓名</label>
-                  <input type="text" class="form-input" id="filterStudent" placeholder="输入学生姓名">
-                </div>
+                <label>学生姓名</label>
+                <input type="text" class="form-input" id="filterStudent" placeholder="输入学生姓名">
+              </div>
               </div>
               <div class="filter-row filter-row-mob2 desktop-filter-actions">
-                <button type="button" class="btn btn-primary btn-block" id="queryBtn">🔍 查询</button>
+              <button type="button" class="btn btn-primary btn-block" id="queryBtn">🔍 查询</button>
                 <button type="button" class="btn btn-outline btn-block" id="resetFilterBtn"><span class="txt-full">重置筛选</span><span class="txt-short">重置</span></button>
               </div>
               <div class="filter-row filter-row-actions sel-mob-btns">
@@ -4345,11 +4345,11 @@ th.sortable.active .sort-icon { opacity: 1; }
             <div class="data-toolbar">
               <div class="data-toolbar-left" id="dataToolbarCountSlot">
                 <div class="data-count-actions" id="dataCountActions">
-                  <span class="data-count" id="dataCount">共 0 条数据</span>
+                <span class="data-count" id="dataCount">共 0 条数据</span>
                   <button type="button" class="btn btn-danger btn-sm" id="batchDeleteBtn" disabled>删除</button>
                   <button type="button" class="btn btn-outline btn-sm" id="deleteAllSelectionsBtn" title="清空全部选课数据">删除所有</button>
                   <button type="button" class="btn btn-secondary btn-sm" id="restoreDeletedSelectionsBtn" disabled title="暂无可恢复的删除备份">恢复删除</button>
-                </div>
+              </div>
               </div>
               <div class="data-toolbar-right desktop-only">
                 <div class="selection-lock-wrap">
@@ -4439,6 +4439,7 @@ th.sortable.active .sort-icon { opacity: 1; }
               <div class="hours-panel-actions">
                 <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddDateBtn" style="display:none">+ <span class="txt-full">新增日期</span><span class="txt-short">日期</span></button>
                 <button type="button" class="btn btn-outline btn-sm" id="courseHoursEditBtn">✎ <span class="txt-full">编辑</span><span class="txt-short">编辑</span></button>
+                <button type="button" class="btn btn-primary btn-sm" id="courseHoursFillTodayBtn" title="当日空单元格自动填 1 课时">⚡ <span class="txt-full">一键补齐</span><span class="txt-short">补齐</span></button>
                 <button type="button" class="btn btn-success btn-sm" id="courseHoursExportBtn">⬇ <span class="txt-full">导出表格</span><span class="txt-short">导出</span></button>
               </div>
             </div>
@@ -5566,25 +5567,241 @@ async function saveCourseHoursEdits() {
 }
 
 function exportCourseHoursTable() {
+  openCourseHoursExportModal();
+}
+
+function getCourseHoursTodayKey() {
+  var d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function isHoursNumericCell(val) {
+  var s = String(val == null ? '' : val).trim();
+  return s !== '' && /^-?\d+(\.\d+)?$/.test(s);
+}
+
+function isHoursSubstituteName(val) {
+  var s = String(val == null ? '' : val).trim();
+  return s !== '' && !isHoursNumericCell(s);
+}
+
+function normalizeSubstituteTeacherName(val) {
+  var s = String(val == null ? '' : val).trim();
+  var stripped = s.replace(/(代看护|代课|代班)\s*$/g, '').trim();
+  return stripped || s;
+}
+
+/** 一键补齐：当日空单元格写入 1 课时并保存 */
+async function fillCourseHoursTodayEmpty() {
+  var data = courseHoursState.data;
+  if (!data || !(data.rows || []).length) {
+    if (typeof toast === 'function') toast('暂无课程数据可补齐', 'warn');
+    return;
+  }
+  var today = getCourseHoursTodayKey();
+  var hasToday = (data.dates || []).some(function (d) { return d && d.key === today; });
+  if (!hasToday) {
+    if (!data.dates) data.dates = [];
+    data.dates.push({ key: today, label: formatHoursDateLabel(today) });
+    data.dates.sort(function (a, b) { return String(a.key).localeCompare(String(b.key)); });
+  }
+
+  var updates = [];
+  (data.rows || []).forEach(function (row) {
+    var cn = row.course_name;
+    if (!cn) return;
+    var val = String(getCourseHoursCellValue(cn, today) || '').trim();
+    if (val !== '') return;
+    updates.push({ course_name: cn, session_date: today, cell_value: '1' });
+  });
+
+  if (!updates.length) {
+    if (typeof toast === 'function') toast('今日无需补齐：空单元格已填满', 'success');
+    return;
+  }
+
+  var btn = document.getElementById('courseHoursFillTodayBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '补齐中…'; }
+  try {
+    var body = { updates: updates };
+    if (!hasToday) body.add_dates = [today];
+    await request('PUT', '/api/course-hours', body);
+    updates.forEach(function (u) {
+      var row = (courseHoursState.data.rows || []).find(function (r) { return r.course_name === u.course_name; });
+      if (!row) return;
+      if (!row.cells) row.cells = {};
+      row.cells[u.session_date] = u.cell_value;
+      delete courseHoursState.pending[u.course_name + '\0' + u.session_date];
+    });
+    renderCourseHoursTable();
+    syncBoardHoursFromMatrix();
+    if (typeof toast === 'function') toast('已补齐今日 ' + updates.length + ' 条课时为 1', 'success');
+  } catch (e) {
+    if (typeof toast === 'function') toast('补齐失败：' + e.message, 'error');
+  }
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '⚡ <span class="txt-full">一键补齐</span><span class="txt-short">补齐</span>';
+  }
+}
+
+function openCourseHoursExportModal() {
   var data = courseHoursState.data;
   if (!data || !(data.rows || []).length) {
     if (typeof toast === 'function') toast('暂无数据可导出', 'warn');
     return;
   }
-  var displayDates = getCourseHoursDisplayDates(data.dates || []);
-  var colCount = COURSE_HOURS_TOTAL_COLS;
-  var title = '浦江一中拓展课 考勤表';
-  var header = ['课程名称', '授课老师'].concat(displayDates.map(function(d) {
-    return d ? (d.label || d.key) : '';
-  }));
+  var today = getCourseHoursTodayKey();
+  var monthVal = today.slice(0, 7);
+  openModal(
+    '<p class="export-choice-hint">选择导出时间范围，将按筛选后的日期列生成表格；含代课姓名的单元格会生成「代看护」行。</p>' +
+    '<div class="form-group" style="margin-bottom:12px">' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px">' +
+        '<input type="radio" name="hoursExportMode" value="month" checked> 按月导出' +
+      '</label>' +
+      '<input type="month" class="form-input" id="hoursExportMonth" value="' + escHtml(monthVal) + '">' +
+    '</div>' +
+    '<div class="form-group" style="margin-bottom:12px">' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px">' +
+        '<input type="radio" name="hoursExportMode" value="range"> 按时间段导出' +
+      '</label>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<input type="date" class="form-input" id="hoursExportStart" value="' + escHtml(monthVal + '-01') + '" style="flex:1;min-width:140px">' +
+        '<span>至</span>' +
+        '<input type="date" class="form-input" id="hoursExportEnd" value="' + escHtml(today) + '" style="flex:1;min-width:140px">' +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+      '<button type="button" class="btn btn-success" id="hoursExportConfirmBtn">确认导出</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '导出上课记录';
+  var confirmBtn = document.getElementById('hoursExportConfirmBtn');
+  if (confirmBtn) {
+    confirmBtn.onclick = function () {
+      var modeEl = document.querySelector('input[name="hoursExportMode"]:checked');
+      var mode = modeEl ? modeEl.value : 'month';
+      var start = '';
+      var end = '';
+      if (mode === 'month') {
+        var m = (document.getElementById('hoursExportMonth') || {}).value || '';
+        if (!/^\d{4}-\d{2}$/.test(m)) {
+          if (typeof toast === 'function') toast('请选择有效月份', 'warn');
+          return;
+        }
+        start = m + '-01';
+        var y = parseInt(m.slice(0, 4), 10);
+        var mo = parseInt(m.slice(5, 7), 10);
+        var lastDay = new Date(y, mo, 0).getDate();
+        end = m + '-' + String(lastDay).padStart(2, '0');
+      } else {
+        start = (document.getElementById('hoursExportStart') || {}).value || '';
+        end = (document.getElementById('hoursExportEnd') || {}).value || '';
+        if (!start || !end) {
+          if (typeof toast === 'function') toast('请选择起止日期', 'warn');
+          return;
+        }
+        if (start > end) {
+          var tmp = start; start = end; end = tmp;
+        }
+      }
+      closeModal();
+      downloadCourseHoursExport(start, end);
+    };
+  }
+}
+
+function filterCourseHoursDatesByRange(allDates, start, end) {
+  return (allDates || []).filter(function (d) {
+    if (!d || !d.key) return false;
+    if (start && d.key < start) return false;
+    if (end && d.key > end) return false;
+    return true;
+  });
+}
+
+function buildCourseHoursExportAoa(displayDates) {
+  var data = courseHoursState.data;
+  var header = ['课程名称', '授课老师'].concat(
+    displayDates.map(function (d) { return d ? (d.label || d.key) : ''; })
+  ).concat(['说明']);
   var aoa = [header];
-  (data.rows || []).forEach(function(row) {
+  var subMap = {};
+
+  (data.rows || []).forEach(function (row) {
     var line = [row.course_name || '', row.teacher_name || ''];
-    displayDates.forEach(function(d) {
-      line.push(d ? getCourseHoursCellValue(row.course_name, d.key) : '');
+    displayDates.forEach(function (d) {
+      if (!d) {
+        line.push('');
+        return;
+      }
+      var val = getCourseHoursCellValue(row.course_name, d.key);
+      if (isHoursSubstituteName(val)) {
+        var subName = normalizeSubstituteTeacherName(val);
+        var sk = subName + '\0' + String(row.course_name || '');
+        if (!subMap[sk]) {
+          subMap[sk] = {
+            course_name: row.course_name || '',
+            teacher_name: subName,
+            cells: {}
+          };
+        }
+        subMap[sk].cells[d.key] = '1';
+        line.push('0');
+      } else {
+        line.push(val);
+      }
     });
+    line.push('');
     aoa.push(line);
   });
+
+  Object.keys(subMap).forEach(function (sk) {
+    var s = subMap[sk];
+    var line = [s.course_name, s.teacher_name];
+    displayDates.forEach(function (d) {
+      if (!d) {
+        line.push('');
+        return;
+      }
+      line.push(s.cells[d.key] ? '1' : '');
+    });
+    line.push('代看护');
+    aoa.push(line);
+  });
+
+  return aoa;
+}
+
+function downloadCourseHoursExport(start, end) {
+  var data = courseHoursState.data;
+  if (!data || !(data.rows || []).length) {
+    if (typeof toast === 'function') toast('暂无数据可导出', 'warn');
+    return;
+  }
+  var allDates = getCourseHoursDisplayDates(data.dates || []).filter(Boolean);
+  // 导出不截断为展示列数：用完整日期再按范围筛
+  var deleted = {};
+  (courseHoursState.deletedDates || []).forEach(function (d) { deleted[d] = true; });
+  var fullMap = {};
+  (data.dates || []).forEach(function (d) {
+    var key = d && (d.key || d);
+    if (!key || deleted[key]) return;
+    fullMap[key] = (typeof d === 'object' && d.label) ? d : { key: key, label: formatHoursDateLabel(key) };
+  });
+  allDates = Object.keys(fullMap).sort().map(function (k) { return fullMap[k]; });
+  var displayDates = filterCourseHoursDatesByRange(allDates, start, end);
+  if (!displayDates.length) {
+    if (typeof toast === 'function') toast('所选时间范围内无日期列可导出', 'warn');
+    return;
+  }
+
+  var title = '浦江一中拓展课 考勤表';
+  var aoa = buildCourseHoursExportAoa(displayDates);
+  var colCount = aoa[0].length;
 
   var ws = XLSX.utils.aoa_to_sheet(aoa);
   var thinBorder = {
@@ -5624,17 +5841,19 @@ function exportCourseHoursTable() {
     cols.push({ wch: Math.min(Math.max(maxLen + 2, c < 2 ? 14 : 10), 36) });
   }
   ws['!cols'] = cols;
-  ws['!rows'] = aoa.map(function(_, i) { return { hpt: i === 0 ? 22 : 20 }; });
+  ws['!rows'] = aoa.map(function (_, i) { return { hpt: i === 0 ? 22 : 20 }; });
 
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, title);
+  XLSX.utils.book_append_sheet(wb, ws, '考勤表');
   var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   var blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = title + '.xlsx';
+  var rangeLabel = start === end ? start : (start + '_' + end);
+  a.download = title + '_' + rangeLabel + '.xlsx';
   a.click();
   URL.revokeObjectURL(a.href);
+  if (typeof toast === 'function') toast('导出成功', 'success');
 }
 
 async function loadCourseHoursPanel() {
@@ -5807,6 +6026,7 @@ document.getElementById('courseHoursEditBtn') && document.getElementById('course
   saveCourseHoursEdits();
 });
 document.getElementById('courseHoursAddDateBtn') && document.getElementById('courseHoursAddDateBtn').addEventListener('click', addCourseHoursDateColumn);
+document.getElementById('courseHoursFillTodayBtn') && document.getElementById('courseHoursFillTodayBtn').addEventListener('click', fillCourseHoursTodayEmpty);
 document.getElementById('courseHoursExportBtn') && document.getElementById('courseHoursExportBtn').addEventListener('click', exportCourseHoursTable);
 
 /* ============ Modal ============ */
@@ -6086,7 +6306,7 @@ async function saveCourses(){
         });
         // 仅行列结构变化时重绘表格，避免无谓全表 DOM 重建拖慢体感
         if (inserted > 0 || deleted > 0) {
-          renderCourses();
+      renderCourses();
         }
       }
       markCoursesSaved(coursesData);
@@ -6100,7 +6320,7 @@ async function saveCourses(){
         if (deleted) parts.push('删除 ' + deleted);
         toast('保存成功（' + (parts.join('，') || ('变更 ' + changed)) + '）', 'success');
       } else {
-        toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
+      toast('保存成功，共 ' + (data.count || coursesData.length) + ' 门课程', 'success');
       }
     } else {
       toast('保存失败', 'error');
@@ -6134,18 +6354,18 @@ function setupUpload(){
     msgEl.style.color = '#1e40af';
     msgEl.textContent = '正在上传并解析 ' + file.name + ' ...';
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const data = await request('POST', '/api/courses/upload', fd, true);
-      if (data.success){
-        const newCourses = data.courses || [];
-        coursesData = coursesData.concat(newCourses);
-        renderCourses();
-        msgEl.style.color = '#16a34a';
+        const fd = new FormData();
+        fd.append('file', file);
+        const data = await request('POST', '/api/courses/upload', fd, true);
+        if (data.success){
+          const newCourses = data.courses || [];
+          coursesData = coursesData.concat(newCourses);
+          renderCourses();
+          msgEl.style.color = '#16a34a';
         msgEl.textContent = '解析成功，共 ' + (data.count || newCourses.length) + ' 门课程已添加到表格，请确认后点击"确认保存"';
         toast('上传成功，新增 ' + (data.count || newCourses.length) + ' 门课程', 'success');
-      } else {
-        msgEl.style.color = '#dc2626';
+        } else {
+          msgEl.style.color = '#dc2626';
         const errMsg = data.error || data.message || '上传失败';
         msgEl.textContent = '上传失败：' + errMsg;
         toast('上传失败：' + errMsg, 'error');
@@ -6385,7 +6605,7 @@ async function querySelections(opts){
     // 30 秒内同条件复用结果，切换导航秒开
     if (opts.useCache && _selectionsQueryCache.qs === qs && selectionsData && selectionsData.length &&
         (Date.now() - _selectionsQueryCache.at) < 30000) {
-      renderSelections();
+    renderSelections();
       return;
     }
     // 有旧数据时先保留表格，避免白屏等待
@@ -6468,7 +6688,7 @@ function renderUnselectedStudents(){
   const start = (selectionsPage - 1) * selectionsPageSize;
   const end = Math.min(start + selectionsPageSize, total);
   const pageData = unselectedData.slice(start, end);
-
+  
   var html = '';
   for (var idx = 0; idx < pageData.length; idx++) {
     var s = pageData[idx];
@@ -6919,15 +7139,15 @@ function renderSelectionsTable(data, opts){
   const dataCountEl = document.getElementById('dataCount');
   const statTotal = document.getElementById('statTotal');
   const statCourseCount = document.getElementById('statCourseCount');
-
+  
   if (dataCountEl) dataCountEl.textContent = opts.countText || ('共 ' + data.length + ' 条数据');
   if (opts.updateStats || currentViewMode === 'pre_enroll') {
     if (statTotal) statTotal.textContent = data.length;
-    const courseNames = new Set();
+  const courseNames = new Set();
     data.forEach(function(s){ if (s.course_name) courseNames.add(s.course_name); });
-    if (statCourseCount) statCourseCount.textContent = courseNames.size;
+  if (statCourseCount) statCourseCount.textContent = courseNames.size;
   }
-
+  
   if (!data.length){
     tbody.innerHTML = '<tr><td colspan="8" class="empty">' + (opts.emptyText || '暂无数据') + '</td></tr>';
     renderSelectionsPagination();
@@ -6935,7 +7155,7 @@ function renderSelectionsTable(data, opts){
     updateSelectAllState();
     return;
   }
-
+  
   const total = data.length;
   const totalPages = Math.max(1, Math.ceil(total / selectionsPageSize));
   if (selectionsPage > totalPages) selectionsPage = totalPages;
@@ -6969,7 +7189,7 @@ function renderSelectionsTable(data, opts){
       '</span></td></tr>';
   }
   tbody.innerHTML = html;
-
+  
   renderSelectionsPagination();
   updateBatchDeleteBtn();
   updateSelectAllState();
@@ -7032,8 +7252,8 @@ function renderSelectionsPagination(){
 
 function updateBatchDeleteBtn(){
   function sync(btn){
-    if (!btn) return;
-    btn.disabled = selectionsCheckedIds.size === 0;
+  if (!btn) return;
+  btn.disabled = selectionsCheckedIds.size === 0;
     var n = selectionsCheckedIds.size;
     btn.textContent = n > 0 ? ('删除 (' + n + ')') : '删除';
   }
@@ -7409,7 +7629,7 @@ async function deleteSelection(id){
     if (currentViewMode === 'unselected') {
       await request('DELETE', '/api/unselected-students/' + id);
     } else {
-      await request('DELETE', '/api/selections/' + id);
+    await request('DELETE', '/api/selections/' + id);
     }
     toast('删除成功', 'success');
   } catch(e){
@@ -7569,7 +7789,7 @@ function openEditSelection(s){
 }
 
 function openExportSelectionsMenu(){
-  if (currentViewMode === 'unselected') {
+    if (currentViewMode === 'unselected') {
     exportSelectionsUnselected();
     return;
   }
@@ -7673,20 +7893,20 @@ async function exportSelectionsUnselected(){
     var gradeSel = document.getElementById('filterGrade');
     var classSel = document.getElementById('filterClass');
     var studentSel = document.getElementById('filterStudent');
-    if (gradeSel && gradeSel.value) params.set('grade', gradeSel.value);
-    if (classSel && classSel.value) params.set('class', classSel.value);
-    if (studentSel && studentSel.value) params.set('student_name', studentSel.value);
+      if (gradeSel && gradeSel.value) params.set('grade', gradeSel.value);
+      if (classSel && classSel.value) params.set('class', classSel.value);
+      if (studentSel && studentSel.value) params.set('student_name', studentSel.value);
     var data = await request('GET', '/api/unselected-students?' + params.toString());
     var list = data.unselected || [];
     var exportData = list.map(function(s){
       var cls = (s.class_name || '').replace(/[()（）]/g, '');
-      if (s.grade && cls.indexOf(s.grade) !== 0) cls = s.grade + cls;
-      return { '年级': s.grade || '', '班级': cls, '姓名': s.student_name || '', '选课名称': '未选课' };
-    });
+        if (s.grade && cls.indexOf(s.grade) !== 0) cls = s.grade + cls;
+        return { '年级': s.grade || '', '班级': cls, '姓名': s.student_name || '', '选课名称': '未选课' };
+      });
     var X = window.XLSX;
     if (!X) throw new Error('Excel库未加载');
     var ws = X.utils.json_to_sheet(exportData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+      ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
     var wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, ws, '未选课名单');
     downloadXlsxWorkbook(wb, '未选课名单导出.xlsx');
@@ -9128,7 +9348,7 @@ function openEditUser(u){
     if (password) updated.password = password;
 
     if (userIdx > -1) usersData[userIdx] = updated;
-    closeModal();
+        closeModal();
     renderUsers();
 
     request('PUT', '/api/users/' + u.id, payload).then(function(data){
@@ -9591,18 +9811,18 @@ async function doImportUsers(){
   btn.disabled = true;
   btn.textContent = '导入中...';
 
-  const users = validUsers.map(function(d){
-    return {
-      username: d.username,
-      password: d.password,
-      teacher_name: d.teacher_name,
-      class_name: d.class_name,
+    const users = validUsers.map(function(d){
+      return {
+        username: d.username,
+        password: d.password,
+        teacher_name: d.teacher_name,
+        class_name: d.class_name,
       course_name: d.course_name || '',
       roles: d.roles,
-      email: d.email || '',
-      phone: d.phone || ''
-    };
-  });
+        email: d.email || '',
+        phone: d.phone || ''
+      };
+    });
 
   try {
     const data = await request('POST', '/api/users/import', { users: users });
