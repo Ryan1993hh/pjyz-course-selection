@@ -979,9 +979,17 @@ table.courses-table td[data-field="description"] {
   border-bottom: 1px solid #e2e8f0;
   background: linear-gradient(135deg, #f0fdfa, #fff);
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .board-main .hours-panel-head h3 { margin: 0; font-size: 17px; color: #0f766e; font-weight: 800; }
-.board-main .hours-panel-actions { display: flex; gap: 8px; align-items: center; }
+.board-main .hours-panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
 .board-main .hours-panel-body {
   flex: 1;
   overflow: hidden;
