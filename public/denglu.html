@@ -894,7 +894,24 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username, password: password })
       });
-      var data = await res.json();
+      var ct = (res.headers.get('content-type') || '').toLowerCase();
+      var raw = await res.text();
+      var data = null;
+      if (ct.indexOf('application/json') !== -1 || (raw && raw.trim().charAt(0) === '{')) {
+        try { data = JSON.parse(raw); } catch (_) { data = null; }
+      }
+      if (!data) {
+        showMsg(
+          res.status === 404
+            ? '登录接口不可用（返回了网页而非数据）。请确认已部署 Cloudflare Pages Functions，或稍后刷新重试。'
+            : ('登录服务异常（HTTP ' + res.status + '），接口未返回 JSON。请稍后重试或检查站点部署。'),
+          'error'
+        );
+        loginInFlight = false;
+        loginBtn.disabled = false;
+        setLoginBtnLabel('登 录');
+        return;
+      }
       if (data.success && data.token) {
         try {
           persistLoginSession(username, password, data);
