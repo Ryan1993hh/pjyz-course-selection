@@ -5634,6 +5634,12 @@ async function fillCourseHoursTodayEmpty() {
       if (!row.cells) row.cells = {};
       row.cells[u.session_date] = u.cell_value;
       delete courseHoursState.pending[u.course_name + '\0' + u.session_date];
+      var sum = 0;
+      Object.keys(row.cells).forEach(function (k) {
+        var s = String(row.cells[k] == null ? '' : row.cells[k]).trim();
+        if (s && /^-?\d+(\.\d+)?$/.test(s)) sum += Number(s);
+      });
+      row.numeric_total = sum;
     });
     renderCourseHoursTable();
     syncBoardHoursFromMatrix();
