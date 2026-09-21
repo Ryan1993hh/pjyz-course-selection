@@ -148,6 +148,14 @@ const INIT_STATEMENTS = [
     updated_at TEXT DEFAULT (datetime('now')),
     PRIMARY KEY (course_name, session_date)
   )`,
+  `CREATE TABLE IF NOT EXISTS course_hour_cares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_label TEXT NOT NULL,
+    teacher_name TEXT NOT NULL,
+    session_date TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
   `CREATE TABLE IF NOT EXISTS student_leave_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     grade TEXT NOT NULL DEFAULT '',
@@ -6850,8 +6858,13 @@ async function buildCourseHoursMatrix(db) {
     dateSet.add(dt);
   });
 
+  const cares = await listCourseHourCares(db);
   const hiddenDates = new Set(await getHiddenCourseHourDates(db));
   const extraDates = await getExtraCourseHourDates(db);
+  cares.forEach((c) => {
+    const dt = String(c.session_date || '').trim();
+    if (dt) dateSet.add(dt);
+  });
   extraDates.forEach((d) => {
     if (d && !hiddenDates.has(d)) dateSet.add(d);
   });
@@ -6886,8 +6899,74 @@ async function buildCourseHoursMatrix(db) {
 
   return {
     dates: dates.map((d) => ({ key: d, label: formatCourseHourDateLabel(d) })),
-    rows
+    rows,
+    cares: cares.map((c) => ({
+      id: c.id,
+      class_label: String(c.class_label || ''),
+      teacher_name: String(c.teacher_name || ''),
+      session_date: String(c.session_date || ''),
+      note: String(c.note || '')
+    }))
   };
+}
+
+async function ensureCourseHourCaresTable(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS course_hour_cares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_label TEXT NOT NULL,
+    teacher_name TEXT NOT NULL,
+    session_date TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`).run();
+}
+
+async function listCourseHourCares(db) {
+  try {
+    await ensureCourseHourCaresTable(db);
+    const res = await db.prepare(
+      'SELECT id, class_label, teacher_name, session_date, note FROM course_hour_cares ORDER BY session_date ASC, id ASC'
+    ).all();
+    return res.results || [];
+  } catch (err) {
+    console.warn('listCourseHourCares:', err && err.message);
+    return [];
+  }
+}
+
+async function handleCourseHoursCaresPost(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const items = Array.isArray(body.items) ? body.items : [];
+  const clean = [];
+  items.forEach((item) => {
+    const classLabel = String(item.class_label || '').trim();
+    const teacher = String(item.teacher_name || '').trim();
+    const date = String(item.session_date || '').trim();
+    const note = String(item.note || '').trim();
+    if (!classLabel || !teacher || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    clean.push({ classLabel, teacher, date, note });
+  });
+  if (!clean.length) return json({ error: '请填写班级、看护老师和看护时间' }, 400);
+
+  await ensureCourseHourCaresTable(db);
+  for (const item of clean) {
+    await db.prepare(
+      'INSERT INTO course_hour_cares (class_label, teacher_name, session_date, note) VALUES (?, ?, ?, ?)'
+    ).bind(item.classLabel, item.teacher, item.date, item.note).run();
+  }
+  const dates = clean.map((item) => item.date);
+  const extra = await getExtraCourseHourDates(db);
+  dates.forEach((d) => { if (!extra.includes(d)) extra.push(d); });
+  await setExtraCourseHourDates(db, extra);
+  const hidden = (await getHiddenCourseHourDates(db)).filter((d) => !dates.includes(d));
+  await setHiddenCourseHourDates(db, hidden);
+  const matrix = await buildCourseHoursMatrix(db);
+  return json({ success: true, count: clean.length, ...matrix });
 }
 
 async function getNumericHoursTotalForCourse(db, courseName) {
@@ -7335,6 +7414,9 @@ async function onRequestImpl(context) {
   // /api/course-hours — 全课程课时矩阵
   if (path === '/api/course-hours/total' && method === 'GET') {
     return handleCourseHoursTotalGet(db, request, url);
+  }
+  if (path === '/api/course-hours/cares' && method === 'POST') {
+    return handleCourseHoursCaresPost(db, request);
   }
   if (path === '/api/course-hours') {
     if (method === 'GET') return handleCourseHoursGet(db, request);
