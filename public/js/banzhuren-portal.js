@@ -501,17 +501,33 @@
       return;
     }
     if (hint) hint.textContent = '共 ' + bzState.classStudents.length + ' 名学生';
-    list.innerHTML = bzState.classStudents.map(function (s) {
+    var rows = bzState.classStudents.map(function (s, idx) {
       var name = s.student_name || '';
       var longName = name.length > 3 ? ' is-long' : '';
       var leave = getLeaveForStudent(name);
-      var tag = leave ? (' · ' + (leave.leave_type === 'isolation' ? '班级隔离' : leaveTypeLabel(leave.leave_type))) : '';
-      return '<div class="bz-course-row">' +
-        '<div class="col-name">' + escHtml(s.course_name || '未选课') + '</div>' +
-        '<div class="col-loc">' + escHtml(s.location || '—') + '</div>' +
-        '<div class="col-stu' + longName + '">' + escHtml(name) + escHtml(tag) + '</div>' +
-        '</div>';
+      var status = '在读';
+      var statusCls = '';
+      if (leave && leave.leave_type === 'isolation') {
+        status = '班级隔离';
+        statusCls = ' is-isolation';
+      } else if (leave && leave.leave_type === 'sick') {
+        status = '病假';
+        statusCls = ' is-sick';
+      } else if (leave && leave.leave_type === 'personal') {
+        status = '事假';
+        statusCls = ' is-personal';
+      }
+      return '<tr>' +
+        '<td>' + (idx + 1) + '</td>' +
+        '<td class="col-course-name">' + escHtml(s.course_name || '未选课') + '</td>' +
+        '<td>' + escHtml(s.location || '—') + '</td>' +
+        '<td class="col-stu' + longName + '">' + escHtml(name) + '</td>' +
+        '<td><span class="bz-status-tag' + statusCls + '">' + escHtml(status) + '</span></td>' +
+        '</tr>';
     }).join('');
+    list.innerHTML = '<div class="bz-sel-wrap"><table class="bz-sel-table"><thead><tr>' +
+      '<th>序号</th><th>课程名称</th><th>上课地点</th><th>学生姓名</th><th>状态</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
   }
 
   function openStudentLeaveModal() {
@@ -541,11 +557,14 @@
           if (picks[name] === type) delete picks[name];
           else picks[name] = type;
           card.querySelectorAll('.pick').forEach(function (b) {
-            b.classList.remove('on-sick', 'on-personal');
+            b.classList.remove('on-sick', 'on-personal', 'is-pop');
             if (picks[name] && b.getAttribute('data-type') === picks[name]) {
               b.classList.add(picks[name] === 'sick' ? 'on-sick' : 'on-personal');
             }
           });
+          btn.classList.remove('is-pop');
+          void btn.offsetWidth;
+          btn.classList.add('is-pop');
         });
       });
     });
