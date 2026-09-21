@@ -941,6 +941,7 @@ table.courses-table td[data-field="description"] {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.45;
+  white-space: normal;
 }
 .board-card-foot {
   display: flex;
@@ -4942,7 +4943,7 @@ function renderBoardGrid() {
         '<span class="board-badge ' + boardBadgeClass(item.today_status) + '">' + escHtml(item.today_status) + '</span>' +
       '</div>' +
       '<div class="board-card-meta">' +
-        escHtml(item.teacher_name || '—') +
+        escHtml(item.teacher_name || '—').replace(/\n/g, '<br>') +
         (item.location ? (' · ' + escHtml(item.location)) : '') +
       '</div>' +
       '<div class="board-card-foot">' +
@@ -5054,14 +5055,23 @@ function syncBoardHoursFromMatrix() {
   var rows = (courseHoursState.data && courseHoursState.data.rows) || [];
   if (!rows.length || !(boardState.items || []).length) return;
   var map = {};
+  var teachersByCourse = {};
   rows.forEach(function (r) {
-    map[r.course_name] = Number(r.numeric_total) || 0;
+    var cn = r.course_name;
+    if (!cn) return;
+    if (map[cn] == null) map[cn] = Number(r.numeric_total) || 0;
+    if (!teachersByCourse[cn]) teachersByCourse[cn] = [];
+    var teacher = String(r.teacher_name || '').trim();
+    if (teacher && teachersByCourse[cn].indexOf(teacher) < 0) teachersByCourse[cn].push(teacher);
   });
   var total = 0;
   boardState.items.forEach(function (item) {
     if (map[item.course_name] != null) {
       item.numeric_hours_total = map[item.course_name];
       item.total_classes = map[item.course_name];
+    }
+    if (teachersByCourse[item.course_name] && teachersByCourse[item.course_name].length) {
+      item.teacher_name = teachersByCourse[item.course_name].join('\n');
     }
     total += Number(item.numeric_hours_total != null ? item.numeric_hours_total : item.total_classes) || 0;
   });
@@ -5354,7 +5364,9 @@ async function removeCourseHoursDateColumn(dateKey) {
     courseHoursState.addedDates = (courseHoursState.addedDates || []).filter(function(d) { return d !== dateKey; });
     courseHoursState.deletedDates = (courseHoursState.deletedDates || []).filter(function(d) { return d !== dateKey; });
     Object.keys(courseHoursState.pending).forEach(function(key) {
-      if (key.split('\0')[1] === dateKey) delete courseHoursState.pending[key];
+      var parts = key.split('\0');
+      var pendingDate = parts.length >= 3 ? parts[2] : parts[1];
+      if (pendingDate === dateKey) delete courseHoursState.pending[key];
     });
     renderCourseHoursTable();
     if (typeof toast === 'function') toast('已删除日期列并同步', 'success');
@@ -5418,7 +5430,7 @@ async function renameCourseHoursDateColumn(oldKey, newRaw) {
   try {
     var updates = [];
     (courseHoursState.data.rows || []).forEach(function(row) {
-      var val = getCourseHoursCellValue(row.course_name, oldKey);
+      var val = getCourseHoursCellValue(row.course_name, oldKey, row.teacher_name);
       if (val !== '') {
         updates.push({ course_name: row.course_name, session_date: newKey, cell_value: val });
       }
@@ -5446,8 +5458,10 @@ async function renameCourseHoursDateColumn(oldKey, newRaw) {
     }
     Object.keys(courseHoursState.pending).forEach(function(key) {
       var parts = key.split('\0');
-      if (parts[1] === oldKey) {
-        courseHoursState.pending[parts[0] + '\0' + newKey] = courseHoursState.pending[key];
+      var pendingDate = parts.length >= 3 ? parts[2] : parts[1];
+      if (pendingDate === oldKey) {
+        var teacher = parts.length >= 3 ? parts[1] : '';
+        courseHoursState.pending[parts[0] + '\0' + teacher + '\0' + newKey] = courseHoursState.pending[key];
         delete courseHoursState.pending[key];
       }
     });
@@ -5637,12 +5651,19 @@ function highlightCourseHoursRow(courseName) {
   });
 }
 
-function getCourseHoursCellValue(courseName, dateKey) {
-  var pendingKey = courseName + '\0' + dateKey;
+function getCourseHoursCellValue(courseName, dateKey, teacherName) {
+  var teacher = teacherName == null ? '' : String(teacherName);
+  var pendingKey = teacherName == null
+    ? (courseName + '\0' + dateKey)
+    : (courseName + '\0' + teacher + '\0' + dateKey);
   if (courseHoursState.pending[pendingKey] != null) return courseHoursState.pending[pendingKey];
   var data = courseHoursState.data;
   if (!data) return '';
-  var row = (data.rows || []).find(function(r) { return r.course_name === courseName; });
+  var row = (data.rows || []).find(function(r) {
+    if (r.course_name !== courseName) return false;
+    if (teacherName == null) return true;
+    return String(r.teacher_name || '') === teacher;
+  });
   if (!row || !row.cells) return '';
   return row.cells[dateKey] != null ? String(row.cells[dateKey]) : '';
 }
@@ -5681,9 +5702,10 @@ function renderCourseHoursTable() {
     var active = row.course_name === boardState.selectedCourse ? ' hours-row-active' : '';
     var cells = displayDates.map(function(d) {
       if (!d) return '<td class="cell-empty">—</td>';
-      var val = getCourseHoursCellValue(row.course_name, d.key);
+      var val = getCourseHoursCellValue(row.course_name, d.key, row.teacher_name);
       if (courseHoursState.editing) {
         return '<td><input type="text" class="hours-cell-input" data-hours-course="' + escHtml(row.course_name) +
+          '" data-hours-teacher="' + escHtml(row.teacher_name || '') +
           '" data-hours-date="' + escHtml(d.key) + '" value="' + escHtml(val) + '" placeholder=""></td>';
       }
       if (!val) return '<td class="cell-empty">—</td>';
@@ -5705,8 +5727,9 @@ function renderCourseHoursTable() {
     wrap.querySelectorAll('.hours-cell-input').forEach(function(inp) {
       inp.addEventListener('input', function() {
         var cn = inp.getAttribute('data-hours-course');
+        var teacher = inp.getAttribute('data-hours-teacher') || '';
         var dt = inp.getAttribute('data-hours-date');
-        courseHoursState.pending[cn + '\0' + dt] = inp.value;
+        courseHoursState.pending[cn + '\0' + teacher + '\0' + dt] = inp.value;
         courseHoursState.dirty = true;
       });
     });
@@ -5728,9 +5751,13 @@ function renderCourseHoursTable() {
 async function saveCourseHoursEdits() {
   var updates = Object.keys(courseHoursState.pending).map(function(key) {
     var parts = key.split('\0');
+    var course = parts[0];
+    var teacher = parts.length >= 3 ? parts[1] : '';
+    var date = parts.length >= 3 ? parts[2] : parts[1];
     return {
-      course_name: parts[0],
-      session_date: parts[1],
+      course_name: course,
+      teacher_name: teacher,
+      session_date: date,
       cell_value: courseHoursState.pending[key]
     };
   }).filter(function(u) {
@@ -5748,7 +5775,12 @@ async function saveCourseHoursEdits() {
   try {
     await request('PUT', '/api/course-hours', { updates: updates, delete_dates: deleteDates });
     updates.forEach(function(u) {
-      var row = (courseHoursState.data.rows || []).find(function(r) { return r.course_name === u.course_name; });
+      var row = (courseHoursState.data.rows || []).find(function(r) {
+        return r.course_name === u.course_name && String(r.teacher_name || '') === String(u.teacher_name || '');
+      });
+      if (!row) {
+        row = (courseHoursState.data.rows || []).find(function(r) { return r.course_name === u.course_name; });
+      }
       if (!row) return;
       if (!row.cells) row.cells = {};
       if (u.cell_value === '') delete row.cells[u.session_date];
@@ -5820,12 +5852,16 @@ async function fillCourseHoursTodayEmpty() {
   }
 
   var updates = [];
+  var seenCourseDate = {};
   (data.rows || []).forEach(function (row) {
     var cn = row.course_name;
     if (!cn) return;
-    var val = String(getCourseHoursCellValue(cn, today) || '').trim();
+    var val = String(getCourseHoursCellValue(cn, today, row.teacher_name) || '').trim();
     if (val !== '') return;
-    updates.push({ course_name: cn, session_date: today, cell_value: '1' });
+    var uk = cn + '\0' + today;
+    if (seenCourseDate[uk]) return;
+    seenCourseDate[uk] = true;
+    updates.push({ course_name: cn, teacher_name: row.teacher_name || '', session_date: today, cell_value: '1' });
   });
 
   if (!updates.length) {
@@ -5840,11 +5876,14 @@ async function fillCourseHoursTodayEmpty() {
     if (!hasToday) body.add_dates = [today];
     await request('PUT', '/api/course-hours', body);
     updates.forEach(function (u) {
-      var row = (courseHoursState.data.rows || []).find(function (r) { return r.course_name === u.course_name; });
+      var row = (courseHoursState.data.rows || []).find(function (r) {
+        return r.course_name === u.course_name && String(r.teacher_name || '') === String(u.teacher_name || '');
+      });
+      if (!row) row = (courseHoursState.data.rows || []).find(function (r) { return r.course_name === u.course_name; });
       if (!row) return;
       if (!row.cells) row.cells = {};
       row.cells[u.session_date] = u.cell_value;
-      delete courseHoursState.pending[u.course_name + '\0' + u.session_date];
+      delete courseHoursState.pending[u.course_name + '\0' + (u.teacher_name || '') + '\0' + u.session_date];
       var sum = 0;
       Object.keys(row.cells).forEach(function (k) {
         var s = String(row.cells[k] == null ? '' : row.cells[k]).trim();
@@ -5955,7 +5994,7 @@ function buildCourseHoursExportAoa(displayDates) {
         line.push('');
         return;
       }
-      var val = getCourseHoursCellValue(row.course_name, d.key);
+      var val = getCourseHoursCellValue(row.course_name, d.key, row.teacher_name);
       if (isHoursSubstituteName(val)) {
         var subName = normalizeSubstituteTeacherName(val);
         var sk = subName + '\0' + String(row.course_name || '');
@@ -6600,6 +6639,12 @@ function fillCourseFilterFromList(arr) {
     opt.value = c.name; opt.textContent = c.name;
     sel.appendChild(opt);
   });
+  if (!sel._courseFilterBound) {
+    sel._courseFilterBound = true;
+    sel.addEventListener('change', function() {
+      querySelections({ silent: true });
+    });
+  }
 }
 
 async function loadCourses(){

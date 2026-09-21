@@ -4097,6 +4097,7 @@ function completeCheckinSession() {
     date: today,
     dateLabel: formatDateLabel(now),
     updatedAt: Date.now(),
+    teacherName: (state.teacher && state.teacher.name) || "",
     checkin: snapshot
   };
   const idx = state.history.findIndex(h => h.date === today);
