@@ -1017,6 +1017,7 @@ table.courses-table td[data-field="description"] {
 .care-item .care-note { grid-column: 1 / -1; }
 .hours-care-pop .care-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .hours-table tr.hours-care-row td { background: #f0fdfa; white-space: pre-line; vertical-align: top; }
+.iso-grades, .iso-classes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .board-main .hours-panel-body {
   flex: 1;
   overflow: hidden;
@@ -4434,6 +4435,9 @@ th.sortable.active .sort-icon { opacity: 1; }
         </div>
         <div class="board-header-actions">
           <div class="board-schedule-wrap">
+            <button type="button" class="btn btn-outline" id="boardIsolationBtn"><span class="txt-full">班级隔离</span><span class="txt-short">隔离</span></button>
+            <span class="board-schedule-status" id="boardIsolationStatus"></span>
+            <button type="button" class="btn btn-primary" id="boardIsolationSaveBtn" style="display:none">保存</button>
             <span class="board-schedule-status" id="boardScheduleStatus">停课状态</span>
             <button type="button" class="btn btn-warning" id="boardSuspendBtn"><span class="txt-full">今日停课</span><span class="txt-short">停课</span></button>
           </div>
@@ -5017,6 +5021,7 @@ async function loadCourseBoard() {
       console.warn('loadCourseHoursPanel:', e);
     });
     loadBoardScheduleUI();
+    loadClassIsolationUI();
 
     var data = await classroomP;
     boardState.items = data.items || [];
@@ -6210,6 +6215,134 @@ async function toggleBoardSchedule() {
   }
 }
 
+var isolationDraft = [];
+
+function isolationClassLabel(grade, n) {
+  return (String(grade || '').indexOf('七') >= 0 ? '七' : '六') + n + '班';
+}
+
+function renderIsolationStatus(labels) {
+  var status = document.getElementById('boardIsolationStatus');
+  var saveBtn = document.getElementById('boardIsolationSaveBtn');
+  if (status) {
+    if (labels && labels.length) {
+      status.textContent = '隔离班级：' + labels.join('、');
+      status.classList.add('show');
+    } else {
+      status.textContent = '';
+      status.classList.remove('show');
+    }
+  }
+  if (saveBtn) saveBtn.style.display = labels && labels.length ? '' : 'none';
+}
+
+async function loadClassIsolationUI() {
+  try {
+    var data = await request('GET', '/api/class-isolation');
+    var labels = (data && data.labels) || [];
+    isolationDraft = (data && data.classes) || [];
+    renderIsolationStatus(labels);
+    var saveBtn = document.getElementById('boardIsolationSaveBtn');
+    if (saveBtn && labels.length) saveBtn.style.display = 'none';
+  } catch (e) {
+    console.warn('loadClassIsolationUI:', e);
+  }
+}
+
+function openClassIsolationPicker() {
+  var selected = {};
+  isolationDraft.forEach(function (c) {
+    if (!c) return;
+    var n = c.class_number || c.classNum;
+    var g = c.grade;
+    if (!g || !n) return;
+    selected[g + ':' + n] = { grade: g, class_number: String(n), label: c.label || isolationClassLabel(g, n) };
+  });
+  openModal(
+    '<div id="isoPicker">' +
+      '<p style="margin:0 0 10px;color:#64748b;font-size:13px;">先点年级，再点班级，可多选。</p>' +
+      '<div class="iso-grades">' +
+        '<button type="button" class="btn btn-outline btn-sm" data-iso-grade="六年级">六年级</button>' +
+        '<button type="button" class="btn btn-outline btn-sm" data-iso-grade="七年级">七年级</button>' +
+      '</div>' +
+      '<div id="isoClassBox"></div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="btn btn-secondary" id="isoCancelBtn">取消</button>' +
+        '<button type="button" class="btn btn-primary" id="isoConfirmBtn">确定</button>' +
+      '</div>' +
+    '</div>'
+  );
+  var title = document.getElementById('modalTitle');
+  if (title) title.textContent = '班级隔离';
+  function renderClasses(grade) {
+    var box = document.getElementById('isoClassBox');
+    if (!box) return;
+    var html = '';
+    for (var i = 1; i <= 10; i++) {
+      var key = grade + ':' + i;
+      var on = selected[key] ? ' btn-primary' : ' btn-outline';
+      html += '<button type="button" class="btn btn-sm' + on + '" data-iso-class="' + i + '" data-iso-g="' + grade + '">' + isolationClassLabel(grade, i) + '</button>';
+    }
+    box.innerHTML = '<div class="iso-classes">' + html + '</div>';
+    box.querySelectorAll('[data-iso-class]').forEach(function (btn) {
+      btn.onclick = function () {
+        var g = btn.getAttribute('data-iso-g');
+        var n = btn.getAttribute('data-iso-class');
+        var key = g + ':' + n;
+        if (selected[key]) delete selected[key];
+        else selected[key] = { grade: g, class_number: n, label: isolationClassLabel(g, n) };
+        renderClasses(g);
+      };
+    });
+  }
+  document.querySelectorAll('[data-iso-grade]').forEach(function (btn) {
+    btn.onclick = function () {
+      document.querySelectorAll('[data-iso-grade]').forEach(function (b) {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline');
+      });
+      btn.classList.add('btn-primary');
+      btn.classList.remove('btn-outline');
+      renderClasses(btn.getAttribute('data-iso-grade'));
+    };
+  });
+  var cancelBtn = document.getElementById('isoCancelBtn');
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+  var confirmBtn = document.getElementById('isoConfirmBtn');
+  if (confirmBtn) {
+    confirmBtn.onclick = function () {
+      isolationDraft = Object.keys(selected).map(function (k) { return selected[k]; });
+      if (!isolationDraft.length) {
+        if (typeof toast === 'function') toast('请选择班级', 'warn');
+        return;
+      }
+      renderIsolationStatus(isolationDraft.map(function (c) { return c.label; }));
+      closeModal();
+    };
+  }
+}
+
+async function saveClassIsolation() {
+  if (!isolationDraft.length) {
+    if (typeof toast === 'function') toast('请先选择班级并确定', 'warn');
+    return;
+  }
+  var btn = document.getElementById('boardIsolationSaveBtn');
+  if (btn) btn.disabled = true;
+  try {
+    var data = await request('POST', '/api/class-isolation', { classes: isolationDraft });
+    isolationDraft = data.classes || isolationDraft;
+    renderIsolationStatus(data.labels || []);
+    if (btn) btn.style.display = 'none';
+    if (typeof toast === 'function') toast('已同步班级隔离', 'success');
+  } catch (e) {
+    if (typeof toast === 'function') toast(e.message, 'error');
+  }
+  if (btn) btn.disabled = false;
+}
+
+document.getElementById('boardIsolationBtn') && document.getElementById('boardIsolationBtn').addEventListener('click', openClassIsolationPicker);
+document.getElementById('boardIsolationSaveBtn') && document.getElementById('boardIsolationSaveBtn').addEventListener('click', saveClassIsolation);
 document.getElementById('boardSuspendBtn') && document.getElementById('boardSuspendBtn').addEventListener('click', toggleBoardSchedule);
 document.getElementById('boardSearch') && document.getElementById('boardSearch').addEventListener('input', function() {
   renderBoardGrid();

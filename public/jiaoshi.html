@@ -626,7 +626,18 @@ body {
 .status-dot.sick { background: #0ea5e9; }
 .student-item.is-present { border-color: rgba(52,199,89,0.35); background: #f0fdf4; }
 .student-item.is-absent { border-color: rgba(255,59,48,0.35); background: #fff5f5; }
-.student-item.is-sick { border-color: rgba(14,165,233,0.4); background: #f0f9ff; }
+.student-item.is-isolation { border-color: rgba(15,118,110,0.45); background: #f0fdfa; }
+.student-status-badge.isolation { background: #ccfbf1; color: #0f766e; }
+.fs-student-card.is-isolation { border-color: rgba(15,118,110,0.45); background: #f0fdfa; }
+.fs-student-card .fs-badge.isolation { background: #ccfbf1; color: #0f766e; }
+@keyframes bz-leave-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.bz-leave-shake { animation: bz-leave-shake 0.45s ease; }
 .student-item.is-personal { border-color: rgba(245,158,11,0.4); background: #fffbeb; }
 .student-item.is-late { border-color: rgba(255,149,0,0.4); background: #fffbeb; }
 .student-name { font-size: 14px; font-weight: 600; }
@@ -2967,8 +2978,8 @@ const TOKEN_KEY = "admin_token";
 const USER_KEY = "pjyz_user";
 const STORE_PREFIX = "pjyz_teacher_attendance_";
 
-const STATUS_LABEL = { none: "未签到", present: "已签到", absent: "旷课", late: "迟到", sick: "病假", personal: "事假" };
-const ABNORMAL = new Set(["absent", "late", "sick", "personal"]);
+const STATUS_LABEL = { none: "未签到", present: "已签到", absent: "旷课", late: "迟到", sick: "病假", personal: "事假", isolation: "班级隔离" };
+const ABNORMAL = new Set(["absent", "late", "sick", "personal", "isolation"]);
 
 let state = {
   students: [],
@@ -3654,8 +3665,10 @@ async function applyServerLeaveReports() {
       if (!student) return;
       const id = studentId(student);
       const st = getStatus(id);
-      if (st === "none" || st === "sick" || st === "personal") {
+      if (st === "none" || st === "sick" || st === "personal" || st === "isolation") {
         state.checkin[id] = leave.leave_type;
+        if (!state.bzLeaveLock) state.bzLeaveLock = {};
+        state.bzLeaveLock[id] = true;
       }
       if (leave.leave_type === "personal" && leave.note) {
         state.leaveNotes[id] = String(leave.note).trim();
@@ -3676,6 +3689,20 @@ function setStatus(id, status, opts) {
     toast(scheduleState.reason || "非上课时间 不可使用", "error");
     return;
   }
+  if (state.bzLeaveLock && state.bzLeaveLock[id]) {
+    if (!state.bzLeaveWarned) state.bzLeaveWarned = {};
+    if (!state.bzLeaveWarned[id]) {
+      state.bzLeaveWarned[id] = true;
+      toast("该生已被班主任请假", "warning");
+      document.querySelectorAll('[data-sid="' + id + '"], [data-card-id="' + id + '"]').forEach(function (card) {
+        card.classList.remove("bz-leave-shake");
+        void card.offsetWidth;
+        card.classList.add("bz-leave-shake");
+      });
+      return;
+    }
+    delete state.bzLeaveLock[id];
+  }
   opts = opts || {};
   const fsOpen = document.getElementById("fsCheckin").classList.contains("show");
   const prevFsStats = fsOpen ? calcFsStats() : null;
@@ -3695,7 +3722,7 @@ function buildFsCardActions(id, st) {
     return '<button type="button" class="fs-act cancel-btn" data-fs-act="cancel" data-id="' + id + '">取消</button>' +
       '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">改未到</button>';
   }
-  if (st === "sick" || st === "personal" || st === "absent" || st === "late") {
+  if (st === "sick" || st === "personal" || st === "absent" || st === "late" || st === "isolation") {
     return '<button type="button" class="fs-act present-change-btn" data-fs-act="present" data-id="' + id + '">改签到</button>' +
       '<button type="button" class="fs-act absent-btn" data-fs-act="absent-pick" data-id="' + id + '">改未到</button>';
   }
@@ -3713,6 +3740,7 @@ function buildLeaveNoteHtml(id, st) {
 function buildFsCardBadge(st, id) {
   if (st === "present") return '<span class="fs-badge present">已签到</span>';
   if (st === "sick") return '<span class="fs-badge sick">病假</span>';
+  if (st === "isolation") return '<span class="fs-badge isolation">班级隔离</span>';
   if (st === "personal") {
     const note = state.leaveNotes && state.leaveNotes[id];
     const noteHtml = note ? '<span class="fs-leave-note">' + esc(note) + '</span>' : '';
@@ -3920,14 +3948,14 @@ function renderCheckin() {
     let actions = "";
     if (st === "present") {
       actions = '<button type="button" class="btn-sm danger" data-act="cancel" data-id="' + id + '">取消签到</button>';
-    } else if (st === "sick" || st === "personal" || st === "absent" || st === "late") {
+    } else if (st === "sick" || st === "personal" || st === "absent" || st === "late" || st === "isolation") {
       actions = '<button type="button" class="btn-sm outline" data-act="present" data-id="' + id + '">改签到</button>';
       actions += '<button type="button" class="btn-sm ghost" data-act="absent-pick" data-id="' + id + '">改未到</button>';
     } else {
       actions = '<button type="button" class="btn-sm primary" data-act="present" data-id="' + id + '">签到</button>';
       actions += '<button type="button" class="btn-sm ghost" data-act="absent-pick" data-id="' + id + '">未到</button>';
     }
-    return '<div class="' + itemCls + '">' +
+    return '<div class="' + itemCls + '" data-sid="' + id + '">' +
       '<div class="student-head"><span class="status-dot ' + st + '"></span>' +
       '<div><div class="student-name">' + esc(s.student_name) + '</div><div class="student-class">' + esc(cls) + '</div>' + badge + '</div></div>' +
       '<div class="student-actions">' + actions + '</div></div>';
@@ -3969,7 +3997,7 @@ function renderFsCheckin(animateId) {
     const cardCls = "fs-student-card" + (st !== "none" ? " is-" + st : "");
     const badge = buildFsCardBadge(st, id);
     const actions = buildFsCardActions(id, st);
-    return '<div class="' + cardCls + '" data-card-id="' + id + '">' + badge +
+    return '<div class="' + cardCls + '" data-card-id="' + id + '" data-sid="' + id + '">' + badge +
       '<div class="fs-name">' + esc(s.student_name) + '</div>' +
       '<div class="fs-class">' + esc(cls) + '</div>' +
       '<div class="fs-actions">' + actions + '</div></div>';
@@ -4035,7 +4063,7 @@ function openFsCheckinAllPresent() {
     state.students.forEach(function (s) {
       const id = studentId(s);
       const cur = state.checkin[id] || "none";
-      if (cur === "sick" || cur === "personal") return;
+      if (cur === "sick" || cur === "personal" || cur === "isolation") return;
       state.checkin[id] = "present";
     });
     saveLocal();

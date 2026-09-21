@@ -378,6 +378,7 @@ async function ensureDbReady(db) {
 const CLASS_SCHEDULE_KEY = 'class_schedule_control';
 const COURSE_HOURS_HIDDEN_DATES_KEY = 'course_hours_hidden_dates';
 const COURSE_HOURS_EXTRA_DATES_KEY = 'course_hours_extra_dates';
+const CLASS_ISOLATION_KEY = 'class_isolation_day';
 const CLASS_SCHEDULE_TZ = 'Asia/Shanghai';
 
 function getTodayDateKey(tz = CLASS_SCHEDULE_TZ) {
@@ -4746,7 +4747,7 @@ function applyLeavesToPayloadCheckin(payload, leaves, leaveDate) {
     const student = students.find((s) => String(s.student_name || '').trim() === name);
     if (!student) return;
     const cur = checkin[student.stableId];
-    if (!cur || cur === 'none' || cur === 'sick' || cur === 'personal') {
+    if (!cur || cur === 'none' || cur === 'sick' || cur === 'personal' || cur === 'isolation') {
       checkin[student.stableId] = leaveType;
     }
   });
@@ -4848,7 +4849,7 @@ async function removeLeaveFromClassrooms(db, report, opts) {
     if (!student) continue;
     const checkin = Object.assign({}, payload.checkin || {});
     const cur = checkin[student.stableId];
-    if (cur === leaveType || cur === 'sick' || cur === 'personal') {
+    if (cur === leaveType || cur === 'sick' || cur === 'personal' || cur === 'isolation') {
       checkin[student.stableId] = 'none';
     }
     payload.checkin = remapClassroomKeyedMap(checkin, students);
@@ -4889,12 +4890,22 @@ async function getBanzhurenClassRoster(db, grade, className) {
     return sortByStudentNo(Array.from(map.values()).map((s) => ({
       student_name: s.student_name,
       gender: s.gender || genderByName.get(s.student_name) || '',
-      student_no: s.student_no || studentNoByName.get(s.student_name) || ''
+      student_no: s.student_no || studentNoByName.get(s.student_name) || '',
+      course_name: s.course_name || '',
+      location: s.location || ''
     })));
   }
 
+  const courseLoc = new Map();
+  try {
+    const courseRes = await db.prepare('SELECT name, location FROM courses').all();
+    (courseRes.results || []).forEach((c) => {
+      courseLoc.set(String(c.name || '').trim(), String(c.location || '').trim());
+    });
+  } catch (_) {}
+
   const selRes = await db.prepare(
-    'SELECT student_name, gender, grade, class_name, student_no FROM selections'
+    'SELECT student_name, gender, grade, class_name, student_no, course_name FROM selections'
   ).all();
   for (const row of (selRes.results || [])) {
     if (!selectionMatchesClassScope(row, grade, className)) continue;
@@ -4904,10 +4915,13 @@ async function getBanzhurenClassRoster(db, grade, className) {
     if (gender && !genderByName.get(name)) genderByName.set(name, gender);
     const sno = String(row.student_no || '').trim();
     if (sno && !studentNoByName.get(name)) studentNoByName.set(name, sno);
+    const courseName = String(row.course_name || '').trim();
     map.set(name, {
       student_name: name,
       gender: gender || genderByName.get(name) || '',
       student_no: sno || studentNoByName.get(name) || '',
+      course_name: courseName,
+      location: courseLoc.get(courseName) || '',
       source: 'selection'
     });
   }
@@ -5120,8 +5134,8 @@ async function handleStudentLeavesPost(db, request) {
   const leaveType = String(body.leave_type || 'sick').trim();
   const leaveDate = String(body.leave_date || getTodayDateKey()).trim();
   if (!studentName) return json({ error: '缺少学生姓名' }, 400);
-  if (!['sick', 'personal'].includes(leaveType)) {
-    return json({ error: '请假类型无效（sick=病假, personal=事假）' }, 400);
+  if (!['sick', 'personal', 'isolation'].includes(leaveType)) {
+    return json({ error: '请假类型无效' }, 400);
   }
 
   const roster = await getBanzhurenClassRoster(db, grade, className);
@@ -5130,9 +5144,6 @@ async function handleStudentLeavesPost(db, request) {
   }
 
   const note = String(body.note || '').trim();
-  if (leaveType === 'personal' && !note) {
-    return json({ error: '事假需填写原因说明' }, 400);
-  }
 
   const existing = await db.prepare(
     'SELECT id FROM student_leave_reports WHERE grade = ? AND class_name = ? AND student_name = ? AND leave_date = ?'
@@ -5162,6 +5173,129 @@ async function handleStudentLeavesPost(db, request) {
 
   const row = await db.prepare('SELECT * FROM student_leave_reports WHERE id = ?').bind(id).first();
   return json({ success: true, leave: row });
+}
+
+async function upsertStudentLeave(db, grade, className, studentName, leaveType, leaveDate, userId, note) {
+  const existing = await db.prepare(
+    'SELECT id FROM student_leave_reports WHERE grade = ? AND class_name = ? AND student_name = ? AND leave_date = ?'
+  ).bind(grade, className, studentName, leaveDate).first();
+  if (existing) {
+    await db.prepare(
+      'UPDATE student_leave_reports SET leave_type = ?, reported_by = ?, reported_at = datetime(\'now\'), note = ? WHERE id = ?'
+    ).bind(leaveType, userId, note || '', existing.id).run();
+    return existing.id;
+  }
+  const res = await db.prepare(
+    'INSERT INTO student_leave_reports (grade, class_name, student_name, leave_type, leave_date, reported_by, note) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(grade, className, studentName, leaveType, leaveDate, userId, note || '').run();
+  return res.meta.last_row_id;
+}
+
+async function resolveLeaveClassContext(db, auth, body) {
+  const ctx = await getBanzhurenClassContext(db, auth.user.userId);
+  let grade = String((body && body.grade) || '').trim();
+  let className = String((body && (body.class_name || body.class)) || '').trim();
+  if (auth.user.roles.indexOf('admin') === -1) {
+    if (!ctx || !ctx.grade) return { error: '账号未绑定班级' };
+    grade = ctx.grade;
+    className = ctx.class_name;
+  } else if (grade || className) {
+    const parsed = parseGradeClassFields(grade, className);
+    grade = parsed.grade || grade;
+    className = parsed.class_name || className;
+  }
+  return { grade, className };
+}
+
+async function handleStudentLeavesBatch(db, request) {
+  const auth = requireAuth(request, ['banzhuren', 'admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const resolved = await resolveLeaveClassContext(db, auth, body);
+  if (resolved.error) return json({ error: resolved.error }, 400);
+  const grade = resolved.grade;
+  const className = resolved.className;
+  const leaveDate = String(body.leave_date || getTodayDateKey()).trim();
+  const roster = await getBanzhurenClassRoster(db, grade, className);
+  const names = new Set(roster.map((s) => s.student_name));
+  let items = Array.isArray(body.items) ? body.items : [];
+  if (body.isolation === true) {
+    items = roster.map((s) => ({ student_name: s.student_name, leave_type: 'isolation' }));
+  }
+  const clean = [];
+  items.forEach((item) => {
+    const studentName = String(item.student_name || '').trim();
+    const leaveType = String(item.leave_type || '').trim();
+    if (!studentName || !names.has(studentName)) return;
+    if (!['sick', 'personal', 'isolation'].includes(leaveType)) return;
+    clean.push({ studentName, leaveType, note: String(item.note || '').trim() });
+  });
+  if (!clean.length) return json({ error: '没有可保存的学生' }, 400);
+  for (const item of clean) {
+    await upsertStudentLeave(db, grade, className, item.studentName, item.leaveType, leaveDate, auth.user.userId, item.note);
+    await syncLeaveReportToClassrooms(db, {
+      grade, class_name: className, student_name: item.studentName, leave_type: item.leaveType, leave_date: leaveDate
+    });
+  }
+  return json({ success: true, count: clean.length });
+}
+
+function isolationClassLabel(grade, classNum) {
+  const prefix = String(grade || '').indexOf('七') >= 0 ? '七' : '六';
+  return prefix + String(classNum || '') + '班';
+}
+
+async function handleClassIsolationGet(db, request) {
+  const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  const today = getTodayDateKey();
+  let saved = { date: today, classes: [], labels: [] };
+  try {
+    const row = await db.prepare('SELECT value FROM system_settings WHERE key = ?').bind(CLASS_ISOLATION_KEY).first();
+    if (row && row.value) saved = JSON.parse(row.value);
+  } catch (_) {}
+  if (saved.date !== today) saved = { date: today, classes: [], labels: [] };
+  return json(saved);
+}
+
+async function handleClassIsolationPost(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const classes = Array.isArray(body.classes) ? body.classes : [];
+  const leaveDate = getTodayDateKey();
+  const savedClasses = [];
+  const labels = [];
+  for (const item of classes) {
+    const parsed = parseGradeClassFields(item.grade, item.class_number || item.class_name || item.class || '');
+    if (!parsed.grade || !parsed.classNum) continue;
+    const label = isolationClassLabel(parsed.grade, parsed.classNum);
+    savedClasses.push({ grade: parsed.grade, class_number: parsed.classNum, class_name: parsed.class_name, label });
+    labels.push(label);
+    const roster = await getBanzhurenClassRoster(db, parsed.grade, parsed.class_name);
+    for (const student of roster) {
+      await upsertStudentLeave(db, parsed.grade, parsed.class_name, student.student_name, 'isolation', leaveDate, auth.user.userId, '班级隔离');
+      await syncLeaveReportToClassrooms(db, {
+        grade: parsed.grade,
+        class_name: parsed.class_name,
+        student_name: student.student_name,
+        leave_type: 'isolation',
+        leave_date: leaveDate
+      });
+    }
+  }
+  if (!savedClasses.length) return json({ error: '请选择班级' }, 400);
+  const payload = { date: leaveDate, classes: savedClasses, labels };
+  await db.prepare(
+    'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  ).bind(CLASS_ISOLATION_KEY, JSON.stringify(payload)).run();
+  return json({ success: true, ...payload });
 }
 
 async function handleStudentLeavesDelete(db, request, id) {
@@ -7444,7 +7578,17 @@ async function onRequestImpl(context) {
     return handleSelectionDataSyncGet(db, request);
   }
 
+  if (path === '/api/class-isolation' && method === 'GET') {
+    return handleClassIsolationGet(db, request);
+  }
+  if (path === '/api/class-isolation' && method === 'POST') {
+    return handleClassIsolationPost(db, request);
+  }
+
   // /api/student-leaves — 班主任请假报备
+  if (path === '/api/student-leaves/batch' && method === 'POST') {
+    return handleStudentLeavesBatch(db, request);
+  }
   if (path === '/api/student-leaves') {
     if (method === 'GET') return handleStudentLeavesGet(db, request);
     if (method === 'POST') return handleStudentLeavesPost(db, request);

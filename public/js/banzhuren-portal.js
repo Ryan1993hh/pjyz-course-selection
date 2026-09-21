@@ -55,6 +55,7 @@
   function leaveTypeLabel(t) {
     if (t === 'sick') return '病假';
     if (t === 'personal') return '事假';
+    if (t === 'isolation') return '班级隔离';
     return t || '';
   }
 
@@ -235,7 +236,9 @@
     return {
       student_name: String((s && s.student_name) || '').trim(),
       gender: String((s && s.gender) || '').trim(),
-      student_no: String((s && s.student_no) || '').trim()
+      student_no: String((s && s.student_no) || '').trim(),
+      course_name: String((s && s.course_name) || '').trim(),
+      location: String((s && s.location) || '').trim()
     };
   }
 
@@ -412,7 +415,9 @@
           return {
             student_name: s.student_name,
             gender: s.gender || a.gender || '',
-            student_no: s.student_no || a.student_no || ''
+            student_no: s.student_no || a.student_no || '',
+            course_name: a.course_name || s.course_name || '',
+            location: a.location || s.location || ''
           };
         }));
       }
@@ -486,40 +491,106 @@
   }
 
   function renderLeaveGrid() {
-    var grid = document.getElementById('bzLeaveGrid');
+    var list = document.getElementById('bzCourseList');
     var hint = document.getElementById('bzLeaveHint');
-    if (!grid) return;
-
+    if (!list) return;
     bzState.classStudents = sortStudentsByNo(bzState.classStudents || []);
-
     if (!bzState.classStudents.length) {
-      grid.innerHTML = '';
+      list.innerHTML = '';
       if (hint) hint.textContent = '暂无班级学生名单，请先在后台导入选课数据或完成选课';
       return;
     }
-    if (hint) hint.textContent = '共 ' + bzState.classStudents.length + ' 名学生 · 点击选择学生后报备请假';
-
-    grid.innerHTML = bzState.classStudents.map(function (s) {
-      var name = s.student_name;
+    if (hint) hint.textContent = '共 ' + bzState.classStudents.length + ' 名学生';
+    list.innerHTML = bzState.classStudents.map(function (s) {
+      var name = s.student_name || '';
+      var longName = name.length > 3 ? ' is-long' : '';
       var leave = getLeaveForStudent(name);
-      var st = leave ? leave.leave_type : '';
-      var cls = 'bz-student-card';
-      if (bzState.selectedStudent === name) cls += ' selected';
-      if (st === 'sick') cls += ' is-sick';
-      if (st === 'personal') cls += ' is-personal';
-      var badge = leave ? '<span class="bz-leave-badge">' + leaveTypeLabel(st) + '</span>' : '';
-      return '<button type="button" class="' + cls + '" data-name="' + attrEsc(name) + '">' +
-        '<span class="bz-stu-name">' + escHtml(name) + '</span>' + badge + '</button>';
+      var tag = leave ? (' · ' + (leave.leave_type === 'isolation' ? '班级隔离' : leaveTypeLabel(leave.leave_type))) : '';
+      return '<div class="bz-course-row">' +
+        '<div class="col-name">' + escHtml(s.course_name || '未选课') + '</div>' +
+        '<div class="col-loc">' + escHtml(s.location || '—') + '</div>' +
+        '<div class="col-stu' + longName + '">' + escHtml(name) + escHtml(tag) + '</div>' +
+        '</div>';
     }).join('');
+  }
 
-    grid.querySelectorAll('.bz-student-card').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        bzState.selectedStudent = btn.getAttribute('data-name');
-        renderLeaveGrid();
-        var selEl = document.getElementById('bzLeaveSelected');
-        if (selEl) selEl.textContent = '已选：' + bzState.selectedStudent;
+  function openStudentLeaveModal() {
+    var modal = document.getElementById('bzLeavePickModal');
+    var grid = document.getElementById('bzLeavePickGrid');
+    if (!modal || !grid) return;
+    var picks = {};
+    bzState.leavePicks = picks;
+    grid.innerHTML = (bzState.classStudents || []).map(function (s) {
+      var name = s.student_name || '';
+      var longName = name.length > 3 ? ' is-long' : '';
+      var leave = getLeaveForStudent(name);
+      if (leave && (leave.leave_type === 'sick' || leave.leave_type === 'personal')) {
+        picks[name] = leave.leave_type;
+      }
+      return '<div class="bz-pick-card" data-name="' + attrEsc(name) + '">' +
+        '<div class="nm' + longName + '">' + escHtml(name) + '</div>' +
+        '<button type="button" class="pick' + (picks[name] === 'sick' ? ' on-sick' : '') + '" data-type="sick">病假</button>' +
+        '<button type="button" class="pick' + (picks[name] === 'personal' ? ' on-personal' : '') + '" data-type="personal">事假</button>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('.bz-pick-card').forEach(function (card) {
+      card.querySelectorAll('.pick').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var name = card.getAttribute('data-name');
+          var type = btn.getAttribute('data-type');
+          if (picks[name] === type) delete picks[name];
+          else picks[name] = type;
+          card.querySelectorAll('.pick').forEach(function (b) {
+            b.classList.remove('on-sick', 'on-personal');
+            if (picks[name] && b.getAttribute('data-type') === picks[name]) {
+              b.classList.add(picks[name] === 'sick' ? 'on-sick' : 'on-personal');
+            }
+          });
+        });
       });
     });
+    modal.classList.add('show');
+  }
+
+  function closeStudentLeaveModal() {
+    var modal = document.getElementById('bzLeavePickModal');
+    if (modal) modal.classList.remove('show');
+  }
+
+  async function saveStudentLeaves() {
+    var picks = bzState.leavePicks || {};
+    var items = Object.keys(picks).map(function (name) {
+      return { student_name: name, leave_type: picks[name] };
+    });
+    if (!items.length) {
+      showToast('请先选择病假或事假', 'warning');
+      return;
+    }
+    try {
+      await apiRequest('POST', '/api/student-leaves/batch', { items: items, leave_date: todayKey() });
+      showToast('已保存 ' + items.length + ' 名学生请假', 'success');
+      closeStudentLeaveModal();
+      await loadTodayLeaves();
+      renderLeaveGrid();
+    } catch (e) {
+      showToast('保存失败：' + e.message, 'error');
+    }
+  }
+
+  async function confirmClassIsolation() {
+    if (!bzState.classStudents.length) {
+      showToast('暂无班级学生', 'warning');
+      return;
+    }
+    if (!confirm('确认将全班学生标记为「班级隔离」？教师端签到将同步显示该状态。')) return;
+    try {
+      await apiRequest('POST', '/api/student-leaves/batch', { isolation: true, leave_date: todayKey() });
+      showToast('全班已设为班级隔离', 'success');
+      await loadTodayLeaves();
+      renderLeaveGrid();
+    } catch (e) {
+      showToast('设置失败：' + e.message, 'error');
+    }
   }
 
   function renderLeaveList() {
@@ -1186,10 +1257,24 @@
       });
     });
 
-    var sickBtn = document.getElementById('bzLeaveSickBtn');
-    var personalBtn = document.getElementById('bzLeavePersonalBtn');
-    if (sickBtn) sickBtn.addEventListener('click', function () { submitLeave('sick'); });
-    if (personalBtn) personalBtn.addEventListener('click', openPersonalLeaveModal);
+    var sickBtn = document.getElementById('bzStudentLeaveBtn');
+    var isoBtn = document.getElementById('bzClassIsolationBtn');
+    if (sickBtn) sickBtn.addEventListener('click', openStudentLeaveModal);
+    if (isoBtn) isoBtn.addEventListener('click', confirmClassIsolation);
+    var pickSave = document.getElementById('bzLeavePickSave');
+    var pickCancel = document.getElementById('bzLeavePickCancel');
+    var pickModal = document.getElementById('bzLeavePickModal');
+    if (pickSave) pickSave.addEventListener('click', saveStudentLeaves);
+    if (pickCancel) pickCancel.addEventListener('click', closeStudentLeaveModal);
+    if (pickModal) {
+      pickModal.addEventListener('click', function (e) {
+        if (e.target === pickModal) closeStudentLeaveModal();
+      });
+    }
+
+    apiRequest('GET', '/api/selection-status').then(function (data) {
+      if (data && data.enabled === false) switchTab('leave');
+    }).catch(function () {});
 
     var plSubmit = document.getElementById('bzPersonalLeaveSubmit');
     var plClose = document.getElementById('bzPersonalLeaveClose');
