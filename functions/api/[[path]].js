@@ -5562,6 +5562,68 @@ function signedTeachersFromHistory(history, fallbackTeacher) {
   return byTeacher;
 }
 
+function collectAllSignedDates(byTeacher) {
+  const all = new Set();
+  byTeacher.forEach((set) => {
+    if (!set) return;
+    set.forEach((d) => all.add(d));
+  });
+  return all;
+}
+
+/**
+ * 上课记录授课老师以「用户管理」课程绑定为准：
+ * - 一门课只绑一位老师：始终显示该老师（纠正旧课堂里残留的错误姓名，如向巧）
+ * - 一门课绑多位老师：有签到戳记时按实际签到老师分行；否则只显示第一位绑定老师
+ */
+function resolveCourseHourTeacherRows(boundList, history, classroomTeacher, courseTeacher) {
+  const boundNames = (boundList || []).map((t) => String(t.name || '').trim()).filter(Boolean);
+  const primaryBound = boundNames[0] || '';
+  const fallback = primaryBound || String(classroomTeacher || '').trim() || String(courseTeacher || '').trim();
+  const rawByTeacher = signedTeachersFromHistory(history, fallback);
+  const allDates = collectAllSignedDates(rawByTeacher);
+
+  if (boundNames.length === 1) {
+    return {
+      teachers: [primaryBound],
+      byTeacher: new Map([[primaryBound, allDates]])
+    };
+  }
+
+  if (boundNames.length > 1) {
+    const stampedInBound = [];
+    boundNames.forEach((name) => {
+      const set = rawByTeacher.get(name);
+      if (set && set.size) stampedInBound.push(name);
+    });
+    // 历史戳记里还有未绑定姓名时，若能对应到绑定列表则忽略旧名
+    if (stampedInBound.length) {
+      const byTeacher = new Map();
+      stampedInBound.forEach((name) => byTeacher.set(name, rawByTeacher.get(name) || new Set()));
+      return { teachers: stampedInBound, byTeacher };
+    }
+    const room = String(classroomTeacher || '').trim();
+    const pick = (room && boundNames.indexOf(room) >= 0) ? room : primaryBound;
+    return {
+      teachers: [pick],
+      byTeacher: new Map([[pick, allDates]])
+    };
+  }
+
+  // 用户管理未绑定该课：退回课堂/课程表姓名，且只保留一行
+  let teachers = orderSignedTeachers(rawByTeacher, boundList);
+  if (!teachers.length && fallback) teachers = [fallback];
+  if (teachers.length > 1) {
+    // 无绑定信息时不要因错误戳记拆成多行同名/旧名
+    const pick = fallback || teachers[0];
+    return {
+      teachers: [pick],
+      byTeacher: new Map([[pick, allDates]])
+    };
+  }
+  return { teachers: teachers, byTeacher: rawByTeacher };
+}
+
 function orderSignedTeachers(byTeacher, boundList) {
   const names = Array.from(byTeacher.keys()).filter(Boolean);
   const idOf = new Map((boundList || []).map((t) => [t.name, Number(t.id) || 1000000000]));
@@ -5590,15 +5652,17 @@ function buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap,
   return cells;
 }
 
-function appendCourseHourRows(rows, name, fallbackTeacher, boundList, history, dates, overrideMap) {
-  const byTeacher = signedTeachersFromHistory(history, fallbackTeacher);
-  let teachers = orderSignedTeachers(byTeacher, boundList);
+function appendCourseHourRows(rows, name, fallbackTeacher, boundList, history, dates, overrideMap, courseTeacher) {
+  const resolved = resolveCourseHourTeacherRows(
+    boundList,
+    history,
+    fallbackTeacher,
+    courseTeacher
+  );
+  let teachers = resolved.teachers || [];
+  const byTeacher = resolved.byTeacher || new Map();
   if (!teachers.length) teachers = [fallbackTeacher || ((boundList[0] && boundList[0].name) || '')];
-  const signedAnywhere = new Set();
-  teachers.forEach((teacher) => {
-    const set = byTeacher.get(teacher);
-    if (set) set.forEach((d) => signedAnywhere.add(d));
-  });
+  const signedAnywhere = collectAllSignedDates(byTeacher);
   teachers.forEach((teacher, idx) => {
     const signedSet = byTeacher.get(teacher) || new Set();
     const cells = buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap, idx === 0, signedAnywhere);
@@ -6728,20 +6792,25 @@ async function handleTeacherClassroomPut(db, request) {
     (body.teacher && body.teacher.name) || body.teacher_name || body.teacherName || ''
   ).trim();
 
-  // 用户管理绑定优先：防止教师端本地缓存把旧老师名写回后台
+  // 用户管理绑定优先：一门课只绑一位老师时，强制用绑定姓名，避免本地缓存旧名写回
   try {
-    const boundUser = await db.prepare(
-      'SELECT id, teacher_name, course_name FROM users WHERE id = ?'
-    ).bind(auth.user.userId).first();
-    if (boundUser && String(boundUser.course_name || '').trim() === courseName) {
-      const boundName = String(boundUser.teacher_name || '').trim();
-      if (boundName) teacherName = boundName;
+    const peersRes = await db.prepare(
+      "SELECT id, teacher_name FROM users WHERE TRIM(course_name) = ? AND teacher_name IS NOT NULL AND TRIM(teacher_name) != '' ORDER BY id ASC"
+    ).bind(courseName).all();
+    const peers = peersRes.results || [];
+    if (peers.length === 1) {
+      const only = String(peers[0].teacher_name || '').trim();
+      if (only) teacherName = only;
     } else {
-      const byCourse = await db.prepare(
-        "SELECT id, teacher_name FROM users WHERE course_name = ? AND teacher_name IS NOT NULL AND TRIM(teacher_name) != '' LIMIT 1"
-      ).bind(courseName).first();
-      if (byCourse && String(byCourse.teacher_name || '').trim()) {
-        teacherName = String(byCourse.teacher_name).trim();
+      const boundUser = await db.prepare(
+        'SELECT id, teacher_name, course_name FROM users WHERE id = ?'
+      ).bind(auth.user.userId).first();
+      if (boundUser && String(boundUser.course_name || '').trim() === courseName) {
+        const boundName = String(boundUser.teacher_name || '').trim();
+        if (boundName) teacherName = boundName;
+      } else if (peers.length) {
+        const first = String(peers[0].teacher_name || '').trim();
+        if (first) teacherName = first;
       }
     }
   } catch (_) {}
@@ -6844,6 +6913,8 @@ async function handleTeacherClassroomList(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
 
+  try { await applyAllBoundTeachersToCourses(db); } catch (_) {}
+
   const coursesRes = await db.prepare(
     'SELECT id, name, teacher, location, category, selected_count FROM courses WHERE is_active = 1 ORDER BY id ASC'
   ).all();
@@ -6880,7 +6951,7 @@ async function handleTeacherClassroomList(db, request) {
     return {
       course_id: String(c.id),
       course_name: c.name,
-      teacher_name: (synced && synced.teacher_name) || boundTeachers.get(c.name) || c.teacher || '',
+      teacher_name: boundTeachers.get(c.name) || (synced && synced.teacher_name) || c.teacher || '',
       location: c.location || '',
       category: c.category || '',
       selected_count: c.selected_count || 0,
@@ -6913,7 +6984,7 @@ async function handleTeacherClassroomList(db, request) {
     items.push({
       course_id: synced.course_id || '',
       course_name: name,
-      teacher_name: synced.teacher_name || boundTeachers.get(name) || '',
+      teacher_name: boundTeachers.get(name) || synced.teacher_name || '',
       location: '',
       category: '',
       selected_count: synced.student_count || 0,
@@ -7185,16 +7256,17 @@ async function buildCourseHoursMatrix(db) {
     const name = c.name;
     const synced = classroomMap[name];
     const boundList = boundTeachers.get(name) || [];
-    const fallback = (synced && synced.teacher_name) || c.teacher || (boundList[0] && boundList[0].name) || '';
-    appendCourseHourRows(rows, name, fallback, boundList, historyByCourse[name] || [], dates, overrideMap);
+    // 用户管理绑定优先，避免课堂缓存里的旧老师名（如向巧）盖住正确绑定
+    const fallback = (boundList[0] && boundList[0].name) || (synced && synced.teacher_name) || c.teacher || '';
+    appendCourseHourRows(rows, name, fallback, boundList, historyByCourse[name] || [], dates, overrideMap, c.teacher);
   });
 
   Object.keys(classroomMap).forEach((name) => {
     if (rows.some((r) => r.course_name === name)) return;
     const synced = classroomMap[name];
     const boundList = boundTeachers.get(name) || [];
-    const fallback = synced.teacher_name || (boundList[0] && boundList[0].name) || '';
-    appendCourseHourRows(rows, name, fallback, boundList, historyByCourse[name] || [], dates, overrideMap);
+    const fallback = (boundList[0] && boundList[0].name) || synced.teacher_name || '';
+    appendCourseHourRows(rows, name, fallback, boundList, historyByCourse[name] || [], dates, overrideMap, '');
   });
 
   // 不再按课程名重排，保持与课程管理 id 顺序一致
@@ -7295,6 +7367,7 @@ async function getNumericHoursTotalForCourse(db, courseName) {
 async function handleCourseHoursGet(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
+  try { await applyAllBoundTeachersToCourses(db); } catch (_) {}
   const matrix = await buildCourseHoursMatrix(db);
   return json(matrix);
 }

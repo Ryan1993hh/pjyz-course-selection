@@ -1276,10 +1276,28 @@
       });
     });
 
+    function pulseTopBtn(btn) {
+      if (!btn) return;
+      btn.classList.remove('is-pop');
+      void btn.offsetWidth;
+      btn.classList.add('is-pop');
+      btn.classList.add('is-pressed');
+      setTimeout(function () { btn.classList.remove('is-pressed'); }, 160);
+    }
     var sickBtn = document.getElementById('bzStudentLeaveBtn');
     var isoBtn = document.getElementById('bzClassIsolationBtn');
-    if (sickBtn) sickBtn.addEventListener('click', openStudentLeaveModal);
-    if (isoBtn) isoBtn.addEventListener('click', confirmClassIsolation);
+    if (sickBtn) {
+      sickBtn.addEventListener('click', function () {
+        pulseTopBtn(sickBtn);
+        openStudentLeaveModal();
+      });
+    }
+    if (isoBtn) {
+      isoBtn.addEventListener('click', function () {
+        pulseTopBtn(isoBtn);
+        confirmClassIsolation();
+      });
+    }
     var pickSave = document.getElementById('bzLeavePickSave');
     var pickCancel = document.getElementById('bzLeavePickCancel');
     var pickModal = document.getElementById('bzLeavePickModal');

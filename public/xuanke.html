@@ -2530,22 +2530,63 @@ tr.no-quota:hover td { opacity: 0.7; }
 .bz-leave-top { display: flex; gap: 10px; margin-bottom: 14px; }
 .bz-leave-top .bz-top-btn {
   flex: 1;
-  border: 1px solid color-mix(in srgb, var(--primary) 42%, #fff);
-  background: color-mix(in srgb, var(--primary) 10%, var(--card, #fff));
-  color: var(--primary-dark);
-  border-radius: 12px;
-  min-height: 44px;
-  font-weight: 700;
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 0 14px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  letter-spacing: 0.04em;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.bz-leave-top .bz-top-btn .ico {
+  font-size: 18px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.12));
+}
+.bz-leave-top .bz-top-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 48%);
+  pointer-events: none;
+}
+.bz-leave-top .bz-top-btn.is-leave {
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 55%, var(--primary-dark) 100%);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.bz-leave-top .bz-top-btn.is-isolation {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 48%, #d97706 100%);
+  box-shadow: 0 10px 20px rgba(245, 158, 11, 0.35);
+  color: #7c2d12;
 }
 .bz-leave-top .bz-top-btn:hover {
-  background: color-mix(in srgb, var(--primary) 18%, var(--card, #fff));
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 28%, transparent);
+  filter: brightness(1.04);
+  transform: translateY(-1px);
 }
-.bz-leave-top .bz-top-btn:active { transform: scale(0.96); }
+.bz-leave-top .bz-top-btn:active,
+.bz-leave-top .bz-top-btn.is-pressed {
+  transform: scale(0.96);
+  filter: brightness(0.98);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
+}
+.bz-leave-top .bz-top-btn.is-pop {
+  animation: bzTopBtnPop .28s ease;
+}
+@keyframes bzTopBtnPop {
+  0% { transform: scale(0.94); }
+  55% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
 .bz-course-list { margin-top: 4px; }
 .bz-sel-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 10px; }
 .bz-sel-table {
@@ -3071,8 +3112,8 @@ tr.no-quota:hover td { opacity: 0.7; }
   <div class="bz-card">
     <div class="bz-card-title">请假报备 <span id="bzLeaveDate" style="font-weight:400;font-size:12px;color:var(--muted)"></span></div>
     <div class="bz-leave-top">
-      <button type="button" class="bz-top-btn" id="bzStudentLeaveBtn">学生请假</button>
-      <button type="button" class="bz-top-btn" id="bzClassIsolationBtn">班级隔离</button>
+      <button type="button" class="bz-top-btn is-leave" id="bzStudentLeaveBtn"><span class="ico">📝</span><span>学生请假</span></button>
+      <button type="button" class="bz-top-btn is-isolation" id="bzClassIsolationBtn"><span class="ico">🛡️</span><span>班级隔离</span></button>
     </div>
     <p class="bz-subtitle" id="bzLeaveHint">加载中…</p>
     <div class="bz-course-list" id="bzCourseList"></div>
@@ -6499,6 +6540,6 @@ document.addEventListener('keydown', e => {
   };
 })();
 </script>
-<script src="js/banzhuren-portal.js?v=20260921c"></script>
+<script src="js/banzhuren-portal.js?v=20260922a"></script>
 </body>
 </html>
