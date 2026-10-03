@@ -143,10 +143,11 @@ const INIT_STATEMENTS = [
   )`,
   `CREATE TABLE IF NOT EXISTS course_hour_overrides (
     course_name TEXT NOT NULL,
+    teacher_name TEXT NOT NULL DEFAULT '',
     session_date TEXT NOT NULL,
     cell_value TEXT NOT NULL DEFAULT '1',
     updated_at TEXT DEFAULT (datetime('now')),
-    PRIMARY KEY (course_name, session_date)
+    PRIMARY KEY (course_name, teacher_name, session_date)
   )`,
   `CREATE TABLE IF NOT EXISTS course_hour_cares (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,7 +192,7 @@ const SELECTION_STATUS_KEY = 'selection_enabled';
 const SELECTION_DATA_REVISION_KEY = 'selection_data_revision';
 /** 变更建表/迁移逻辑时递增，用于跳过已完成的冷启动初始化 */
 const SCHEMA_VERSION_KEY = '_schema_version';
-const SCHEMA_VERSION = '20260910a';
+const SCHEMA_VERSION = '20261003b';
 
 /** Worker 隔离区内只跑一次建表/迁移，避免每个 API 请求都打大量 D1 */
 let dbInitPromise = null;
@@ -295,6 +296,12 @@ async function ensureDbReady(db) {
       await ensureSelectionsColumns(db);
     } catch (selSchemaErr) {
       console.warn('Selections schema migration error:', selSchemaErr.message);
+    }
+
+    try {
+      await ensureCourseHourOverridesSchema(db);
+    } catch (hoursSchemaErr) {
+      console.warn('Course hour overrides schema migration error:', hoursSchemaErr && hoursSchemaErr.message);
     }
 
     try {
@@ -5636,13 +5643,58 @@ function orderSignedTeachers(byTeacher, boundList) {
   return names;
 }
 
-function buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap, isPrimary, signedAnywhere) {
+/** 上课记录覆盖表：按课程+老师+日期存值；兼容旧表无 teacher_name */
+async function ensureCourseHourOverridesSchema(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS course_hour_overrides (
+    course_name TEXT NOT NULL,
+    teacher_name TEXT NOT NULL DEFAULT '',
+    session_date TEXT NOT NULL,
+    cell_value TEXT NOT NULL DEFAULT '1',
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (course_name, teacher_name, session_date)
+  )`).run();
+
+  const colsRes = await db.prepare('PRAGMA table_info(course_hour_overrides)').all();
+  const colNames = (colsRes.results || []).map((c) => c.name);
+  if (colNames.includes('teacher_name')) return;
+
+  await db.prepare(`CREATE TABLE IF NOT EXISTS course_hour_overrides_v2 (
+    course_name TEXT NOT NULL,
+    teacher_name TEXT NOT NULL DEFAULT '',
+    session_date TEXT NOT NULL,
+    cell_value TEXT NOT NULL DEFAULT '1',
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (course_name, teacher_name, session_date)
+  )`).run();
+  await db.prepare(`INSERT OR IGNORE INTO course_hour_overrides_v2
+    (course_name, teacher_name, session_date, cell_value, updated_at)
+    SELECT course_name, '', session_date, cell_value, COALESCE(updated_at, datetime('now'))
+    FROM course_hour_overrides`).run();
+  await db.prepare('DROP TABLE course_hour_overrides').run();
+  await db.prepare('ALTER TABLE course_hour_overrides_v2 RENAME TO course_hour_overrides').run();
+}
+
+function lookupCourseHourOverride(overrideMap, courseName, teacherName, dateKey) {
+  const byCourse = overrideMap && overrideMap[courseName];
+  if (!byCourse) return { has: false, value: '' };
+  const teacher = String(teacherName || '');
+  if (byCourse[teacher] && Object.prototype.hasOwnProperty.call(byCourse[teacher], dateKey)) {
+    return { has: true, value: byCourse[teacher][dateKey] };
+  }
+  // 兼容旧数据：仅按课程+日期写入、teacher_name 为空
+  if (teacher && byCourse[''] && Object.prototype.hasOwnProperty.call(byCourse[''], dateKey)) {
+    return { has: true, value: byCourse[''][dateKey] };
+  }
+  return { has: false, value: '' };
+}
+
+function buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap, teacherName) {
   const cells = {};
   dates.forEach((d) => {
-    // 管理员覆盖值始终优先，保证编辑其他日期后刷新仍显示已保存数据
-    const hasOverride = !!(overrideMap[name] && Object.prototype.hasOwnProperty.call(overrideMap[name], d));
-    if (hasOverride) {
-      cells[d] = overrideMap[name][d];
+    // 管理员覆盖值始终优先（含空字符串=管理员主动清空），保证保存后刷新仍一致
+    const ov = lookupCourseHourOverride(overrideMap, name, teacherName, d);
+    if (ov.has) {
+      cells[d] = ov.value;
     } else if (signedSet.has(d)) {
       cells[d] = '1';
     } else {
@@ -5662,10 +5714,9 @@ function appendCourseHourRows(rows, name, fallbackTeacher, boundList, history, d
   let teachers = resolved.teachers || [];
   const byTeacher = resolved.byTeacher || new Map();
   if (!teachers.length) teachers = [fallbackTeacher || ((boundList[0] && boundList[0].name) || '')];
-  const signedAnywhere = collectAllSignedDates(byTeacher);
-  teachers.forEach((teacher, idx) => {
+  teachers.forEach((teacher) => {
     const signedSet = byTeacher.get(teacher) || new Set();
-    const cells = buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap, idx === 0, signedAnywhere);
+    const cells = buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap, teacher);
     rows.push({
       course_name: name,
       teacher_name: teacher,
@@ -7227,14 +7278,27 @@ async function buildCourseHoursMatrix(db) {
     });
   });
 
-  const overrideRes = await db.prepare('SELECT course_name, session_date, cell_value FROM course_hour_overrides').all();
+  try { await ensureCourseHourOverridesSchema(db); } catch (_) {}
+  let overrideRes;
+  try {
+    overrideRes = await db.prepare(
+      'SELECT course_name, teacher_name, session_date, cell_value FROM course_hour_overrides'
+    ).all();
+  } catch (_) {
+    overrideRes = await db.prepare(
+      'SELECT course_name, session_date, cell_value FROM course_hour_overrides'
+    ).all();
+  }
+  // overrideMap[course][teacher][date] = value
   const overrideMap = {};
   (overrideRes.results || []).forEach((o) => {
     const cn = String(o.course_name || '').trim();
+    const tn = String(o.teacher_name || '').trim();
     const dt = String(o.session_date || '').trim();
     if (!cn || !dt) return;
     if (!overrideMap[cn]) overrideMap[cn] = {};
-    overrideMap[cn][dt] = String(o.cell_value ?? '');
+    if (!overrideMap[cn][tn]) overrideMap[cn][tn] = {};
+    overrideMap[cn][tn][dt] = String(o.cell_value ?? '');
     dateSet.add(dt);
   });
 
@@ -7477,27 +7541,33 @@ async function handleCourseHoursPut(db, request) {
     return json({ success: true, count: 0, ...matrix });
   }
 
+  try { await ensureCourseHourOverridesSchema(db); } catch (_) {}
+
   let count = 0;
   const touchedDates = [];
   for (const item of updates) {
     const courseName = String(item.course_name || '').trim();
+    const teacherName = String(item.teacher_name || item.teacher || '').trim();
     const sessionDate = String(item.session_date || item.date || '').trim();
     if (!courseName || !sessionDate) continue;
     const cellValue = item.cell_value != null ? String(item.cell_value) : '';
     touchedDates.push(sessionDate);
-    if (cellValue === '') {
-      await db.prepare('DELETE FROM course_hour_overrides WHERE course_name = ? AND session_date = ?')
-        .bind(courseName, sessionDate).run();
-      count++;
-      continue;
-    }
+    // 空值也写入覆盖表，表示管理员主动清空；刷新后不会回退成签到默认 1
     await db.prepare(
-      `INSERT INTO course_hour_overrides (course_name, session_date, cell_value, updated_at)
-       VALUES (?, ?, ?, datetime('now'))
-       ON CONFLICT(course_name, session_date) DO UPDATE SET
+      `INSERT INTO course_hour_overrides (course_name, teacher_name, session_date, cell_value, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(course_name, teacher_name, session_date) DO UPDATE SET
          cell_value = excluded.cell_value,
          updated_at = datetime('now')`
-    ).bind(courseName, sessionDate, cellValue).run();
+    ).bind(courseName, teacherName, sessionDate, cellValue).run();
+    // 兼容旧行（teacher_name 为空）被同课同日编辑时一并更新/清理
+    if (teacherName) {
+      try {
+        await db.prepare(
+          'DELETE FROM course_hour_overrides WHERE course_name = ? AND teacher_name = ? AND session_date = ?'
+        ).bind(courseName, '', sessionDate).run();
+      } catch (_) {}
+    }
     count++;
   }
 

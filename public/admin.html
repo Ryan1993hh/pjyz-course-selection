@@ -6177,19 +6177,38 @@ function renderCourseHoursTable() {
 }
 
 async function saveCourseHoursEdits() {
-  var updates = Object.keys(courseHoursState.pending).map(function(key) {
+  // 保存前从 DOM 扫全部分格，避免仅依赖 pending（未触发 input 的单元格也会入库）
+  var wrap = document.getElementById('courseHoursTableWrap');
+  var fromDom = {};
+  if (wrap) {
+    wrap.querySelectorAll('.hours-cell-input').forEach(function(inp) {
+      var cn = inp.getAttribute('data-hours-course') || '';
+      var teacher = inp.getAttribute('data-hours-teacher') || '';
+      var dt = inp.getAttribute('data-hours-date') || '';
+      if (!cn || !dt) return;
+      fromDom[cn + '\0' + teacher + '\0' + dt] = inp.value;
+      courseHoursState.pending[cn + '\0' + teacher + '\0' + dt] = inp.value;
+    });
+  }
+  var mergedKeys = Object.keys(courseHoursState.pending);
+  Object.keys(fromDom).forEach(function(k) {
+    if (mergedKeys.indexOf(k) === -1) mergedKeys.push(k);
+  });
+  var updates = mergedKeys.map(function(key) {
     var parts = key.split('\0');
     var course = parts[0];
     var teacher = parts.length >= 3 ? parts[1] : '';
     var date = parts.length >= 3 ? parts[2] : parts[1];
+    var cellValue = fromDom[key] != null ? fromDom[key] : courseHoursState.pending[key];
     return {
       course_name: course,
       teacher_name: teacher,
       session_date: date,
-      cell_value: courseHoursState.pending[key]
+      cell_value: cellValue
     };
   }).filter(function(u) {
-    return (courseHoursState.deletedDates || []).indexOf(u.session_date) === -1;
+    return u.course_name && u.session_date &&
+      (courseHoursState.deletedDates || []).indexOf(u.session_date) === -1;
   });
   var deleteDates = (courseHoursState.deletedDates || []).slice();
   if (!updates.length && !deleteDates.length) {
