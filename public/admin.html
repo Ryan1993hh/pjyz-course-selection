@@ -999,131 +999,135 @@ table.courses-table td[data-field="description"] {
   z-index: 40;
   width: min(480px, calc(100vw - 32px));
   max-height: min(70vh, 560px);
-  overflow: auto;
+  overflow: visible;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
   padding: 12px;
 }
+.hours-care-pop #careItemList {
+  max-height: min(42vh, 320px);
+  overflow: auto;
+}
 .hours-care-pop h4 { margin: 0 0 8px; font-size: 14px; color: #0f766e; }
 .hours-care-date-bar {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
   border: 1px solid #99f6e4;
-  border-radius: 14px;
+  border-radius: 10px;
   background:
     linear-gradient(135deg, rgba(240, 253, 250, 0.96) 0%, rgba(204, 251, 241, 0.9) 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 6px 16px rgba(13, 148, 136, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 4px 10px rgba(13, 148, 136, 0.06);
   cursor: pointer;
   user-select: none;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 .hours-care-date-bar:hover {
   border-color: #2dd4bf;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 8px 20px rgba(13, 148, 136, 0.14);
-  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 6px 14px rgba(13, 148, 136, 0.12);
 }
-.hours-care-date-bar:active { transform: translateY(0); }
 .hours-care-date-bar .care-date-icon {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  border-radius: 12px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(160deg, #2dd4bf 0%, #0d9488 70%, #0f766e 100%);
   color: #fff;
-  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.28);
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.24);
 }
 .hours-care-date-bar .care-date-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   display: block;
 }
 .hours-care-date-bar .care-date-main {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
 }
 .hours-care-date-bar .care-date-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #0f766e;
-  text-transform: none;
-  white-space: nowrap;
+  display: none;
 }
 .hours-care-date-bar .care-date-display {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.2;
   color: #134e4a;
-  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 .hours-care-date-bar .care-date-sub {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: #0f766e;
-  opacity: 0.78;
+  opacity: 0.72;
+  white-space: nowrap;
 }
 .hours-care-date-bar .care-date-aside {
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
 }
 .hours-care-date-bar .care-date-weekday {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  padding: 3px 8px;
+  min-width: 34px;
+  padding: 1px 6px;
   border-radius: 999px;
   background: rgba(13, 148, 136, 0.12);
   color: #0f766e;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 .hours-care-date-bar .care-date-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #0d9488;
-  white-space: nowrap;
+  display: none;
 }
-.hours-care-date-bar .care-date-hint::after {
-  content: '';
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid currentColor;
-  margin-left: 2px;
-  opacity: 0.85;
+.hours-care-date-bar .care-date-face {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
 }
 .hours-care-date-bar input[type="date"] {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  cursor: pointer;
+  z-index: 3;
   width: 100%;
   height: 100%;
-  border: 0;
-  padding: 0;
   margin: 0;
-  z-index: 2;
-  font-size: 16px; /* 避免部分移动端聚焦缩放 */
+  padding: 0;
+  border: 0;
+  opacity: 0.01;
+  cursor: pointer;
+  background: transparent;
+  color: transparent;
+  font-size: 16px;
+}
+.hours-care-date-bar input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 .hours-care-date-bar.is-empty .care-date-display { color: #64748b; font-weight: 700; font-size: 16px; }
 .hours-care-date-bar.is-empty .care-date-weekday { background: #e2e8f0; color: #64748b; }
@@ -5823,20 +5827,22 @@ function careDateWeekdayLabel(dateKey) {
 function careDateBarHtml(inputId, displayId, value) {
   var v = escHtml(value || '');
   return '<div class="hours-care-date-bar" title="点击选择日期">' +
-    '<span class="care-date-icon" aria-hidden="true">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<rect x="3" y="5" width="18" height="16" rx="2"></rect>' +
-        '<path d="M16 3v4M8 3v4M3 11h18"></path>' +
-      '</svg>' +
-    '</span>' +
-    '<div class="care-date-main">' +
-      '<span class="care-date-label">看护日期</span>' +
-      '<span class="care-date-display" id="' + displayId + '"></span>' +
-      '<span class="care-date-sub" data-care-date-sub></span>' +
-    '</div>' +
-    '<div class="care-date-aside">' +
-      '<span class="care-date-weekday" data-care-date-weekday>—</span>' +
-      '<span class="care-date-hint">点击选择</span>' +
+    '<div class="care-date-face">' +
+      '<span class="care-date-icon" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<rect x="3" y="5" width="18" height="16" rx="2"></rect>' +
+          '<path d="M16 3v4M8 3v4M3 11h18"></path>' +
+        '</svg>' +
+      '</span>' +
+      '<div class="care-date-main">' +
+        '<span class="care-date-label">看护日期</span>' +
+        '<span class="care-date-display" id="' + displayId + '"></span>' +
+        '<span class="care-date-sub" data-care-date-sub></span>' +
+      '</div>' +
+      '<div class="care-date-aside">' +
+        '<span class="care-date-weekday" data-care-date-weekday>—</span>' +
+        '<span class="care-date-hint">点击选择</span>' +
+      '</div>' +
     '</div>' +
     '<input type="date" id="' + inputId + '" value="' + v + '" aria-label="选择看护日期">' +
   '</div>';
@@ -5873,18 +5879,21 @@ function bindCareDateBarPicker(root, inputId) {
   var input = document.getElementById(inputId) || root.querySelector('#' + inputId);
   var bar = input ? input.closest('.hours-care-date-bar') : null;
   if (!input || !bar) return;
-  var openPicker = function() {
-    try {
-      if (typeof input.showPicker === 'function') input.showPicker();
-      else { input.focus(); input.click(); }
-    } catch (_) {
+  var openPicker = function(e) {
+    if (e) e.stopPropagation();
+    try { input.focus({ preventScroll: true }); } catch (_) {
       try { input.focus(); } catch (e2) {}
     }
+    if (typeof input.showPicker === 'function') {
+      try { input.showPicker(); return; } catch (_) {}
+    }
   };
+  bar.addEventListener('pointerdown', function(e) {
+    e.stopPropagation();
+    openPicker(e);
+  });
   bar.addEventListener('click', function(e) {
-    if (e.target === input) return;
-    e.preventDefault();
-    openPicker();
+    e.stopPropagation();
   });
   input.addEventListener('change', function() { syncCareDateBarDisplay(root); });
   input.addEventListener('input', function() { syncCareDateBarDisplay(root); });
@@ -6896,6 +6905,7 @@ document.addEventListener('click', function(e) {
   var wrap = document.getElementById('courseHoursCareWrap');
   var pop = document.getElementById('courseHoursCarePop');
   if (!wrap || !pop || pop.hidden) return;
+  if (e.target && e.target.closest && e.target.closest('.hours-care-date-bar')) return;
   if (!wrap.contains(e.target)) closeCourseHoursCarePop();
 });
 document.getElementById('courseHoursFillTodayBtn') && document.getElementById('courseHoursFillTodayBtn').addEventListener('click', fillCourseHoursTodayEmpty);
