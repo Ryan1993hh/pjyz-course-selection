@@ -5639,11 +5639,11 @@ function orderSignedTeachers(byTeacher, boundList) {
 function buildCourseHourCellsForSignedDates(name, dates, signedSet, overrideMap, isPrimary, signedAnywhere) {
   const cells = {};
   dates.forEach((d) => {
+    // 管理员覆盖值始终优先，保证编辑其他日期后刷新仍显示已保存数据
     const hasOverride = !!(overrideMap[name] && Object.prototype.hasOwnProperty.call(overrideMap[name], d));
-    const signed = signedSet.has(d);
-    if (hasOverride && (signed || (isPrimary && !signedAnywhere.has(d)))) {
+    if (hasOverride) {
       cells[d] = overrideMap[name][d];
-    } else if (signed) {
+    } else if (signedSet.has(d)) {
       cells[d] = '1';
     } else {
       cells[d] = '';
@@ -7308,6 +7308,29 @@ async function listCourseHourCares(db) {
   }
 }
 
+async function ensureCareDatesVisible(db, dates) {
+  const uniq = Array.from(new Set((dates || []).map((d) => String(d || '').trim()).filter(Boolean)));
+  if (!uniq.length) return;
+  const extra = await getExtraCourseHourDates(db);
+  uniq.forEach((d) => { if (!extra.includes(d)) extra.push(d); });
+  await setExtraCourseHourDates(db, extra);
+  const hidden = (await getHiddenCourseHourDates(db)).filter((d) => !uniq.includes(d));
+  await setHiddenCourseHourDates(db, hidden);
+}
+
+function normalizeCareItems(items, forcedDate) {
+  const clean = [];
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const classLabel = String(item.class_label || '').trim();
+    const teacher = String(item.teacher_name || '').trim();
+    const date = String(forcedDate || item.session_date || item.date || '').trim();
+    const note = String(item.note || '').trim();
+    if (!classLabel || !teacher || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    clean.push({ classLabel, teacher, date, note });
+  });
+  return clean;
+}
+
 async function handleCourseHoursCaresPost(db, request) {
   const auth = requireAuth(request, ['admin']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -7315,16 +7338,8 @@ async function handleCourseHoursCaresPost(db, request) {
   try { body = await request.json(); } catch (_) {
     return json({ error: '请求体无效' }, 400);
   }
-  const items = Array.isArray(body.items) ? body.items : [];
-  const clean = [];
-  items.forEach((item) => {
-    const classLabel = String(item.class_label || '').trim();
-    const teacher = String(item.teacher_name || '').trim();
-    const date = String(item.session_date || '').trim();
-    const note = String(item.note || '').trim();
-    if (!classLabel || !teacher || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-    clean.push({ classLabel, teacher, date, note });
-  });
+  const forcedDate = String(body.session_date || body.date || '').trim();
+  const clean = normalizeCareItems(body.items, /^\d{4}-\d{2}-\d{2}$/.test(forcedDate) ? forcedDate : '');
   if (!clean.length) return json({ error: '请填写班级、看护老师和看护时间' }, 400);
 
   await ensureCourseHourCaresTable(db);
@@ -7333,14 +7348,64 @@ async function handleCourseHoursCaresPost(db, request) {
       'INSERT INTO course_hour_cares (class_label, teacher_name, session_date, note) VALUES (?, ?, ?, ?)'
     ).bind(item.classLabel, item.teacher, item.date, item.note).run();
   }
-  const dates = clean.map((item) => item.date);
-  const extra = await getExtraCourseHourDates(db);
-  dates.forEach((d) => { if (!extra.includes(d)) extra.push(d); });
-  await setExtraCourseHourDates(db, extra);
-  const hidden = (await getHiddenCourseHourDates(db)).filter((d) => !dates.includes(d));
-  await setHiddenCourseHourDates(db, hidden);
+  await ensureCareDatesVisible(db, clean.map((item) => item.date));
   const matrix = await buildCourseHoursMatrix(db);
   return json({ success: true, count: clean.length, ...matrix });
+}
+
+/** 按日期整批替换看护记录（用于单元格增删改查） */
+async function handleCourseHoursCaresPut(db, request) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ error: '请求体无效' }, 400);
+  }
+  const sessionDate = String(body.session_date || body.date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sessionDate)) {
+    return json({ error: '请选择有效看护日期' }, 400);
+  }
+  const clean = normalizeCareItems(body.items, sessionDate);
+
+  await ensureCourseHourCaresTable(db);
+  await db.prepare('DELETE FROM course_hour_cares WHERE session_date = ?').bind(sessionDate).run();
+  for (const item of clean) {
+    await db.prepare(
+      'INSERT INTO course_hour_cares (class_label, teacher_name, session_date, note) VALUES (?, ?, ?, ?)'
+    ).bind(item.classLabel, item.teacher, item.date, item.note).run();
+  }
+  await ensureCareDatesVisible(db, [sessionDate]);
+  const matrix = await buildCourseHoursMatrix(db);
+  return json({ success: true, count: clean.length, session_date: sessionDate, ...matrix });
+}
+
+async function handleCourseHoursCaresDelete(db, request, url) {
+  const auth = requireAuth(request, ['admin']);
+  if (auth.error) return json({ error: auth.error }, auth.status);
+  let body = {};
+  try { body = await request.json(); } catch (_) { body = {}; }
+  const ids = Array.isArray(body.ids)
+    ? body.ids.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
+    : [];
+  const sessionDate = String(
+    body.session_date || body.date || (url && url.searchParams.get('session_date')) || ''
+  ).trim();
+
+  await ensureCourseHourCaresTable(db);
+  let count = 0;
+  if (ids.length) {
+    for (const id of ids) {
+      const r = await db.prepare('DELETE FROM course_hour_cares WHERE id = ?').bind(id).run();
+      count += (r && r.meta && r.meta.changes) || 0;
+    }
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(sessionDate)) {
+    const r = await db.prepare('DELETE FROM course_hour_cares WHERE session_date = ?').bind(sessionDate).run();
+    count += (r && r.meta && r.meta.changes) || 0;
+  } else {
+    return json({ error: '请提供要删除的看护 id 或日期' }, 400);
+  }
+  const matrix = await buildCourseHoursMatrix(db);
+  return json({ success: true, count, ...matrix });
 }
 
 async function getNumericHoursTotalForCourse(db, courseName) {
@@ -7408,15 +7473,18 @@ async function handleCourseHoursPut(db, request) {
     : [];
 
   if (!updates.length && !deleteDates.length && !addDates.length) {
-    return json({ success: true, count: 0 });
+    const matrix = await buildCourseHoursMatrix(db);
+    return json({ success: true, count: 0, ...matrix });
   }
 
   let count = 0;
+  const touchedDates = [];
   for (const item of updates) {
     const courseName = String(item.course_name || '').trim();
     const sessionDate = String(item.session_date || item.date || '').trim();
     if (!courseName || !sessionDate) continue;
     const cellValue = item.cell_value != null ? String(item.cell_value) : '';
+    touchedDates.push(sessionDate);
     if (cellValue === '') {
       await db.prepare('DELETE FROM course_hour_overrides WHERE course_name = ? AND session_date = ?')
         .bind(courseName, sessionDate).run();
@@ -7439,8 +7507,25 @@ async function handleCourseHoursPut(db, request) {
   if (deleteDates.length) {
     hidden = Array.from(new Set(hidden.concat(deleteDates)));
     extra = extra.filter((d) => deleteDates.indexOf(d) === -1);
+    // 单列改名：看护记录迁移到新日期；否则随日期列删除
+    const renamePair = (deleteDates.length === 1 && addDates.length === 1)
+      ? { from: deleteDates[0], to: addDates[0] }
+      : null;
+    try {
+      await ensureCourseHourCaresTable(db);
+      if (renamePair && renamePair.from !== renamePair.to) {
+        await db.prepare('UPDATE course_hour_cares SET session_date = ? WHERE session_date = ?')
+          .bind(renamePair.to, renamePair.from).run();
+      }
+    } catch (_) {}
     for (const dt of deleteDates) {
       await db.prepare('DELETE FROM course_hour_overrides WHERE session_date = ?').bind(dt).run();
+      if (!renamePair || dt !== renamePair.from) {
+        try {
+          await ensureCourseHourCaresTable(db);
+          await db.prepare('DELETE FROM course_hour_cares WHERE session_date = ?').bind(dt).run();
+        } catch (_) {}
+      }
       count++;
     }
   }
@@ -7451,7 +7536,16 @@ async function handleCourseHoursPut(db, request) {
     count += addDates.length;
   }
 
-  if (deleteDates.length || addDates.length) {
+  // 编辑单元格涉及的日期也要保留在日期列中，避免刷新后列消失
+  if (touchedDates.length) {
+    const uniqTouch = Array.from(new Set(touchedDates));
+    uniqTouch.forEach((d) => {
+      if (d && !extra.includes(d) && deleteDates.indexOf(d) === -1) extra.push(d);
+    });
+    hidden = hidden.filter((d) => uniqTouch.indexOf(d) === -1);
+  }
+
+  if (deleteDates.length || addDates.length || touchedDates.length) {
     await setHiddenCourseHourDates(db, hidden);
     await setExtraCourseHourDates(db, extra);
   }
@@ -7462,7 +7556,8 @@ async function handleCourseHoursPut(db, request) {
     await bumpSelectionDataRevision(db);
   }
 
-  return json({ success: true, count, deleted_dates: deleteDates, added_dates: addDates });
+  const matrix = await buildCourseHoursMatrix(db);
+  return json({ success: true, count, deleted_dates: deleteDates, added_dates: addDates, ...matrix });
 }
 
 // =======================================================
@@ -7802,8 +7897,10 @@ async function onRequestImpl(context) {
   if (path === '/api/course-hours/total' && method === 'GET') {
     return handleCourseHoursTotalGet(db, request, url);
   }
-  if (path === '/api/course-hours/cares' && method === 'POST') {
-    return handleCourseHoursCaresPost(db, request);
+  if (path === '/api/course-hours/cares') {
+    if (method === 'POST') return handleCourseHoursCaresPost(db, request);
+    if (method === 'PUT') return handleCourseHoursCaresPut(db, request);
+    if (method === 'DELETE') return handleCourseHoursCaresDelete(db, request, url);
   }
   if (path === '/api/course-hours') {
     if (method === 'GET') return handleCourseHoursGet(db, request);

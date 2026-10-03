@@ -997,8 +997,8 @@ table.courses-table td[data-field="description"] {
   top: calc(100% + 8px);
   right: 0;
   z-index: 40;
-  width: min(460px, calc(100vw - 32px));
-  max-height: min(70vh, 520px);
+  width: min(480px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
   overflow: auto;
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -1007,17 +1007,69 @@ table.courses-table td[data-field="description"] {
   padding: 12px;
 }
 .hours-care-pop h4 { margin: 0 0 8px; font-size: 14px; color: #0f766e; }
+.hours-care-date-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+  background: #f0fdfa;
+  cursor: pointer;
+  user-select: none;
+}
+.hours-care-date-bar:hover { border-color: #2dd4bf; }
+.hours-care-date-bar .care-date-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f766e;
+  white-space: nowrap;
+}
+.hours-care-date-bar .care-date-display {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #134e4a;
+}
+.hours-care-date-bar .care-date-hint {
+  font-size: 12px;
+  color: #0d9488;
+}
+.hours-care-date-bar input[type="date"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
 .care-item {
   display: grid;
-  grid-template-columns: 88px 72px 1fr;
+  grid-template-columns: 88px 72px 1fr auto;
   gap: 6px;
   padding: 8px 0;
   border-top: 1px solid #f1f5f9;
+  align-items: center;
 }
-.care-item .care-date,
 .care-item .care-note { grid-column: 1 / -1; }
 .hours-care-pop .care-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .hours-table tr.hours-care-row td { background: #f0fdfa; white-space: pre-line; vertical-align: top; }
+.hours-table tr.hours-care-row td.hours-care-cell {
+  cursor: default;
+}
+.hours-table.editing tr.hours-care-row td.hours-care-cell {
+  cursor: pointer;
+}
+.hours-table.editing tr.hours-care-row td.hours-care-cell:hover {
+  outline: 2px solid #2dd4bf;
+  outline-offset: -2px;
+  background: #ccfbf1;
+}
 .iso-grades, .iso-classes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .iso-confirmed { margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
 .iso-confirmed-line {
@@ -1291,6 +1343,13 @@ table.courses-table td[data-field="description"] {
   padding-top: 20px;
   position: sticky;
   top: 0;
+}
+.hours-table th.col-date,
+.hours-table td.col-date-cell {
+  width: var(--hours-date-col-width, 5.5em);
+  min-width: var(--hours-date-col-width, 5.5em);
+  max-width: var(--hours-date-col-width, 5.5em);
+  box-sizing: border-box;
 }
 .hours-table th.col-date { position: relative; }
 .hours-col-del {
@@ -4183,11 +4242,12 @@ th.sortable.active .sort-icon { opacity: 1; }
     table-layout: auto;
   }
   #section-board .hours-table th.col-date,
-  #section-board .hours-table td:nth-child(n+3) {
-    min-width: 4.8em;
-    width: auto;
-    white-space: nowrap;
-    word-break: keep-all;
+  #section-board .hours-table td.col-date-cell {
+    width: var(--hours-date-col-width, 5.5em);
+    min-width: var(--hours-date-col-width, 5.5em);
+    max-width: var(--hours-date-col-width, 5.5em);
+    white-space: pre-line;
+    word-break: break-all;
   }
 }
 </style>
@@ -4518,7 +4578,7 @@ th.sortable.active .sort-icon { opacity: 1; }
             <div class="hours-panel-head">
               <h3 id="courseHoursTitle">上课记录</h3>
               <div class="hours-panel-actions">
-                <span class="hours-care-wrap" id="courseHoursCareWrap" style="display:none">
+                <span class="hours-care-wrap" id="courseHoursCareWrap">
                   <button type="button" class="btn btn-outline btn-sm" id="courseHoursCareBtn">+ <span class="txt-full">添加看护</span><span class="txt-short">看护</span></button>
                   <div class="hours-care-pop" id="courseHoursCarePop" hidden></div>
                 </span>
@@ -5388,13 +5448,22 @@ async function removeCourseHoursDateColumn(dateKey) {
   if (!dateKey) return;
   if (!confirm('确定删除该日期列「' + dateKey + '」吗？删除后将立即同步，刷新页面也不会再显示。')) return;
   try {
-    await request('PUT', '/api/course-hours', { updates: [], delete_dates: [dateKey] });
-    if (courseHoursState.data) {
+    var res = await request('PUT', '/api/course-hours', { updates: [], delete_dates: [dateKey] });
+    if (res && (res.rows || res.dates)) {
+      courseHoursState.data = {
+        dates: res.dates || [],
+        rows: res.rows || [],
+        cares: res.cares || []
+      };
+    } else if (courseHoursState.data) {
       courseHoursState.data.dates = (courseHoursState.data.dates || []).filter(function(d) {
         return d.key !== dateKey;
       });
       (courseHoursState.data.rows || []).forEach(function(row) {
         if (row.cells) delete row.cells[dateKey];
+      });
+      courseHoursState.data.cares = (courseHoursState.data.cares || []).filter(function(c) {
+        return !c || c.session_date !== dateKey;
       });
     }
     courseHoursState.addedDates = (courseHoursState.addedDates || []).filter(function(d) { return d !== dateKey; });
@@ -5431,17 +5500,25 @@ async function addCourseHoursDateColumn() {
     return;
   }
   try {
-    await request('PUT', '/api/course-hours', { updates: [], add_dates: [dateKey] });
-    if (!courseHoursState.data) courseHoursState.data = { dates: [], rows: [] };
-    if (!courseHoursState.data.dates) courseHoursState.data.dates = [];
-    if (!courseHoursState.data.dates.some(function(d) { return d.key === dateKey; })) {
-      courseHoursState.data.dates.push({ key: dateKey, label: formatHoursDateLabel(dateKey) });
-      courseHoursState.data.dates.sort(function(a, b) { return String(a.key).localeCompare(String(b.key)); });
+    var res = await request('PUT', '/api/course-hours', { updates: [], add_dates: [dateKey] });
+    if (res && (res.rows || res.dates)) {
+      courseHoursState.data = {
+        dates: res.dates || [],
+        rows: res.rows || [],
+        cares: res.cares || []
+      };
+    } else {
+      if (!courseHoursState.data) courseHoursState.data = { dates: [], rows: [], cares: [] };
+      if (!courseHoursState.data.dates) courseHoursState.data.dates = [];
+      if (!courseHoursState.data.dates.some(function(d) { return d.key === dateKey; })) {
+        courseHoursState.data.dates.push({ key: dateKey, label: formatHoursDateLabel(dateKey) });
+        courseHoursState.data.dates.sort(function(a, b) { return String(a.key).localeCompare(String(b.key)); });
+      }
+      (courseHoursState.data.rows || []).forEach(function(row) {
+        if (!row.cells) row.cells = {};
+        if (row.cells[dateKey] == null) row.cells[dateKey] = '';
+      });
     }
-    (courseHoursState.data.rows || []).forEach(function(row) {
-      if (!row.cells) row.cells = {};
-      if (row.cells[dateKey] == null) row.cells[dateKey] = '';
-    });
     courseHoursState.deletedDates = (courseHoursState.deletedDates || []).filter(function(d) { return d !== dateKey; });
     renderCourseHoursTable();
     if (typeof toast === 'function') toast('已新增日期列并同步', 'success');
@@ -5471,12 +5548,18 @@ async function renameCourseHoursDateColumn(oldKey, newRaw) {
         updates.push({ course_name: row.course_name, session_date: newKey, cell_value: val });
       }
     });
-    await request('PUT', '/api/course-hours', {
+    var res = await request('PUT', '/api/course-hours', {
       updates: updates,
       delete_dates: [oldKey],
       add_dates: [newKey]
     });
-    if (courseHoursState.data) {
+    if (res && (res.rows || res.dates)) {
+      courseHoursState.data = {
+        dates: res.dates || [],
+        rows: res.rows || [],
+        cares: res.cares || []
+      };
+    } else if (courseHoursState.data) {
       courseHoursState.data.dates = (courseHoursState.data.dates || []).filter(function(d) { return d.key !== oldKey; });
       if (!courseHoursState.data.dates.some(function(d) { return d.key === newKey; })) {
         courseHoursState.data.dates.push({ key: newKey, label: formatHoursDateLabel(newKey) });
@@ -5490,6 +5573,9 @@ async function renameCourseHoursDateColumn(oldKey, newRaw) {
         } else if (row.cells[newKey] == null) {
           row.cells[newKey] = '';
         }
+      });
+      (courseHoursState.data.cares || []).forEach(function(c) {
+        if (c && c.session_date === oldKey) c.session_date = newKey;
       });
     }
     Object.keys(courseHoursState.pending).forEach(function(key) {
@@ -5516,26 +5602,63 @@ function formatCareClassLabel(grade, classNo) {
   return prefix + n;
 }
 
-function formatCareCellText(dateKey, withNote) {
+function parseCareClassLabel(label) {
+  var s = String(label || '').trim();
+  var m = s.match(/^(六|七)\s*(\d{1,2})/);
+  if (!m) return { grade: '六年级', classNo: '1' };
+  return {
+    grade: m[1] === '七' ? '七年级' : '六年级',
+    classNo: String(parseInt(m[2], 10) || 1)
+  };
+}
+
+function getCaresForDate(dateKey) {
   var cares = (courseHoursState.data && courseHoursState.data.cares) || [];
-  var lines = cares.filter(function(c) {
-    return c && c.session_date === dateKey;
-  }).map(function(c) {
+  return cares.filter(function(c) { return c && c.session_date === dateKey; });
+}
+
+function formatCareCellText(dateKey, withNote) {
+  return getCaresForDate(dateKey).map(function(c) {
     var text = (c.class_label || '') + '·' + (c.teacher_name || '');
     if (withNote && c.note) text += '·' + c.note;
     return text;
+  }).join('\n');
+}
+
+function measureCourseHoursDateColWidth(displayDates) {
+  var minCh = 5.5;
+  (displayDates || []).forEach(function(d) {
+    if (!d) return;
+    var text = formatCareCellText(d.key, false);
+    if (!text) {
+      var label = String(d.label || d.key || '');
+      if (label.length + 1 > minCh) minCh = label.length + 1;
+      return;
+    }
+    text.split('\n').forEach(function(line) {
+      var len = String(line || '').length + 1;
+      if (len > minCh) minCh = len;
+    });
   });
-  return lines.join('\n');
+  return Math.min(Math.max(minCh, 5.5), 16) + 'em';
+}
+
+function applyCourseHoursDateColWidth(wrap, displayDates) {
+  if (!wrap) return;
+  wrap.style.setProperty('--hours-date-col-width', measureCourseHoursDateColWidth(displayDates));
 }
 
 function buildCourseHoursCareRowHtml(displayDates) {
   var cares = (courseHoursState.data && courseHoursState.data.cares) || [];
-  if (!cares.length) return '';
+  var editing = !!courseHoursState.editing;
+  if (!cares.length && !editing) return '';
   var cells = displayDates.map(function(d) {
-    if (!d) return '<td class="cell-empty">—</td>';
+    if (!d) return '<td class="col-date-cell cell-empty">—</td>';
     var text = formatCareCellText(d.key, false);
-    if (!text) return '<td class="cell-empty">—</td>';
-    return '<td>' + escHtml(text) + '</td>';
+    var cls = 'col-date-cell hours-care-cell' + (text ? '' : ' cell-empty');
+    var title = editing ? '点击编辑该日期看护老师' : '';
+    var body = text ? escHtml(text) : (editing ? '+' : '—');
+    return '<td class="' + cls + '" data-care-date="' + escHtml(d.key) + '" title="' + escHtml(title) + '">' + body + '</td>';
   }).join('');
   return '<tr class="hours-care-row"><td class="col-course">看护</td><td class="col-teacher">—</td>' + cells + '</tr>';
 }
@@ -5566,20 +5689,31 @@ function closeCourseHoursCarePop() {
   }
 }
 
-function careClassOptionsHtml() {
+function careClassOptionsHtml(selected) {
+  var sel = String(selected || '1');
   var html = '';
-  for (var i = 1; i <= 10; i++) html += '<option value="' + i + '">' + i + '班</option>';
+  for (var i = 1; i <= 10; i++) {
+    html += '<option value="' + i + '"' + (sel === String(i) ? ' selected' : '') + '>' + i + '班</option>';
+  }
   return html;
 }
 
-function careItemHtml(today) {
+function careItemHtml(item) {
+  var it = item || {};
+  var parsed = parseCareClassLabel(it.class_label);
+  var grade = it.grade || parsed.grade;
+  var classNo = it.classNo || parsed.classNo;
+  var teacher = it.teacher_name || '';
+  var note = it.note || '';
   return '<div class="care-item">' +
-    '<select class="form-select care-grade"><option value="六年级">六年级</option><option value="七年级">七年级</option></select>' +
-    '<select class="form-select care-class">' + careClassOptionsHtml() + '</select>' +
-    '<input type="text" class="form-input care-teacher" placeholder="看护老师">' +
-    '<input type="date" class="form-input care-date" value="' + escHtml(today) + '">' +
-    '<input type="text" class="form-input care-note" placeholder="看护说明，例如班级隔离">' +
+    '<select class="form-select care-grade">' +
+      '<option value="六年级"' + (grade === '七年级' ? '' : ' selected') + '>六年级</option>' +
+      '<option value="七年级"' + (grade === '七年级' ? ' selected' : '') + '>七年级</option>' +
+    '</select>' +
+    '<select class="form-select care-class">' + careClassOptionsHtml(classNo) + '</select>' +
+    '<input type="text" class="form-input care-teacher" placeholder="看护老师" value="' + escHtml(teacher) + '">' +
     '<button type="button" class="btn btn-outline btn-sm care-remove">移除</button>' +
+    '<input type="text" class="form-input care-note" placeholder="看护说明，例如班级隔离" value="' + escHtml(note) + '">' +
     '</div>';
 }
 
@@ -5587,11 +5721,49 @@ function bindCarePopRows(pop) {
   pop.querySelectorAll('.care-remove').forEach(function(btn) {
     btn.onclick = function() {
       var items = pop.querySelectorAll('.care-item');
-      if (items.length <= 1) return;
       var row = btn.closest('.care-item');
-      if (row) row.remove();
+      if (!row) return;
+      if (items.length <= 1) {
+        row.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+        return;
+      }
+      row.remove();
     };
   });
+}
+
+function syncCareDateBarDisplay(pop) {
+  if (!pop) return;
+  var input = pop.querySelector('#careSharedDate');
+  var display = pop.querySelector('#careSharedDateDisplay');
+  if (!input || !display) return;
+  var key = normalizeCourseHourDateKey(input.value) || input.value;
+  display.textContent = key ? (formatHoursDateLabel(key) + '（' + key + '）') : '请选择日期';
+}
+
+function collectCareItemsFromContainer(container, sharedDate) {
+  var items = [];
+  var invalid = false;
+  var date = normalizeCourseHourDateKey(sharedDate || '');
+  if (!date) return { items: [], invalid: true };
+  (container || document).querySelectorAll('.care-item').forEach(function(row) {
+    var grade = (row.querySelector('.care-grade') || {}).value || '';
+    var cls = (row.querySelector('.care-class') || {}).value || '';
+    var teacher = ((row.querySelector('.care-teacher') || {}).value || '').trim();
+    var note = ((row.querySelector('.care-note') || {}).value || '').trim();
+    if (!teacher && !note) return;
+    if (!grade || !cls || !teacher) {
+      invalid = true;
+      return;
+    }
+    items.push({
+      class_label: formatCareClassLabel(grade, cls),
+      teacher_name: teacher,
+      session_date: date,
+      note: note
+    });
+  });
+  return { items: items, invalid: invalid, date: date };
 }
 
 function openCourseHoursCarePop() {
@@ -5604,16 +5776,28 @@ function openCourseHoursCarePop() {
   var today = getCourseHoursTodayKey();
   pop.innerHTML =
     '<h4>添加看护</h4>' +
-    '<div id="careItemList">' + careItemHtml(today) + '</div>' +
+    '<div class="hours-care-date-bar" id="careDateBar" title="点击选择日期">' +
+      '<span class="care-date-label">日期</span>' +
+      '<span class="care-date-display" id="careSharedDateDisplay"></span>' +
+      '<span class="care-date-hint">点击选择</span>' +
+      '<input type="date" id="careSharedDate" value="' + escHtml(today) + '">' +
+    '</div>' +
+    '<div id="careItemList">' + careItemHtml() + '</div>' +
     '<div class="care-actions">' +
       '<button type="button" class="btn btn-outline btn-sm" id="careAddRowBtn">再加一条</button>' +
       '<button type="button" class="btn btn-secondary btn-sm" id="careCancelBtn">取消</button>' +
       '<button type="button" class="btn btn-primary btn-sm" id="careSaveBtn">保存</button>' +
     '</div>';
   pop.hidden = false;
+  syncCareDateBarDisplay(pop);
   bindCarePopRows(pop);
+  var dateInput = document.getElementById('careSharedDate');
+  if (dateInput) {
+    dateInput.addEventListener('change', function() { syncCareDateBarDisplay(pop); });
+    dateInput.addEventListener('input', function() { syncCareDateBarDisplay(pop); });
+  }
   document.getElementById('careAddRowBtn').onclick = function() {
-    document.getElementById('careItemList').insertAdjacentHTML('beforeend', careItemHtml(today));
+    document.getElementById('careItemList').insertAdjacentHTML('beforeend', careItemHtml());
     bindCarePopRows(pop);
   };
   document.getElementById('careCancelBtn').onclick = closeCourseHoursCarePop;
@@ -5623,33 +5807,23 @@ function openCourseHoursCarePop() {
 async function saveCourseHoursCares() {
   var pop = document.getElementById('courseHoursCarePop');
   if (!pop) return;
-  var items = [];
-  var invalid = false;
-  pop.querySelectorAll('.care-item').forEach(function(row) {
-    var grade = (row.querySelector('.care-grade') || {}).value || '';
-    var cls = (row.querySelector('.care-class') || {}).value || '';
-    var teacher = ((row.querySelector('.care-teacher') || {}).value || '').trim();
-    var date = (row.querySelector('.care-date') || {}).value || '';
-    var note = ((row.querySelector('.care-note') || {}).value || '').trim();
-    if (!grade || !cls || !teacher || !date) {
-      invalid = true;
-      return;
-    }
-    items.push({
-      class_label: formatCareClassLabel(grade, cls),
-      teacher_name: teacher,
-      session_date: date,
-      note: note
-    });
-  });
-  if (!items.length || invalid) {
-    if (typeof toast === 'function') toast('请填写每一条的班级、看护老师和看护时间', 'warn');
+  var sharedDate = ((document.getElementById('careSharedDate') || {}).value || '').trim();
+  var collected = collectCareItemsFromContainer(pop, sharedDate);
+  if (!collected.date) {
+    if (typeof toast === 'function') toast('请先选择看护日期', 'warn');
+    return;
+  }
+  if (!collected.items.length || collected.invalid) {
+    if (typeof toast === 'function') toast('请填写每一条的班级和看护老师', 'warn');
     return;
   }
   var btn = document.getElementById('careSaveBtn');
   if (btn) btn.disabled = true;
   try {
-    var res = await request('POST', '/api/course-hours/cares', { items: items });
+    var res = await request('POST', '/api/course-hours/cares', {
+      session_date: collected.date,
+      items: collected.items
+    });
     courseHoursState.data = {
       dates: res.dates || [],
       rows: res.rows || [],
@@ -5657,20 +5831,96 @@ async function saveCourseHoursCares() {
     };
     closeCourseHoursCarePop();
     renderCourseHoursTable();
-    if (typeof toast === 'function') toast('已添加 ' + items.length + ' 条看护', 'success');
+    if (typeof toast === 'function') toast('已添加 ' + collected.items.length + ' 条看护', 'success');
   } catch (e) {
     if (typeof toast === 'function') toast('保存看护失败：' + e.message, 'error');
     if (btn) btn.disabled = false;
   }
 }
 
+function openCourseHoursCareCellEditor(dateKey) {
+  var key = normalizeCourseHourDateKey(dateKey);
+  if (!key) return;
+  var existing = getCaresForDate(key);
+  var listHtml = existing.length
+    ? existing.map(function(c) { return careItemHtml(c); }).join('')
+    : careItemHtml();
+  openModal(
+    '<p class="export-choice-hint">当前日期下的看护老师可增删改；保存后立即写入数据库。</p>' +
+    '<div class="hours-care-date-bar" id="careCellDateBar" title="点击选择日期">' +
+      '<span class="care-date-label">日期</span>' +
+      '<span class="care-date-display" id="careCellDateDisplay"></span>' +
+      '<span class="care-date-hint">点击选择</span>' +
+      '<input type="date" id="careCellSharedDate" value="' + escHtml(key) + '">' +
+    '</div>' +
+    '<div id="careCellItemList">' + listHtml + '</div>' +
+    '<div class="care-actions" style="margin-top:10px">' +
+      '<button type="button" class="btn btn-outline btn-sm" id="careCellAddRowBtn">再加一条</button>' +
+      '<button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+      '<button type="button" class="btn btn-primary" id="careCellSaveBtn">保存</button>' +
+    '</div>'
+  );
+  document.getElementById('modalTitle').textContent = '编辑看护 · ' + formatHoursDateLabel(key);
+  var modalBox = document.getElementById('modalBox');
+  var sync = function() {
+    var input = document.getElementById('careCellSharedDate');
+    var display = document.getElementById('careCellDateDisplay');
+    if (!input || !display) return;
+    var v = normalizeCourseHourDateKey(input.value) || input.value;
+    display.textContent = v ? (formatHoursDateLabel(v) + '（' + v + '）') : '请选择日期';
+  };
+  sync();
+  bindCarePopRows(modalBox);
+  var dateInput = document.getElementById('careCellSharedDate');
+  if (dateInput) {
+    dateInput.addEventListener('change', sync);
+    dateInput.addEventListener('input', sync);
+  }
+  document.getElementById('careCellAddRowBtn').onclick = function() {
+    document.getElementById('careCellItemList').insertAdjacentHTML('beforeend', careItemHtml());
+    bindCarePopRows(modalBox);
+  };
+  document.getElementById('careCellSaveBtn').onclick = async function() {
+    var shared = ((document.getElementById('careCellSharedDate') || {}).value || '').trim();
+    var collected = collectCareItemsFromContainer(modalBox, shared);
+    if (!collected.date) {
+      if (typeof toast === 'function') toast('请先选择看护日期', 'warn');
+      return;
+    }
+    if (collected.invalid) {
+      if (typeof toast === 'function') toast('请填写每一条的班级和看护老师', 'warn');
+      return;
+    }
+    var btn = document.getElementById('careCellSaveBtn');
+    if (btn) btn.disabled = true;
+    try {
+      // 原日期整批替换；若改了日期，先清空原日期再写入新日期
+      if (key !== collected.date) {
+        await request('PUT', '/api/course-hours/cares', { session_date: key, items: [] });
+      }
+      var res = await request('PUT', '/api/course-hours/cares', {
+        session_date: collected.date,
+        items: collected.items
+      });
+      courseHoursState.data = {
+        dates: res.dates || [],
+        rows: res.rows || [],
+        cares: res.cares || []
+      };
+      closeModal();
+      renderCourseHoursTable();
+      if (typeof toast === 'function') toast('看护记录已保存', 'success');
+    } catch (e) {
+      if (typeof toast === 'function') toast('保存看护失败：' + e.message, 'error');
+      if (btn) btn.disabled = false;
+    }
+  };
+}
+
 function updateCourseHoursEditActions() {
   var addBtn = document.getElementById('courseHoursAddDateBtn');
-  var careWrap = document.getElementById('courseHoursCareWrap');
   var show = courseHoursState.editing ? '' : 'none';
   if (addBtn) addBtn.style.display = show;
-  if (careWrap) careWrap.style.display = show;
-  if (!courseHoursState.editing) closeCourseHoursCarePop();
 }
 
 function highlightCourseHoursRow(courseName) {
@@ -5721,6 +5971,7 @@ function renderCourseHoursTable() {
   }
   if (editBtn) editBtn.textContent = courseHoursState.editing ? '保存' : '编辑';
   updateCourseHoursEditActions();
+  applyCourseHoursDateColWidth(wrap, displayDates);
 
   var head = '<th class="col-course">课程名称</th><th class="col-teacher">授课教师</th>' +
     displayDates.map(function(d) {
@@ -5737,15 +5988,15 @@ function renderCourseHoursTable() {
   var body = rows.map(function(row) {
     var active = row.course_name === boardState.selectedCourse ? ' hours-row-active' : '';
     var cells = displayDates.map(function(d) {
-      if (!d) return '<td class="cell-empty">—</td>';
+      if (!d) return '<td class="col-date-cell cell-empty">—</td>';
       var val = getCourseHoursCellValue(row.course_name, d.key, row.teacher_name);
       if (courseHoursState.editing) {
-        return '<td><input type="text" class="hours-cell-input" data-hours-course="' + escHtml(row.course_name) +
+        return '<td class="col-date-cell"><input type="text" class="hours-cell-input" data-hours-course="' + escHtml(row.course_name) +
           '" data-hours-teacher="' + escHtml(row.teacher_name || '') +
           '" data-hours-date="' + escHtml(d.key) + '" value="' + escHtml(val) + '" placeholder=""></td>';
       }
-      if (!val) return '<td class="cell-empty">—</td>';
-      return '<td>' + escHtml(val) + '</td>';
+      if (!val) return '<td class="col-date-cell cell-empty">—</td>';
+      return '<td class="col-date-cell">' + escHtml(val) + '</td>';
     }).join('');
     return '<tr class="' + active.trim() + '" data-course="' + escHtml(row.course_name) + '">' +
       '<td class="col-course">' + escHtml(row.course_name) + '</td>' +
@@ -5756,7 +6007,8 @@ function renderCourseHoursTable() {
   var careRow = buildCourseHoursCareRowHtml(displayDates);
   if (careRow) body += careRow;
 
-  wrap.innerHTML = '<table class="hours-table cols-20' + (courseHoursState.editing ? '' : ' readonly') + '"><thead><tr>' +
+  wrap.innerHTML = '<table class="hours-table cols-20' +
+    (courseHoursState.editing ? ' editing' : ' readonly') + '"><thead><tr>' +
     head + '</tr></thead><tbody>' + body + '</tbody></table>';
 
   if (courseHoursState.editing) {
@@ -5779,6 +6031,13 @@ function renderCourseHoursTable() {
     wrap.querySelectorAll('.hours-date-input').forEach(function(inp) {
       inp.addEventListener('change', function() {
         renameCourseHoursDateColumn(inp.getAttribute('data-old-date'), inp.value);
+      });
+    });
+    wrap.querySelectorAll('.hours-care-cell').forEach(function(td) {
+      td.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openCourseHoursCareCellEditor(td.getAttribute('data-care-date'));
       });
     });
   }
@@ -5809,30 +6068,21 @@ async function saveCourseHoursEdits() {
   var editBtn = document.getElementById('courseHoursEditBtn');
   if (editBtn) { editBtn.disabled = true; editBtn.textContent = '保存中…'; }
   try {
-    await request('PUT', '/api/course-hours', { updates: updates, delete_dates: deleteDates });
-    updates.forEach(function(u) {
-      var row = (courseHoursState.data.rows || []).find(function(r) {
-        return r.course_name === u.course_name && String(r.teacher_name || '') === String(u.teacher_name || '');
-      });
-      if (!row) {
-        row = (courseHoursState.data.rows || []).find(function(r) { return r.course_name === u.course_name; });
-      }
-      if (!row) return;
-      if (!row.cells) row.cells = {};
-      if (u.cell_value === '') delete row.cells[u.session_date];
-      else row.cells[u.session_date] = u.cell_value;
-    });
-    if (deleteDates.length && courseHoursState.data) {
-      courseHoursState.data.dates = (courseHoursState.data.dates || []).filter(function(d) {
-        return deleteDates.indexOf(d.key) === -1;
-      });
-      (courseHoursState.data.rows || []).forEach(function(row) {
-        if (!row.cells) return;
-        deleteDates.forEach(function(dt) { delete row.cells[dt]; });
-      });
+    var res = await request('PUT', '/api/course-hours', { updates: updates, delete_dates: deleteDates });
+    // 以服务端返回矩阵为准，刷新后即为最新已保存数据
+    if (res && (res.rows || res.dates)) {
+      courseHoursState.data = {
+        dates: res.dates || [],
+        rows: res.rows || [],
+        cares: res.cares || []
+      };
+    } else {
+      var fresh = await request('GET', '/api/course-hours');
+      courseHoursState.data = fresh;
     }
     courseHoursState.pending = {};
     courseHoursState.deletedDates = [];
+    courseHoursState.addedDates = [];
     courseHoursState.dirty = false;
     courseHoursState.editing = false;
     if (typeof toast === 'function') toast('上课记录已保存', 'success');
@@ -5842,7 +6092,7 @@ async function saveCourseHoursEdits() {
     if (typeof toast === 'function') toast('保存失败：' + e.message, 'error');
     else alert('保存失败：' + e.message);
   }
-  if (editBtn) { editBtn.disabled = false; editBtn.textContent = '编辑'; }
+  if (editBtn) { editBtn.disabled = false; editBtn.textContent = courseHoursState.editing ? '保存' : '编辑'; }
 }
 
 function exportCourseHoursTable() {
@@ -6015,6 +6265,14 @@ function filterCourseHoursDatesByRange(allDates, start, end) {
   });
 }
 
+function teacherHasAnyCourseHourRecord(row) {
+  if (!row) return false;
+  var cells = row.cells || {};
+  return Object.keys(cells).some(function (k) {
+    return String(cells[k] == null ? '' : cells[k]).trim() !== '';
+  });
+}
+
 function buildCourseHoursExportAoa(displayDates) {
   var data = courseHoursState.data;
   var header = ['课程名称', '授课老师'].concat(
@@ -6024,6 +6282,8 @@ function buildCourseHoursExportAoa(displayDates) {
   var subMap = {};
 
   (data.rows || []).forEach(function (row) {
+    // 一直没有上课记录的老师不出现在导出文件中
+    if (!teacherHasAnyCourseHourRecord(row)) return;
     var line = [row.course_name || '', row.teacher_name || ''];
     displayDates.forEach(function (d) {
       if (!d) {
@@ -6094,7 +6354,17 @@ function downloadCourseHoursExport(start, end) {
     return;
   }
 
-  var title = '浦江一中拓展课 考勤表';
+  var monthNum = 0;
+  if (start && end && start.slice(0, 7) === end.slice(0, 7)) {
+    monthNum = parseInt(start.slice(5, 7), 10) || 0;
+  } else if (start) {
+    monthNum = parseInt(start.slice(5, 7), 10) || 0;
+  }
+  if (!monthNum) {
+    var td = getCourseHoursTodayKey();
+    monthNum = parseInt(td.slice(5, 7), 10) || 1;
+  }
+  var fileTitle = '浦江一中' + monthNum + '月拓展课 上课记录';
   var aoa = buildCourseHoursExportAoa(displayDates);
   var colCount = aoa[0].length;
 
@@ -6112,28 +6382,33 @@ function downloadCourseHoursExport(start, end) {
       var addr = XLSX.utils.encode_cell({ r: R, c: C });
       if (!ws[addr]) ws[addr] = { t: 's', v: '' };
       var isHeader = R === 0;
-      var isNameCol = C === 0 || C === 1;
       ws[addr].s = {
         border: thinBorder,
         alignment: centerAlign,
         font: { bold: isHeader, name: '微软雅黑', sz: isHeader ? 11 : 10 },
         fill: isHeader ? { fgColor: { rgb: 'F1F5F9' } } : undefined
       };
-      if (isNameCol && !isHeader) {
-        ws[addr].s.alignment = centerAlign;
-      }
     }
   }
 
+  // 日期列等宽：以能完整显示看护记录的最小宽度为准
+  var dateColWch = 8;
+  displayDates.forEach(function (d) {
+    if (!d) return;
+    var text = formatCareCellText(d.key, true);
+    String(text || d.label || '').split('\n').forEach(function (line) {
+      var len = String(line || '').replace(/[^\x00-\xff]/g, 'xx').length + 2;
+      if (len > dateColWch) dateColWch = len;
+    });
+  });
+  dateColWch = Math.min(Math.max(dateColWch, 8), 28);
+
   var cols = [];
   for (var c = 0; c < colCount; c++) {
-    var maxLen = 8;
-    for (var r = 0; r < aoa.length; r++) {
-      var cellVal = aoa[r][c] != null ? String(aoa[r][c]) : '';
-      var len = cellVal.replace(/[^\x00-\xff]/g, 'xx').length;
-      if (len > maxLen) maxLen = len;
-    }
-    cols.push({ wch: Math.min(Math.max(maxLen + 2, c < 2 ? 14 : 10), 36) });
+    if (c === 0) cols.push({ wch: 16 });
+    else if (c === 1) cols.push({ wch: 12 });
+    else if (c === colCount - 1) cols.push({ wch: 10 });
+    else cols.push({ wch: dateColWch });
   }
   ws['!cols'] = cols;
   ws['!rows'] = aoa.map(function (row, i) {
@@ -6146,13 +6421,12 @@ function downloadCourseHoursExport(start, end) {
   });
 
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '考勤表');
+  XLSX.utils.book_append_sheet(wb, ws, '上课记录');
   var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   var blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  var rangeLabel = start === end ? start : (start + '_' + end);
-  a.download = title + '_' + rangeLabel + '.xlsx';
+  a.download = fileTitle + '.xlsx';
   a.click();
   URL.revokeObjectURL(a.href);
   if (typeof toast === 'function') toast('导出成功', 'success');
