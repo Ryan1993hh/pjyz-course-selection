@@ -5305,6 +5305,106 @@ function isolationClassLabel(grade, classNum) {
   return prefix + String(classNum || '') + '班';
 }
 
+function isolationGradeKey(gradeOrLabel) {
+  const g = String(gradeOrLabel || '');
+  if (g.indexOf('七') >= 0) return '七';
+  if (g.indexOf('六') >= 0) return '六';
+  return '';
+}
+
+function isolationClassNumber(value) {
+  const m = String(value || '').match(/(\d+)/);
+  return m ? m[1] : '';
+}
+
+/** 学生是否属于当日隔离班级（按年级前缀 + 班号匹配） */
+function studentMatchesIsolationClasses(student, classes) {
+  if (!student || !Array.isArray(classes) || !classes.length) return false;
+  const sGrade = isolationGradeKey(student.grade || student.class_name || '');
+  const sNum = isolationClassNumber(student.class_name || student.class_number || '');
+  if (!sGrade || !sNum) return false;
+  return classes.some((c) => {
+    if (!c) return false;
+    const cGrade = isolationGradeKey(c.grade || c.label || c.class_name || '');
+    const cNum = isolationClassNumber(c.class_number || c.classNum || c.class_name || c.label || '');
+    return cGrade && cNum && cGrade === sGrade && cNum === sNum;
+  });
+}
+
+/** 将当日隔离班级批量写入教师课堂签到，避免逐生 sync 导致超时/未同步 */
+async function syncClassIsolationToAllClassrooms(db, classes, leaveDate) {
+  if (!Array.isArray(classes) || !classes.length) return;
+  const day = String(leaveDate || getTodayDateKey());
+  const rows = await db.prepare('SELECT * FROM teacher_classroom').all();
+  for (const row of (rows.results || [])) {
+    const courseName = String(row.course_name || '').trim();
+    if (!courseName) continue;
+    let payload = {
+      students: [],
+      checkin: {},
+      checkinDay: '',
+      checkinDone: false,
+      rewards: {},
+      exams: {},
+      history: [],
+      activities: [],
+      teacher: { name: '', course: courseName, location: '', totalClasses: 0 }
+    };
+    if (row.payload) {
+      try { payload = JSON.parse(row.payload); } catch (_) {}
+    }
+    let students = normalizeClassroomStudents(payload.students || []);
+    if (!students.length) {
+      const fillRes = await db.prepare(
+        'SELECT id, student_name, class_name, grade, gender, course_id, course_name FROM selections WHERE course_name = ?'
+      ).bind(courseName).all();
+      const seen = new Set();
+      students = [];
+      (fillRes.results || []).forEach((s, i) => {
+        const key = String(s.student_name || '') + '|' + String(s.class_name || '');
+        if (seen.has(key)) return;
+        seen.add(key);
+        students.push({
+          id: s.id || (i + 1),
+          stableId: key.replace(/[()（）\s]/g, ''),
+          student_name: s.student_name,
+          class_name: s.class_name,
+          grade: s.grade,
+          gender: s.gender || '',
+          course_name: s.course_name,
+          course_id: s.course_id
+        });
+      });
+      students = normalizeClassroomStudents(students);
+    }
+    if (!students.length) continue;
+
+    const checkin = Object.assign({}, payload.checkin || {});
+    if (String(payload.checkinDay || '') !== day) {
+      payload.checkinDay = day;
+      payload.checkinDone = false;
+      students.forEach((s) => {
+        if (!checkin[s.stableId]) checkin[s.stableId] = 'none';
+      });
+    }
+    let changed = false;
+    students.forEach((s) => {
+      if (!studentMatchesIsolationClasses(s, classes)) return;
+      if (checkin[s.stableId] !== 'isolation') changed = true;
+      checkin[s.stableId] = 'isolation';
+    });
+    if (!changed && String(payload.checkinDay || '') === day) continue;
+    payload.students = students;
+    payload.checkin = remapClassroomKeyedMap(checkin, students);
+    await upsertTeacherClassroomPayload(db, courseName, payload, {
+      course_id: row.course_id || '',
+      teacher_name: row.teacher_name || '',
+      teacher_user_id: row.teacher_user_id
+    });
+  }
+  await bumpSelectionDataRevision(db);
+}
+
 async function handleClassIsolationGet(db, request) {
   const auth = requireAuth(request, ['admin', 'banzhuren', 'teacher']);
   if (auth.error) return json({ error: auth.error }, auth.status);
@@ -5335,23 +5435,39 @@ async function handleClassIsolationPost(db, request) {
     const label = isolationClassLabel(parsed.grade, parsed.classNum);
     savedClasses.push({ grade: parsed.grade, class_number: parsed.classNum, class_name: parsed.class_name, label });
     labels.push(label);
-    const roster = await getBanzhurenClassRoster(db, parsed.grade, parsed.class_name);
-    for (const student of roster) {
-      await upsertStudentLeave(db, parsed.grade, parsed.class_name, student.student_name, 'isolation', leaveDate, auth.user.userId, '班级隔离');
-      await syncLeaveReportToClassrooms(db, {
-        grade: parsed.grade,
-        class_name: parsed.class_name,
-        student_name: student.student_name,
-        leave_type: 'isolation',
-        leave_date: leaveDate
-      });
-    }
   }
   if (!savedClasses.length) return json({ error: '请选择班级' }, 400);
+
+  // 先入库隔离名单，保证刷新后后台可见
   const payload = { date: leaveDate, classes: savedClasses, labels };
   await db.prepare(
     'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   ).bind(CLASS_ISOLATION_KEY, JSON.stringify(payload)).run();
+
+  // 写入请假报备（班级隔离），供教师端 /api/student-leaves 拉取
+  for (const item of savedClasses) {
+    const roster = await getBanzhurenClassRoster(db, item.grade, item.class_name);
+    for (const student of roster) {
+      await upsertStudentLeave(
+        db,
+        item.grade,
+        item.class_name,
+        student.student_name,
+        'isolation',
+        leaveDate,
+        auth.user.userId,
+        '班级隔离'
+      );
+    }
+  }
+
+  // 批量同步到教师课堂签到状态
+  try {
+    await syncClassIsolationToAllClassrooms(db, savedClasses, leaveDate);
+  } catch (syncErr) {
+    console.warn('syncClassIsolationToAllClassrooms:', syncErr && syncErr.message);
+  }
+
   return json({ success: true, ...payload });
 }
 

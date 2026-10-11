@@ -3447,12 +3447,13 @@ async function pullClassroomFromServer() {
     const localTime = localAt ? Date.parse(localAt.replace(" ", "T")) : 0;
     if (!hasLocal || serverTime > localTime) {
       mergeClassroomFromServer(data.payload, data.summary);
-      await applyServerLeaveReports();
-      saveLocal({ skipSync: true });
       if (serverAt) saveClassroomMeta({ syncedAt: serverAt });
     } else if (hasLocal && (localTime > serverTime || !serverAt)) {
       scheduleClassroomSync();
     }
+    // 无论本地/服务器谁更新，都套用请假与当日班级隔离
+    await applyServerLeaveAndIsolation();
+    saveLocal({ skipSync: true });
   } catch (_) {
     if (hasLocal) scheduleClassroomSync();
   }
@@ -3645,6 +3646,60 @@ function closeClockOverlay() {
   clearInterval(clockTimer);
 }
 
+function isolationGradeKey(gradeOrLabel) {
+  const g = String(gradeOrLabel || "");
+  if (g.indexOf("七") >= 0) return "七";
+  if (g.indexOf("六") >= 0) return "六";
+  return "";
+}
+
+function isolationClassNumber(value) {
+  const m = String(value || "").match(/(\d+)/);
+  return m ? m[1] : "";
+}
+
+function studentInIsolationClasses(s, classes) {
+  if (!s || !classes || !classes.length) return false;
+  const sGrade = isolationGradeKey(s.grade || s.class_name || "");
+  const sNum = isolationClassNumber(s.class_name || s.class_number || "");
+  if (!sGrade || !sNum) return false;
+  return classes.some(function (c) {
+    if (!c) return false;
+    const cGrade = isolationGradeKey(c.grade || c.label || c.class_name || "");
+    const cNum = isolationClassNumber(c.class_number || c.classNum || c.class_name || c.label || "");
+    return cGrade && cNum && cGrade === sGrade && cNum === sNum;
+  });
+}
+
+/** 按后台当日班级隔离名单，将对应学生标为「班级隔离」 */
+async function applyClassIsolationFromServer() {
+  if (!getToken() || !state.students.length) return;
+  try {
+    const data = await api("GET", "/api/class-isolation");
+    const classes = (data && data.classes) || [];
+    state.isolationClasses = classes;
+    if (!classes.length) return;
+    const today = todayKey();
+    if (state.checkinDay !== today) {
+      state.checkinDay = today;
+      state.checkinDone = false;
+      state.students.forEach(function (s) { state.checkin[studentId(s)] = "none"; });
+    }
+    if (!state.bzLeaveLock) state.bzLeaveLock = {};
+    let changed = false;
+    state.students.forEach(function (s) {
+      if (!studentInIsolationClasses(s, classes)) return;
+      const id = studentId(s);
+      if (state.checkin[id] !== "isolation") changed = true;
+      state.checkin[id] = "isolation";
+      state.bzLeaveLock[id] = true;
+    });
+    if (changed) saveLocal({ skipSync: true });
+  } catch (e) {
+    console.warn("applyClassIsolationFromServer:", e);
+  }
+}
+
 async function applyServerLeaveReports() {
   const today = todayKey();
   const courseName = (state.courseName || state.teacher.course || "").trim();
@@ -3680,6 +3735,11 @@ async function applyServerLeaveReports() {
   } catch (e) {
     console.warn("applyServerLeaveReports:", e);
   }
+}
+
+async function applyServerLeaveAndIsolation() {
+  await applyServerLeaveReports();
+  await applyClassIsolationFromServer();
 }
 
 function getStatus(id) { return state.checkin[id] || "none"; }
@@ -4031,7 +4091,8 @@ function openFsCheckin() {
     toast("暂无学生，请先同步选课数据", "error");
     return;
   }
-  applyServerLeaveReports().then(function () {
+  applyServerLeaveAndIsolation().then(function () {
+    renderCheckin();
     document.getElementById("fsCheckin").classList.add("show");
     document.body.classList.add("fs-checkin-open");
     document.body.style.overflow = "hidden";
@@ -4054,7 +4115,7 @@ function openFsCheckinAllPresent() {
     toast("暂无学生，请先同步选课数据", "error");
     return;
   }
-  applyServerLeaveReports().then(function () {
+  applyServerLeaveAndIsolation().then(function () {
     const today = todayKey();
     if (state.checkinDay !== today) {
       state.checkinDay = today;
@@ -4064,6 +4125,12 @@ function openFsCheckinAllPresent() {
       const id = studentId(s);
       const cur = state.checkin[id] || "none";
       if (cur === "sick" || cur === "personal" || cur === "isolation") return;
+      if (studentInIsolationClasses(s, state.isolationClasses || [])) {
+        state.checkin[id] = "isolation";
+        if (!state.bzLeaveLock) state.bzLeaveLock = {};
+        state.bzLeaveLock[id] = true;
+        return;
+      }
       state.checkin[id] = "present";
     });
     saveLocal();
@@ -4088,6 +4155,14 @@ function completeCheckinSession() {
     toast(scheduleState.reason || "非上课时间 不可使用", "error");
     return;
   }
+  // 保存前再套用隔离，确保隔离班学生不会以旷课写入历史
+  state.students.forEach(function (s) {
+    if (!studentInIsolationClasses(s, state.isolationClasses || [])) return;
+    const id = studentId(s);
+    state.checkin[id] = "isolation";
+    if (!state.bzLeaveLock) state.bzLeaveLock = {};
+    state.bzLeaveLock[id] = true;
+  });
   const stats = calcStats();
   const now = new Date();
   const today = todayKey();
@@ -5105,7 +5180,15 @@ document.getElementById("celebrateClose").addEventListener("click", () => {
 });
 
 document.getElementById("reportBtn").addEventListener("click", async () => {
-  const absent = state.students.filter(s => getStatus(studentId(s)) === "absent");
+  // 复制前再同步一次隔离状态，避免隔离生被误当成旷课
+  try { await applyServerLeaveAndIsolation(); renderCheckin(); } catch (_) {}
+  const absent = state.students.filter(function (s) {
+    const id = studentId(s);
+    const st = getStatus(id);
+    if (st === "isolation") return false;
+    if (studentInIsolationClasses(s, state.isolationClasses || [])) return false;
+    return st === "absent";
+  });
   if (!absent.length) { toast("当前无旷课学生", "error"); return; }
   let courseName = (state.courseName || state.teacher.course || "").trim();
   courseName = courseName.replace(/拓展课$/u, "").trim() || "拓展课";
@@ -5567,6 +5650,7 @@ async function initApp() {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       loadClassScheduleStatus().catch(() => {});
+      applyServerLeaveAndIsolation().then(function () { renderCheckin(); }).catch(function () {});
       fetchSelectionDataRevision().then(function(rev) {
         if (rev !== serverSelectionRevision) {
           serverSelectionRevision = rev;
