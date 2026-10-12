@@ -1550,44 +1550,6 @@ table.courses-table td[data-field="description"] {
   justify-content: center;
 }
 .hours-row-del:hover { background: #fecaca; color: #b91c1c; }
-/* 原有课程行：课程名/教师加粗；进班管理不加粗 */
-.hours-table tbody tr:not(.hours-care-row) td.col-course,
-.hours-table tbody tr:not(.hours-care-row) td.col-teacher {
-  font-weight: 700;
-}
-.hours-table tbody tr.hours-care-row td.col-course,
-.hours-table tbody tr.hours-care-row td.col-teacher {
-  font-weight: 400;
-}
-.hours-table td.col-course .hours-course-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.hours-table td.col-course .hours-course-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hours-row-del {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  border: none;
-  border-radius: 4px;
-  background: #fee2e2;
-  color: #dc2626;
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.hours-row-del:hover { background: #fecaca; color: #b91c1c; }
 .hours-table thead th.col-course,
 .hours-table thead th.col-teacher { background: #f1f5f9; z-index: 4; }
 .hours-table tbody tr:nth-child(even) td.col-course,
