@@ -9233,6 +9233,9 @@ async function exportSelectionsUnselected(){
         if (s.grade && cls.indexOf(s.grade) !== 0) cls = s.grade + cls;
         return { '年级': s.grade || '', '班级': cls, '姓名': s.student_name || '', '选课名称': '未选课' };
       });
+    if (typeof window.XLSX === 'undefined' && typeof window.ensureXlsxLoaded === 'function') {
+      await window.ensureXlsxLoaded();
+    }
     var X = window.XLSX;
     if (!X) throw new Error('Excel库未加载');
     var ws = X.utils.json_to_sheet(exportData);
