@@ -6039,7 +6039,7 @@ function collectCareItemsFromContainer(container, sharedDate) {
     var note = ((row.querySelector('.care-note') || {}).value || '').trim();
     var rawLabel = (row.getAttribute('data-class-label') || '').trim();
     if (!teacher && !note && !rawLabel) return;
-    if (!teacher || (!rawLabel && (!grade || !cls))) {
+    if (!teacher || !note || (!rawLabel && (!grade || !cls))) {
       invalid = true;
       return;
     }
