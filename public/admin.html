@@ -5,8 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>后台管理 - 浦江一中拓展课选课</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js" crossorigin="anonymous"></script>
+<script src="js/xlsx.min.js?v=20261012a"></script>
 <script src="js/role-utils.js?v=20260909g"></script>
+<script>
+/* Excel 库：优先本地 js/xlsx.min.js；失败再试国内/备用 CDN */
+window.__XLSX_LOAD__ = null;
+window.ensureXlsxLoaded = function ensureXlsxLoaded() {
+  if (typeof window.XLSX !== 'undefined') return Promise.resolve(true);
+  if (window.__XLSX_LOAD__) return window.__XLSX_LOAD__;
+  var urls = [
+    'js/xlsx.min.js?v=20261012a',
+    'https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js',
+    'https://fastly.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  window.__XLSX_LOAD__ = new Promise(function (resolve) {
+    var i = 0;
+    function tryNext() {
+      if (typeof window.XLSX !== 'undefined') {
+        resolve(true);
+        return;
+      }
+      if (i >= urls.length) {
+        resolve(false);
+        return;
+      }
+      var url = urls[i++];
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { s.remove(); } catch (_) {}
+        tryNext();
+      }, 8000);
+      s.onload = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (typeof window.XLSX !== 'undefined') resolve(true);
+        else tryNext();
+      };
+      s.onerror = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        tryNext();
+      };
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+  return window.__XLSX_LOAD__;
+};
+</script>
 <script>
 /* 已有会话：首屏前隐藏本地登录层；无会话则回统一登录页，避免二次登录弹窗 */
 (function () {
@@ -6700,7 +6755,9 @@ function openCourseHoursExportModal() {
         }
       }
       closeModal();
-      downloadCourseHoursExport(start, end);
+      Promise.resolve(downloadCourseHoursExport(start, end)).catch(function (e) {
+        if (typeof toast === 'function') toast('导出失败：' + (e && e.message ? e.message : e), 'error');
+      });
     };
   }
 }
@@ -6788,9 +6845,13 @@ function buildCourseHoursExportAoa(displayDates) {
   return aoa;
 }
 
-function downloadCourseHoursExport(start, end) {
+async function downloadCourseHoursExport(start, end) {
   try {
-    if (typeof window.XLSX === 'undefined') {
+    var xlsxOk = typeof window.XLSX !== 'undefined';
+    if (!xlsxOk && typeof window.ensureXlsxLoaded === 'function') {
+      xlsxOk = await window.ensureXlsxLoaded();
+    }
+    if (!xlsxOk || typeof window.XLSX === 'undefined') {
       throw new Error('Excel库未加载，请刷新页面后重试');
     }
     var data = courseHoursState.data;
@@ -9091,6 +9152,9 @@ async function exportSelectionsXlsx(mode){
   ].filter(Boolean);
   btns.forEach(function(b){ b.disabled = true; });
   try {
+    if (typeof window.XLSX === 'undefined' && typeof window.ensureXlsxLoaded === 'function') {
+      await window.ensureXlsxLoaded();
+    }
     if (typeof window.XLSX === 'undefined') throw new Error('Excel库未加载');
     var list = await fetchSelectionsForExport();
     if (!list.length) {
@@ -9822,6 +9886,9 @@ async function handleSchoolRosterImport(file) {
     toast('请上传 Excel / CSV 文件', 'error');
     return;
   }
+  if (typeof window.XLSX === 'undefined' && typeof window.ensureXlsxLoaded === 'function') {
+    await window.ensureXlsxLoaded();
+  }
   if (typeof window.XLSX === 'undefined') {
     toast('Excel 组件未加载，请刷新页面后重试', 'error');
     return;
@@ -10052,6 +10119,9 @@ async function handlePreEnrollUpload(file) {
   if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
     toast('请上传 Excel / CSV 文件（.xlsx / .xls / .csv）', 'error');
     return;
+  }
+  if (typeof window.XLSX === 'undefined' && typeof window.ensureXlsxLoaded === 'function') {
+    await window.ensureXlsxLoaded();
   }
   if (typeof window.XLSX === 'undefined') {
     toast('Excel 组件未加载，请刷新页面后重试', 'error');
@@ -10822,18 +10892,11 @@ async function handleUserFile(file){
     if (isBinary) {
       if (typeof window.XLSX === 'undefined') {
         msgEl.textContent = '加载解析组件...';
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-        script.crossOrigin = 'anonymous';
-        try {
-          await new Promise(function(resolve, reject){
-            script.onload = resolve;
-            script.onerror = function(){ reject(new Error('加载解析组件失败')); };
-            document.head.appendChild(script);
-            setTimeout(function(){ reject(new Error('加载超时')); }, 10000);
-          });
-        } catch(err) {
-          throw new Error('Excel 解析组件加载失败：' + err.message + '。请使用 CSV 格式');
+        var ok = typeof window.ensureXlsxLoaded === 'function'
+          ? await window.ensureXlsxLoaded()
+          : false;
+        if (!ok || typeof window.XLSX === 'undefined') {
+          throw new Error('Excel 解析组件加载失败。请使用 CSV 格式，或检查 js/xlsx.min.js 是否可访问');
         }
       }
       msgEl.textContent = '解析文件内容...';
