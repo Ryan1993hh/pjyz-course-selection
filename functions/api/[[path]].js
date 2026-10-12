@@ -385,6 +385,8 @@ async function ensureDbReady(db) {
 const CLASS_SCHEDULE_KEY = 'class_schedule_control';
 const COURSE_HOURS_HIDDEN_DATES_KEY = 'course_hours_hidden_dates';
 const COURSE_HOURS_EXTRA_DATES_KEY = 'course_hours_extra_dates';
+const COURSE_HOURS_HIDDEN_ROWS_KEY = 'course_hours_hidden_rows';
+const COURSE_HOURS_MANUAL_ROWS_KEY = 'course_hours_manual_rows';
 const CLASS_ISOLATION_KEY = 'class_isolation_day';
 const CLASS_SCHEDULE_TZ = 'Asia/Shanghai';
 
@@ -7331,6 +7333,109 @@ async function setExtraCourseHourDates(db, dates) {
   return unique;
 }
 
+function normalizeCourseHourRowKey(courseName, teacherName) {
+  return String(courseName || '').trim() + '\0' + String(teacherName || '').trim();
+}
+
+async function getHiddenCourseHourRows(db) {
+  try {
+    const row = await db.prepare('SELECT value FROM system_settings WHERE key = ?')
+      .bind(COURSE_HOURS_HIDDEN_ROWS_KEY).first();
+    if (!row || !row.value) return [];
+    const parsed = JSON.parse(row.value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((r) => ({
+      course_name: String((r && r.course_name) || '').trim(),
+      teacher_name: String((r && (r.teacher_name || r.teacher)) || '').trim()
+    })).filter((r) => r.course_name);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function setHiddenCourseHourRows(db, rows) {
+  const clean = [];
+  const seen = new Set();
+  (rows || []).forEach((r) => {
+    const course_name = String((r && r.course_name) || '').trim();
+    const teacher_name = String((r && (r.teacher_name || r.teacher)) || '').trim();
+    if (!course_name) return;
+    const key = normalizeCourseHourRowKey(course_name, teacher_name);
+    if (seen.has(key)) return;
+    seen.add(key);
+    clean.push({ course_name, teacher_name });
+  });
+  await db.prepare(
+    'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  ).bind(COURSE_HOURS_HIDDEN_ROWS_KEY, JSON.stringify(clean)).run();
+  return clean;
+}
+
+async function getManualCourseHourRows(db) {
+  try {
+    const row = await db.prepare('SELECT value FROM system_settings WHERE key = ?')
+      .bind(COURSE_HOURS_MANUAL_ROWS_KEY).first();
+    if (!row || !row.value) return [];
+    const parsed = JSON.parse(row.value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((r, idx) => ({
+      course_name: String((r && r.course_name) || '').trim(),
+      teacher_name: String((r && (r.teacher_name || r.teacher)) || '').trim(),
+      position: Number.isFinite(Number(r && r.position)) ? Number(r.position) : idx
+    })).filter((r) => r.course_name);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function setManualCourseHourRows(db, rows) {
+  const clean = (rows || []).map((r, idx) => ({
+    course_name: String((r && r.course_name) || '').trim(),
+    teacher_name: String((r && (r.teacher_name || r.teacher)) || '').trim(),
+    position: Number.isFinite(Number(r && r.position)) ? Math.max(0, Math.floor(Number(r.position))) : idx
+  })).filter((r) => r.course_name);
+  await db.prepare(
+    'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  ).bind(COURSE_HOURS_MANUAL_ROWS_KEY, JSON.stringify(clean)).run();
+  return clean;
+}
+
+function applyCourseHourRowVisibility(rows, hiddenRows, manualRows, dates, overrideMap) {
+  const list = Array.isArray(rows) ? rows.slice() : [];
+  const hiddenSet = new Set(
+    (hiddenRows || []).map((r) => normalizeCourseHourRowKey(r.course_name, r.teacher_name))
+  );
+  let visible = list.filter((r) => !hiddenSet.has(normalizeCourseHourRowKey(r.course_name, r.teacher_name)));
+
+  const existingKeys = new Set(
+    visible.map((r) => normalizeCourseHourRowKey(r.course_name, r.teacher_name))
+  );
+  const manuals = (manualRows || [])
+    .slice()
+    .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
+
+  manuals.forEach((m) => {
+    const key = normalizeCourseHourRowKey(m.course_name, m.teacher_name);
+    if (hiddenSet.has(key) || existingKeys.has(key)) return;
+    const cells = {};
+    (dates || []).forEach((d) => {
+      const ov = lookupCourseHourOverride(overrideMap, m.course_name, m.teacher_name, d);
+      cells[d] = ov.has ? ov.value : '';
+    });
+    const insertAt = Math.max(0, Math.min(visible.length, Number(m.position) || 0));
+    visible.splice(insertAt, 0, {
+      course_name: m.course_name,
+      teacher_name: m.teacher_name,
+      cells,
+      numeric_total: sumNumericCourseHourCells(cells),
+      manual: true
+    });
+    existingKeys.add(key);
+  });
+
+  return visible;
+}
+
 function formatCourseHourDateLabel(dateStr) {
   const s = String(dateStr || '').trim();
   if (!s) return '';
@@ -7450,10 +7555,13 @@ async function buildCourseHoursMatrix(db) {
   });
 
   // 不再按课程名重排，保持与课程管理 id 顺序一致
+  const hiddenRows = await getHiddenCourseHourRows(db);
+  const manualRows = await getManualCourseHourRows(db);
+  const visibleRows = applyCourseHourRowVisibility(rows, hiddenRows, manualRows, dates, overrideMap);
 
   return {
     dates: dates.map((d) => ({ key: d, label: formatCourseHourDateLabel(d) })),
-    rows,
+    rows: visibleRows,
     cares: cares.map((c) => ({
       id: c.id,
       class_label: String(c.class_label || ''),
@@ -7651,8 +7759,10 @@ async function handleCourseHoursPut(db, request) {
   const addDates = Array.isArray(body.add_dates)
     ? body.add_dates.map((d) => String(d || '').trim()).filter(Boolean)
     : [];
+  const deleteRows = Array.isArray(body.delete_rows) ? body.delete_rows : [];
+  const addRows = Array.isArray(body.add_rows) ? body.add_rows : [];
 
-  if (!updates.length && !deleteDates.length && !addDates.length) {
+  if (!updates.length && !deleteDates.length && !addDates.length && !deleteRows.length && !addRows.length) {
     const matrix = await buildCourseHoursMatrix(db);
     return json({ success: true, count: 0, ...matrix });
   }
@@ -7734,6 +7844,52 @@ async function handleCourseHoursPut(db, request) {
   if (deleteDates.length || addDates.length || touchedDates.length) {
     await setHiddenCourseHourDates(db, hidden);
     await setExtraCourseHourDates(db, extra);
+  }
+
+  // 删除/新增上课记录课程行（隐藏原行 / 写入手动行，持久化到 system_settings）
+  if (deleteRows.length || addRows.length) {
+    let hiddenRows = await getHiddenCourseHourRows(db);
+    let manualRows = await getManualCourseHourRows(db);
+
+    for (const item of deleteRows) {
+      const courseName = String((item && item.course_name) || '').trim();
+      const teacherName = String((item && (item.teacher_name || item.teacher)) || '').trim();
+      if (!courseName) continue;
+      const key = normalizeCourseHourRowKey(courseName, teacherName);
+      if (!hiddenRows.some((r) => normalizeCourseHourRowKey(r.course_name, r.teacher_name) === key)) {
+        hiddenRows.push({ course_name: courseName, teacher_name: teacherName });
+      }
+      manualRows = manualRows.filter(
+        (r) => normalizeCourseHourRowKey(r.course_name, r.teacher_name) !== key
+      );
+      try {
+        await db.prepare(
+          'DELETE FROM course_hour_overrides WHERE course_name = ? AND teacher_name = ?'
+        ).bind(courseName, teacherName).run();
+      } catch (_) {}
+      count++;
+    }
+
+    for (const item of addRows) {
+      const courseName = String((item && item.course_name) || '').trim();
+      const teacherName = String((item && (item.teacher_name || item.teacher)) || '').trim();
+      if (!courseName) continue;
+      const position = Number.isFinite(Number(item.position))
+        ? Math.max(0, Math.floor(Number(item.position)))
+        : manualRows.length;
+      const key = normalizeCourseHourRowKey(courseName, teacherName);
+      hiddenRows = hiddenRows.filter(
+        (r) => normalizeCourseHourRowKey(r.course_name, r.teacher_name) !== key
+      );
+      manualRows = manualRows.filter(
+        (r) => normalizeCourseHourRowKey(r.course_name, r.teacher_name) !== key
+      );
+      manualRows.push({ course_name: courseName, teacher_name: teacherName, position });
+      count++;
+    }
+
+    await setHiddenCourseHourRows(db, hiddenRows);
+    await setManualCourseHourRows(db, manualRows);
   }
 
   // 删除日期列时同步清除教师课堂签到 history，班主任班级考核看板与教师端考核看板一并失效

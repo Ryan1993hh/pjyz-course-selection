@@ -1505,6 +1505,7 @@ table.courses-table td[data-field="description"] {
   z-index: 3;
   background: #fff;
   box-shadow: 2px 0 4px rgba(15, 23, 42, 0.04);
+  font-weight: 700;
 }
 .hours-table th.col-teacher, .hours-table td.col-teacher {
   width: 100px;
@@ -1514,7 +1515,79 @@ table.courses-table td[data-field="description"] {
   z-index: 3;
   background: #fff;
   box-shadow: 2px 0 4px rgba(15, 23, 42, 0.04);
+  font-weight: 700;
 }
+.hours-table tr.hours-care-row td.col-course,
+.hours-table tr.hours-care-row td.col-teacher {
+  font-weight: 400;
+}
+.hours-table td.col-course .hours-course-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.hours-table td.col-course .hours-course-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hours-row-del {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hours-row-del:hover { background: #fecaca; color: #b91c1c; }
+/* 原有课程行：课程名/教师加粗；进班管理不加粗 */
+.hours-table tbody tr:not(.hours-care-row) td.col-course,
+.hours-table tbody tr:not(.hours-care-row) td.col-teacher {
+  font-weight: 700;
+}
+.hours-table tbody tr.hours-care-row td.col-course,
+.hours-table tbody tr.hours-care-row td.col-teacher {
+  font-weight: 400;
+}
+.hours-table td.col-course .hours-course-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.hours-table td.col-course .hours-course-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hours-row-del {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hours-row-del:hover { background: #fecaca; color: #b91c1c; }
 .hours-table thead th.col-course,
 .hours-table thead th.col-teacher { background: #f1f5f9; z-index: 4; }
 .hours-table tbody tr:nth-child(even) td.col-course,
@@ -4771,11 +4844,12 @@ th.sortable.active .sort-icon { opacity: 1; }
             <div class="hours-panel-head">
               <h3 id="courseHoursTitle">上课记录</h3>
               <div class="hours-panel-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddDateBtn" style="display:none">+ <span class="txt-full">新增日期</span><span class="txt-short">日期</span></button>
+                <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddCourseBtn" style="display:none">+ <span class="txt-full">新增课程</span><span class="txt-short">课程</span></button>
                 <span class="hours-care-wrap" id="courseHoursCareWrap">
                   <button type="button" class="btn btn-outline btn-sm" id="courseHoursCareBtn">+ <span class="txt-full">添加看护</span><span class="txt-short">看护</span></button>
                   <div class="hours-care-pop" id="courseHoursCarePop" hidden></div>
                 </span>
-                <button type="button" class="btn btn-outline btn-sm" id="courseHoursAddDateBtn" style="display:none">+ <span class="txt-full">新增日期</span><span class="txt-short">日期</span></button>
                 <button type="button" class="btn btn-outline btn-sm" id="courseHoursEditBtn">✎ <span class="txt-full">编辑</span><span class="txt-short">编辑</span></button>
                 <button type="button" class="btn btn-primary btn-sm" id="courseHoursFillTodayBtn" title="当日空单元格自动填 1 课时">⚡ <span class="txt-full">一键补齐</span><span class="txt-short">补齐</span></button>
                 <button type="button" class="btn btn-success btn-sm" id="courseHoursExportBtn">⬇ <span class="txt-full">导出表格</span><span class="txt-short">导出</span></button>
@@ -6409,8 +6483,106 @@ function openCourseHoursCareCellEditor(dateKey) {
 
 function updateCourseHoursEditActions() {
   var addBtn = document.getElementById('courseHoursAddDateBtn');
+  var addCourseBtn = document.getElementById('courseHoursAddCourseBtn');
   var show = courseHoursState.editing ? '' : 'none';
   if (addBtn) addBtn.style.display = show;
+  if (addCourseBtn) addCourseBtn.style.display = show;
+}
+
+async function deleteCourseHoursRow(courseName, teacherName) {
+  var cn = String(courseName || '').trim();
+  var tn = String(teacherName || '').trim();
+  if (!cn) return;
+  if (!confirm('确定删除课程行「' + cn + (tn ? ' / ' + tn : '') + '」吗？删除后将从上课记录表格中移除。')) return;
+  try {
+    var res = await request('PUT', '/api/course-hours', {
+      updates: [],
+      delete_rows: [{ course_name: cn, teacher_name: tn }]
+    });
+    if (res && (res.rows || res.dates)) {
+      courseHoursState.data = {
+        dates: res.dates || [],
+        rows: res.rows || [],
+        cares: res.cares || []
+      };
+    } else {
+      courseHoursState.data = await request('GET', '/api/course-hours');
+    }
+    renderCourseHoursTable();
+    if (typeof toast === 'function') toast('已删除课程行', 'success');
+  } catch (e) {
+    if (typeof toast === 'function') toast('删除失败：' + e.message, 'error');
+  }
+}
+
+function openAddCourseHoursRowModal() {
+  var baseRows = (courseHoursState.data && courseHoursState.data.rows) || [];
+  var posOpts = '<option value="0">放在最前</option>';
+  baseRows.forEach(function (r, i) {
+    var label = (r.course_name || '') + (r.teacher_name ? ' / ' + r.teacher_name : '');
+    posOpts += '<option value="' + (i + 1) + '">放在「' + escHtml(label) + '」之后</option>';
+  });
+  posOpts += '<option value="' + baseRows.length + '" selected>放在最后</option>';
+  openModal(
+    '<p class="export-choice-hint">填写课程名称与授课老师，并选择在上课记录表格中的插入位置。</p>' +
+    '<div class="form-group" style="margin-bottom:10px">' +
+      '<label class="form-label">课程名称</label>' +
+      '<input type="text" class="form-input" id="hoursAddCourseName" placeholder="例如：机器人">' +
+    '</div>' +
+    '<div class="form-group" style="margin-bottom:10px">' +
+      '<label class="form-label">授课老师</label>' +
+      '<input type="text" class="form-input" id="hoursAddTeacherName" placeholder="例如：张老师">' +
+    '</div>' +
+    '<div class="form-group" style="margin-bottom:10px">' +
+      '<label class="form-label">表格位置</label>' +
+      '<select class="form-select" id="hoursAddCoursePos">' + posOpts + '</select>' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>' +
+      '<button type="button" class="btn btn-primary" id="hoursAddCourseSaveBtn">确定添加</button>' +
+    '</div>'
+  );
+  var title = document.getElementById('modalTitle');
+  if (title) title.textContent = '新增课程';
+  var saveBtn = document.getElementById('hoursAddCourseSaveBtn');
+  if (saveBtn) {
+    saveBtn.onclick = async function () {
+      var courseName = ((document.getElementById('hoursAddCourseName') || {}).value || '').trim();
+      var teacherName = ((document.getElementById('hoursAddTeacherName') || {}).value || '').trim();
+      var position = parseInt(((document.getElementById('hoursAddCoursePos') || {}).value || '0'), 10);
+      if (!courseName) {
+        if (typeof toast === 'function') toast('请填写课程名称', 'warn');
+        return;
+      }
+      if (!teacherName) {
+        if (typeof toast === 'function') toast('请填写授课老师', 'warn');
+        return;
+      }
+      if (isNaN(position) || position < 0) position = baseRows.length;
+      saveBtn.disabled = true;
+      try {
+        var res = await request('PUT', '/api/course-hours', {
+          updates: [],
+          add_rows: [{ course_name: courseName, teacher_name: teacherName, position: position }]
+        });
+        if (res && (res.rows || res.dates)) {
+          courseHoursState.data = {
+            dates: res.dates || [],
+            rows: res.rows || [],
+            cares: res.cares || []
+          };
+        } else {
+          courseHoursState.data = await request('GET', '/api/course-hours');
+        }
+        closeModal();
+        renderCourseHoursTable();
+        if (typeof toast === 'function') toast('已新增课程行', 'success');
+      } catch (e) {
+        if (typeof toast === 'function') toast('新增失败：' + e.message, 'error');
+        saveBtn.disabled = false;
+      }
+    };
+  }
 }
 
 function highlightCourseHoursRow(courseName) {
@@ -6479,6 +6651,16 @@ function renderCourseHoursTable() {
   var body = rows.map(function(row) {
     var active = (!row.from_care_only && row.course_name === boardState.selectedCourse) ? ' hours-row-active' : '';
     var noteText = row.care_notes_text || '';
+    var courseLabel = row.course_name || (row.from_care_only ? '进班管理' : '');
+    var courseCell = '';
+    if (courseHoursState.editing && !row.from_care_only) {
+      courseCell = '<div class="hours-course-cell">' +
+        '<button type="button" class="hours-row-del" title="删除此课程行" data-del-course="' + escHtml(row.course_name || '') +
+        '" data-del-teacher="' + escHtml(row.teacher_name || '') + '">×</button>' +
+        '<span class="hours-course-name">' + escHtml(courseLabel) + '</span></div>';
+    } else {
+      courseCell = escHtml(courseLabel);
+    }
     var cells = displayDates.map(function(d) {
       if (!d) return '<td class="col-date-cell cell-empty">—</td>';
       // 合并后的展示值（含看护累加）；编辑态对普通课程行仍编辑原始课时
@@ -6493,7 +6675,7 @@ function renderCourseHoursTable() {
       return '<td class="col-date-cell">' + escHtml(displayVal) + '</td>';
     }).join('');
     return '<tr class="' + active.trim() + (row.from_care_only ? ' hours-care-row' : '') + '" data-course="' + escHtml(row.course_name) + '" data-teacher="' + escHtml(row.teacher_name || '') + '">' +
-      '<td class="col-course">' + escHtml(row.course_name || (row.from_care_only ? '进班管理' : '')) + '</td>' +
+      '<td class="col-course">' + courseCell + '</td>' +
       '<td class="col-teacher">' + escHtml(row.teacher_name || '—') + '</td>' +
       cells +
       '<td class="col-note">' + (noteText ? escHtml(noteText) : '—') + '</td></tr>';
@@ -6523,6 +6705,13 @@ function renderCourseHoursTable() {
     wrap.querySelectorAll('.hours-date-input').forEach(function(inp) {
       inp.addEventListener('change', function() {
         renameCourseHoursDateColumn(inp.getAttribute('data-old-date'), inp.value);
+      });
+    });
+    wrap.querySelectorAll('.hours-row-del').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteCourseHoursRow(btn.getAttribute('data-del-course'), btn.getAttribute('data-del-teacher'));
       });
     });
   }
@@ -7020,14 +7209,18 @@ async function downloadCourseHoursExport(start, end) {
       var centerAlign = { horizontal: 'center', vertical: 'center', wrapText: true };
       var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
       for (var R = range.s.r; R <= range.e.r; R++) {
+        var rowCourseName = R > 0 && aoa[R] ? String(aoa[R][0] || '') : '';
+        var isCareManageRow = rowCourseName === '进班管理';
         for (var C = range.s.c; C <= range.e.c; C++) {
           var addr = XLSX.utils.encode_cell({ r: R, c: C });
           if (!ws[addr]) ws[addr] = { t: 's', v: '' };
           var isHeader = R === 0;
+          // 原有课程名称/授课教师加粗；进班管理不加粗
+          var boldCell = isHeader || (!isCareManageRow && (C === 0 || C === 1));
           var style = {
             border: thinBorder,
             alignment: centerAlign,
-            font: { bold: isHeader, name: '微软雅黑', sz: isHeader ? 11 : 10 }
+            font: { bold: boldCell, name: '微软雅黑', sz: isHeader ? 11 : 10 }
           };
           if (isHeader) style.fill = { fgColor: { rgb: 'F1F5F9' } };
           ws[addr].s = style;
@@ -7381,6 +7574,7 @@ document.getElementById('courseHoursEditBtn') && document.getElementById('course
   saveCourseHoursEdits();
 });
 document.getElementById('courseHoursAddDateBtn') && document.getElementById('courseHoursAddDateBtn').addEventListener('click', addCourseHoursDateColumn);
+document.getElementById('courseHoursAddCourseBtn') && document.getElementById('courseHoursAddCourseBtn').addEventListener('click', openAddCourseHoursRowModal);
 document.getElementById('courseHoursCareBtn') && document.getElementById('courseHoursCareBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   openCourseHoursCarePop();
