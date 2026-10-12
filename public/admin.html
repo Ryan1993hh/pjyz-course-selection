@@ -5752,7 +5752,7 @@ function parseCareClassLabel(label) {
 
 /** 说明列展示：去掉末尾「班」、压缩空白（六1班 → 六1） */
 function formatCareNoteClass(label) {
-  return String(label || '').replace(/\s+/g, '').replace(/班$/u, '');
+  return String(label || '').replace(/\s+/g, '').replace(/班$/, '');
 }
 
 function formatCareNoteText(classLabel, note) {
@@ -6722,6 +6722,16 @@ function teacherHasAnyCourseHourRecord(row) {
   });
 }
 
+function rowHasContentInExportDates(row, displayDates) {
+  if (!row) return false;
+  if (row.from_care_only) return true;
+  if (row.care_notes_text && String(row.care_notes_text).trim()) return true;
+  return (displayDates || []).some(function (d) {
+    if (!d || !d.key) return false;
+    return String(row.cells && row.cells[d.key] != null ? row.cells[d.key] : '').trim() !== '';
+  });
+}
+
 function buildCourseHoursExportAoa(displayDates) {
   var header = ['课程名称', '授课老师'].concat(
     displayDates.map(function (d) { return d ? (d.label || d.key) : ''; })
@@ -6731,9 +6741,8 @@ function buildCourseHoursExportAoa(displayDates) {
   var merged = getMergedCourseHoursDisplayRows();
 
   merged.forEach(function (row) {
-    // 无课时且无看护说明的行不导出
-    var hasCare = !!(row.care_notes_text && String(row.care_notes_text).trim());
-    if (!row.from_care_only && !hasCare && !teacherHasAnyCourseHourRecord(row)) return;
+    // 仅导出所选日期范围内有内容（或有看护说明）的行
+    if (!rowHasContentInExportDates(row, displayDates)) return;
     var line = [row.course_name || '', row.teacher_name || ''];
     displayDates.forEach(function (d) {
       if (!d) {
@@ -6780,103 +6789,149 @@ function buildCourseHoursExportAoa(displayDates) {
 }
 
 function downloadCourseHoursExport(start, end) {
-  var data = courseHoursState.data;
-  if (!data || (!(data.rows || []).length && !(data.cares || []).length)) {
-    if (typeof toast === 'function') toast('暂无数据可导出', 'warn');
-    return;
-  }
-  var allDates = getCourseHoursDisplayDates(data.dates || []).filter(Boolean);
-  // 导出不截断为展示列数：用完整日期再按范围筛
-  var deleted = {};
-  (courseHoursState.deletedDates || []).forEach(function (d) { deleted[d] = true; });
-  var fullMap = {};
-  (data.dates || []).forEach(function (d) {
-    var key = d && (d.key || d);
-    if (!key || deleted[key]) return;
-    fullMap[key] = (typeof d === 'object' && d.label) ? d : { key: key, label: formatHoursDateLabel(key) };
-  });
-  allDates = Object.keys(fullMap).sort().map(function (k) { return fullMap[k]; });
-  var displayDates = filterCourseHoursDatesByRange(allDates, start, end);
-  if (!displayDates.length) {
-    if (typeof toast === 'function') toast('所选时间范围内无日期列可导出', 'warn');
-    return;
-  }
-
-  var monthNum = 0;
-  if (start && end && start.slice(0, 7) === end.slice(0, 7)) {
-    monthNum = parseInt(start.slice(5, 7), 10) || 0;
-  } else if (start) {
-    monthNum = parseInt(start.slice(5, 7), 10) || 0;
-  }
-  if (!monthNum) {
-    var td = getCourseHoursTodayKey();
-    monthNum = parseInt(td.slice(5, 7), 10) || 1;
-  }
-  var fileTitle = '浦江一中' + monthNum + '月拓展课 上课记录';
-  var aoa = buildCourseHoursExportAoa(displayDates);
-  var colCount = aoa[0].length;
-
-  var ws = XLSX.utils.aoa_to_sheet(aoa);
-  var thinBorder = {
-    top: { style: 'thin', color: { rgb: '000000' } },
-    bottom: { style: 'thin', color: { rgb: '000000' } },
-    left: { style: 'thin', color: { rgb: '000000' } },
-    right: { style: 'thin', color: { rgb: '000000' } }
-  };
-  var centerAlign = { horizontal: 'center', vertical: 'center', wrapText: true };
-  var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-  for (var R = range.s.r; R <= range.e.r; R++) {
-    for (var C = range.s.c; C <= range.e.c; C++) {
-      var addr = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
-      var isHeader = R === 0;
-      ws[addr].s = {
-        border: thinBorder,
-        alignment: centerAlign,
-        font: { bold: isHeader, name: '微软雅黑', sz: isHeader ? 11 : 10 },
-        fill: isHeader ? { fgColor: { rgb: 'F1F5F9' } } : undefined
-      };
+  try {
+    if (typeof window.XLSX === 'undefined') {
+      throw new Error('Excel库未加载，请刷新页面后重试');
     }
-  }
+    var data = courseHoursState.data;
+    if (!data || (!(data.rows || []).length && !(data.cares || []).length)) {
+      if (typeof toast === 'function') toast('暂无数据可导出', 'warn');
+      return;
+    }
 
-  // 日期列等宽
-  var dateColWch = 8;
-  displayDates.forEach(function (d) {
-    if (!d) return;
-    String(d.label || d.key || '').split('\n').forEach(function (line) {
-      var len = String(line || '').replace(/[^\x00-\xff]/g, 'xx').length + 2;
-      if (len > dateColWch) dateColWch = len;
+    // 导出用完整日期列（不截断为看板展示列数），并并入看护日期
+    var deleted = {};
+    (courseHoursState.deletedDates || []).forEach(function (d) { deleted[d] = true; });
+    var fullMap = {};
+    function addExportDate(key, label) {
+      var k = String(key || '').trim();
+      if (!k || deleted[k] || fullMap[k]) return;
+      fullMap[k] = { key: k, label: label || formatHoursDateLabel(k) };
+    }
+    (data.dates || []).forEach(function (d) {
+      var key = d && (d.key || d);
+      if (!key) return;
+      addExportDate(key, (typeof d === 'object' && d.label) ? d.label : '');
     });
-  });
-  dateColWch = Math.min(Math.max(dateColWch, 8), 28);
-
-  var cols = [];
-  for (var c = 0; c < colCount; c++) {
-    if (c === 0) cols.push({ wch: 16 });
-    else if (c === 1) cols.push({ wch: 12 });
-    else if (c === colCount - 1) cols.push({ wch: 10 });
-    else cols.push({ wch: dateColWch });
-  }
-  ws['!cols'] = cols;
-  ws['!rows'] = aoa.map(function (row, i) {
-    var lines = 1;
-    (row || []).forEach(function (cell) {
-      var n = String(cell == null ? '' : cell).split('\n').length;
-      if (n > lines) lines = n;
+    (data.cares || []).forEach(function (c) {
+      if (c && c.session_date) addExportDate(c.session_date);
     });
-    return { hpt: i === 0 ? 22 : Math.max(20, lines * 18) };
-  });
+    (courseHoursState.addedDates || []).forEach(function (key) { addExportDate(key); });
 
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '上课记录');
-  var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-  var blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileTitle + '.xlsx';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  if (typeof toast === 'function') toast('导出成功', 'success');
+    var allDates = Object.keys(fullMap).sort().map(function (k) { return fullMap[k]; });
+    var displayDates = filterCourseHoursDatesByRange(allDates, start, end);
+    if (!displayDates.length) {
+      if (typeof toast === 'function') toast('所选时间范围内无日期列可导出', 'warn');
+      return;
+    }
+
+    var monthNum = 0;
+    if (start && end && start.slice(0, 7) === end.slice(0, 7)) {
+      monthNum = parseInt(start.slice(5, 7), 10) || 0;
+    } else if (start) {
+      monthNum = parseInt(start.slice(5, 7), 10) || 0;
+    }
+    if (!monthNum) {
+      var td = getCourseHoursTodayKey();
+      monthNum = parseInt(td.slice(5, 7), 10) || 1;
+    }
+    var fileTitle = '浦江一中' + monthNum + '月拓展课 上课记录';
+    var aoa = buildCourseHoursExportAoa(displayDates);
+    if (!aoa || aoa.length < 2) {
+      if (typeof toast === 'function') toast('所选范围内无可导出的上课记录', 'warn');
+      return;
+    }
+    var colCount = aoa[0].length;
+
+    // 统一每行列数，避免稀疏表导致写入异常
+    aoa = aoa.map(function (row) {
+      var line = (row || []).slice();
+      while (line.length < colCount) line.push('');
+      if (line.length > colCount) line = line.slice(0, colCount);
+      return line;
+    });
+
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var thinBorder = {
+      top: { style: 'thin', color: { rgb: '000000' } },
+      bottom: { style: 'thin', color: { rgb: '000000' } },
+      left: { style: 'thin', color: { rgb: '000000' } },
+      right: { style: 'thin', color: { rgb: '000000' } }
+    };
+    var centerAlign = { horizontal: 'center', vertical: 'center', wrapText: true };
+    var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (var R = range.s.r; R <= range.e.r; R++) {
+      for (var C = range.s.c; C <= range.e.c; C++) {
+        var addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+        var isHeader = R === 0;
+        var style = {
+          border: thinBorder,
+          alignment: centerAlign,
+          font: { bold: isHeader, name: '微软雅黑', sz: isHeader ? 11 : 10 }
+        };
+        if (isHeader) style.fill = { fgColor: { rgb: 'F1F5F9' } };
+        ws[addr].s = style;
+      }
+    }
+
+    var dateColWch = 8;
+    displayDates.forEach(function (d) {
+      if (!d) return;
+      String(d.label || d.key || '').split('\n').forEach(function (line) {
+        var len = String(line || '').replace(/[^\x00-\xff]/g, 'xx').length + 2;
+        if (len > dateColWch) dateColWch = len;
+      });
+    });
+    dateColWch = Math.min(Math.max(dateColWch, 8), 28);
+
+    var cols = [];
+    for (var c = 0; c < colCount; c++) {
+      if (c === 0) cols.push({ wch: 16 });
+      else if (c === 1) cols.push({ wch: 12 });
+      else if (c === colCount - 1) cols.push({ wch: 18 });
+      else cols.push({ wch: dateColWch });
+    }
+    ws['!cols'] = cols;
+    ws['!rows'] = aoa.map(function (row, i) {
+      var lines = 1;
+      (row || []).forEach(function (cell) {
+        var n = String(cell == null ? '' : cell).split('\n').length;
+        if (n > lines) lines = n;
+      });
+      return { hpt: i === 0 ? 22 : Math.max(20, lines * 18) };
+    });
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '上课记录');
+
+    var wbout;
+    try {
+      wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+    } catch (styleErr) {
+      // 样式库不可用时回退为无样式导出，保证文件能下载
+      console.warn('course hours export styled write failed:', styleErr);
+      wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    }
+    if (!wbout || !wbout.length) throw new Error('生成 Excel 内容为空');
+
+    var blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileTitle + '.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    if (typeof toast === 'function') toast('导出成功', 'success');
+  } catch (e) {
+    console.error('downloadCourseHoursExport:', e);
+    if (typeof toast === 'function') toast('导出失败：' + (e && e.message ? e.message : e), 'error');
+    else alert('导出失败：' + (e && e.message ? e.message : e));
+  }
 }
 
 async function loadCourseHoursPanel() {
