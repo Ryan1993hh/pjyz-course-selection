@@ -6845,6 +6845,57 @@ function buildCourseHoursExportAoa(displayDates) {
   return aoa;
 }
 
+function xlsxOutputSize(out) {
+  if (!out) return 0;
+  if (typeof out.byteLength === 'number') return out.byteLength;
+  if (typeof out.length === 'number') return out.length;
+  return 0;
+}
+
+/** 兼容 array / Uint8Array / ArrayBuffer / binary string */
+function writeXlsxBytes(wb, preferStyles) {
+  var attempts = [];
+  if (preferStyles) {
+    attempts.push({ bookType: 'xlsx', type: 'array', cellStyles: true });
+    attempts.push({ bookType: 'xlsx', type: 'array' });
+  } else {
+    attempts.push({ bookType: 'xlsx', type: 'array' });
+  }
+  attempts.push({ bookType: 'xlsx', type: 'uint8array' });
+  attempts.push({ bookType: 'xlsx', type: 'binary' });
+
+  var lastErr = null;
+  for (var i = 0; i < attempts.length; i++) {
+    try {
+      var out = XLSX.write(wb, attempts[i]);
+      if (attempts[i].type === 'binary' && typeof out === 'string') {
+        var buf = new ArrayBuffer(out.length);
+        var view = new Uint8Array(buf);
+        for (var j = 0; j < out.length; j++) view[j] = out.charCodeAt(j) & 0xff;
+        out = buf;
+      }
+      if (xlsxOutputSize(out) >= 32) return out;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('生成 Excel 内容为空');
+}
+
+function triggerXlsxBlobDownload(bytes, filename) {
+  var blob = new Blob([bytes], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'export.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
 async function downloadCourseHoursExport(start, end) {
   try {
     var xlsxOk = typeof window.XLSX !== 'undefined';
@@ -6854,6 +6905,21 @@ async function downloadCourseHoursExport(start, end) {
     if (!xlsxOk || typeof window.XLSX === 'undefined') {
       throw new Error('Excel库未加载，请刷新页面后重试');
     }
+
+    // 导出前从数据库刷新矩阵，保证文件内容与已保存数据一致
+    try {
+      var fresh = await request('GET', '/api/course-hours');
+      if (fresh && (fresh.rows || fresh.dates || fresh.cares)) {
+        courseHoursState.data = {
+          dates: fresh.dates || [],
+          rows: fresh.rows || [],
+          cares: fresh.cares || []
+        };
+      }
+    } catch (refreshErr) {
+      console.warn('export refresh course-hours failed:', refreshErr);
+    }
+
     var data = courseHoursState.data;
     if (!data || (!(data.rows || []).length && !(data.cares || []).length)) {
       if (typeof toast === 'function') toast('暂无数据可导出', 'warn');
@@ -6909,33 +6975,13 @@ async function downloadCourseHoursExport(start, end) {
       var line = (row || []).slice();
       while (line.length < colCount) line.push('');
       if (line.length > colCount) line = line.slice(0, colCount);
-      return line;
+      // 单元格一律转字符串，避免数字/空值让 SheetJS 写出异常
+      return line.map(function (cell) {
+        return cell == null ? '' : String(cell);
+      });
     });
 
     var ws = XLSX.utils.aoa_to_sheet(aoa);
-    var thinBorder = {
-      top: { style: 'thin', color: { rgb: '000000' } },
-      bottom: { style: 'thin', color: { rgb: '000000' } },
-      left: { style: 'thin', color: { rgb: '000000' } },
-      right: { style: 'thin', color: { rgb: '000000' } }
-    };
-    var centerAlign = { horizontal: 'center', vertical: 'center', wrapText: true };
-    var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (var R = range.s.r; R <= range.e.r; R++) {
-      for (var C = range.s.c; C <= range.e.c; C++) {
-        var addr = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[addr]) ws[addr] = { t: 's', v: '' };
-        var isHeader = R === 0;
-        var style = {
-          border: thinBorder,
-          alignment: centerAlign,
-          font: { bold: isHeader, name: '微软雅黑', sz: isHeader ? 11 : 10 }
-        };
-        if (isHeader) style.fill = { fgColor: { rgb: 'F1F5F9' } };
-        ws[addr].s = style;
-      }
-    }
-
     var dateColWch = 8;
     displayDates.forEach(function (d) {
       if (!d) return;
@@ -6963,31 +7009,39 @@ async function downloadCourseHoursExport(start, end) {
       return { hpt: i === 0 ? 22 : Math.max(20, lines * 18) };
     });
 
+    // 样式可选：失败不影响导出内容
+    try {
+      var thinBorder = {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      };
+      var centerAlign = { horizontal: 'center', vertical: 'center', wrapText: true };
+      var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      for (var R = range.s.r; R <= range.e.r; R++) {
+        for (var C = range.s.c; C <= range.e.c; C++) {
+          var addr = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+          var isHeader = R === 0;
+          var style = {
+            border: thinBorder,
+            alignment: centerAlign,
+            font: { bold: isHeader, name: '微软雅黑', sz: isHeader ? 11 : 10 }
+          };
+          if (isHeader) style.fill = { fgColor: { rgb: 'F1F5F9' } };
+          ws[addr].s = style;
+        }
+      }
+    } catch (styleApplyErr) {
+      console.warn('course hours export style apply skipped:', styleApplyErr);
+    }
+
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '上课记录');
-
-    var wbout;
-    try {
-      wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-    } catch (styleErr) {
-      // 样式库不可用时回退为无样式导出，保证文件能下载
-      console.warn('course hours export styled write failed:', styleErr);
-      wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    }
-    if (!wbout || !wbout.length) throw new Error('生成 Excel 内容为空');
-
-    var blob = new Blob([wbout], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = fileTitle + '.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
-    if (typeof toast === 'function') toast('导出成功', 'success');
+    var wbout = writeXlsxBytes(wb, true);
+    triggerXlsxBlobDownload(wbout, fileTitle + '.xlsx');
+    if (typeof toast === 'function') toast('导出成功（共 ' + (aoa.length - 1) + ' 行）', 'success');
   } catch (e) {
     console.error('downloadCourseHoursExport:', e);
     if (typeof toast === 'function') toast('导出失败：' + (e && e.message ? e.message : e), 'error');
