@@ -6930,14 +6930,52 @@ function teacherHasAnyCourseHourRecord(row) {
   });
 }
 
-function rowHasContentInExportDates(row, displayDates) {
+function rowHasCellContentInExportDates(row, displayDates) {
   if (!row) return false;
-  if (row.from_care_only) return true;
-  if (row.care_notes_text && String(row.care_notes_text).trim()) return true;
   return (displayDates || []).some(function (d) {
     if (!d || !d.key) return false;
     return String(row.cells && row.cells[d.key] != null ? row.cells[d.key] : '').trim() !== '';
   });
+}
+
+function isJinbanManageExportRow(row) {
+  return !!(row && (row.from_care_only || String(row.course_name || '').trim() === '进班管理'));
+}
+
+/** 仅取所选导出日期范围内的看护记录 */
+function getCaresForExportDates(displayDates) {
+  var keySet = {};
+  (displayDates || []).forEach(function (d) {
+    if (d && d.key) keySet[String(d.key)] = true;
+  });
+  return ((courseHoursState.data && courseHoursState.data.cares) || []).filter(function (c) {
+    if (!c) return false;
+    var dt = String(c.session_date || '').trim();
+    return !!(dt && keySet[dt]);
+  });
+}
+
+/**
+ * 导出专用矩阵：只把「所选时间区间内」的看护合并进来。
+ * 区间内无进班管理数据 → 不出现进班管理行；有则按教师依次追加。
+ */
+function getMergedCourseHoursRowsForExport(displayDates) {
+  var data = courseHoursState.data;
+  if (!data) return [];
+  var dateKeys = (displayDates || []).filter(Boolean).map(function (d) { return d.key; });
+  var seeded = (data.rows || []).map(function (r) {
+    var cells = {};
+    dateKeys.forEach(function (key) {
+      if (!key) return;
+      cells[key] = getCourseHoursCellValue(r.course_name, key, r.teacher_name);
+    });
+    return {
+      course_name: r.course_name || '',
+      teacher_name: r.teacher_name || '',
+      cells: cells
+    };
+  });
+  return mergeCaresIntoHoursRows(seeded, getCaresForExportDates(displayDates));
 }
 
 function buildCourseHoursExportAoa(displayDates) {
@@ -6946,11 +6984,20 @@ function buildCourseHoursExportAoa(displayDates) {
   ).concat(['说明']);
   var aoa = [header];
   var subMap = {};
-  var merged = getMergedCourseHoursDisplayRows();
+  var merged = getMergedCourseHoursRowsForExport(displayDates);
+  var courseLines = [];
+  var jinbanLines = [];
 
   merged.forEach(function (row) {
-    // 仅导出所选日期范围内有内容（或有看护说明）的行
-    if (!rowHasContentInExportDates(row, displayDates)) return;
+    var isJinban = isJinbanManageExportRow(row);
+    // 进班管理：所选区间内日期列必须有数据才导出；普通课程行按原规则
+    if (isJinban) {
+      if (!rowHasCellContentInExportDates(row, displayDates)) return;
+    } else {
+      var hasCareNote = !!(row.care_notes_text && String(row.care_notes_text).trim());
+      if (!hasCareNote && !rowHasCellContentInExportDates(row, displayDates)) return;
+    }
+
     var line = [row.course_name || '', row.teacher_name || ''];
     displayDates.forEach(function (d) {
       if (!d) {
@@ -6958,8 +7005,8 @@ function buildCourseHoursExportAoa(displayDates) {
         return;
       }
       var val = row.cells && row.cells[d.key] != null ? String(row.cells[d.key]) : '';
-      // 代课姓名：导出时拆成代看护行（仅对非纯看护行）
-      if (!row.from_care_only && isHoursSubstituteName(val)) {
+      // 代课姓名：导出时拆成代看护行（仅对非进班管理行）
+      if (!isJinban && isHoursSubstituteName(val)) {
         var subName = normalizeSubstituteTeacherName(val);
         var sk = subName + '\0' + String(row.course_name || '');
         if (!subMap[sk]) {
@@ -6976,9 +7023,12 @@ function buildCourseHoursExportAoa(displayDates) {
       }
     });
     line.push(row.care_notes_text || '');
-    aoa.push(line);
+    if (isJinban) jinbanLines.push(line);
+    else courseLines.push(line);
   });
 
+  // 先普通课程行，再依次追加有数据的进班管理行
+  courseLines.forEach(function (line) { aoa.push(line); });
   Object.keys(subMap).forEach(function (sk) {
     var s = subMap[sk];
     var line = [s.course_name, s.teacher_name];
@@ -6992,6 +7042,7 @@ function buildCourseHoursExportAoa(displayDates) {
     line.push('代看护');
     aoa.push(line);
   });
+  jinbanLines.forEach(function (line) { aoa.push(line); });
 
   return aoa;
 }
